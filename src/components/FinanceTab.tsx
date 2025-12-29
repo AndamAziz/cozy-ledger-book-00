@@ -20,6 +20,7 @@ interface FinanceTabProps {
   };
   maxDays: number;
   defaultDay: number;
+  currentMonthKey: string;
   onAddIncome: (income: Omit<Income, 'id'>) => void;
   onUpdateIncome: (id: number, income: Omit<Income, 'id'>) => void;
   onDeleteIncome: (id: number) => void;
@@ -35,6 +36,7 @@ export function FinanceTab({
   summary,
   maxDays,
   defaultDay,
+  currentMonthKey,
   onAddIncome,
   onUpdateIncome,
   onDeleteIncome,
@@ -140,48 +142,71 @@ export function FinanceTab({
           </div>
         ) : (
           <div className="space-y-3">
-            {incomeData.map((income, index) => (
-              <div 
-                key={income.id} 
-                className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-success/5 to-transparent border border-success/10 p-4 flex justify-between items-center gap-4 hover:border-success/30 hover:shadow-lg hover:shadow-success/5 transition-all duration-300"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center text-success font-bold">
-                    {income.day}
-                  </div>
-                  <div>
-                    <div className="font-bold text-foreground">ڕۆژی {income.day}</div>
-                    <div className="text-sm text-muted-foreground flex gap-3">
-                      <span>کاش: {formatCurrency(income.cash)}</span>
-                      <span>کارت: {formatCurrency(income.card)}</span>
+            {incomeData.map((income, index) => {
+              // Parse month/year from currentMonthKey (format: YYYY-MM)
+              const [year, month] = currentMonthKey.split('-');
+              const dateStr = `${income.day.toString().padStart(2, '0')}-${month}-${year}`;
+              
+              return (
+                <div 
+                  key={income.id} 
+                  className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-success/5 to-transparent border border-success/10 p-3 md:p-4 hover:border-success/30 hover:shadow-lg hover:shadow-success/5 transition-all duration-300"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  {/* Mobile Layout */}
+                  <div className="flex flex-col gap-3">
+                    {/* Top Row: Date & Total */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-success/10 flex items-center justify-center text-success font-bold text-sm md:text-base font-mono">
+                          {income.day}
+                        </div>
+                        <div>
+                          <div className="font-bold text-foreground text-sm md:text-base font-mono tracking-wide">{dateStr}</div>
+                          <div className="text-xs md:text-sm text-muted-foreground">ڕۆژی {income.day}</div>
+                        </div>
+                      </div>
+                      <div className="text-success font-bold text-base md:text-lg">{formatCurrency(income.total)}</div>
+                    </div>
+                    
+                    {/* Bottom Row: Cash/Card & Actions */}
+                    <div className="flex items-center justify-between border-t border-border/30 pt-3">
+                      <div className="flex gap-4 text-xs md:text-sm">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">💵</span>
+                          <span className="text-foreground font-medium">{formatCurrency(income.cash)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">💳</span>
+                          <span className="text-foreground font-medium">{formatCurrency(income.card)}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Action Buttons - Always Visible */}
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => { setEditingIncome(income); setIncomeModalOpen(true); }}
+                          className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (confirm('دڵنیایت؟')) {
+                              onDeleteIncome(income.id);
+                              toast({ title: 'سەرکەوتوو', description: 'داهات سڕایەوە' });
+                            }
+                          }}
+                          className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all duration-200 hover:scale-105"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-success font-bold text-lg">{formatCurrency(income.total)}</div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={() => { setEditingIncome(income); setIncomeModalOpen(true); }}
-                      className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (confirm('دڵنیایت؟')) {
-                          onDeleteIncome(income.id);
-                          toast({ title: 'سەرکەوتوو', description: 'داهات سڕایەوە' });
-                        }
-                      }}
-                      className="p-2 rounded-lg bg-secondary/50 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
