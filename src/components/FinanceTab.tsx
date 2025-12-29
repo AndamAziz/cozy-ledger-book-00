@@ -74,9 +74,9 @@ export function FinanceTab({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Summary Grid */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in">
+      <div className="grid grid-cols-2 gap-4 md:gap-5 animate-fade-in">
         <SummaryCard title="کاش" value={formatCurrency(summary.totalCash)} variant="income" icon="💵" />
         <SummaryCard title="کارت" value={formatCurrency(summary.totalCard)} variant="income" icon="💳" />
         <SummaryCard title="کۆی فرۆشتن" value={formatCurrency(summary.totalIncome)} variant="income" icon="📈" />
@@ -85,40 +85,52 @@ export function FinanceTab({
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
+      <div className="grid grid-cols-2 gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
         <Button 
           onClick={() => { setEditingIncome(null); setIncomeModalOpen(true); }} 
-          className="btn-gradient-primary py-5 text-sm md:text-base rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300"
+          className="group btn-gradient-primary py-6 text-base md:text-lg rounded-2xl shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
         >
-          <Plus className="h-5 w-5 ml-2" />
-          داهات
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Plus className="h-5 w-5" />
+            </div>
+            <span className="font-bold">داهات</span>
+          </div>
         </Button>
         <Button 
           onClick={() => { setEditingExpense(null); setExpenseModalOpen(true); }} 
-          className="btn-gradient-danger py-5 text-sm md:text-base rounded-xl shadow-lg shadow-destructive/20 hover:shadow-destructive/40 hover:scale-[1.02] transition-all duration-300"
+          className="group btn-gradient-danger py-6 text-base md:text-lg rounded-2xl shadow-xl shadow-destructive/30 hover:shadow-destructive/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
         >
-          <Minus className="h-5 w-5 ml-2" />
-          خەرجی
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Minus className="h-5 w-5" />
+            </div>
+            <span className="font-bold">خەرجی</span>
+          </div>
         </Button>
       </div>
 
       {/* Income List */}
-      <div className="glass-card p-4 md:p-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
-        <h3 className="text-lg font-bold text-foreground mb-5 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-success/20 to-success/5 flex items-center justify-center">
-            <span className="text-xl">📅</span>
+      <div className="glass-card p-5 md:p-7 animate-fade-in" style={{ animationDelay: '200ms' }}>
+        <h3 className="text-lg md:text-xl font-bold text-foreground mb-6 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-success to-emerald-400 flex items-center justify-center shadow-lg shadow-success/30">
+            <span className="text-2xl">📅</span>
           </div>
-          داهاتی ڕۆژانە
+          <div>
+            <span className="block">داهاتی ڕۆژانە</span>
+            <span className="text-sm font-normal text-muted-foreground">{incomeData.length} تۆمار</span>
+          </div>
         </h3>
         {incomeData.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl opacity-50">📅</span>
+          <div className="text-center py-16 text-muted-foreground">
+            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-5 shadow-inner">
+              <span className="text-5xl opacity-60">📅</span>
             </div>
-            <p className="text-sm">هیچ داهاتێک نییە</p>
+            <p className="text-base font-medium">هیچ داهاتێک نییە</p>
+            <p className="text-sm text-muted-foreground/70 mt-2">کلیک لەسەر "داهات" بۆ زیادکردن</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {incomeData.map((income, index) => {
               const [year, month] = currentMonthKey.split('-');
               const dateStr = `${income.day.toString().padStart(2, '0')}-${month}-${year}`;
@@ -126,39 +138,42 @@ export function FinanceTab({
               return (
                 <div 
                   key={income.id} 
-                  className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-success/5 to-transparent border border-success/10 p-3 md:p-4 hover:border-success/30 hover:shadow-lg hover:shadow-success/5 transition-all duration-300"
+                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-l from-success/10 via-success/5 to-transparent border border-success/20 p-4 md:p-5 hover:border-success/40 hover:shadow-xl hover:shadow-success/10 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="flex flex-col gap-3">
+                  {/* Glow effect */}
+                  <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-success/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  
+                  <div className="relative flex flex-col gap-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-success/10 flex items-center justify-center text-success font-bold text-sm md:text-base font-mono">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-success/30 to-success/10 border border-success/20 flex items-center justify-center text-success font-bold text-lg md:text-xl font-mono shadow-inner">
                           {income.day}
                         </div>
                         <div>
-                          <div className="font-bold text-foreground text-sm md:text-base font-mono tracking-wide">{dateStr}</div>
-                          <div className="text-xs md:text-sm text-muted-foreground">ڕۆژی {income.day}</div>
+                          <div className="font-bold text-foreground text-base md:text-lg font-mono tracking-wide">{dateStr}</div>
+                          <div className="text-sm text-muted-foreground">ڕۆژی {income.day}</div>
                         </div>
                       </div>
-                      <div className="text-success font-bold text-base md:text-lg">{formatCurrency(income.total)}</div>
+                      <div className="text-success font-bold text-lg md:text-2xl">{formatCurrency(income.total)}</div>
                     </div>
                     
-                    <div className="flex items-center justify-between border-t border-border/30 pt-3">
-                      <div className="flex gap-4 text-xs md:text-sm">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">💵</span>
-                          <span className="text-foreground font-medium">{formatCurrency(income.cash)}</span>
+                    <div className="flex items-center justify-between border-t border-border/40 pt-4">
+                      <div className="flex gap-5 text-sm md:text-base">
+                        <div className="flex items-center gap-2 bg-success/10 px-3 py-1.5 rounded-xl">
+                          <span className="text-lg">💵</span>
+                          <span className="text-foreground font-semibold">{formatCurrency(income.cash)}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">💳</span>
-                          <span className="text-foreground font-medium">{formatCurrency(income.card)}</span>
+                        <div className="flex items-center gap-2 bg-info/10 px-3 py-1.5 rounded-xl">
+                          <span className="text-lg">💳</span>
+                          <span className="text-foreground font-semibold">{formatCurrency(income.card)}</span>
                         </div>
                       </div>
                       
                       <div className="flex gap-2">
                         <button 
                           onClick={() => { setEditingIncome(income); setIncomeModalOpen(true); }}
-                          className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105"
+                          className="p-2.5 rounded-xl bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-110 active:scale-95"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -169,7 +184,7 @@ export function FinanceTab({
                               toast({ title: 'سەرکەوتوو', description: 'داهات سڕایەوە' });
                             }
                           }}
-                          className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all duration-200 hover:scale-105"
+                          className="p-2.5 rounded-xl bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 hover:scale-110 active:scale-95"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -184,22 +199,26 @@ export function FinanceTab({
       </div>
 
       {/* Expense List */}
-      <div className="glass-card p-4 md:p-6 animate-fade-in" style={{ animationDelay: '300ms' }}>
-        <h3 className="text-lg font-bold text-foreground mb-5 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/5 flex items-center justify-center">
-            <span className="text-xl">💸</span>
+      <div className="glass-card p-5 md:p-7 animate-fade-in" style={{ animationDelay: '300ms' }}>
+        <h3 className="text-lg md:text-xl font-bold text-foreground mb-6 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-destructive to-rose-400 flex items-center justify-center shadow-lg shadow-destructive/30">
+            <span className="text-2xl">💸</span>
           </div>
-          خەرجییەکان
+          <div>
+            <span className="block">خەرجییەکان</span>
+            <span className="text-sm font-normal text-muted-foreground">{expenseData.length} تۆمار</span>
+          </div>
         </h3>
         {expenseData.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl opacity-50">💸</span>
+          <div className="text-center py-16 text-muted-foreground">
+            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-5 shadow-inner">
+              <span className="text-5xl opacity-60">💸</span>
             </div>
-            <p className="text-sm">هیچ خەرجییەک نییە</p>
+            <p className="text-base font-medium">هیچ خەرجییەک نییە</p>
+            <p className="text-sm text-muted-foreground/70 mt-2">کلیک لەسەر "خەرجی" بۆ زیادکردن</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {expenseData.map((expense, index) => {
               const [year, month] = currentMonthKey.split('-');
               const dateStr = `${expense.day.toString().padStart(2, '0')}-${month}-${year}`;
@@ -207,30 +226,33 @@ export function FinanceTab({
               return (
                 <div 
                   key={expense.id} 
-                  className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-destructive/5 to-transparent border border-destructive/10 p-3 md:p-4 hover:border-destructive/30 hover:shadow-lg hover:shadow-destructive/5 transition-all duration-300"
+                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-l from-destructive/10 via-destructive/5 to-transparent border border-destructive/20 p-4 md:p-5 hover:border-destructive/40 hover:shadow-xl hover:shadow-destructive/10 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="flex flex-col gap-3">
+                  {/* Glow effect */}
+                  <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-destructive/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  
+                  <div className="relative flex flex-col gap-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive font-bold text-sm md:text-base font-mono">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-destructive/30 to-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive font-bold text-lg md:text-xl font-mono shadow-inner">
                           {expense.day}
                         </div>
                         <div>
-                          <div className="font-bold text-foreground text-sm md:text-base font-mono tracking-wide">{dateStr}</div>
-                          <div className="text-xs md:text-sm text-muted-foreground truncate max-w-[180px] md:max-w-[250px]">
+                          <div className="font-bold text-foreground text-base md:text-lg font-mono tracking-wide">{dateStr}</div>
+                          <div className="text-sm text-muted-foreground truncate max-w-[200px] md:max-w-[300px]">
                             {expense.description}
                           </div>
                         </div>
                       </div>
-                      <div className="text-destructive font-bold text-base md:text-lg">{formatCurrency(expense.amount)}</div>
+                      <div className="text-destructive font-bold text-lg md:text-2xl">{formatCurrency(expense.amount)}</div>
                     </div>
                     
-                    <div className="flex items-center justify-end border-t border-border/30 pt-3">
+                    <div className="flex items-center justify-end border-t border-border/40 pt-4">
                       <div className="flex gap-2">
                         <button 
                           onClick={() => { setEditingExpense(expense); setExpenseModalOpen(true); }}
-                          className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105"
+                          className="p-2.5 rounded-xl bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-110 active:scale-95"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -241,7 +263,7 @@ export function FinanceTab({
                               toast({ title: 'سەرکەوتوو', description: 'خەرجی سڕایەوە' });
                             }
                           }}
-                          className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all duration-200 hover:scale-105"
+                          className="p-2.5 rounded-xl bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 hover:scale-110 active:scale-95"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
