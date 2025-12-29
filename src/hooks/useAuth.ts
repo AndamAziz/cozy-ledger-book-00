@@ -71,7 +71,19 @@ export function useAuth() {
   }, []);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    try {
+      // Clear local state first
+      setSession(null);
+      setUser(null);
+      
+      // Then sign out from Supabase
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still clear local state even if signOut fails
+      setSession(null);
+      setUser(null);
+    }
   }, []);
 
   return { 

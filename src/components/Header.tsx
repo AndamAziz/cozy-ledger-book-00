@@ -63,11 +63,11 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
           
           <Button
             variant="ghost"
-            size="icon"
             onClick={onLogout}
-            className="w-11 h-11 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 hover:scale-105 transition-all duration-300"
+            className="group flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 h-auto min-h-[44px] rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground hover:scale-105 active:scale-95 transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-destructive/25"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" />
+            <span className="hidden sm:inline font-medium text-sm">چوونەدەرەوە</span>
           </Button>
         </div>
       </div>
