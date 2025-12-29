@@ -356,8 +356,8 @@ export function ReportsTab({
                     {index + 1}
                   </div>
                   <div>
-                    <div className="font-bold text-foreground">{exp.name}</div>
-                    <div className="text-sm text-muted-foreground truncate max-w-[200px]">{exp.purpose}</div>
+                    <div className="font-bold text-foreground">{exp.description}</div>
+                    <div className="text-sm text-muted-foreground">Day {exp.day}</div>
                   </div>
                 </div>
                 <div className="text-destructive font-bold text-lg">{formatCurrency(exp.amount)}</div>

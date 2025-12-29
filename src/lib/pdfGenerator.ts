@@ -130,11 +130,11 @@ export function generatePDFReport(data: ReportData): void {
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Amount', 'Purpose', 'Name']],
+      head: [['Amount', 'Description', 'Day']],
       body: expenseData.map(exp => [
         `£${exp.amount.toFixed(2)}`,
-        exp.purpose.substring(0, 30) + (exp.purpose.length > 30 ? '...' : ''),
-        exp.name,
+        exp.description.substring(0, 40) + (exp.description.length > 40 ? '...' : ''),
+        `Day ${exp.day}`,
       ]),
       theme: 'striped',
       headStyles: { 
