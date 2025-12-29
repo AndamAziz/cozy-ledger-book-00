@@ -92,7 +92,7 @@ export function FinanceTab({
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
+      <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
         <Button 
           onClick={() => { setEditingIncome(null); setIncomeModalOpen(true); }} 
           className="btn-gradient-primary py-5 text-sm md:text-base rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300"
@@ -106,22 +106,6 @@ export function FinanceTab({
         >
           <Minus className="h-5 w-5 ml-2" />
           خەرجی
-        </Button>
-        <Button 
-          onClick={() => window.print()} 
-          variant="secondary" 
-          className="py-5 text-sm md:text-base no-print rounded-xl hover:bg-secondary hover:scale-[1.02] transition-all duration-300"
-        >
-          <Printer className="h-5 w-5 ml-2" />
-          چاپ
-        </Button>
-        <Button 
-          onClick={handleClearAll} 
-          variant="secondary" 
-          className="py-5 text-sm md:text-base no-print rounded-xl hover:bg-destructive/10 hover:text-destructive hover:scale-[1.02] transition-all duration-300"
-        >
-          <Trash2 className="h-5 w-5 ml-2" />
-          سڕینەوە
         </Button>
       </div>
 
