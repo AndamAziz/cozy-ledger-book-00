@@ -1,21 +1,52 @@
 import { ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  icon?: ReactNode;
+  variant?: 'primary' | 'danger' | 'info' | 'accent';
 }
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+const variantStyles = {
+  primary: {
+    gradient: 'from-primary/20 via-primary/5 to-transparent',
+    iconBg: 'from-primary to-emerald-400',
+    glow: 'shadow-primary/20',
+    border: 'border-primary/30',
+  },
+  danger: {
+    gradient: 'from-destructive/20 via-destructive/5 to-transparent',
+    iconBg: 'from-destructive to-rose-400',
+    glow: 'shadow-destructive/20',
+    border: 'border-destructive/30',
+  },
+  info: {
+    gradient: 'from-info/20 via-info/5 to-transparent',
+    iconBg: 'from-info to-blue-400',
+    glow: 'shadow-info/20',
+    border: 'border-info/30',
+  },
+  accent: {
+    gradient: 'from-accent/20 via-accent/5 to-transparent',
+    iconBg: 'from-accent to-amber-400',
+    glow: 'shadow-accent/20',
+    border: 'border-accent/30',
+  },
+};
+
+export function Modal({ isOpen, onClose, title, children, icon, variant = 'primary' }: ModalProps) {
   if (!isOpen) return null;
+
+  const styles = variantStyles[variant];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop with blur */}
       <div 
-        className="absolute inset-0 bg-background/80 backdrop-blur-md"
+        className="absolute inset-0 bg-background/90 backdrop-blur-xl"
         onClick={onClose}
       />
       
@@ -24,24 +55,41 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         className="relative w-full max-w-md animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="glass-card rounded-2xl border border-primary/20 shadow-2xl shadow-primary/10 overflow-hidden">
+        <div className={`glass-card rounded-3xl border ${styles.border} shadow-2xl ${styles.glow} overflow-hidden`}>
+          {/* Decorative glow */}
+          <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-gradient-to-br from-primary/30 to-transparent blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-gradient-to-br from-info/20 to-transparent blur-3xl" />
+          
           {/* Header with gradient */}
-          <div className="bg-gradient-to-l from-primary/10 via-transparent to-transparent px-6 py-5 border-b border-border/50">
+          <div className={`relative bg-gradient-to-l ${styles.gradient} px-6 py-6 border-b border-white/10`}>
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold bg-gradient-to-l from-primary to-foreground bg-clip-text text-transparent">
-                {title}
-              </h2>
+              <div className="flex items-center gap-4">
+                {icon && (
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${styles.iconBg} flex items-center justify-center shadow-lg`}>
+                    {icon}
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">
+                    {title}
+                  </h2>
+                  <div className="flex items-center gap-1 mt-1 text-muted-foreground text-sm">
+                    <Sparkles className="h-3 w-3" />
+                    <span>پڕ بکەرەوە</span>
+                  </div>
+                </div>
+              </div>
               <button
                 onClick={onClose}
-                className="w-9 h-9 rounded-xl bg-secondary/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-destructive/20 hover:text-destructive transition-all duration-200"
+                className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-destructive/20 hover:text-destructive hover:scale-110 active:scale-95 transition-all duration-200"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           </div>
           
           {/* Content */}
-          <div className="p-6">
+          <div className="relative p-6 md:p-7">
             {children}
           </div>
         </div>
