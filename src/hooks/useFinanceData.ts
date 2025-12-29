@@ -76,6 +76,7 @@ export function useFinanceData() {
           day: inc.day,
           cash: Number(inc.cash),
           card: Number(inc.card),
+          total: Number(inc.cash) + Number(inc.card),
           note: inc.note || '',
         }))
       );
@@ -96,6 +97,7 @@ export function useFinanceData() {
           packsPerBox: cig.packs_per_box,
           packPrice: Number(cig.pack_price),
           boxPrice: Number(cig.box_price),
+          sellPrice: Number(cig.pack_price), // Using pack_price as sell price for now
           boxes: cig.boxes,
           extraPacks: cig.extra_packs,
           alertLevel: cig.alert_level,
@@ -143,21 +145,26 @@ export function useFinanceData() {
         day: income.day,
         cash: income.cash,
         card: income.card,
-        note: income.note,
+        note: income.note || null,
       })
       .select()
       .single();
 
     if (!error && data) {
       setIncomeData((prev) =>
-        [...prev, { id: data.id, day: data.day, cash: Number(data.cash), card: Number(data.card), note: data.note || '' }].sort(
-          (a, b) => a.day - b.day
-        )
+        [...prev, { 
+          id: data.id, 
+          day: data.day, 
+          cash: Number(data.cash), 
+          card: Number(data.card), 
+          total: Number(data.cash) + Number(data.card),
+          note: data.note || '' 
+        }].sort((a, b) => a.day - b.day)
       );
     }
   }, [user, currentMonthKey]);
 
-  const updateIncome = useCallback(async (id: number | string, income: Omit<Income, 'id'>) => {
+  const updateIncome = useCallback(async (id: string | number, income: Omit<Income, 'id'>) => {
     if (!user) return;
 
     const { error } = await supabase
@@ -166,21 +173,21 @@ export function useFinanceData() {
         day: income.day,
         cash: income.cash,
         card: income.card,
-        note: income.note,
+        note: income.note || null,
       })
-      .eq('id', id);
+      .eq('id', String(id));
 
     if (!error) {
       setIncomeData((prev) =>
-        prev.map((item) => (item.id === id ? { ...income, id } : item)).sort((a, b) => a.day - b.day)
+        prev.map((item) => (item.id === id ? { ...income, id, total: income.cash + income.card } : item)).sort((a, b) => a.day - b.day)
       );
     }
   }, [user]);
 
-  const deleteIncome = useCallback(async (id: number | string) => {
+  const deleteIncome = useCallback(async (id: string | number) => {
     if (!user) return;
 
-    const { error } = await supabase.from('incomes').delete().eq('id', id);
+    const { error } = await supabase.from('incomes').delete().eq('id', String(id));
 
     if (!error) {
       setIncomeData((prev) => prev.filter((item) => item.id !== id));
@@ -208,7 +215,7 @@ export function useFinanceData() {
     }
   }, [user, currentMonthKey]);
 
-  const updateExpense = useCallback(async (id: number | string, expense: Omit<Expense, 'id'>) => {
+  const updateExpense = useCallback(async (id: string | number, expense: Omit<Expense, 'id'>) => {
     if (!user) return;
 
     const { error } = await supabase
@@ -218,17 +225,17 @@ export function useFinanceData() {
         amount: expense.amount,
         description: expense.description,
       })
-      .eq('id', id);
+      .eq('id', String(id));
 
     if (!error) {
       setExpenseData((prev) => prev.map((item) => (item.id === id ? { ...expense, id } : item)));
     }
   }, [user]);
 
-  const deleteExpense = useCallback(async (id: number | string) => {
+  const deleteExpense = useCallback(async (id: string | number) => {
     if (!user) return;
 
-    const { error } = await supabase.from('expenses').delete().eq('id', id);
+    const { error } = await supabase.from('expenses').delete().eq('id', String(id));
 
     if (!error) {
       setExpenseData((prev) => prev.filter((item) => item.id !== id));
@@ -264,6 +271,7 @@ export function useFinanceData() {
           packsPerBox: data.packs_per_box,
           packPrice: Number(data.pack_price),
           boxPrice: Number(data.box_price),
+          sellPrice: cigarette.sellPrice,
           boxes: data.boxes,
           extraPacks: data.extra_packs,
           alertLevel: data.alert_level,
@@ -272,7 +280,7 @@ export function useFinanceData() {
     }
   }, [user, currentMonthKey]);
 
-  const updateCigarette = useCallback(async (id: number | string, cigarette: Partial<Cigarette>) => {
+  const updateCigarette = useCallback(async (id: string | number, cigarette: Partial<Cigarette>) => {
     if (!user) return;
 
     const updateData: Record<string, unknown> = {};
@@ -284,24 +292,24 @@ export function useFinanceData() {
     if (cigarette.extraPacks !== undefined) updateData.extra_packs = cigarette.extraPacks;
     if (cigarette.alertLevel !== undefined) updateData.alert_level = cigarette.alertLevel;
 
-    const { error } = await supabase.from('cigarettes').update(updateData).eq('id', id);
+    const { error } = await supabase.from('cigarettes').update(updateData).eq('id', String(id));
 
     if (!error) {
       setCigaretteData((prev) => prev.map((item) => (item.id === id ? { ...item, ...cigarette } : item)));
     }
   }, [user]);
 
-  const deleteCigarette = useCallback(async (id: number | string) => {
+  const deleteCigarette = useCallback(async (id: string | number) => {
     if (!user) return;
 
-    const { error } = await supabase.from('cigarettes').delete().eq('id', id);
+    const { error } = await supabase.from('cigarettes').delete().eq('id', String(id));
 
     if (!error) {
       setCigaretteData((prev) => prev.filter((item) => item.id !== id));
     }
   }, [user]);
 
-  const addStock = useCallback(async (id: number | string, boxes: number) => {
+  const addStock = useCallback(async (id: string | number, boxes: number) => {
     if (!user) return;
 
     const cigarette = cigaretteData.find((c) => c.id === id);
@@ -309,17 +317,17 @@ export function useFinanceData() {
 
     const newBoxes = cigarette.boxes + boxes;
 
-    const { error } = await supabase.from('cigarettes').update({ boxes: newBoxes }).eq('id', id);
+    const { error } = await supabase.from('cigarettes').update({ boxes: newBoxes }).eq('id', String(id));
 
     if (!error) {
       setCigaretteData((prev) => prev.map((item) => (item.id === id ? { ...item, boxes: newBoxes } : item)));
     }
   }, [user, cigaretteData]);
 
-  const updateStock = useCallback(async (id: number | string, boxes: number, extraPacks: number) => {
+  const updateStock = useCallback(async (id: string | number, boxes: number, extraPacks: number) => {
     if (!user) return;
 
-    const { error } = await supabase.from('cigarettes').update({ boxes, extra_packs: extraPacks }).eq('id', id);
+    const { error } = await supabase.from('cigarettes').update({ boxes, extra_packs: extraPacks }).eq('id', String(id));
 
     if (!error) {
       setCigaretteData((prev) => prev.map((item) => (item.id === id ? { ...item, boxes, extraPacks } : item)));
@@ -327,7 +335,7 @@ export function useFinanceData() {
   }, [user]);
 
   // Sales operations
-  const addSale = useCallback(async (sale: Omit<Sale, 'id'>, cigaretteId: number | string) => {
+  const addSale = useCallback(async (sale: Omit<Sale, 'id'>, cigaretteId: string | number) => {
     if (!user) return;
 
     const { data, error } = await supabase
@@ -336,7 +344,7 @@ export function useFinanceData() {
         user_id: user.id,
         month_key: currentMonthKey,
         day: sale.day,
-        cigarette_id: cigaretteId,
+        cigarette_id: String(cigaretteId),
         cigarette_name: sale.cigaretteName,
         packs: sale.packs,
         pack_price: sale.packPrice,
@@ -383,7 +391,7 @@ export function useFinanceData() {
           newExtraPacks = packsFromBoxes - remainingPacks;
         }
 
-        await supabase.from('cigarettes').update({ boxes: newBoxes, extra_packs: newExtraPacks }).eq('id', cigaretteId);
+        await supabase.from('cigarettes').update({ boxes: newBoxes, extra_packs: newExtraPacks }).eq('id', String(cigaretteId));
 
         setCigaretteData((prev) =>
           prev.map((cig) => (cig.id === cigaretteId ? { ...cig, boxes: newBoxes, extraPacks: newExtraPacks } : cig))
@@ -392,7 +400,7 @@ export function useFinanceData() {
     }
   }, [user, currentMonthKey, cigaretteData]);
 
-  const deleteSale = useCallback(async (id: number | string) => {
+  const deleteSale = useCallback(async (id: string | number) => {
     if (!user) return;
 
     const sale = salesData.find((s) => s.id === id);
@@ -400,14 +408,14 @@ export function useFinanceData() {
       const cigarette = cigaretteData.find((c) => c.id === sale.cigaretteId);
       if (cigarette) {
         const newExtraPacks = (cigarette.extraPacks || 0) + sale.packs;
-        await supabase.from('cigarettes').update({ extra_packs: newExtraPacks }).eq('id', sale.cigaretteId);
+        await supabase.from('cigarettes').update({ extra_packs: newExtraPacks }).eq('id', String(sale.cigaretteId));
         setCigaretteData((prev) =>
           prev.map((cig) => (cig.id === sale.cigaretteId ? { ...cig, extraPacks: newExtraPacks } : cig))
         );
       }
     }
 
-    const { error } = await supabase.from('sales').delete().eq('id', id);
+    const { error } = await supabase.from('sales').delete().eq('id', String(id));
 
     if (!error) {
       setSalesData((prev) => prev.filter((item) => item.id !== id));

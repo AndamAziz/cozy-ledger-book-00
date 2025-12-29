@@ -19,10 +19,10 @@ interface InventoryTabProps {
     totalStockValue: number;
   };
   onAddCigarette: (cigarette: Omit<Cigarette, 'id' | 'boxes' | 'extraPacks'>) => void;
-  onUpdateCigarette: (id: number, cigarette: Partial<Cigarette>) => void;
-  onDeleteCigarette: (id: number) => void;
-  onAddStock: (id: number, boxes: number) => void;
-  onUpdateStock: (id: number, boxes: number, extraPacks: number) => void;
+  onUpdateCigarette: (id: string | number, cigarette: Partial<Cigarette>) => void;
+  onDeleteCigarette: (id: string | number) => void;
+  onAddStock: (id: string | number, boxes: number) => void;
+  onUpdateStock: (id: string | number, boxes: number, extraPacks: number) => void;
 }
 
 export function InventoryTab({
@@ -52,13 +52,13 @@ export function InventoryTab({
     setEditingCigarette(null);
   };
 
-  const handleAddStock = (cigaretteId: number, boxes: number) => {
+  const handleAddStock = (cigaretteId: string | number, boxes: number) => {
     onAddStock(cigaretteId, boxes);
     const cig = cigaretteData.find(c => c.id === cigaretteId);
     toast({ title: 'سەرکەوتوو', description: `${boxes} بۆکس زیادکرا بۆ ${cig?.name}` });
   };
 
-  const handleEditStock = (id: number, boxes: number, extraPacks: number) => {
+  const handleEditStock = (id: string | number, boxes: number, extraPacks: number) => {
     onUpdateStock(id, boxes, extraPacks);
     toast({ title: 'سەرکەوتوو', description: 'کۆگا نوێکرایەوە' });
   };
@@ -119,7 +119,6 @@ export function InventoryTab({
                 className="group relative overflow-hidden rounded-2xl border border-info/20 bg-gradient-to-br from-info/10 via-transparent to-transparent p-5 hover:border-info/40 hover:shadow-xl hover:shadow-info/10 transition-all duration-300 animate-fade-in"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                {/* Background glow */}
                 <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-info/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 
                 <div className="relative">

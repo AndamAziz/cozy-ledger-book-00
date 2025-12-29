@@ -10,7 +10,7 @@ import { formatCurrency } from '@/lib/format';
 interface SellModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (sale: Omit<Sale, 'id'>, cigaretteId: number) => void;
+  onSubmit: (sale: Omit<Sale, 'id'>, cigaretteId: string | number) => void;
   cigarettes: Cigarette[];
   maxDays: number;
   defaultDay: number;
@@ -20,7 +20,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
   const [day, setDay] = useState(defaultDay);
   const [selectedId, setSelectedId] = useState<string>('');
   const [packs, setPacks] = useState(1);
-  const [sellPrice, setSellPrice] = useState(0);
+  const [packPrice, setPackPrice] = useState(0);
 
   const selectedCigarette = useMemo(() => {
     return cigarettes.find(c => c.id.toString() === selectedId);
@@ -28,7 +28,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
 
   useEffect(() => {
     if (selectedCigarette) {
-      setSellPrice(selectedCigarette.sellPrice);
+      setPackPrice(selectedCigarette.sellPrice);
     }
   }, [selectedCigarette]);
 
@@ -36,7 +36,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
     setDay(defaultDay);
   }, [defaultDay]);
 
-  const total = useMemo(() => packs * sellPrice, [packs, sellPrice]);
+  const total = useMemo(() => packs * packPrice, [packs, packPrice]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,16 +52,14 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
         cigaretteId: selectedCigarette.id,
         cigaretteName: selectedCigarette.name,
         packs,
-        sellPrice,
+        packPrice,
         totalSale: total,
-        costPerPack: selectedCigarette.packPrice,
-        totalCost: packs * selectedCigarette.packPrice,
         profit: total - (packs * selectedCigarette.packPrice),
       }, selectedCigarette.id);
 
       setSelectedId('');
       setPacks(1);
-      setSellPrice(0);
+      setPackPrice(0);
       onClose();
     }
   };
@@ -119,8 +117,8 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
               type="number"
               min={0}
               step={0.01}
-              value={sellPrice}
-              onChange={(e) => setSellPrice(parseFloat(e.target.value) || 0)}
+              value={packPrice}
+              onChange={(e) => setPackPrice(parseFloat(e.target.value) || 0)}
               className="bg-secondary/50 border-border"
               required
             />

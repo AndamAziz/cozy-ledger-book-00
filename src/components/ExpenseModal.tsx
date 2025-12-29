@@ -5,35 +5,37 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from './Modal';
 import { Expense } from '@/types/finance';
-import { Building2, PoundSterling, FileText } from 'lucide-react';
+import { Calendar, PoundSterling, FileText } from 'lucide-react';
 
 interface ExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (expense: Omit<Expense, 'id'>) => void;
   editingExpense?: Expense | null;
+  maxDays: number;
+  defaultDay: number;
 }
 
-export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense }: ExpenseModalProps) {
-  const [name, setName] = useState('');
+export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDays, defaultDay }: ExpenseModalProps) {
+  const [day, setDay] = useState(defaultDay);
   const [amount, setAmount] = useState('');
-  const [purpose, setPurpose] = useState('');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (editingExpense) {
-      setName(editingExpense.name);
+      setDay(editingExpense.day);
       setAmount(editingExpense.amount.toString());
-      setPurpose(editingExpense.purpose);
+      setDescription(editingExpense.description);
     } else {
-      setName('');
+      setDay(defaultDay);
       setAmount('');
-      setPurpose('');
+      setDescription('');
     }
-  }, [editingExpense]);
+  }, [editingExpense, defaultDay]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ name, amount: parseFloat(amount) || 0, purpose });
+    onSubmit({ day, amount: parseFloat(amount) || 0, description });
     onClose();
   };
 
@@ -46,14 +48,15 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense }: Expe
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
           <Label className="text-muted-foreground flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-primary" />
-            ناوی کۆمپانیا/کەس
+            <Calendar className="h-4 w-4 text-primary" />
+            ڕۆژ
           </Label>
           <Input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="ناو بنووسە"
+            type="number"
+            min={1}
+            max={maxDays}
+            value={day}
+            onChange={(e) => setDay(parseInt(e.target.value) || 1)}
             className="bg-secondary/30 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all"
             required
           />
@@ -78,12 +81,12 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense }: Expe
         <div className="space-y-2">
           <Label className="text-muted-foreground flex items-center gap-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
-            مەبەست
+            وەسف
           </Label>
           <Textarea
-            value={purpose}
-            onChange={(e) => setPurpose(e.target.value)}
-            placeholder="مەبەست بنووسە"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="وەسفی خەرجی بنووسە"
             className="bg-secondary/30 border-border/50 focus:border-primary/50 focus:ring-primary/20 min-h-[100px] transition-all"
             required
           />
