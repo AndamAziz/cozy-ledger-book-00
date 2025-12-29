@@ -231,40 +231,47 @@ export function FinanceTab({
             {expenseData.map((expense, index) => (
               <div 
                 key={expense.id} 
-                className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-destructive/5 to-transparent border border-destructive/10 p-4 flex justify-between items-center gap-4 hover:border-destructive/30 hover:shadow-lg hover:shadow-destructive/5 transition-all duration-300"
+                className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-destructive/5 to-transparent border border-destructive/10 p-3 md:p-4 hover:border-destructive/30 hover:shadow-lg hover:shadow-destructive/5 transition-all duration-300"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
-                    <Minus className="h-5 w-5 text-destructive" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-foreground">{expense.name}</div>
-                    <div className="text-sm text-muted-foreground truncate max-w-[200px]">
-                      {expense.purpose}
+                <div className="flex flex-col gap-3">
+                  {/* Top Row: Name & Amount */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+                        <Minus className="h-4 w-4 md:h-5 md:w-5 text-destructive" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-foreground text-sm md:text-base">{expense.name}</div>
+                        <div className="text-xs md:text-sm text-muted-foreground truncate max-w-[180px] md:max-w-[250px]">
+                          {expense.purpose}
+                        </div>
+                      </div>
                     </div>
+                    <div className="text-destructive font-bold text-base md:text-lg">{formatCurrency(expense.amount)}</div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-destructive font-bold text-lg">{formatCurrency(expense.amount)}</div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={() => { setEditingExpense(expense); setExpenseModalOpen(true); }}
-                      className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (confirm('دڵنیایت؟')) {
-                          onDeleteExpense(expense.id);
-                          toast({ title: 'سەرکەوتوو', description: 'خەرجی سڕایەوە' });
-                        }
-                      }}
-                      className="p-2 rounded-lg bg-secondary/50 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  
+                  {/* Bottom Row: Actions - Always Visible */}
+                  <div className="flex items-center justify-end border-t border-border/30 pt-3">
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => { setEditingExpense(expense); setExpenseModalOpen(true); }}
+                        className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (confirm('دڵنیایت؟')) {
+                            onDeleteExpense(expense.id);
+                            toast({ title: 'سەرکەوتوو', description: 'خەرجی سڕایەوە' });
+                          }
+                        }}
+                        className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all duration-200 hover:scale-105"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

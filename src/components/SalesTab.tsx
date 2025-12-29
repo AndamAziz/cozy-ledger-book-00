@@ -17,6 +17,7 @@ interface SalesTabProps {
   };
   maxDays: number;
   defaultDay: number;
+  currentMonthKey: string;
   onAddSale: (sale: Omit<Sale, 'id'>, cigaretteId: number) => void;
   onDeleteSale: (id: number) => void;
 }
@@ -27,6 +28,7 @@ export function SalesTab({
   summary,
   maxDays,
   defaultDay,
+  currentMonthKey,
   onAddSale,
   onDeleteSale,
 }: SalesTabProps) {
@@ -74,50 +76,65 @@ export function SalesTab({
           </div>
         ) : (
           <div className="space-y-3">
-            {salesData.map((sale, index) => (
-              <div 
-                key={sale.id} 
-                className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-primary/5 to-transparent border border-primary/10 p-4 flex justify-between items-center gap-4 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold">
-                    {sale.day}
-                  </div>
-                  <div>
-                    <div className="font-bold text-foreground flex items-center gap-2">
-                      <span>{sale.cigaretteName}</span>
-                      <span className="text-xs bg-secondary/50 px-2 py-0.5 rounded-full text-muted-foreground">
-                        ڕۆژی {sale.day}
-                      </span>
+            {salesData.map((sale, index) => {
+              const [year, month] = currentMonthKey.split('-');
+              const dateStr = `${sale.day.toString().padStart(2, '0')}-${month}-${year}`;
+              
+              return (
+                <div 
+                  key={sale.id} 
+                  className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-primary/5 to-transparent border border-primary/10 p-3 md:p-4 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="flex flex-col gap-3">
+                    {/* Top Row: Date & Product */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-sm md:text-base font-mono">
+                          {sale.day}
+                        </div>
+                        <div>
+                          <div className="font-bold text-foreground text-sm md:text-base">{sale.cigaretteName}</div>
+                          <div className="text-xs md:text-sm text-muted-foreground font-mono tracking-wide">{dateStr}</div>
+                        </div>
+                      </div>
+                      <div className="text-success font-bold text-base md:text-lg">{formatCurrency(sale.totalSale)}</div>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {sale.packs} پاکەت × {formatCurrency(sale.sellPrice)}
+                    
+                    {/* Bottom Row: Details & Actions */}
+                    <div className="flex items-center justify-between border-t border-border/30 pt-3">
+                      <div className="flex gap-4 text-xs md:text-sm">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">📦</span>
+                          <span className="text-foreground font-medium">{sale.packs} پاکەت</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">💵</span>
+                          <span className="text-foreground font-medium">{formatCurrency(sale.sellPrice)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-info">قازانج:</span>
+                          <span className="text-info font-semibold">{formatCurrency(sale.profit)}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Delete Button - Always Visible */}
+                      <button 
+                        onClick={() => {
+                          if (confirm('دڵنیایت؟ پاکەتەکان دەگەڕێنەوە بۆ کۆگا.')) {
+                            onDeleteSale(sale.id);
+                            toast({ title: 'سەرکەوتوو', description: 'فرۆشتن سڕایەوە و پاکەتەکان گەڕانەوە' });
+                          }
+                        }}
+                        className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all duration-200 hover:scale-105"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-left">
-                    <div className="text-success font-bold text-lg">{formatCurrency(sale.totalSale)}</div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <span className="text-info">قازانج:</span>
-                      <span className="text-info font-semibold">{formatCurrency(sale.profit)}</span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      if (confirm('دڵنیایت؟ پاکەتەکان دەگەڕێنەوە بۆ کۆگا.')) {
-                        onDeleteSale(sale.id);
-                        toast({ title: 'سەرکەوتوو', description: 'فرۆشتن سڕایەوە و پاکەتەکان گەڕانەوە' });
-                      }
-                    }}
-                    className="p-2.5 rounded-xl bg-secondary/50 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-all opacity-0 group-hover:opacity-100"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
