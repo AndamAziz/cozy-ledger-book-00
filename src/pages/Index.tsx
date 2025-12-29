@@ -41,7 +41,7 @@ const Dashboard = () => {
 
           {/* Tab Navigation */}
           <div className="relative mb-8 no-print">
-            <div className="grid grid-cols-4 gap-2 md:gap-4 p-2 rounded-2xl bg-secondary/20 backdrop-blur-sm border border-border/30">
+            <div className="grid grid-cols-4 gap-2 md:gap-3 p-2.5 md:p-3 rounded-3xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20">
               <TabButton
                 active={activeTab === 'finance'}
                 onClick={() => setActiveTab('finance')}
