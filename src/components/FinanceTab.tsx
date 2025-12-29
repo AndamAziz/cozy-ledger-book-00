@@ -79,9 +79,9 @@ export function FinanceTab({
   };
 
   return (
-    <div className="fade-in space-y-6">
+    <div className="space-y-6">
       {/* Summary Grid */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in">
         <SummaryCard title="کاش" value={formatCurrency(summary.totalCash)} variant="income" icon="💵" />
         <SummaryCard title="کارت" value={formatCurrency(summary.totalCard)} variant="income" icon="💳" />
         <SummaryCard title="کۆی فرۆشتن" value={formatCurrency(summary.totalIncome)} variant="income" icon="📈" />
@@ -90,78 +90,95 @@ export function FinanceTab({
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
         <Button 
           onClick={() => { setEditingIncome(null); setIncomeModalOpen(true); }} 
-          className="btn-gradient-primary py-4 text-sm md:text-base"
+          className="btn-gradient-primary py-5 text-sm md:text-base rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300"
         >
-          <Plus className="h-4 w-4 ml-2" />
+          <Plus className="h-5 w-5 ml-2" />
           داهات
         </Button>
         <Button 
           onClick={() => { setEditingExpense(null); setExpenseModalOpen(true); }} 
-          className="btn-gradient-danger py-4 text-sm md:text-base"
+          className="btn-gradient-danger py-5 text-sm md:text-base rounded-xl shadow-lg shadow-destructive/20 hover:shadow-destructive/40 hover:scale-[1.02] transition-all duration-300"
         >
-          <Minus className="h-4 w-4 ml-2" />
+          <Minus className="h-5 w-5 ml-2" />
           خەرجی
         </Button>
         <Button 
           onClick={() => window.print()} 
           variant="secondary" 
-          className="py-4 text-sm md:text-base no-print"
+          className="py-5 text-sm md:text-base no-print rounded-xl hover:bg-secondary hover:scale-[1.02] transition-all duration-300"
         >
-          <Printer className="h-4 w-4 ml-2" />
+          <Printer className="h-5 w-5 ml-2" />
           چاپ
         </Button>
         <Button 
           onClick={handleClearAll} 
           variant="secondary" 
-          className="py-4 text-sm md:text-base no-print"
+          className="py-5 text-sm md:text-base no-print rounded-xl hover:bg-destructive/10 hover:text-destructive hover:scale-[1.02] transition-all duration-300"
         >
-          <Trash2 className="h-4 w-4 ml-2" />
+          <Trash2 className="h-5 w-5 ml-2" />
           سڕینەوە
         </Button>
       </div>
 
       {/* Income List */}
-      <div className="glass-card p-4 md:p-5">
-        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-          <span>📅</span> داهاتی ڕۆژانە
+      <div className="glass-card p-4 md:p-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
+        <h3 className="text-lg font-bold text-foreground mb-5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-success/20 to-success/5 flex items-center justify-center">
+            <span className="text-xl">📅</span>
+          </div>
+          داهاتی ڕۆژانە
         </h3>
         {incomeData.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <div className="text-4xl mb-3">📅</div>
-            <p>هیچ داهاتێک نییە</p>
+          <div className="text-center py-12 text-muted-foreground">
+            <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-4">
+              <span className="text-4xl opacity-50">📅</span>
+            </div>
+            <p className="text-sm">هیچ داهاتێک نییە</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {incomeData.map((income) => (
-              <div key={income.id} className="report-item">
-                <div>
-                  <div className="font-bold text-foreground">ڕۆژی {income.day}</div>
-                  <div className="text-sm text-muted-foreground">
-                    کاش: {formatCurrency(income.cash)} | کارت: {formatCurrency(income.card)}
+            {incomeData.map((income, index) => (
+              <div 
+                key={income.id} 
+                className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-success/5 to-transparent border border-success/10 p-4 flex justify-between items-center gap-4 hover:border-success/30 hover:shadow-lg hover:shadow-success/5 transition-all duration-300"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center text-success font-bold">
+                    {income.day}
+                  </div>
+                  <div>
+                    <div className="font-bold text-foreground">ڕۆژی {income.day}</div>
+                    <div className="text-sm text-muted-foreground flex gap-3">
+                      <span>کاش: {formatCurrency(income.cash)}</span>
+                      <span>کارت: {formatCurrency(income.card)}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-success font-bold">{formatCurrency(income.total)}</div>
-                  <button 
-                    onClick={() => { setEditingIncome(income); setIncomeModalOpen(true); }}
-                    className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button 
-                    onClick={() => {
-                      if (confirm('دڵنیایت؟')) {
-                        onDeleteIncome(income.id);
-                        toast({ title: 'سەرکەوتوو', description: 'داهات سڕایەوە' });
-                      }
-                    }}
-                    className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                <div className="flex items-center gap-3">
+                  <div className="text-success font-bold text-lg">{formatCurrency(income.total)}</div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => { setEditingIncome(income); setIncomeModalOpen(true); }}
+                      className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (confirm('دڵنیایت؟')) {
+                          onDeleteIncome(income.id);
+                          toast({ title: 'سەرکەوتوو', description: 'داهات سڕایەوە' });
+                        }
+                      }}
+                      className="p-2 rounded-lg bg-secondary/50 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -170,44 +187,60 @@ export function FinanceTab({
       </div>
 
       {/* Expense List */}
-      <div className="glass-card p-4 md:p-5">
-        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-          <span>💸</span> خەرجییەکان
+      <div className="glass-card p-4 md:p-6 animate-fade-in" style={{ animationDelay: '300ms' }}>
+        <h3 className="text-lg font-bold text-foreground mb-5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/5 flex items-center justify-center">
+            <span className="text-xl">💸</span>
+          </div>
+          خەرجییەکان
         </h3>
         {expenseData.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <div className="text-4xl mb-3">💸</div>
-            <p>هیچ خەرجییەک نییە</p>
+          <div className="text-center py-12 text-muted-foreground">
+            <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-4">
+              <span className="text-4xl opacity-50">💸</span>
+            </div>
+            <p className="text-sm">هیچ خەرجییەک نییە</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {expenseData.map((expense) => (
-              <div key={expense.id} className="report-item">
-                <div>
-                  <div className="font-bold text-foreground">{expense.name}</div>
-                  <div className="text-sm text-muted-foreground truncate max-w-[200px]">
-                    {expense.purpose}
+            {expenseData.map((expense, index) => (
+              <div 
+                key={expense.id} 
+                className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-destructive/5 to-transparent border border-destructive/10 p-4 flex justify-between items-center gap-4 hover:border-destructive/30 hover:shadow-lg hover:shadow-destructive/5 transition-all duration-300"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+                    <Minus className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-foreground">{expense.name}</div>
+                    <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                      {expense.purpose}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-destructive font-bold">{formatCurrency(expense.amount)}</div>
-                  <button 
-                    onClick={() => { setEditingExpense(expense); setExpenseModalOpen(true); }}
-                    className="p-2 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button 
-                    onClick={() => {
-                      if (confirm('دڵنیایت؟')) {
-                        onDeleteExpense(expense.id);
-                        toast({ title: 'سەرکەوتوو', description: 'خەرجی سڕایەوە' });
-                      }
-                    }}
-                    className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                <div className="flex items-center gap-3">
+                  <div className="text-destructive font-bold text-lg">{formatCurrency(expense.amount)}</div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => { setEditingExpense(expense); setExpenseModalOpen(true); }}
+                      className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (confirm('دڵنیایت؟')) {
+                          onDeleteExpense(expense.id);
+                          toast({ title: 'سەرکەوتوو', description: 'خەرجی سڕایەوە' });
+                        }
+                      }}
+                      className="p-2 rounded-lg bg-secondary/50 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

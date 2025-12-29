@@ -40,31 +40,33 @@ const Dashboard = () => {
           <AlertBox lowStockItems={lowStockItems} />
 
           {/* Tab Navigation */}
-          <div className="grid grid-cols-4 gap-2 md:gap-3 mb-6 no-print">
-            <TabButton
-              active={activeTab === 'finance'}
-              onClick={() => setActiveTab('finance')}
-              icon="💰"
-              label="داراییی"
-            />
-            <TabButton
-              active={activeTab === 'inventory'}
-              onClick={() => setActiveTab('inventory')}
-              icon="📦"
-              label="کۆگا"
-            />
-            <TabButton
-              active={activeTab === 'sales'}
-              onClick={() => setActiveTab('sales')}
-              icon="🛒"
-              label="فرۆشتن"
-            />
-            <TabButton
-              active={activeTab === 'reports'}
-              onClick={() => setActiveTab('reports')}
-              icon="📊"
-              label="ڕاپۆرت"
-            />
+          <div className="relative mb-8 no-print">
+            <div className="grid grid-cols-4 gap-2 md:gap-4 p-2 rounded-2xl bg-secondary/20 backdrop-blur-sm border border-border/30">
+              <TabButton
+                active={activeTab === 'finance'}
+                onClick={() => setActiveTab('finance')}
+                icon="💰"
+                label="داراییی"
+              />
+              <TabButton
+                active={activeTab === 'inventory'}
+                onClick={() => setActiveTab('inventory')}
+                icon="📦"
+                label="کۆگا"
+              />
+              <TabButton
+                active={activeTab === 'sales'}
+                onClick={() => setActiveTab('sales')}
+                icon="🛒"
+                label="فرۆشتن"
+              />
+              <TabButton
+                active={activeTab === 'reports'}
+                onClick={() => setActiveTab('reports')}
+                icon="📊"
+                label="ڕاپۆرت"
+              />
+            </div>
           </div>
 
           {/* Tab Content */}
