@@ -18,8 +18,8 @@ interface SalesTabProps {
   maxDays: number;
   defaultDay: number;
   currentMonthKey: string;
-  onAddSale: (sale: Omit<Sale, 'id'>, cigaretteId: number) => void;
-  onDeleteSale: (id: number) => void;
+  onAddSale: (sale: Omit<Sale, 'id'>, cigaretteId: string | number) => void;
+  onDeleteSale: (id: string | number) => void;
 }
 
 export function SalesTab({
@@ -35,7 +35,7 @@ export function SalesTab({
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleSaleSubmit = (sale: Omit<Sale, 'id'>, cigaretteId: number) => {
+  const handleSaleSubmit = (sale: Omit<Sale, 'id'>, cigaretteId: string | number) => {
     onAddSale(sale, cigaretteId);
     toast({ title: 'سەرکەوتوو', description: 'فرۆشتن تۆمارکرا' });
   };
@@ -87,7 +87,6 @@ export function SalesTab({
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex flex-col gap-3">
-                    {/* Top Row: Date & Product */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-sm md:text-base font-mono">
@@ -101,7 +100,6 @@ export function SalesTab({
                       <div className="text-success font-bold text-base md:text-lg">{formatCurrency(sale.totalSale)}</div>
                     </div>
                     
-                    {/* Bottom Row: Details & Actions */}
                     <div className="flex items-center justify-between border-t border-border/30 pt-3">
                       <div className="flex gap-4 text-xs md:text-sm">
                         <div className="flex items-center gap-1.5">
@@ -110,7 +108,7 @@ export function SalesTab({
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className="text-muted-foreground">💵</span>
-                          <span className="text-foreground font-medium">{formatCurrency(sale.sellPrice)}</span>
+                          <span className="text-foreground font-medium">{formatCurrency(sale.packPrice)}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className="text-info">قازانج:</span>
@@ -118,7 +116,6 @@ export function SalesTab({
                         </div>
                       </div>
                       
-                      {/* Delete Button - Always Visible */}
                       <button 
                         onClick={() => {
                           if (confirm('دڵنیایت؟ پاکەتەکان دەگەڕێنەوە بۆ کۆگا.')) {

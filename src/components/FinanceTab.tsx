@@ -5,7 +5,7 @@ import { IncomeModal } from './IncomeModal';
 import { ExpenseModal } from './ExpenseModal';
 import { Income, Expense } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
-import { Plus, Minus, Printer, Trash2, Pencil } from 'lucide-react';
+import { Plus, Minus, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface FinanceTabProps {
@@ -22,11 +22,11 @@ interface FinanceTabProps {
   defaultDay: number;
   currentMonthKey: string;
   onAddIncome: (income: Omit<Income, 'id'>) => void;
-  onUpdateIncome: (id: number, income: Omit<Income, 'id'>) => void;
-  onDeleteIncome: (id: number) => void;
+  onUpdateIncome: (id: string | number, income: Omit<Income, 'id'>) => void;
+  onDeleteIncome: (id: string | number) => void;
   onAddExpense: (expense: Omit<Expense, 'id'>) => void;
-  onUpdateExpense: (id: number, expense: Omit<Expense, 'id'>) => void;
-  onDeleteExpense: (id: number) => void;
+  onUpdateExpense: (id: string | number, expense: Omit<Expense, 'id'>) => void;
+  onDeleteExpense: (id: string | number) => void;
   onClearAll: () => void;
 }
 
@@ -71,13 +71,6 @@ export function FinanceTab({
       toast({ title: 'سەرکەوتوو', description: 'خەرجی زیادکرا' });
     }
     setEditingExpense(null);
-  };
-
-  const handleClearAll = () => {
-    if (confirm('دڵنیایت لە سڕینەوەی هەموو داتاکان؟')) {
-      onClearAll();
-      toast({ title: 'سەرکەوتوو', description: 'هەموو داتاکان سڕانەوە' });
-    }
   };
 
   return (
@@ -127,7 +120,6 @@ export function FinanceTab({
         ) : (
           <div className="space-y-3">
             {incomeData.map((income, index) => {
-              // Parse month/year from currentMonthKey (format: YYYY-MM)
               const [year, month] = currentMonthKey.split('-');
               const dateStr = `${income.day.toString().padStart(2, '0')}-${month}-${year}`;
               
@@ -137,9 +129,7 @@ export function FinanceTab({
                   className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-success/5 to-transparent border border-success/10 p-3 md:p-4 hover:border-success/30 hover:shadow-lg hover:shadow-success/5 transition-all duration-300"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  {/* Mobile Layout */}
                   <div className="flex flex-col gap-3">
-                    {/* Top Row: Date & Total */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-success/10 flex items-center justify-center text-success font-bold text-sm md:text-base font-mono">
@@ -153,7 +143,6 @@ export function FinanceTab({
                       <div className="text-success font-bold text-base md:text-lg">{formatCurrency(income.total)}</div>
                     </div>
                     
-                    {/* Bottom Row: Cash/Card & Actions */}
                     <div className="flex items-center justify-between border-t border-border/30 pt-3">
                       <div className="flex gap-4 text-xs md:text-sm">
                         <div className="flex items-center gap-1.5">
@@ -166,7 +155,6 @@ export function FinanceTab({
                         </div>
                       </div>
                       
-                      {/* Action Buttons - Always Visible */}
                       <div className="flex gap-2">
                         <button 
                           onClick={() => { setEditingIncome(income); setIncomeModalOpen(true); }}
@@ -212,54 +200,57 @@ export function FinanceTab({
           </div>
         ) : (
           <div className="space-y-3">
-            {expenseData.map((expense, index) => (
-              <div 
-                key={expense.id} 
-                className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-destructive/5 to-transparent border border-destructive/10 p-3 md:p-4 hover:border-destructive/30 hover:shadow-lg hover:shadow-destructive/5 transition-all duration-300"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="flex flex-col gap-3">
-                  {/* Top Row: Name & Amount */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
-                        <Minus className="h-4 w-4 md:h-5 md:w-5 text-destructive" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-foreground text-sm md:text-base">{expense.name}</div>
-                        <div className="text-xs md:text-sm text-muted-foreground truncate max-w-[180px] md:max-w-[250px]">
-                          {expense.purpose}
+            {expenseData.map((expense, index) => {
+              const [year, month] = currentMonthKey.split('-');
+              const dateStr = `${expense.day.toString().padStart(2, '0')}-${month}-${year}`;
+              
+              return (
+                <div 
+                  key={expense.id} 
+                  className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-destructive/5 to-transparent border border-destructive/10 p-3 md:p-4 hover:border-destructive/30 hover:shadow-lg hover:shadow-destructive/5 transition-all duration-300"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive font-bold text-sm md:text-base font-mono">
+                          {expense.day}
+                        </div>
+                        <div>
+                          <div className="font-bold text-foreground text-sm md:text-base font-mono tracking-wide">{dateStr}</div>
+                          <div className="text-xs md:text-sm text-muted-foreground truncate max-w-[180px] md:max-w-[250px]">
+                            {expense.description}
+                          </div>
                         </div>
                       </div>
+                      <div className="text-destructive font-bold text-base md:text-lg">{formatCurrency(expense.amount)}</div>
                     </div>
-                    <div className="text-destructive font-bold text-base md:text-lg">{formatCurrency(expense.amount)}</div>
-                  </div>
-                  
-                  {/* Bottom Row: Actions - Always Visible */}
-                  <div className="flex items-center justify-end border-t border-border/30 pt-3">
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => { setEditingExpense(expense); setExpenseModalOpen(true); }}
-                        className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (confirm('دڵنیایت؟')) {
-                            onDeleteExpense(expense.id);
-                            toast({ title: 'سەرکەوتوو', description: 'خەرجی سڕایەوە' });
-                          }
-                        }}
-                        className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all duration-200 hover:scale-105"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                    
+                    <div className="flex items-center justify-end border-t border-border/30 pt-3">
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => { setEditingExpense(expense); setExpenseModalOpen(true); }}
+                          className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (confirm('دڵنیایت؟')) {
+                              onDeleteExpense(expense.id);
+                              toast({ title: 'سەرکەوتوو', description: 'خەرجی سڕایەوە' });
+                            }
+                          }}
+                          className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all duration-200 hover:scale-105"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -278,6 +269,8 @@ export function FinanceTab({
         onClose={() => { setExpenseModalOpen(false); setEditingExpense(null); }}
         onSubmit={handleExpenseSubmit}
         editingExpense={editingExpense}
+        maxDays={maxDays}
+        defaultDay={defaultDay}
       />
     </div>
   );

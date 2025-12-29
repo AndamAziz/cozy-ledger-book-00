@@ -8,7 +8,7 @@ import { Cigarette } from '@/types/finance';
 interface EditStockModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (id: number, boxes: number, extraPacks: number) => void;
+  onSubmit: (id: string | number, boxes: number, extraPacks: number) => void;
   cigarette: Cigarette | null;
 }
 
