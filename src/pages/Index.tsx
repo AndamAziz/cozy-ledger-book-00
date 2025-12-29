@@ -77,6 +77,7 @@ const Dashboard = () => {
               summary={summary}
               maxDays={financeData.getMaxDays()}
               defaultDay={financeData.getDefaultDay()}
+              currentMonthKey={financeData.currentMonthKey}
               onAddIncome={financeData.addIncome}
               onUpdateIncome={financeData.updateIncome}
               onDeleteIncome={financeData.deleteIncome}
