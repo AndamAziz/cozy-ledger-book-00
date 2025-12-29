@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Income, Expense, Cigarette, Sale, MONTH_OPTIONS } from '@/types/finance';
-
-function storageKey(base: string, monthKey: string) {
-  return `${base}_${monthKey}`;
-}
+import { useAuth } from './useAuth';
 
 function parseMonthKey(monthKey: string) {
   const parts = monthKey.split('-');
@@ -22,6 +20,7 @@ function isCurrentMonth(monthKey: string) {
 }
 
 export function useFinanceData() {
+  const { user } = useAuth();
   const [currentMonthKey, setCurrentMonthKey] = useState(() => {
     return localStorage.getItem('selectedMonthKey') || '2025-12';
   });
@@ -30,36 +29,101 @@ export function useFinanceData() {
   const [expenseData, setExpenseData] = useState<Expense[]>([]);
   const [cigaretteData, setCigaretteData] = useState<Cigarette[]>([]);
   const [salesData, setSalesData] = useState<Sale[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load data for current month
-  const loadMonthData = useCallback(() => {
-    const income = JSON.parse(localStorage.getItem(storageKey('incomeData', currentMonthKey)) || '[]');
-    const expense = JSON.parse(localStorage.getItem(storageKey('expenseData', currentMonthKey)) || '[]');
-    const cigarette = JSON.parse(localStorage.getItem(storageKey('cigaretteData', currentMonthKey)) || '[]');
-    const sales = JSON.parse(localStorage.getItem(storageKey('salesData', currentMonthKey)) || '[]');
-    
-    setIncomeData(income);
-    setExpenseData(expense);
-    setCigaretteData(cigarette);
-    setSalesData(sales);
-  }, [currentMonthKey]);
+  // Load data from database
+  const loadMonthData = useCallback(async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
-  // Save all data
-  const saveAllData = useCallback(() => {
-    localStorage.setItem(storageKey('incomeData', currentMonthKey), JSON.stringify(incomeData));
-    localStorage.setItem(storageKey('expenseData', currentMonthKey), JSON.stringify(expenseData));
-    localStorage.setItem(storageKey('cigaretteData', currentMonthKey), JSON.stringify(cigaretteData));
-    localStorage.setItem(storageKey('salesData', currentMonthKey), JSON.stringify(salesData));
-    localStorage.setItem('selectedMonthKey', currentMonthKey);
-  }, [currentMonthKey, incomeData, expenseData, cigaretteData, salesData]);
+    setIsLoading(true);
+
+    try {
+      // Load incomes
+      const { data: incomes } = await supabase
+        .from('incomes')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('month_key', currentMonthKey)
+        .order('day', { ascending: true });
+
+      // Load expenses
+      const { data: expenses } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('month_key', currentMonthKey);
+
+      // Load cigarettes
+      const { data: cigarettes } = await supabase
+        .from('cigarettes')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('month_key', currentMonthKey);
+
+      // Load sales
+      const { data: sales } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('month_key', currentMonthKey);
+
+      setIncomeData(
+        (incomes || []).map((inc) => ({
+          id: inc.id,
+          day: inc.day,
+          cash: Number(inc.cash),
+          card: Number(inc.card),
+          note: inc.note || '',
+        }))
+      );
+
+      setExpenseData(
+        (expenses || []).map((exp) => ({
+          id: exp.id,
+          day: exp.day,
+          amount: Number(exp.amount),
+          description: exp.description,
+        }))
+      );
+
+      setCigaretteData(
+        (cigarettes || []).map((cig) => ({
+          id: cig.id,
+          name: cig.name,
+          packsPerBox: cig.packs_per_box,
+          packPrice: Number(cig.pack_price),
+          boxPrice: Number(cig.box_price),
+          boxes: cig.boxes,
+          extraPacks: cig.extra_packs,
+          alertLevel: cig.alert_level,
+        }))
+      );
+
+      setSalesData(
+        (sales || []).map((sale) => ({
+          id: sale.id,
+          day: sale.day,
+          cigaretteId: sale.cigarette_id,
+          cigaretteName: sale.cigarette_name,
+          packs: sale.packs,
+          packPrice: Number(sale.pack_price),
+          totalSale: Number(sale.total_sale),
+          profit: Number(sale.profit),
+        }))
+      );
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+
+    setIsLoading(false);
+  }, [user, currentMonthKey]);
 
   useEffect(() => {
     loadMonthData();
   }, [loadMonthData]);
-
-  useEffect(() => {
-    saveAllData();
-  }, [incomeData, expenseData, cigaretteData, salesData]);
 
   // Change month
   const changeMonth = useCallback((monthKey: string) => {
@@ -68,75 +132,242 @@ export function useFinanceData() {
   }, []);
 
   // Income operations
-  const addIncome = useCallback((income: Omit<Income, 'id'>) => {
-    setIncomeData(prev => {
-      const newIncome = { ...income, id: Date.now() };
-      return [...prev, newIncome].sort((a, b) => a.day - b.day);
-    });
-  }, []);
+  const addIncome = useCallback(async (income: Omit<Income, 'id'>) => {
+    if (!user) return;
 
-  const updateIncome = useCallback((id: number, income: Omit<Income, 'id'>) => {
-    setIncomeData(prev => 
-      prev.map(item => item.id === id ? { ...income, id } : item).sort((a, b) => a.day - b.day)
-    );
-  }, []);
+    const { data, error } = await supabase
+      .from('incomes')
+      .insert({
+        user_id: user.id,
+        month_key: currentMonthKey,
+        day: income.day,
+        cash: income.cash,
+        card: income.card,
+        note: income.note,
+      })
+      .select()
+      .single();
 
-  const deleteIncome = useCallback((id: number) => {
-    setIncomeData(prev => prev.filter(item => item.id !== id));
-  }, []);
+    if (!error && data) {
+      setIncomeData((prev) =>
+        [...prev, { id: data.id, day: data.day, cash: Number(data.cash), card: Number(data.card), note: data.note || '' }].sort(
+          (a, b) => a.day - b.day
+        )
+      );
+    }
+  }, [user, currentMonthKey]);
+
+  const updateIncome = useCallback(async (id: number | string, income: Omit<Income, 'id'>) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('incomes')
+      .update({
+        day: income.day,
+        cash: income.cash,
+        card: income.card,
+        note: income.note,
+      })
+      .eq('id', id);
+
+    if (!error) {
+      setIncomeData((prev) =>
+        prev.map((item) => (item.id === id ? { ...income, id } : item)).sort((a, b) => a.day - b.day)
+      );
+    }
+  }, [user]);
+
+  const deleteIncome = useCallback(async (id: number | string) => {
+    if (!user) return;
+
+    const { error } = await supabase.from('incomes').delete().eq('id', id);
+
+    if (!error) {
+      setIncomeData((prev) => prev.filter((item) => item.id !== id));
+    }
+  }, [user]);
 
   // Expense operations
-  const addExpense = useCallback((expense: Omit<Expense, 'id'>) => {
-    setExpenseData(prev => [...prev, { ...expense, id: Date.now() }]);
-  }, []);
+  const addExpense = useCallback(async (expense: Omit<Expense, 'id'>) => {
+    if (!user) return;
 
-  const updateExpense = useCallback((id: number, expense: Omit<Expense, 'id'>) => {
-    setExpenseData(prev => prev.map(item => item.id === id ? { ...expense, id } : item));
-  }, []);
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert({
+        user_id: user.id,
+        month_key: currentMonthKey,
+        day: expense.day,
+        amount: expense.amount,
+        description: expense.description,
+      })
+      .select()
+      .single();
 
-  const deleteExpense = useCallback((id: number) => {
-    setExpenseData(prev => prev.filter(item => item.id !== id));
-  }, []);
+    if (!error && data) {
+      setExpenseData((prev) => [...prev, { id: data.id, day: data.day, amount: Number(data.amount), description: data.description }]);
+    }
+  }, [user, currentMonthKey]);
+
+  const updateExpense = useCallback(async (id: number | string, expense: Omit<Expense, 'id'>) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('expenses')
+      .update({
+        day: expense.day,
+        amount: expense.amount,
+        description: expense.description,
+      })
+      .eq('id', id);
+
+    if (!error) {
+      setExpenseData((prev) => prev.map((item) => (item.id === id ? { ...expense, id } : item)));
+    }
+  }, [user]);
+
+  const deleteExpense = useCallback(async (id: number | string) => {
+    if (!user) return;
+
+    const { error } = await supabase.from('expenses').delete().eq('id', id);
+
+    if (!error) {
+      setExpenseData((prev) => prev.filter((item) => item.id !== id));
+    }
+  }, [user]);
 
   // Cigarette operations
-  const addCigarette = useCallback((cigarette: Omit<Cigarette, 'id' | 'boxes' | 'extraPacks'>) => {
-    setCigaretteData(prev => [...prev, { ...cigarette, id: Date.now(), boxes: 0, extraPacks: 0 }]);
-  }, []);
+  const addCigarette = useCallback(async (cigarette: Omit<Cigarette, 'id' | 'boxes' | 'extraPacks'>) => {
+    if (!user) return;
 
-  const updateCigarette = useCallback((id: number, cigarette: Partial<Cigarette>) => {
-    setCigaretteData(prev => prev.map(item => item.id === id ? { ...item, ...cigarette } : item));
-  }, []);
+    const { data, error } = await supabase
+      .from('cigarettes')
+      .insert({
+        user_id: user.id,
+        month_key: currentMonthKey,
+        name: cigarette.name,
+        packs_per_box: cigarette.packsPerBox,
+        pack_price: cigarette.packPrice,
+        box_price: cigarette.boxPrice,
+        alert_level: cigarette.alertLevel,
+        boxes: 0,
+        extra_packs: 0,
+      })
+      .select()
+      .single();
 
-  const deleteCigarette = useCallback((id: number) => {
-    setCigaretteData(prev => prev.filter(item => item.id !== id));
-  }, []);
+    if (!error && data) {
+      setCigaretteData((prev) => [
+        ...prev,
+        {
+          id: data.id,
+          name: data.name,
+          packsPerBox: data.packs_per_box,
+          packPrice: Number(data.pack_price),
+          boxPrice: Number(data.box_price),
+          boxes: data.boxes,
+          extraPacks: data.extra_packs,
+          alertLevel: data.alert_level,
+        },
+      ]);
+    }
+  }, [user, currentMonthKey]);
 
-  const addStock = useCallback((id: number, boxes: number) => {
-    setCigaretteData(prev => prev.map(item => 
-      item.id === id ? { ...item, boxes: item.boxes + boxes } : item
-    ));
-  }, []);
+  const updateCigarette = useCallback(async (id: number | string, cigarette: Partial<Cigarette>) => {
+    if (!user) return;
 
-  const updateStock = useCallback((id: number, boxes: number, extraPacks: number) => {
-    setCigaretteData(prev => prev.map(item => 
-      item.id === id ? { ...item, boxes, extraPacks } : item
-    ));
-  }, []);
+    const updateData: Record<string, unknown> = {};
+    if (cigarette.name !== undefined) updateData.name = cigarette.name;
+    if (cigarette.packsPerBox !== undefined) updateData.packs_per_box = cigarette.packsPerBox;
+    if (cigarette.packPrice !== undefined) updateData.pack_price = cigarette.packPrice;
+    if (cigarette.boxPrice !== undefined) updateData.box_price = cigarette.boxPrice;
+    if (cigarette.boxes !== undefined) updateData.boxes = cigarette.boxes;
+    if (cigarette.extraPacks !== undefined) updateData.extra_packs = cigarette.extraPacks;
+    if (cigarette.alertLevel !== undefined) updateData.alert_level = cigarette.alertLevel;
+
+    const { error } = await supabase.from('cigarettes').update(updateData).eq('id', id);
+
+    if (!error) {
+      setCigaretteData((prev) => prev.map((item) => (item.id === id ? { ...item, ...cigarette } : item)));
+    }
+  }, [user]);
+
+  const deleteCigarette = useCallback(async (id: number | string) => {
+    if (!user) return;
+
+    const { error } = await supabase.from('cigarettes').delete().eq('id', id);
+
+    if (!error) {
+      setCigaretteData((prev) => prev.filter((item) => item.id !== id));
+    }
+  }, [user]);
+
+  const addStock = useCallback(async (id: number | string, boxes: number) => {
+    if (!user) return;
+
+    const cigarette = cigaretteData.find((c) => c.id === id);
+    if (!cigarette) return;
+
+    const newBoxes = cigarette.boxes + boxes;
+
+    const { error } = await supabase.from('cigarettes').update({ boxes: newBoxes }).eq('id', id);
+
+    if (!error) {
+      setCigaretteData((prev) => prev.map((item) => (item.id === id ? { ...item, boxes: newBoxes } : item)));
+    }
+  }, [user, cigaretteData]);
+
+  const updateStock = useCallback(async (id: number | string, boxes: number, extraPacks: number) => {
+    if (!user) return;
+
+    const { error } = await supabase.from('cigarettes').update({ boxes, extra_packs: extraPacks }).eq('id', id);
+
+    if (!error) {
+      setCigaretteData((prev) => prev.map((item) => (item.id === id ? { ...item, boxes, extraPacks } : item)));
+    }
+  }, [user]);
 
   // Sales operations
-  const addSale = useCallback((sale: Omit<Sale, 'id'>, cigaretteId: number) => {
-    setSalesData(prev => [...prev, { ...sale, id: Date.now() }]);
-    
-    // Reduce stock
-    setCigaretteData(prev => {
-      return prev.map(cig => {
-        if (cig.id !== cigaretteId) return cig;
-        
+  const addSale = useCallback(async (sale: Omit<Sale, 'id'>, cigaretteId: number | string) => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('sales')
+      .insert({
+        user_id: user.id,
+        month_key: currentMonthKey,
+        day: sale.day,
+        cigarette_id: cigaretteId,
+        cigarette_name: sale.cigaretteName,
+        packs: sale.packs,
+        pack_price: sale.packPrice,
+        total_sale: sale.totalSale,
+        profit: sale.profit,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setSalesData((prev) => [
+        ...prev,
+        {
+          id: data.id,
+          day: data.day,
+          cigaretteId: data.cigarette_id,
+          cigaretteName: data.cigarette_name,
+          packs: data.packs,
+          packPrice: Number(data.pack_price),
+          totalSale: Number(data.total_sale),
+          profit: Number(data.profit),
+        },
+      ]);
+
+      // Reduce stock
+      const cigarette = cigaretteData.find((c) => c.id === cigaretteId);
+      if (cigarette) {
         let remainingPacks = sale.packs;
-        let newExtraPacks = cig.extraPacks || 0;
-        let newBoxes = cig.boxes;
-        
-        // First use extra packs
+        let newExtraPacks = cigarette.extraPacks || 0;
+        let newBoxes = cigarette.boxes;
+
         if (newExtraPacks >= remainingPacks) {
           newExtraPacks -= remainingPacks;
           remainingPacks = 0;
@@ -144,39 +375,59 @@ export function useFinanceData() {
           remainingPacks -= newExtraPacks;
           newExtraPacks = 0;
         }
-        
-        // Then use boxes
+
         if (remainingPacks > 0) {
-          const boxesNeeded = Math.ceil(remainingPacks / cig.packsPerBox);
+          const boxesNeeded = Math.ceil(remainingPacks / cigarette.packsPerBox);
           newBoxes -= boxesNeeded;
-          const packsFromBoxes = boxesNeeded * cig.packsPerBox;
+          const packsFromBoxes = boxesNeeded * cigarette.packsPerBox;
           newExtraPacks = packsFromBoxes - remainingPacks;
         }
-        
-        return { ...cig, boxes: newBoxes, extraPacks: newExtraPacks };
-      });
-    });
-  }, []);
 
-  const deleteSale = useCallback((id: number) => {
-    const sale = salesData.find(s => s.id === id);
-    if (sale) {
-      // Return packs to stock
-      setCigaretteData(prev => prev.map(cig => 
-        cig.id === sale.cigaretteId 
-          ? { ...cig, extraPacks: (cig.extraPacks || 0) + sale.packs }
-          : cig
-      ));
+        await supabase.from('cigarettes').update({ boxes: newBoxes, extra_packs: newExtraPacks }).eq('id', cigaretteId);
+
+        setCigaretteData((prev) =>
+          prev.map((cig) => (cig.id === cigaretteId ? { ...cig, boxes: newBoxes, extraPacks: newExtraPacks } : cig))
+        );
+      }
     }
-    setSalesData(prev => prev.filter(item => item.id !== id));
-  }, [salesData]);
+  }, [user, currentMonthKey, cigaretteData]);
+
+  const deleteSale = useCallback(async (id: number | string) => {
+    if (!user) return;
+
+    const sale = salesData.find((s) => s.id === id);
+    if (sale && sale.cigaretteId) {
+      const cigarette = cigaretteData.find((c) => c.id === sale.cigaretteId);
+      if (cigarette) {
+        const newExtraPacks = (cigarette.extraPacks || 0) + sale.packs;
+        await supabase.from('cigarettes').update({ extra_packs: newExtraPacks }).eq('id', sale.cigaretteId);
+        setCigaretteData((prev) =>
+          prev.map((cig) => (cig.id === sale.cigaretteId ? { ...cig, extraPacks: newExtraPacks } : cig))
+        );
+      }
+    }
+
+    const { error } = await supabase.from('sales').delete().eq('id', id);
+
+    if (!error) {
+      setSalesData((prev) => prev.filter((item) => item.id !== id));
+    }
+  }, [user, salesData, cigaretteData]);
 
   // Clear all data for current month
-  const clearAllData = useCallback(() => {
+  const clearAllData = useCallback(async () => {
+    if (!user) return;
+
+    await Promise.all([
+      supabase.from('incomes').delete().eq('user_id', user.id).eq('month_key', currentMonthKey),
+      supabase.from('expenses').delete().eq('user_id', user.id).eq('month_key', currentMonthKey),
+      supabase.from('sales').delete().eq('user_id', user.id).eq('month_key', currentMonthKey),
+    ]);
+
     setIncomeData([]);
     setExpenseData([]);
     setSalesData([]);
-  }, []);
+  }, [user, currentMonthKey]);
 
   // Get summary
   const getSummary = useCallback(() => {
@@ -185,22 +436,19 @@ export function useFinanceData() {
     const totalIncome = totalCash + totalCard;
     const totalExpense = expenseData.reduce((sum, exp) => sum + exp.amount, 0);
     const balance = totalIncome - totalExpense;
-    
+
     const totalCigaretteTypes = cigaretteData.length;
     const totalBoxes = cigaretteData.reduce((sum, cig) => sum + cig.boxes, 0);
-    const totalPacks = cigaretteData.reduce((sum, cig) => 
-      sum + (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0), 0
-    );
+    const totalPacks = cigaretteData.reduce((sum, cig) => sum + cig.boxes * cig.packsPerBox + (cig.extraPacks || 0), 0);
     const totalStockValue = cigaretteData.reduce((sum, cig) => {
-      const totalCigPacks = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
-      return sum + (totalCigPacks * cig.packPrice);
+      const totalCigPacks = cig.boxes * cig.packsPerBox + (cig.extraPacks || 0);
+      return sum + totalCigPacks * cig.packPrice;
     }, 0);
-    
-    const todaySales = salesData.filter(s => s.day === new Date().getDate())
-      .reduce((sum, s) => sum + s.totalSale, 0);
+
+    const todaySales = salesData.filter((s) => s.day === new Date().getDate()).reduce((sum, s) => sum + s.totalSale, 0);
     const monthSales = salesData.reduce((sum, s) => sum + s.totalSale, 0);
     const cigaretteProfit = salesData.reduce((sum, s) => sum + s.profit, 0);
-    
+
     return {
       totalCash,
       totalCard,
@@ -219,15 +467,15 @@ export function useFinanceData() {
 
   // Get low stock items
   const getLowStockItems = useCallback(() => {
-    return cigaretteData.filter(cig => {
-      const total = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
+    return cigaretteData.filter((cig) => {
+      const total = cig.boxes * cig.packsPerBox + (cig.extraPacks || 0);
       return total <= cig.alertLevel;
     });
   }, [cigaretteData]);
 
   // Get current month label
   const getCurrentMonthLabel = useCallback(() => {
-    const opt = MONTH_OPTIONS.find(m => m.key === currentMonthKey);
+    const opt = MONTH_OPTIONS.find((m) => m.key === currentMonthKey);
     return opt ? opt.label : currentMonthKey;
   }, [currentMonthKey]);
 
@@ -247,6 +495,7 @@ export function useFinanceData() {
     expenseData,
     cigaretteData,
     salesData,
+    isLoading,
     changeMonth,
     addIncome,
     updateIncome,

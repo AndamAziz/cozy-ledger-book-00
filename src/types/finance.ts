@@ -1,20 +1,21 @@
 export interface Income {
-  id: number;
+  id: string | number;
   day: number;
   cash: number;
   card: number;
   total: number;
+  note?: string;
 }
 
 export interface Expense {
-  id: number;
-  name: string;
+  id: string | number;
+  day: number;
   amount: number;
-  purpose: string;
+  description: string;
 }
 
 export interface Cigarette {
-  id: number;
+  id: string | number;
   name: string;
   boxPrice: number;
   packsPerBox: number;
@@ -26,15 +27,13 @@ export interface Cigarette {
 }
 
 export interface Sale {
-  id: number;
+  id: string | number;
   day: number;
-  cigaretteId: number;
+  cigaretteId: string | number | null;
   cigaretteName: string;
   packs: number;
-  sellPrice: number;
+  packPrice: number;
   totalSale: number;
-  costPerPack: number;
-  totalCost: number;
   profit: number;
 }
 

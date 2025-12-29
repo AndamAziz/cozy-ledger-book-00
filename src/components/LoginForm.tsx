@@ -3,33 +3,62 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, LogIn, Wallet, Sparkles } from 'lucide-react';
+import { Mail, Lock, LogIn, Wallet, Sparkles, UserPlus } from 'lucide-react';
 
 interface LoginFormProps {
-  onLogin: (email: string, password: string) => { success: boolean; error?: string };
+  onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  onSignup: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-export function LoginForm({ onLogin }: LoginFormProps) {
+export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignupMode, setIsSignupMode] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    setTimeout(() => {
-      const result = onLogin(email, password);
-      if (!result.success) {
-        toast({
-          title: 'هەڵە',
-          description: result.error,
-          variant: 'destructive',
-        });
-      }
+
+    if (!email || !password) {
+      toast({
+        title: 'هەڵە',
+        description: 'تکایە هەموو خانەکان پڕبکەوە',
+        variant: 'destructive',
+      });
       setIsLoading(false);
-    }, 500);
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: 'هەڵە',
+        description: 'وشەی نهێنی دەبێت لانیکەم ٦ پیت بێت',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const result = isSignupMode 
+      ? await onSignup(email, password)
+      : await onLogin(email, password);
+
+    if (result.success) {
+      toast({
+        title: 'سەرکەوتوو',
+        description: isSignupMode ? 'هەژمارەکەت دروست کرا' : 'بەخێرهاتیت',
+      });
+    } else {
+      toast({
+        title: 'هەڵە',
+        description: result.error || 'هەڵەیەک ڕویدا',
+        variant: 'destructive',
+      });
+    }
+
+    setIsLoading(false);
   };
 
   return (
@@ -72,7 +101,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 بەڕێوەبردنی داراییی
               </h1>
               <p className="text-muted-foreground text-sm md:text-base">
-                بچۆ ژوورەوە بۆ بەڕێوەبردنی حسابەکانت
+                {isSignupMode ? 'هەژمارەی نوێ دروست بکە' : 'بچۆ ژوورەوە بۆ بەڕێوەبردنی حسابەکانت'}
               </p>
             </div>
             
@@ -90,6 +119,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="ئیمەیڵ بنووسە"
                     required
+                    disabled={isLoading}
                     className="bg-secondary/30 border-border/50 rounded-xl py-6 pr-4 focus:border-primary/50 focus:ring-primary/20 transition-all"
                   />
                 </div>
@@ -108,6 +138,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="وشەی نهێنی بنووسە"
                     required
+                    disabled={isLoading}
                     className="bg-secondary/30 border-border/50 rounded-xl py-6 pr-4 focus:border-primary/50 focus:ring-primary/20 transition-all"
                   />
                 </div>
@@ -123,6 +154,11 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                     <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                     چاوەڕوانبە...
                   </div>
+                ) : isSignupMode ? (
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5" />
+                    تۆمارکردن
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <LogIn className="h-5 w-5" />
@@ -131,6 +167,18 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                 )}
               </Button>
             </form>
+            
+            {/* Toggle signup/login */}
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => setIsSignupMode(!isSignupMode)}
+                className="text-primary hover:underline text-sm transition-colors"
+                disabled={isLoading}
+              >
+                {isSignupMode ? 'هەژمارم هەیە، چوونەژوورەوە' : 'هەژمارم نییە، تۆمارکردن'}
+              </button>
+            </div>
             
             {/* Footer */}
             <div className="mt-8 pt-6 border-t border-border/30 text-center">
