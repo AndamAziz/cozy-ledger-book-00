@@ -90,8 +90,11 @@
 
 @layer components {
   .glass-card {
-    @apply bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl;
-    box-shadow: var(--shadow-card);
+    @apply bg-card/70 backdrop-blur-2xl border border-white/10 rounded-3xl;
+    box-shadow: 
+      0 8px 32px -8px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .glass-card-hover {
@@ -99,12 +102,15 @@
   }
 
   .glass-card-hover:hover {
-    @apply border-primary/30;
-    box-shadow: var(--shadow-glow-primary);
+    @apply border-primary/40 scale-[1.01];
+    box-shadow: 
+      0 16px 48px -12px rgba(0, 0, 0, 0.5),
+      0 0 40px hsla(160, 84%, 39%, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   .summary-card {
-    @apply glass-card p-5 relative overflow-hidden;
+    @apply glass-card p-5 md:p-6 relative overflow-hidden;
   }
 
   .summary-card::before {
@@ -112,36 +118,76 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 100px;
-    height: 100px;
+    width: 120px;
+    height: 120px;
     background: linear-gradient(135deg, currentColor, transparent 70%);
-    opacity: 0.1;
-    border-radius: 0 0 100px 0;
+    opacity: 0.08;
+    border-radius: 0 0 100% 0;
   }
 
   .btn-gradient-primary {
     background: var(--gradient-primary);
-    @apply text-primary-foreground font-bold;
+    @apply text-primary-foreground font-bold relative overflow-hidden;
+  }
+
+  .btn-gradient-primary::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  }
+
+  .btn-gradient-primary:hover::before {
+    @apply opacity-100;
   }
 
   .btn-gradient-danger {
     background: var(--gradient-danger);
-    @apply text-destructive-foreground font-bold;
+    @apply text-destructive-foreground font-bold relative overflow-hidden;
+  }
+
+  .btn-gradient-danger::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  }
+
+  .btn-gradient-danger:hover::before {
+    @apply opacity-100;
   }
 
   .btn-gradient-accent {
     background: var(--gradient-accent);
-    @apply text-accent-foreground font-bold;
+    @apply text-accent-foreground font-bold relative overflow-hidden;
+  }
+
+  .btn-gradient-accent::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  }
+
+  .btn-gradient-accent:hover::before {
+    @apply opacity-100;
   }
 
   .btn-gradient-info {
     background: var(--gradient-info);
-    @apply text-info-foreground font-bold;
+    @apply text-info-foreground font-bold relative overflow-hidden;
+  }
+
+  .btn-gradient-info::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  }
+
+  .btn-gradient-info:hover::before {
+    @apply opacity-100;
   }
 
   .btn-gradient-hero {
     background: var(--gradient-hero);
-    @apply text-foreground font-bold;
+    @apply text-foreground font-bold relative overflow-hidden;
   }
 
   .modal-overlay {
