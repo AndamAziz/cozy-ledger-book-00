@@ -130,7 +130,7 @@ const Dashboard = () => {
 };
 
 const Index = () => {
-  const { isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated, isLoading, login, signup } = useAuth();
 
   if (isLoading) {
     return (
@@ -146,7 +146,7 @@ const Index = () => {
   }
 
   if (!isAuthenticated) {
-    return <LoginForm onLogin={login} />;
+    return <LoginForm onLogin={login} onSignup={signup} />;
   }
 
   return <Dashboard />;
