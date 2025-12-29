@@ -1,6 +1,10 @@
+import { Button } from '@/components/ui/button';
 import { SummaryCard } from './SummaryCard';
 import { Cigarette, Sale, Income, Expense } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
+import { generatePDFReport } from '@/lib/pdfGenerator';
+import { FileDown, Share2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReportsTabProps {
   incomeData: Income[];
@@ -13,6 +17,8 @@ interface ReportsTabProps {
     balance: number;
     totalStockValue: number;
     cigaretteProfit: number;
+    totalCash: number;
+    totalCard: number;
   };
   currentMonthLabel: string;
 }
@@ -25,7 +31,47 @@ export function ReportsTab({
   summary,
   currentMonthLabel,
 }: ReportsTabProps) {
+  const { toast } = useToast();
   const netProfit = summary.balance + summary.cigaretteProfit;
+
+  const handleDownloadPDF = () => {
+    try {
+      generatePDFReport({
+        monthLabel: currentMonthLabel,
+        incomeData,
+        expenseData,
+        cigaretteData,
+        salesData,
+        summary: {
+          ...summary,
+          totalCash: summary.totalCash || 0,
+          totalCard: summary.totalCard || 0,
+        },
+      });
+      toast({ title: 'سەرکەوتوو', description: 'ڕاپۆرتی PDF داگیرا' });
+    } catch (error) {
+      toast({ title: 'هەڵە', description: 'نەتوانرا ڕاپۆرت دروست بکرێت', variant: 'destructive' });
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: `ڕاپۆرتی داراییی - ${currentMonthLabel}`,
+      text: `کۆی داهات: ${formatCurrency(summary.totalIncome)}\nکۆی خەرجی: ${formatCurrency(summary.totalExpense)}\nقازانجی پاک: ${formatCurrency(netProfit)}`,
+    };
+    
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // User cancelled sharing
+      }
+    } else {
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(shareData.text);
+      toast({ title: 'سەرکەوتوو', description: 'ڕاپۆرت کۆپی کرا' });
+    }
+  };
 
   // Calculate total by box
   const boxReport = cigaretteData.map(cig => ({
@@ -62,9 +108,19 @@ export function ReportsTab({
 
   return (
     <div className="fade-in space-y-6">
-      {/* Header */}
-      <div className="glass-card p-4 text-center">
-        <h2 className="text-xl font-bold text-foreground">ڕاپۆرتی {currentMonthLabel}</h2>
+      {/* Header with Export Buttons */}
+      <div className="glass-card p-4">
+        <h2 className="text-xl font-bold text-foreground text-center mb-4">ڕاپۆرتی {currentMonthLabel}</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <Button onClick={handleDownloadPDF} className="btn-gradient-primary py-4">
+            <FileDown className="h-5 w-5 ml-2" />
+            داگرتنی PDF
+          </Button>
+          <Button onClick={handleShare} variant="secondary" className="py-4">
+            <Share2 className="h-5 w-5 ml-2" />
+            هاوبەشکردن
+          </Button>
+        </div>
       </div>
 
       {/* Summary Grid */}
