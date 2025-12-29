@@ -50,11 +50,15 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
       isOpen={isOpen} 
       onClose={onClose} 
       title={editingIncome ? 'دەستکاری داهات' : 'زیادکردنی داهات'}
+      icon={<Wallet className="h-6 w-6 text-white" />}
+      variant="primary"
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="space-y-2">
-          <Label className="text-muted-foreground flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary" />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-3">
+          <Label className="text-foreground font-medium flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Calendar className="h-4 w-4 text-primary" />
+            </div>
             ڕۆژ
           </Label>
           <Input
@@ -63,15 +67,17 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
             max={maxDays}
             value={day}
             onChange={(e) => setDay(parseInt(e.target.value) || 1)}
-            className="bg-secondary/30 border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all"
+            className="h-14 text-lg bg-secondary/50 border-white/10 rounded-xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
             required
           />
         </div>
         
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="text-muted-foreground flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-success" />
+          <div className="space-y-3">
+            <Label className="text-foreground font-medium flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-success/20 flex items-center justify-center">
+                <Wallet className="h-4 w-4 text-success" />
+              </div>
               کاش £
             </Label>
             <Input
@@ -80,13 +86,15 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
               placeholder="0.00"
               value={cash}
               onChange={(e) => setCash(e.target.value)}
-              className="bg-secondary/30 border-border/50 focus:border-success/50 focus:ring-success/20 transition-all"
+              className="h-14 text-lg bg-secondary/50 border-white/10 rounded-xl focus:border-success/50 focus:ring-2 focus:ring-success/20 transition-all"
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-muted-foreground flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-info" />
+          <div className="space-y-3">
+            <Label className="text-foreground font-medium flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-info/20 flex items-center justify-center">
+                <CreditCard className="h-4 w-4 text-info" />
+              </div>
               کارت £
             </Label>
             <Input
@@ -95,13 +103,13 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
               placeholder="0.00"
               value={card}
               onChange={(e) => setCard(e.target.value)}
-              className="bg-secondary/30 border-border/50 focus:border-info/50 focus:ring-info/20 transition-all"
+              className="h-14 text-lg bg-secondary/50 border-white/10 rounded-xl focus:border-info/50 focus:ring-2 focus:ring-info/20 transition-all"
               required
             />
           </div>
         </div>
         
-        <Button type="submit" className="w-full btn-gradient-primary py-6 text-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow">
+        <Button type="submit" className="w-full btn-gradient-primary py-7 text-lg font-bold rounded-2xl shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all">
           {editingIncome ? 'نوێکردنەوە' : 'زیادکردن'}
         </Button>
       </form>
