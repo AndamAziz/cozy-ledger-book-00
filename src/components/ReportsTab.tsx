@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { SummaryCard } from './SummaryCard';
+import { DailyIncomeChart, SalesByProductChart, ProfitChart, IncomeExpenseComparison } from './Charts';
 import { Cigarette, Sale, Income, Expense } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
 import { generatePDFReport } from '@/lib/pdfGenerator';
@@ -129,6 +130,45 @@ export function ReportsTab({
         <SummaryCard title="کۆی خەرجی" value={formatCurrency(summary.totalExpense)} variant="expense" icon="📉" />
         <SummaryCard title="قازانجی پاک" value={formatCurrency(netProfit)} variant="balance" icon="💎" />
         <SummaryCard title="بەهای کۆگا" value={formatCurrency(summary.totalStockValue)} variant="stock" icon="📦" />
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Income Comparison Chart */}
+        <div className="glass-card p-4 md:p-5">
+          <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+            <span>📊</span> بەراوردی داهات و خەرجی
+          </h3>
+          <IncomeExpenseComparison 
+            totalIncome={summary.totalIncome}
+            totalExpense={summary.totalExpense}
+            cigaretteProfit={summary.cigaretteProfit}
+          />
+        </div>
+
+        {/* Sales by Product Pie Chart */}
+        <div className="glass-card p-4 md:p-5">
+          <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+            <span>🥧</span> فرۆشتن بە جۆر
+          </h3>
+          <SalesByProductChart salesData={salesData} cigaretteData={cigaretteData} />
+        </div>
+      </div>
+
+      {/* Daily Income Chart */}
+      <div className="glass-card p-4 md:p-5">
+        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+          <span>📈</span> داهاتی ڕۆژانە
+        </h3>
+        <DailyIncomeChart data={incomeData} />
+      </div>
+
+      {/* Profit Chart */}
+      <div className="glass-card p-4 md:p-5">
+        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+          <span>💰</span> قازانجی ڕۆژانە
+        </h3>
+        <ProfitChart salesData={salesData} />
       </div>
 
       {/* Sales by Type */}
