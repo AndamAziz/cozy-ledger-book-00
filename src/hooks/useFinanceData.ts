@@ -309,18 +309,19 @@ export function useFinanceData() {
     }
   }, [user]);
 
-  const addStock = useCallback(async (id: string | number, boxes: number) => {
+  const addStock = useCallback(async (id: string | number, boxes: number, extraPacks: number = 0) => {
     if (!user) return;
 
     const cigarette = cigaretteData.find((c) => c.id === id);
     if (!cigarette) return;
 
     const newBoxes = cigarette.boxes + boxes;
+    const newExtraPacks = (cigarette.extraPacks || 0) + extraPacks;
 
-    const { error } = await supabase.from('cigarettes').update({ boxes: newBoxes }).eq('id', String(id));
+    const { error } = await supabase.from('cigarettes').update({ boxes: newBoxes, extra_packs: newExtraPacks }).eq('id', String(id));
 
     if (!error) {
-      setCigaretteData((prev) => prev.map((item) => (item.id === id ? { ...item, boxes: newBoxes } : item)));
+      setCigaretteData((prev) => prev.map((item) => (item.id === id ? { ...item, boxes: newBoxes, extraPacks: newExtraPacks } : item)));
     }
   }, [user, cigaretteData]);
 

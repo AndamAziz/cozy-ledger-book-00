@@ -21,7 +21,7 @@ interface InventoryTabProps {
   onAddCigarette: (cigarette: Omit<Cigarette, 'id' | 'boxes' | 'extraPacks'>) => void;
   onUpdateCigarette: (id: string | number, cigarette: Partial<Cigarette>) => void;
   onDeleteCigarette: (id: string | number) => void;
-  onAddStock: (id: string | number, boxes: number) => void;
+  onAddStock: (id: string | number, boxes: number, extraPacks: number) => void;
   onUpdateStock: (id: string | number, boxes: number, extraPacks: number) => void;
 }
 
@@ -52,10 +52,15 @@ export function InventoryTab({
     setEditingCigarette(null);
   };
 
-  const handleAddStock = (cigaretteId: string | number, boxes: number) => {
-    onAddStock(cigaretteId, boxes);
+  const handleAddStock = (cigaretteId: string | number, boxes: number, extraPacks: number) => {
+    onAddStock(cigaretteId, boxes, extraPacks);
     const cig = cigaretteData.find(c => c.id === cigaretteId);
-    toast({ title: 'سەرکەوتوو', description: `${boxes} بۆکس زیادکرا بۆ ${cig?.name}` });
+    const message = boxes > 0 && extraPacks > 0 
+      ? `${boxes} بۆکس و ${extraPacks} پاکەت زیادکرا بۆ ${cig?.name}`
+      : boxes > 0 
+        ? `${boxes} بۆکس زیادکرا بۆ ${cig?.name}`
+        : `${extraPacks} پاکەت زیادکرا بۆ ${cig?.name}`;
+    toast({ title: 'سەرکەوتوو', description: message });
   };
 
   const handleEditStock = (id: string | number, boxes: number, extraPacks: number) => {
