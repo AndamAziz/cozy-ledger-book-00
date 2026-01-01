@@ -10,7 +10,7 @@ import { Package } from 'lucide-react';
 interface AddStockModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (cigaretteId: number, boxes: number, extraPacks: number) => void;
+  onSubmit: (cigaretteId: string | number, boxes: number, extraPacks: number) => void;
   cigarettes: Cigarette[];
 }
 
@@ -22,7 +22,7 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedId && (boxes > 0 || extraPacks > 0)) {
-      onSubmit(parseInt(selectedId), boxes, extraPacks);
+      onSubmit(selectedId, boxes, extraPacks);
       setSelectedId('');
       setBoxes(0);
       setExtraPacks(0);
