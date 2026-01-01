@@ -127,10 +127,11 @@ export function ProfitChart({ salesData }: ProfitChartProps) {
 
   const chartData = Object.entries(dailyProfits)
     .map(([day, profit]) => ({
+      dayNum: parseInt(day),
       day: `ڕۆژ ${day}`,
       profit,
     }))
-    .sort((a, b) => parseInt(a.day.replace('ڕۆژ ', '')) - parseInt(b.day.replace('ڕۆژ ', '')));
+    .sort((a, b) => a.dayNum - b.dayNum);
 
   if (chartData.length === 0) {
     return (
