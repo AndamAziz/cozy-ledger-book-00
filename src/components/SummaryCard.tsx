@@ -4,7 +4,7 @@ import { TrendingUp, TrendingDown, Wallet, Package, DollarSign, Sparkles } from 
 interface SummaryCardProps {
   title: string;
   value: string;
-  variant?: 'income' | 'expense' | 'balance' | 'stock' | 'default';
+  variant?: 'income' | 'expense' | 'balance' | 'stock' | 'accent' | 'default';
   fullWidth?: boolean;
   icon?: string;
 }
@@ -35,6 +35,14 @@ const variantConfig = {
     iconBg: 'from-info to-blue-400',
   },
   stock: {
+    color: 'text-accent',
+    bg: 'from-accent/25 via-accent/10 to-transparent',
+    border: 'border-accent/40',
+    icon: Package,
+    glow: 'hover:shadow-accent/20',
+    iconBg: 'from-accent to-amber-400',
+  },
+  accent: {
     color: 'text-accent',
     bg: 'from-accent/25 via-accent/10 to-transparent',
     border: 'border-accent/40',
@@ -73,6 +81,7 @@ export function SummaryCard({ title, value, variant = 'default', fullWidth, icon
         variant === 'expense' && 'bg-destructive',
         variant === 'balance' && 'bg-info',
         variant === 'stock' && 'bg-accent',
+        variant === 'accent' && 'bg-accent',
         variant === 'default' && 'bg-primary'
       )} />
       
