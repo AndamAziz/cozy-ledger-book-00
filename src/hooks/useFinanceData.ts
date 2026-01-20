@@ -87,6 +87,7 @@ export function useFinanceData() {
           day: exp.day,
           amount: Number(exp.amount),
           description: exp.description,
+          expenseType: (exp.expense_type as 'purchase' | 'cost') || 'cost',
         }))
       );
 
@@ -206,12 +207,19 @@ export function useFinanceData() {
         day: expense.day,
         amount: expense.amount,
         description: expense.description,
+        expense_type: expense.expenseType || 'cost',
       })
       .select()
       .single();
 
     if (!error && data) {
-      setExpenseData((prev) => [...prev, { id: data.id, day: data.day, amount: Number(data.amount), description: data.description }]);
+      setExpenseData((prev) => [...prev, { 
+        id: data.id, 
+        day: data.day, 
+        amount: Number(data.amount), 
+        description: data.description,
+        expenseType: (data.expense_type as 'purchase' | 'cost') || 'cost',
+      }]);
     }
   }, [user, currentMonthKey]);
 
@@ -224,6 +232,7 @@ export function useFinanceData() {
         day: expense.day,
         amount: expense.amount,
         description: expense.description,
+        expense_type: expense.expenseType || 'cost',
       })
       .eq('id', String(id));
 

@@ -7,11 +7,14 @@ export interface Income {
   note?: string;
 }
 
+export type ExpenseType = 'purchase' | 'cost';
+
 export interface Expense {
   id: string | number;
   day: number;
   amount: number;
   description: string;
+  expenseType: ExpenseType;
 }
 
 export interface Cigarette {

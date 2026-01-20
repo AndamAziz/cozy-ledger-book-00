@@ -156,18 +156,58 @@ export function generatePDFReport(data: ReportData): void {
     yPos = 20;
   }
 
-  // Expenses Section
-  if (expenseData && expenseData.length > 0) {
+  // Purchases Section
+  const purchases = expenseData?.filter(exp => exp.expenseType === 'purchase') || [];
+  if (purchases.length > 0) {
     doc.setFontSize(14);
     doc.setTextColor(60, 60, 60);
-    doc.text('Expenses', 15, yPos);
+    doc.text('Purchases', 15, yPos);
     
     yPos += 5;
 
     autoTable(doc, {
       startY: yPos,
       head: [['Day', 'Description', 'Amount']],
-      body: expenseData.map(exp => [
+      body: purchases.map(exp => [
+        `Day ${exp.day}`,
+        exp.description ? (exp.description.length > 40 ? exp.description.substring(0, 40) + '...' : exp.description) : '-',
+        formatMoney(exp.amount),
+      ]),
+      theme: 'striped',
+      headStyles: { 
+        fillColor: [245, 158, 11],
+        halign: 'left',
+        fontSize: 10,
+      },
+      bodyStyles: {
+        halign: 'left',
+        fontSize: 9,
+      },
+      margin: { left: 15 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+  }
+
+  // Check if we need a new page
+  if (yPos > 250) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  // Costs Section
+  const costs = expenseData?.filter(exp => exp.expenseType === 'cost' || !exp.expenseType) || [];
+  if (costs.length > 0) {
+    doc.setFontSize(14);
+    doc.setTextColor(60, 60, 60);
+    doc.text('Costs (Business Expenses)', 15, yPos);
+    
+    yPos += 5;
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Day', 'Description', 'Amount']],
+      body: costs.map(exp => [
         `Day ${exp.day}`,
         exp.description ? (exp.description.length > 40 ? exp.description.substring(0, 40) + '...' : exp.description) : '-',
         formatMoney(exp.amount),

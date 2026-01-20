@@ -62,6 +62,7 @@ export type Database = {
           created_at: string
           day: number
           description: string
+          expense_type: string
           id: string
           month_key: string
           user_id: string
@@ -71,6 +72,7 @@ export type Database = {
           created_at?: string
           day: number
           description: string
+          expense_type?: string
           id?: string
           month_key: string
           user_id: string
@@ -80,6 +82,7 @@ export type Database = {
           created_at?: string
           day?: number
           description?: string
+          expense_type?: string
           id?: string
           month_key?: string
           user_id?: string
