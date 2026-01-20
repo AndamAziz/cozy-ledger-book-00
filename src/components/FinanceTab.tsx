@@ -54,10 +54,37 @@ export function FinanceTab({
 
   // Separate expenses by type
   const purchaseData = expenseData.filter(exp => exp.expenseType === 'purchase');
-  const costData = expenseData.filter(exp => exp.expenseType === 'cost');
+  const costData = expenseData.filter(exp => exp.expenseType === 'cost' || !exp.expenseType);
 
   const totalPurchase = purchaseData.reduce((sum, exp) => sum + exp.amount, 0);
   const totalCost = costData.reduce((sum, exp) => sum + exp.amount, 0);
+
+  // Daily summary calculation
+  const dailySummary = (() => {
+    const days: { [key: number]: { purchase: number; cost: number; income: number } } = {};
+    
+    // Add income data
+    incomeData.forEach(inc => {
+      if (!days[inc.day]) days[inc.day] = { purchase: 0, cost: 0, income: 0 };
+      days[inc.day].income += inc.total;
+    });
+    
+    // Add purchase data
+    purchaseData.forEach(exp => {
+      if (!days[exp.day]) days[exp.day] = { purchase: 0, cost: 0, income: 0 };
+      days[exp.day].purchase += exp.amount;
+    });
+    
+    // Add cost data
+    costData.forEach(exp => {
+      if (!days[exp.day]) days[exp.day] = { purchase: 0, cost: 0, income: 0 };
+      days[exp.day].cost += exp.amount;
+    });
+    
+    return Object.entries(days)
+      .map(([day, data]) => ({ day: parseInt(day), ...data }))
+      .sort((a, b) => a.day - b.day);
+  })();
 
   const handleIncomeSubmit = (income: Omit<Income, 'id'>) => {
     if (editingIncome) {
@@ -137,7 +164,88 @@ export function FinanceTab({
         </Button>
       </div>
 
-      {/* Income List */}
+      {/* Daily Summary */}
+      {dailySummary.length > 0 && (
+        <div className="glass-card p-5 md:p-7 animate-fade-in" style={{ animationDelay: '150ms' }}>
+          <h3 className="text-lg md:text-xl font-bold text-foreground mb-6 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-info to-blue-400 flex items-center justify-center shadow-lg shadow-info/30">
+              <span className="text-2xl">📊</span>
+            </div>
+            <div>
+              <span className="block">پوختەی ڕۆژانە</span>
+              <span className="text-sm font-normal text-muted-foreground">{dailySummary.length} ڕۆژ</span>
+            </div>
+          </h3>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/40">
+                  <th className="py-3 px-2 text-right text-muted-foreground font-medium">ڕۆژ</th>
+                  <th className="py-3 px-2 text-right text-success font-medium">داهات</th>
+                  <th className="py-3 px-2 text-right text-accent font-medium">Purchase</th>
+                  <th className="py-3 px-2 text-right text-destructive font-medium">Cost</th>
+                  <th className="py-3 px-2 text-right text-info font-medium">باڵانس</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailySummary.map((day, index) => {
+                  const dailyBalance = day.income - day.purchase - day.cost;
+                  const [year, month] = currentMonthKey.split('-');
+                  const dateStr = `${day.day.toString().padStart(2, '0')}/${month}`;
+                  
+                  return (
+                    <tr 
+                      key={day.day} 
+                      className="border-b border-border/20 hover:bg-secondary/30 transition-colors"
+                      style={{ animationDelay: `${index * 30}ms` }}
+                    >
+                      <td className="py-3 px-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center font-mono font-bold text-foreground">
+                            {day.day}
+                          </div>
+                          <span className="text-muted-foreground text-xs">{dateStr}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={`font-semibold ${day.income > 0 ? 'text-success' : 'text-muted-foreground'}`}>
+                          {formatCurrency(day.income)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={`font-semibold ${day.purchase > 0 ? 'text-accent' : 'text-muted-foreground'}`}>
+                          {formatCurrency(day.purchase)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={`font-semibold ${day.cost > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          {formatCurrency(day.cost)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span className={`font-bold ${dailyBalance >= 0 ? 'text-info' : 'text-destructive'}`}>
+                          {formatCurrency(dailyBalance)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-border/40 bg-secondary/20">
+                  <td className="py-4 px-2 font-bold text-foreground">کۆی گشتی</td>
+                  <td className="py-4 px-2 font-bold text-success">{formatCurrency(summary.totalIncome)}</td>
+                  <td className="py-4 px-2 font-bold text-accent">{formatCurrency(totalPurchase)}</td>
+                  <td className="py-4 px-2 font-bold text-destructive">{formatCurrency(totalCost)}</td>
+                  <td className="py-4 px-2 font-bold text-info">{formatCurrency(summary.totalIncome - totalPurchase - totalCost)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
       <div className="glass-card p-5 md:p-7 animate-fade-in" style={{ animationDelay: '200ms' }}>
         <h3 className="text-lg md:text-xl font-bold text-foreground mb-6 flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-success to-emerald-400 flex items-center justify-center shadow-lg shadow-success/30">
