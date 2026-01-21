@@ -77,7 +77,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [users, setUsers] = useState<UserApproval[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'pending' | 'inactive' | 'expired' | 'expiring'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'pending' | 'inactive' | 'expired' | 'expiring' | 'admin'>('all');
   const [selectedUser, setSelectedUser] = useState<UserApproval | null>(null);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -565,6 +565,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       case 'inactive': return !user.is_active;
       case 'expired': return isExpiredUser;
       case 'expiring': return isExpiringUser;
+      case 'admin': return user.isAdmin === true;
       default: return true;
     }
   });
@@ -584,6 +585,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     const daysLeft = Math.ceil((new Date(u.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     return daysLeft > 0 && daysLeft <= 7;
   }).length;
+  const totalAdmins = users.filter(u => u.isAdmin === true).length;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
@@ -642,7 +644,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         </header>
 
         {/* Statistics Cards - Compact & Clickable */}
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3 mb-6">
+        <div className="grid grid-cols-4 md:grid-cols-7 gap-2 md:gap-3 mb-6">
           <div 
             onClick={() => setActiveFilter(activeFilter === 'all' ? 'all' : 'all')}
             className={`rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border p-3 cursor-pointer transition-all hover:scale-105 ${activeFilter === 'all' ? 'border-primary ring-2 ring-primary/50' : 'border-primary/20'}`}
@@ -708,6 +710,17 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               <p className="text-[10px] text-muted-foreground">{t('expiring')}</p>
             </div>
           </div>
+          
+          <div 
+            onClick={() => setActiveFilter(activeFilter === 'admin' ? 'all' : 'admin')}
+            className={`rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border p-3 cursor-pointer transition-all hover:scale-105 ${activeFilter === 'admin' ? 'border-primary ring-2 ring-primary/50' : 'border-primary/20'}`}
+          >
+            <div className="flex flex-col items-center gap-1 text-center">
+              <Crown className="h-5 w-5 text-primary" />
+              <p className="text-xl font-bold text-foreground">{totalAdmins}</p>
+              <p className="text-[10px] text-muted-foreground">{t('adminBadge')}</p>
+            </div>
+          </div>
         </div>
         
         {/* Active Filter Indicator */}
@@ -720,6 +733,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               {activeFilter === 'inactive' && t('inactive')}
               {activeFilter === 'expired' && t('expired')}
               {activeFilter === 'expiring' && t('expiring')}
+              {activeFilter === 'admin' && t('adminBadge')}
             </span>
             <Button
               variant="ghost"
