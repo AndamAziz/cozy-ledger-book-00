@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -7,6 +7,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DayPickerProps {
   value: number;
@@ -18,6 +19,7 @@ interface DayPickerProps {
 
 export function DayPicker({ value, onChange, maxDays, monthKey, className }: DayPickerProps) {
   const [open, setOpen] = useState(false);
+  const { t } = useLanguage();
   
   const [yearStr, monthStr] = monthKey.split('-');
   const year = parseInt(yearStr);
@@ -25,17 +27,25 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
   
   // Get day of week for the first day of the month (0 = Sunday, 1 = Monday, etc.)
   const firstDayOfMonth = new Date(year, month - 1, 1).getDay();
-  // Adjust for Kurdish calendar (Saturday = first day)
+  // Adjust for calendar (Saturday = first day)
   const startOffset = (firstDayOfMonth + 1) % 7;
   
-  const dayNames = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ه'];
+  const dayNames = [
+    t('satAbbr'),
+    t('sunAbbr'),
+    t('monAbbr'),
+    t('tueAbbr'),
+    t('wedAbbr'),
+    t('thuAbbr'),
+    t('friAbbr'),
+  ];
   
   const handleDaySelect = (day: number) => {
     onChange(day);
     setOpen(false);
   };
   
-  const displayLabel = `ڕۆژی ${value}`;
+  const displayLabel = `${t('dayOf')} ${value}`;
   
   // Generate calendar grid
   const calendarDays = [];
@@ -149,7 +159,7 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
               disabled={!isCurrentMonth}
               className="flex-1 rounded-lg text-xs"
             >
-              ئەمڕۆ
+              {t('today')}
             </Button>
             <Button
               type="button"
@@ -158,7 +168,7 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
               onClick={() => handleDaySelect(1)}
               className="flex-1 rounded-lg text-xs"
             >
-              ڕۆژی ١
+              {t('firstDay')}
             </Button>
             <Button
               type="button"
@@ -167,7 +177,7 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
               onClick={() => handleDaySelect(maxDays)}
               className="flex-1 rounded-lg text-xs"
             >
-              ڕۆژی {maxDays}
+              {t('day')} {maxDays}
             </Button>
           </div>
         </div>

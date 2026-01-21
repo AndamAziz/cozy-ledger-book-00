@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { X, Sparkles } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ModalProps {
   isOpen: boolean;
@@ -38,6 +39,8 @@ const variantStyles = {
 };
 
 export function Modal({ isOpen, onClose, title, children, icon, variant = 'primary' }: ModalProps) {
+  const { t } = useLanguage();
+  
   if (!isOpen) return null;
 
   const styles = variantStyles[variant];
@@ -75,7 +78,7 @@ export function Modal({ isOpen, onClose, title, children, icon, variant = 'prima
                   </h2>
                   <div className="flex items-center gap-1 mt-1 text-muted-foreground text-sm">
                     <Sparkles className="h-3 w-3" />
-                    <span>پڕ بکەرەوە</span>
+                    <span>{t('fillForm')}</span>
                   </div>
                 </div>
               </div>

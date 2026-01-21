@@ -12,11 +12,14 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 const LANGUAGE_STORAGE_KEY = 'city-taxperts-language';
 
+// RTL languages
+const RTL_LANGUAGES: Language[] = ['ku', 'ar', 'fa'];
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      if (stored === 'en' || stored === 'ku') {
+      if (stored === 'en' || stored === 'ku' || stored === 'ar' || stored === 'fa') {
         return stored;
       }
     }
@@ -28,8 +31,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     
     // Update document direction
-    document.documentElement.dir = language === 'ku' ? 'rtl' : 'ltr';
-    document.documentElement.lang = language === 'ku' ? 'ckb' : 'en';
+    const isRTL = RTL_LANGUAGES.includes(language);
+    document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+    
+    // Update language attribute
+    const langAttr = {
+      ku: 'ckb',
+      en: 'en',
+      ar: 'ar',
+      fa: 'fa',
+    }[language];
+    document.documentElement.lang = langAttr;
     
     // Update font family based on language
     if (language === 'en') {
@@ -47,7 +59,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return translations[language][key] || translations.ku[key] || key;
   };
 
-  const dir = language === 'ku' ? 'rtl' : 'ltr';
+  const dir = RTL_LANGUAGES.includes(language) ? 'rtl' : 'ltr';
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, dir }}>
