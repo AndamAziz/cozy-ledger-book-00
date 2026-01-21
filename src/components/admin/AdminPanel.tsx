@@ -22,7 +22,8 @@ import {
   Building2,
   Ban,
   Power,
-  Pencil
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import {
   Select,
@@ -65,6 +66,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showCompanyDialog, setShowCompanyDialog] = useState(false);
   const [showExpiryDialog, setShowExpiryDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [expiryDuration, setExpiryDuration] = useState('30');
   const [customExpiryDate, setCustomExpiryDate] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -349,6 +351,39 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!selectedUser) return;
+    
+    setIsUpdating(true);
+    try {
+      // Delete from user_approvals table
+      const { error } = await supabase
+        .from('user_approvals')
+        .delete()
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سەرکەوتوو',
+        description: 'هەژمارەکە سڕایەوە',
+      });
+
+      setShowDeleteDialog(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: 'هەڵە',
+        description: 'هەڵە لە سڕینەوەی هەژمارە',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (user.company_name && user.company_name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -392,91 +427,78 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   return (
     <div className="min-h-screen p-3 md:p-6">
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={onBack}
-            className="rounded-xl"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-l from-primary via-success to-foreground bg-clip-text text-transparent">
-              پانێلی ئەدمین
-            </h1>
-            <p className="text-muted-foreground text-sm">بەڕێوەبردنی بەکارهێنەران</p>
+        {/* Header - Improved Design */}
+        <header className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-lg p-4 md:p-5 mb-6 animate-fade-in shadow-xl">
+          <div className="absolute -top-16 -right-16 w-32 h-32 rounded-full bg-primary/10 blur-2xl" />
+          
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onBack}
+                className="h-10 w-10 rounded-xl flex-shrink-0"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-lg md:text-xl font-bold text-foreground">
+                  پانێڵی ئەدمین
+                </h1>
+                <p className="text-xs text-muted-foreground">بەڕێوەبردنی بەکارهێنەران</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={fetchUsers}
+              size="sm"
+              className="h-9 px-2.5 md:px-3 rounded-lg flex items-center gap-1.5"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="text-xs md:text-sm">نوێکردنەوە</span>
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            onClick={fetchUsers}
-            className="rounded-xl"
-          >
-            <RefreshCw className={`h-4 w-4 ml-2 ${isLoading ? 'animate-spin' : ''}`} />
-            نوێکردنەوە
-          </Button>
-        </div>
+        </header>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-          <div className="rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{totalUsers}</p>
-                <p className="text-xs text-muted-foreground">کۆی بەکارهێنەران</p>
-              </div>
+        {/* Statistics Cards - Compact */}
+        <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-3 mb-6">
+          <div className="rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 p-3">
+            <div className="flex flex-col items-center gap-1 text-center">
+              <Users className="h-5 w-5 text-primary" />
+              <p className="text-xl font-bold text-foreground">{totalUsers}</p>
+              <p className="text-[10px] text-muted-foreground">کۆی گشتی</p>
             </div>
           </div>
           
-          <div className="rounded-2xl bg-gradient-to-br from-success/20 to-success/5 border border-success/20 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center">
-                <UserCheck className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{totalActive}</p>
-                <p className="text-xs text-muted-foreground">چالاک</p>
-              </div>
+          <div className="rounded-xl bg-gradient-to-br from-success/20 to-success/5 border border-success/20 p-3">
+            <div className="flex flex-col items-center gap-1 text-center">
+              <UserCheck className="h-5 w-5 text-success" />
+              <p className="text-xl font-bold text-foreground">{totalActive}</p>
+              <p className="text-[10px] text-muted-foreground">چالاک</p>
             </div>
           </div>
           
-          <div className="rounded-2xl bg-gradient-to-br from-warning/20 to-warning/5 border border-warning/20 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-warning/20 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{totalPending}</p>
-                <p className="text-xs text-muted-foreground">چاوەڕوان</p>
-              </div>
+          <div className="rounded-xl bg-gradient-to-br from-warning/20 to-warning/5 border border-warning/20 p-3">
+            <div className="flex flex-col items-center gap-1 text-center">
+              <Clock className="h-5 w-5 text-warning" />
+              <p className="text-xl font-bold text-foreground">{totalPending}</p>
+              <p className="text-[10px] text-muted-foreground">چاوەڕوان</p>
             </div>
           </div>
           
-          <div className="rounded-2xl bg-gradient-to-br from-destructive/20 to-destructive/5 border border-destructive/20 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center">
-                <UserX className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{totalExpired}</p>
-                <p className="text-xs text-muted-foreground">بەسەرچوو</p>
-              </div>
+          <div className="rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/5 border border-destructive/20 p-3">
+            <div className="flex flex-col items-center gap-1 text-center">
+              <UserX className="h-5 w-5 text-destructive" />
+              <p className="text-xl font-bold text-foreground">{totalExpired}</p>
+              <p className="text-[10px] text-muted-foreground">بەسەرچوو</p>
             </div>
           </div>
           
-          <div className="rounded-2xl bg-gradient-to-br from-info/20 to-info/5 border border-info/20 p-4 col-span-2 md:col-span-1">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-info/20 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-info" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{expiringIn7Days}</p>
-                <p className="text-xs text-muted-foreground">بەسەردەچێت (٧ڕۆژ)</p>
-              </div>
+          <div className="rounded-xl bg-gradient-to-br from-info/20 to-info/5 border border-info/20 p-3 col-span-3 md:col-span-1">
+            <div className="flex flex-col items-center gap-1 text-center">
+              <TrendingUp className="h-5 w-5 text-info" />
+              <p className="text-xl font-bold text-foreground">{expiringIn7Days}</p>
+              <p className="text-[10px] text-muted-foreground">نزیک بەسەرچوون</p>
             </div>
           </div>
         </div>
@@ -533,10 +555,23 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           setSelectedUser(user);
                           setShowApproveDialog(true);
                         }}
-                        className="bg-success hover:bg-success/90 rounded-xl"
+                        size="sm"
+                        className="bg-success hover:bg-success/90 rounded-lg text-xs"
                       >
-                        <Check className="h-4 w-4 ml-2" />
-                        ئەپروڤکردن
+                        <Check className="h-3 w-3 ml-1" />
+                        ئەپروڤ
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowDeleteDialog(true);
+                        }}
+                        className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
+                      >
+                        <Trash2 className="h-3 w-3 ml-1" />
+                        سڕینەوە
                       </Button>
                     </div>
                   </div>
@@ -714,6 +749,18 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         >
                           <X className="h-3 w-3 ml-1" />
                           لابردن
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowDeleteDialog(true);
+                          }}
+                          className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
+                        >
+                          <Trash2 className="h-3 w-3 ml-1" />
+                          سڕینەوە
                         </Button>
                       </div>
                     </div>
@@ -952,6 +999,41 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               className="rounded-xl"
             >
               {isUpdating ? 'چاوەڕوانبە...' : 'گۆڕین'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Account Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">سڕینەوەی هەژمارە</DialogTitle>
+            <DialogDescription>
+              ئایا دڵنیایت لە سڕینەوەی هەژمارەی {selectedUser?.company_name || selectedUser?.email}؟
+              <br />
+              <span className="text-destructive font-medium">ئەم کردارە ناگەڕێتەوە!</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setSelectedUser(null);
+              }}
+              className="rounded-xl"
+            >
+              پاشگەزبوونەوە
+            </Button>
+            <Button
+              onClick={handleDeleteAccount}
+              disabled={isUpdating}
+              variant="destructive"
+              className="rounded-xl"
+            >
+              {isUpdating ? 'چاوەڕوانبە...' : 'سڕینەوە'}
             </Button>
           </DialogFooter>
         </DialogContent>
