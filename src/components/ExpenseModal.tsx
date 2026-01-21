@@ -7,6 +7,7 @@ import { Modal } from './Modal';
 import { Expense, ExpenseType } from '@/types/finance';
 import { Calendar, PoundSterling, FileText, ShoppingCart, Receipt } from 'lucide-react';
 import { DayPicker } from './DayPicker';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ExpenseModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [expenseType, setExpenseType] = useState<ExpenseType>(defaultExpenseType);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (editingExpense) {
@@ -47,8 +49,8 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
 
   const isPurchase = expenseType === 'purchase';
   const modalTitle = editingExpense 
-    ? (isPurchase ? 'دەستکاری کڕین' : 'دەستکاری تێچوو')
-    : (isPurchase ? 'زیادکردنی کڕین' : 'زیادکردنی تێچوو');
+    ? (isPurchase ? t('editPurchase') : t('editCost'))
+    : (isPurchase ? t('addPurchase') : t('addCost'));
 
   return (
     <Modal 
@@ -65,7 +67,7 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
             <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center">
               <FileText className="h-4 w-4 text-muted-foreground" />
             </div>
-            جۆری خەرجی
+            {t('expenseType')}
           </Label>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -78,8 +80,8 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
               }`}
             >
               <ShoppingCart className="h-6 w-6" />
-              <span className="font-semibold text-sm">Purchase</span>
-              <span className="text-xs opacity-70">کڕین بۆ فرۆشتن</span>
+              <span className="font-semibold text-sm">{t('purchase')}</span>
+              <span className="text-xs opacity-70">{t('purchaseDesc')}</span>
             </button>
             <button
               type="button"
@@ -91,8 +93,8 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
               }`}
             >
               <Receipt className="h-6 w-6" />
-              <span className="font-semibold text-sm">Cost</span>
-              <span className="text-xs opacity-70">تێچووی بزنس</span>
+              <span className="font-semibold text-sm">{t('cost')}</span>
+              <span className="text-xs opacity-70">{t('costDesc')}</span>
             </button>
           </div>
         </div>
@@ -102,7 +104,7 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
             <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
               <Calendar className="h-4 w-4 text-primary" />
             </div>
-            ڕۆژ
+            {t('day')}
           </Label>
           <DayPicker
             value={day}
@@ -117,7 +119,7 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isPurchase ? 'bg-accent/20' : 'bg-destructive/20'}`}>
               <PoundSterling className={`h-4 w-4 ${isPurchase ? 'text-accent' : 'text-destructive'}`} />
             </div>
-            بڕی پارە £
+            {t('amount')} £
           </Label>
           <Input
             type="text"
@@ -139,12 +141,12 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
             <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center">
               <FileText className="h-4 w-4 text-muted-foreground" />
             </div>
-            وەسف
+            {t('description')}
           </Label>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder={isPurchase ? "وەسفی کڕینەکە بنووسە" : "وەسفی تێچووەکە بنووسە"}
+            placeholder={isPurchase ? t('purchasePlaceholder') : t('costPlaceholder')}
             className="bg-secondary/50 border-white/10 rounded-xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 min-h-[100px] text-base transition-all resize-none"
             required
           />
@@ -158,7 +160,7 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
               : 'btn-gradient-danger shadow-destructive/30 hover:shadow-destructive/50'
           }`}
         >
-          {editingExpense ? 'نوێکردنەوە' : 'زیادکردن'}
+          {editingExpense ? t('update') : t('add')}
         </Button>
       </form>
     </Modal>
