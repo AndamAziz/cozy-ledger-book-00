@@ -416,7 +416,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const totalApproved = users.filter(u => u.is_approved).length;
   const totalExpired = users.filter(u => u.is_approved && u.expires_at && new Date(u.expires_at) < new Date()).length;
   const totalInactive = users.filter(u => !u.is_active).length;
-  const totalActive = totalApproved - totalExpired;
+  const totalActive = users.filter(u => u.is_approved && u.is_active && (!u.expires_at || new Date(u.expires_at) >= new Date())).length;
   const expiringIn7Days = users.filter(u => {
     if (!u.is_approved || !u.expires_at) return false;
     const daysLeft = Math.ceil((new Date(u.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
