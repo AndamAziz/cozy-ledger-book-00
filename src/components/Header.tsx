@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, Building2, Globe } from 'lucide-react';
+import { LogOut, Building2 } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface HeaderProps {
@@ -14,7 +15,7 @@ interface HeaderProps {
 
 export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout, companyName }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { t, language, setLanguage } = useLanguage();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -36,9 +37,6 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
     return `${dayName}, ${day} ${month} ${year}`;
   };
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'ku' ? 'en' : 'ku');
-  };
 
   return (
     <header className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-primary/20 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-lg p-3 sm:p-4 md:p-5 mb-4 sm:mb-6 animate-fade-in shadow-xl">
@@ -57,15 +55,7 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
         {/* Date & Language Row */}
         <div className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl bg-secondary/40 border border-border/20">
           <span className="text-[10px] sm:text-xs md:text-sm text-foreground truncate">{formatDate(currentTime)}</span>
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 px-3 py-1.5 rounded-lg bg-info/15 hover:bg-info/25 border border-info/30 transition-all duration-200 hover:scale-105 active:scale-95"
-          >
-            <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info" />
-            <span className="text-sm sm:text-base font-bold text-info">
-              {language === 'ku' ? 'EN' : 'کو'}
-            </span>
-          </button>
+          <LanguageSwitcher />
         </div>
 
         {/* Title & Actions Row */}
