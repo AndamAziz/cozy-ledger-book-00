@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { toast } from '@/hooks/use-toast';
 
 interface ApprovalStatus {
   isApproved: boolean;
@@ -15,17 +16,23 @@ export function useUserRole(user: User | null) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const hasShownExpiryWarning = useRef(false);
+  const previousExpiresAt = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) {
       setIsAdmin(false);
       setApprovalStatus(null);
       setIsLoading(false);
+      hasShownExpiryWarning.current = false;
+      previousExpiresAt.current = null;
       return;
     }
 
-    const checkUserStatus = async () => {
-      setIsLoading(true);
+    const checkUserStatus = async (isInitialLoad = false) => {
+      if (isInitialLoad) {
+        setIsLoading(true);
+      }
       try {
         // Check if user is admin
         const { data: roleData } = await supabase
@@ -48,12 +55,49 @@ export function useUserRole(user: User | null) {
           const expiresAt = approvalData.expires_at ? new Date(approvalData.expires_at) : null;
           const now = new Date();
           const isExpired = expiresAt ? expiresAt < now : false;
-          const isActive = approvalData.is_active !== false; // Default to true if not set
+          const isActive = approvalData.is_active !== false;
           
           let daysUntilExpiry: number | null = null;
           if (expiresAt && !isExpired) {
             daysUntilExpiry = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           }
+
+          // Show expiry warning notification on login (only once per session)
+          if (isInitialLoad && !isUserAdmin && daysUntilExpiry !== null && daysUntilExpiry <= 10 && !hasShownExpiryWarning.current) {
+            hasShownExpiryWarning.current = true;
+            toast({
+              title: daysUntilExpiry === 1 
+                ? "⚠️ بەیانی کاتی بەکارهێنان بەسەردەچێت!" 
+                : `⚠️ ${daysUntilExpiry} ڕۆژ ماوە بۆ بەسەرچوونی کات`,
+              description: "تکایە پەیوەندی بە بەڕێوەبەرەوە بکە بۆ درێژکردنەوە",
+              variant: "destructive",
+              duration: 10000,
+            });
+          }
+
+          // Check if expiry was extended (compare with previous value)
+          if (previousExpiresAt.current && approvalData.expires_at) {
+            const prevExpiry = new Date(previousExpiresAt.current);
+            const newExpiry = new Date(approvalData.expires_at);
+            
+            if (newExpiry > prevExpiry) {
+              const formattedDate = newExpiry.toLocaleDateString('ku-Arab', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              });
+              toast({
+                title: "🎉 کاتی بەکارهێنان درێژکرایەوە!",
+                description: `ئەکاونتەکەت تا ${formattedDate} کارا دەبێت`,
+                duration: 10000,
+              });
+              // Reset the warning flag so it can show again if needed
+              hasShownExpiryWarning.current = false;
+            }
+          }
+          
+          // Store current expires_at for comparison
+          previousExpiresAt.current = approvalData.expires_at;
 
           setApprovalStatus({
             isApproved: approvalData.is_approved && !isExpired && isActive,
@@ -84,11 +128,36 @@ export function useUserRole(user: User | null) {
           isActive: true,
         });
       } finally {
-        setIsLoading(false);
+        if (isInitialLoad) {
+          setIsLoading(false);
+        }
       }
     };
 
-    checkUserStatus();
+    // Initial load
+    checkUserStatus(true);
+
+    // Set up realtime subscription for user_approvals changes
+    const channel = supabase
+      .channel('user-approval-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_approvals',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          // Refetch user status when approval changes
+          checkUserStatus(false);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   return { isAdmin, approvalStatus, isLoading };
