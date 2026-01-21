@@ -8,10 +8,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import kurdistanFlag from '@/assets/flags/kurdistan.png';
-import ukFlag from '@/assets/flags/uk.png';
-import saudiFlag from '@/assets/flags/saudi.png';
-import iranFlag from '@/assets/flags/iran.png';
 
 interface LanguageOption {
   code: Language;
@@ -20,10 +16,10 @@ interface LanguageOption {
 }
 
 const languages: LanguageOption[] = [
-  { code: 'ku', label: 'کوردی', flag: kurdistanFlag },
-  { code: 'en', label: 'English', flag: ukFlag },
-  { code: 'ar', label: 'العربية', flag: saudiFlag },
-  { code: 'fa', label: 'فارسی', flag: iranFlag },
+  { code: 'ku', label: 'کوردی', flag: '🇹🇯' },
+  { code: 'en', label: 'English', flag: '🇬🇧' },
+  { code: 'ar', label: 'العربية', flag: '🇸🇦' },
+  { code: 'fa', label: 'فارسی', flag: '🇮🇷' },
 ];
 
 export function LanguageSwitcher() {
@@ -40,11 +36,7 @@ export function LanguageSwitcher() {
           className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-lg bg-info/15 hover:bg-info/25 border border-info/30 transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info" />
-          <img 
-            src={currentLang.flag} 
-            alt={currentLang.label} 
-            className="h-4 w-5 sm:h-5 sm:w-6 rounded-sm object-cover shadow-sm" 
-          />
+          <span className="text-base sm:text-lg">{currentLang.flag}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[140px] bg-background border border-border">
@@ -56,11 +48,7 @@ export function LanguageSwitcher() {
               language === lang.code ? 'bg-primary/10 text-primary' : ''
             }`}
           >
-            <img 
-              src={lang.flag} 
-              alt={lang.label} 
-              className="h-4 w-5 rounded-sm object-cover shadow-sm" 
-            />
+            <span className="text-lg">{lang.flag}</span>
             <span className="font-medium">{lang.label}</span>
           </DropdownMenuItem>
         ))}
