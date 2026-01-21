@@ -128,40 +128,63 @@ export function FinanceTab({
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-3 gap-2 md:gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
-        <Button 
+      <div className="grid grid-cols-3 gap-3 md:gap-5 animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <button 
           onClick={() => { setEditingIncome(null); setIncomeModalOpen(true); }} 
-          className="group btn-gradient-primary py-4 md:py-6 text-xs md:text-base rounded-xl md:rounded-2xl shadow-lg md:shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+          className="group relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-primary via-primary to-emerald-500 p-4 md:p-6 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.03] active:scale-[0.97] transition-all duration-300"
         >
-          <div className="flex flex-col items-center gap-1 md:gap-2">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Plus className="h-4 w-4 md:h-5 md:w-5" />
+          {/* Glow effect */}
+          <div className="absolute -top-8 -right-8 w-20 h-20 md:w-28 md:h-28 rounded-full bg-white/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
+          
+          <div className="relative flex flex-col items-center gap-2 md:gap-3">
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+              <Plus className="h-6 w-6 md:h-8 md:w-8 text-white" />
             </div>
-            <span className="font-bold text-[10px] md:text-sm">داهات</span>
+            <div className="text-center">
+              <span className="block font-bold text-white text-sm md:text-lg">داهات</span>
+              <span className="block text-white/70 text-[10px] md:text-xs mt-0.5">Income</span>
+            </div>
           </div>
-        </Button>
-        <Button 
+        </button>
+        
+        <button 
           onClick={() => openExpenseModal('purchase')} 
-          className="group btn-gradient-accent py-4 md:py-6 text-xs md:text-base rounded-xl md:rounded-2xl shadow-lg md:shadow-xl shadow-accent/30 hover:shadow-accent/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+          className="group relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-accent via-accent to-amber-400 p-4 md:p-6 shadow-xl shadow-accent/25 hover:shadow-2xl hover:shadow-accent/40 hover:scale-[1.03] active:scale-[0.97] transition-all duration-300"
         >
-          <div className="flex flex-col items-center gap-1 md:gap-2">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
+          {/* Glow effect */}
+          <div className="absolute -top-8 -right-8 w-20 h-20 md:w-28 md:h-28 rounded-full bg-white/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
+          
+          <div className="relative flex flex-col items-center gap-2 md:gap-3">
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+              <ShoppingCart className="h-6 w-6 md:h-8 md:w-8 text-white" />
             </div>
-            <span className="font-bold text-[10px] md:text-sm">Purchase</span>
+            <div className="text-center">
+              <span className="block font-bold text-white text-sm md:text-lg">کڕین</span>
+              <span className="block text-white/70 text-[10px] md:text-xs mt-0.5">Purchase</span>
+            </div>
           </div>
-        </Button>
-        <Button 
+        </button>
+        
+        <button 
           onClick={() => openExpenseModal('cost')} 
-          className="group btn-gradient-danger py-4 md:py-6 text-xs md:text-base rounded-xl md:rounded-2xl shadow-lg md:shadow-xl shadow-destructive/30 hover:shadow-destructive/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+          className="group relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-destructive via-destructive to-rose-400 p-4 md:p-6 shadow-xl shadow-destructive/25 hover:shadow-2xl hover:shadow-destructive/40 hover:scale-[1.03] active:scale-[0.97] transition-all duration-300"
         >
-          <div className="flex flex-col items-center gap-1 md:gap-2">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Receipt className="h-4 w-4 md:h-5 md:w-5" />
+          {/* Glow effect */}
+          <div className="absolute -top-8 -right-8 w-20 h-20 md:w-28 md:h-28 rounded-full bg-white/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
+          
+          <div className="relative flex flex-col items-center gap-2 md:gap-3">
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+              <Receipt className="h-6 w-6 md:h-8 md:w-8 text-white" />
             </div>
-            <span className="font-bold text-[10px] md:text-sm">Cost</span>
+            <div className="text-center">
+              <span className="block font-bold text-white text-sm md:text-lg">تێچوو</span>
+              <span className="block text-white/70 text-[10px] md:text-xs mt-0.5">Cost</span>
+            </div>
           </div>
-        </Button>
+        </button>
       </div>
 
       {/* Daily Summary */}
