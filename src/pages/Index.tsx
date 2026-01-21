@@ -44,22 +44,22 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
         <meta name="description" content="سیستەمی بەڕێوەبردنی داراییی و کۆگای جگەرە" />
       </Helmet>
 
-      <div className="min-h-screen p-3 md:p-6">
+      <div className="min-h-screen p-2 sm:p-3 md:p-6 safe-area-inset">
         <div className="max-w-5xl mx-auto">
           {/* Admin Button - Styled like dashboard buttons */}
           {isAdmin && (
-            <div className="mb-4 no-print">
+            <div className="mb-3 sm:mb-4 no-print">
               <Button
                 onClick={onOpenAdmin}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-4 h-auto w-full md:w-auto transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-info/20"
+                className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-3 sm:p-4 h-auto w-full md:w-auto transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-info/20 touch-manipulation"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-lg shadow-info/30">
-                    <Users className="h-6 w-6 text-info-foreground" />
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-lg shadow-info/30">
+                    <Users className="h-5 w-5 sm:h-6 sm:w-6 text-info-foreground" />
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-foreground text-base">پانێلی ئەدمین</p>
-                    <p className="text-xs text-muted-foreground">بەڕێوەبردنی بەکارهێنەران</p>
+                    <p className="font-bold text-foreground text-sm sm:text-base">پانێلی ئەدمین</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">بەڕێوەبردنی بەکارهێنەران</p>
                   </div>
                 </div>
                 {/* Decorative gradient */}
@@ -84,8 +84,8 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           <AlertBox lowStockItems={lowStockItems} />
 
           {/* Tab Navigation */}
-          <div className="relative mb-8 no-print">
-            <div className="grid grid-cols-4 gap-2 md:gap-3 p-2.5 md:p-3 rounded-3xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20">
+          <div className="relative mb-4 sm:mb-6 md:mb-8 no-print">
+            <div className="grid grid-cols-4 gap-1.5 sm:gap-2 md:gap-3 p-2 sm:p-2.5 md:p-3 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20">
               <TabButton active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon="💰" label="داراییی" />
               <TabButton active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon="📦" label="کۆگا" />
               <TabButton active={activeTab === 'sales'} onClick={() => setActiveTab('sales')} icon="🛒" label="فرۆشتن" />
