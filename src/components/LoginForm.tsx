@@ -3,16 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, LogIn, Wallet, Sparkles, UserPlus } from 'lucide-react';
+import { Mail, Lock, LogIn, Wallet, Sparkles, UserPlus, Building2 } from 'lucide-react';
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  onSignup: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  onSignup: (email: string, password: string, companyName: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSignupMode, setIsSignupMode] = useState(false);
   const { toast } = useToast();
@@ -41,8 +42,18 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
       return;
     }
 
+    if (isSignupMode && !companyName.trim()) {
+      toast({
+        title: 'هەڵە',
+        description: 'تکایە ناوی کۆمپانیاکەت بنووسە',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const result = isSignupMode 
-      ? await onSignup(email, password)
+      ? await onSignup(email, password, companyName.trim())
       : await onLogin(email, password);
 
     if (result.success) {
@@ -105,7 +116,28 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               </p>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {isSignupMode && (
+                <div className="space-y-2">
+                  <Label htmlFor="companyName" className="text-muted-foreground flex items-center gap-2 text-sm">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    ناوی کۆمپانیا
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="companyName"
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="ناوی کۆمپانیا بنووسە"
+                      required={isSignupMode}
+                      disabled={isLoading}
+                      className="bg-secondary/30 border-border/50 rounded-xl py-6 pr-4 focus:border-primary/50 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-muted-foreground flex items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-primary" />
