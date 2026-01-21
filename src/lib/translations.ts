@@ -328,6 +328,16 @@ export const translations = {
     waiting: 'چاوەڕوان',
     approvedAt: 'ئەپروڤ',
     expiresAt: 'بەسەردەچێت',
+    
+    // Admin Management
+    makeAdmin: 'کردن بە ئەدمین',
+    makeAdminTitle: 'کردن بە ئەدمین',
+    makeAdminConfirm: 'ئایا دڵنیایت دەتەوێت ئەم بەکارهێنەرە بکەیت بە ئەدمین؟',
+    makeAdminWarning: 'ئەدمین دەسەڵاتی بەڕێوەبردنی هەموو بەکارهێنەرانی هەیە',
+    adminMadeSuccess: 'بەکارهێنەر بوو بە ئەدمین',
+    errorMakingAdmin: 'هەڵە لە کردن بە ئەدمین',
+    alreadyAdmin: 'ئەم بەکارهێنەرە پێشتر ئەدمینە',
+    adminBadge: 'ئەدمین',
   },
   en: {
     // Header
@@ -656,6 +666,16 @@ export const translations = {
     waiting: 'Pending',
     approvedAt: 'Approved',
     expiresAt: 'Expires',
+    
+    // Admin Management
+    makeAdmin: 'Make Admin',
+    makeAdminTitle: 'Make Admin',
+    makeAdminConfirm: 'Are you sure you want to make this user an admin?',
+    makeAdminWarning: 'Admins have full access to manage all users',
+    adminMadeSuccess: 'User is now an admin',
+    errorMakingAdmin: 'Error making admin',
+    alreadyAdmin: 'This user is already an admin',
+    adminBadge: 'Admin',
   },
   ar: {
     // Header
@@ -984,6 +1004,16 @@ export const translations = {
     waiting: 'منتظر',
     approvedAt: 'موافق',
     expiresAt: 'ينتهي',
+    
+    // Admin Management
+    makeAdmin: 'جعل مشرف',
+    makeAdminTitle: 'جعل مشرف',
+    makeAdminConfirm: 'هل أنت متأكد أنك تريد جعل هذا المستخدم مشرفاً؟',
+    makeAdminWarning: 'المشرفون لديهم صلاحية إدارة جميع المستخدمين',
+    adminMadeSuccess: 'أصبح المستخدم مشرفاً',
+    errorMakingAdmin: 'خطأ في جعل المستخدم مشرفاً',
+    alreadyAdmin: 'هذا المستخدم مشرف بالفعل',
+    adminBadge: 'مشرف',
   },
   fa: {
     // Header
@@ -1312,6 +1342,16 @@ export const translations = {
     waiting: 'منتظر',
     approvedAt: 'تأیید شده',
     expiresAt: 'منقضی می‌شود',
+    
+    // Admin Management
+    makeAdmin: 'تبدیل به ادمین',
+    makeAdminTitle: 'تبدیل به ادمین',
+    makeAdminConfirm: 'آیا مطمئن هستید که می‌خواهید این کاربر را ادمین کنید؟',
+    makeAdminWarning: 'ادمین‌ها دسترسی کامل به مدیریت همه کاربران دارند',
+    adminMadeSuccess: 'کاربر اکنون ادمین است',
+    errorMakingAdmin: 'خطا در تبدیل به ادمین',
+    alreadyAdmin: 'این کاربر قبلاً ادمین است',
+    adminBadge: 'ادمین',
   },
 } as const;
 
