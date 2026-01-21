@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const SplashScreen = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [showText, setShowText] = useState(false);
   const [showSubtext, setShowSubtext] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     // Stagger the animations
@@ -69,7 +71,7 @@ export const SplashScreen = () => {
         {/* Subtitle with delayed animation */}
         <div className={`transition-all duration-700 ease-out delay-200 ${showSubtext ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <p className="text-sm sm:text-base text-muted-foreground mb-8">
-            سیستەمی بەڕێوەبردنی دارایی و کۆگا
+            {t('splashSubtitle')}
           </p>
         </div>
 
@@ -87,7 +89,7 @@ export const SplashScreen = () => {
             </div>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground/70 mt-4">
-            چاوەڕوانبە...
+            {t('loading')}
           </p>
         </div>
       </div>
