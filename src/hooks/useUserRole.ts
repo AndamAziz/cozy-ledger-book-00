@@ -7,6 +7,7 @@ interface ApprovalStatus {
   expiresAt: Date | null;
   isExpired: boolean;
   daysUntilExpiry: number | null;
+  companyName: string | null;
 }
 
 export function useUserRole(user: User | null) {
@@ -30,7 +31,7 @@ export function useUserRole(user: User | null) {
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         const isUserAdmin = roleData?.role === 'admin';
         setIsAdmin(isUserAdmin);
@@ -38,9 +39,9 @@ export function useUserRole(user: User | null) {
         // Check approval status
         const { data: approvalData } = await supabase
           .from('user_approvals')
-          .select('is_approved, expires_at')
+          .select('is_approved, expires_at, company_name')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (approvalData) {
           const expiresAt = approvalData.expires_at ? new Date(approvalData.expires_at) : null;
@@ -57,6 +58,7 @@ export function useUserRole(user: User | null) {
             expiresAt,
             isExpired,
             daysUntilExpiry,
+            companyName: approvalData.company_name,
           });
         } else {
           setApprovalStatus({
@@ -64,6 +66,7 @@ export function useUserRole(user: User | null) {
             expiresAt: null,
             isExpired: false,
             daysUntilExpiry: null,
+            companyName: null,
           });
         }
       } catch (error) {
@@ -73,6 +76,7 @@ export function useUserRole(user: User | null) {
           expiresAt: null,
           isExpired: false,
           daysUntilExpiry: null,
+          companyName: null,
         });
       } finally {
         setIsLoading(false);

@@ -47,7 +47,7 @@ export function useAuth() {
     }
   }, []);
 
-  const signup = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const signup = useCallback(async (email: string, password: string, companyName: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -62,6 +62,17 @@ export function useAuth() {
           return { success: false, error: 'ئەم ئیمەیڵە پێشتر تۆمار کراوە' };
         }
         return { success: false, error: error.message };
+      }
+
+      // Update company name in user_approvals after signup
+      if (data.user) {
+        // Use setTimeout to defer the Supabase call
+        setTimeout(async () => {
+          await supabase
+            .from('user_approvals')
+            .update({ company_name: companyName })
+            .eq('user_id', data.user!.id);
+        }, 100);
       }
 
       return { success: true };

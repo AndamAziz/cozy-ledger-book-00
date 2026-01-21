@@ -15,11 +15,17 @@ import { SalesTab } from '@/components/SalesTab';
 import { ReportsTab } from '@/components/ReportsTab';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { Settings, Users } from 'lucide-react';
 
 type TabType = 'finance' | 'inventory' | 'sales' | 'reports';
 
-const Dashboard = ({ onOpenAdmin, isAdmin }: { onOpenAdmin: () => void; isAdmin: boolean }) => {
+interface DashboardProps {
+  onOpenAdmin: () => void;
+  isAdmin: boolean;
+  companyName?: string | null;
+}
+
+const Dashboard = ({ onOpenAdmin, isAdmin, companyName }: DashboardProps) => {
   const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
   const financeData = useFinanceData();
@@ -30,33 +36,41 @@ const Dashboard = ({ onOpenAdmin, isAdmin }: { onOpenAdmin: () => void; isAdmin:
   return (
     <>
       <Helmet>
-        <title>بەڕێوەبردنی داراییی - {financeData.getCurrentMonthLabel()}</title>
+        <title>{companyName ? `${companyName} - ` : ''}بەڕێوەبردنی داراییی - {financeData.getCurrentMonthLabel()}</title>
         <meta name="description" content="سیستەمی بەڕێوەبردنی داراییی و کۆگای جگەرە" />
       </Helmet>
 
       <div className="min-h-screen p-3 md:p-6">
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-2 mb-4">
-            {isAdmin && (
+          {/* Admin Button - Styled like dashboard buttons */}
+          {isAdmin && (
+            <div className="mb-4 no-print">
               <Button
-                variant="outline"
-                size="icon"
                 onClick={onOpenAdmin}
-                className="rounded-xl no-print"
-                title="پانێلی ئەدمین"
+                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-4 h-auto w-full md:w-auto transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-info/20"
               >
-                <Settings className="h-5 w-5" />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-lg shadow-info/30">
+                    <Users className="h-6 w-6 text-info-foreground" />
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-foreground text-base">پانێلی ئەدمین</p>
+                    <p className="text-xs text-muted-foreground">بەڕێوەبردنی بەکارهێنەران</p>
+                  </div>
+                </div>
+                {/* Decorative gradient */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-info/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </Button>
-            )}
-            <div className="flex-1">
-              <Header
-                currentMonthKey={financeData.currentMonthKey}
-                currentMonthLabel={financeData.getCurrentMonthLabel()}
-                onMonthChange={financeData.changeMonth}
-                onLogout={logout}
-              />
             </div>
-          </div>
+          )}
+
+          <Header
+            currentMonthKey={financeData.currentMonthKey}
+            currentMonthLabel={financeData.getCurrentMonthLabel()}
+            onMonthChange={financeData.changeMonth}
+            onLogout={logout}
+            companyName={companyName}
+          />
 
           <AlertBox lowStockItems={lowStockItems} />
 
@@ -122,7 +136,13 @@ const Index = () => {
     return <AdminPanel onBack={() => setShowAdminPanel(false)} />;
   }
 
-  return <Dashboard onOpenAdmin={() => setShowAdminPanel(true)} isAdmin={isAdmin} />;
+  return (
+    <Dashboard 
+      onOpenAdmin={() => setShowAdminPanel(true)} 
+      isAdmin={isAdmin} 
+      companyName={approvalStatus?.companyName}
+    />
+  );
 };
 
 export default Index;

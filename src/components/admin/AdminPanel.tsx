@@ -18,7 +18,8 @@ import {
   AlertTriangle,
   UserCheck,
   UserX,
-  TrendingUp
+  TrendingUp,
+  Building2
 } from 'lucide-react';
 import {
   Select,
@@ -44,6 +45,7 @@ interface UserApproval {
   approved_at: string | null;
   expires_at: string | null;
   created_at: string;
+  company_name: string | null;
 }
 
 interface AdminPanelProps {
@@ -401,6 +403,12 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         <Shield className="h-4 w-4 text-warning" />
                         <span className="font-medium">{user.email}</span>
                       </div>
+                      {user.company_name && (
+                        <div className="flex items-center gap-1.5 text-sm text-primary mb-1">
+                          <Building2 className="h-3.5 w-3.5" />
+                          <span>{user.company_name}</span>
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         تۆمارکرا: {formatDate(user.created_at)}
                       </p>
@@ -467,6 +475,12 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                               </span>
                             )}
                           </div>
+                          {user.company_name && (
+                            <div className="flex items-center gap-1.5 text-sm text-primary mb-1">
+                              <Building2 className="h-3.5 w-3.5" />
+                              <span>{user.company_name}</span>
+                            </div>
+                          )}
                           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Check className="h-3 w-3" />

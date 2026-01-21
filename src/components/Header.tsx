@@ -1,14 +1,16 @@
 import { Button } from '@/components/ui/button';
-import { LogOut, Calendar, Wallet } from 'lucide-react';
+import { LogOut, Calendar, Wallet, Building2 } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
+
 interface HeaderProps {
   currentMonthKey: string;
   currentMonthLabel: string;
   onMonthChange: (month: string) => void;
   onLogout: () => void;
+  companyName?: string | null;
 }
 
-export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout }: HeaderProps) {
+export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout, companyName }: HeaderProps) {
   return (
     <header className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card/80 to-transparent backdrop-blur-xl p-5 md:p-6 mb-8 animate-fade-in">
       {/* Background decorations */}
@@ -27,6 +29,12 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
             </div>
           </div>
           <div>
+            {companyName && (
+              <div className="flex items-center gap-2 mb-1">
+                <Building2 className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-primary">{companyName}</span>
+              </div>
+            )}
             <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-l from-primary via-success to-foreground bg-clip-text text-transparent">
               بەڕێوەبردنی داراییی
             </h1>
