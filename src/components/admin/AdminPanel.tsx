@@ -64,7 +64,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showCompanyDialog, setShowCompanyDialog] = useState(false);
+  const [showExpiryDialog, setShowExpiryDialog] = useState(false);
   const [expiryDuration, setExpiryDuration] = useState('30');
+  const [customExpiryDate, setCustomExpiryDate] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newCompanyName, setNewCompanyName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -269,6 +271,45 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         description: 'هەڵە لە گۆڕینی دۆخی هەژمارە',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleSetCustomExpiry = async () => {
+    if (!selectedUser || !customExpiryDate) return;
+
+    setIsUpdating(true);
+    try {
+      const newExpiry = new Date(customExpiryDate);
+      newExpiry.setHours(23, 59, 59, 999); // Set to end of day
+
+      const { error } = await supabase
+        .from('user_approvals')
+        .update({
+          expires_at: newExpiry.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سەرکەوتوو',
+        description: 'کاتی بەسەرچوون گۆڕدرا',
+      });
+
+      setShowExpiryDialog(false);
+      setSelectedUser(null);
+      setCustomExpiryDate('');
+      fetchUsers();
+    } catch (error) {
+      console.error('Error setting custom expiry:', error);
+      toast({
+        title: 'هەڵە',
+        description: 'هەڵە لە گۆڕینی کاتی بەسەرچوون',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -577,6 +618,25 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            // Set current expiry date in the input
+                            if (user.expires_at) {
+                              const date = new Date(user.expires_at);
+                              setCustomExpiryDate(date.toISOString().split('T')[0]);
+                            } else {
+                              setCustomExpiryDate(new Date().toISOString().split('T')[0]);
+                            }
+                            setShowExpiryDialog(true);
+                          }}
+                          className="rounded-lg text-xs border-primary/30 text-primary hover:text-primary"
+                        >
+                          <Calendar className="h-3 w-3 ml-1" />
+                          گۆڕینی کات
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleExtendExpiry(user, 30)}
                           className="rounded-lg text-xs"
                         >
@@ -785,6 +845,105 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <Button
               onClick={handleChangeCompanyName}
               disabled={isUpdating}
+              className="rounded-xl"
+            >
+              {isUpdating ? 'چاوەڕوانبە...' : 'گۆڕین'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Expiry Dialog */}
+      <Dialog open={showExpiryDialog} onOpenChange={setShowExpiryDialog}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>گۆڕینی کاتی بەسەرچوون</DialogTitle>
+            <DialogDescription>
+              کاتی بەسەرچوونی نوێ دیاری بکە بۆ {selectedUser?.company_name || selectedUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            <div>
+              <Label>ڕێکەوتی بەسەرچوون</Label>
+              <Input
+                type="date"
+                value={customExpiryDate}
+                onChange={(e) => setCustomExpiryDate(e.target.value)}
+                className="mt-2 rounded-xl"
+              />
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const date = new Date();
+                  date.setDate(date.getDate() + 7);
+                  setCustomExpiryDate(date.toISOString().split('T')[0]);
+                }}
+                className="rounded-lg text-xs"
+              >
+                ١ هەفتە
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const date = new Date();
+                  date.setDate(date.getDate() + 30);
+                  setCustomExpiryDate(date.toISOString().split('T')[0]);
+                }}
+                className="rounded-lg text-xs"
+              >
+                ١ مانگ
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const date = new Date();
+                  date.setDate(date.getDate() + 90);
+                  setCustomExpiryDate(date.toISOString().split('T')[0]);
+                }}
+                className="rounded-lg text-xs"
+              >
+                ٣ مانگ
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const date = new Date();
+                  date.setFullYear(date.getFullYear() + 1);
+                  setCustomExpiryDate(date.toISOString().split('T')[0]);
+                }}
+                className="rounded-lg text-xs"
+              >
+                ١ ساڵ
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowExpiryDialog(false);
+                setCustomExpiryDate('');
+              }}
+              className="rounded-xl"
+            >
+              پاشگەزبوونەوە
+            </Button>
+            <Button
+              onClick={handleSetCustomExpiry}
+              disabled={isUpdating || !customExpiryDate}
               className="rounded-xl"
             >
               {isUpdating ? 'چاوەڕوانبە...' : 'گۆڕین'}
