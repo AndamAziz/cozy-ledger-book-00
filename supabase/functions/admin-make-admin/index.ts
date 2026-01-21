@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface MakeAdminRequest {
   userId: string;
+  targetEmail?: string;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -67,7 +68,7 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // Parse request body
-    const { userId }: MakeAdminRequest = await req.json();
+    const { userId, targetEmail }: MakeAdminRequest = await req.json();
 
     if (!userId) {
       return new Response(
@@ -103,6 +104,16 @@ serve(async (req: Request): Promise<Response> => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log the activity
+    await supabaseAdmin.from("admin_activity_logs").insert({
+      admin_id: user.id,
+      admin_email: user.email || "",
+      action_type: "make_admin",
+      target_user_id: userId,
+      target_user_email: targetEmail || null,
+      details: { action: "User promoted to admin role" }
+    });
 
     console.log(`User ${userId} promoted to admin by ${user.id}`);
 

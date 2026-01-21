@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
     }
 
     const adminUserId = claimsData.claims.sub;
+    const adminEmail = claimsData.claims.email as string || '';
 
     // Check if requesting user is admin
     const { data: isAdmin } = await supabaseUser.rpc('has_role', {
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { userId } = await req.json();
+    const { userId, targetEmail } = await req.json();
 
     if (!userId) {
       return new Response(
@@ -69,6 +70,16 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+
+    // Log the activity BEFORE deletion (so we have target info)
+    await supabaseAdmin.from("admin_activity_logs").insert({
+      admin_id: adminUserId,
+      admin_email: adminEmail,
+      action_type: "account_deleted",
+      target_user_id: userId,
+      target_user_email: targetEmail || null,
+      details: { action: "Account and all data permanently deleted" }
+    });
 
     // Delete user data from all tables
     const tables = ['incomes', 'expenses', 'sales', 'cigarettes'];

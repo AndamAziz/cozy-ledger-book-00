@@ -343,6 +343,25 @@ export const translations = {
     removeAdminConfirm: 'ئایا دڵنیایت دەتەوێت ڕۆڵی ئەدمین لاببەیت لەم بەکارهێنەرە؟',
     adminRemovedSuccess: 'ڕۆڵی ئەدمین لابرا',
     errorRemovingAdmin: 'هەڵە لە لابردنی ڕۆڵی ئەدمین',
+    
+    // Activity Log
+    activityLog: 'لۆگی چالاکییەکان',
+    activityLogTitle: 'لۆگی چالاکییەکانی ئەدمین',
+    noActivityLogs: 'هیچ چالاکییەک تۆمار نەکراوە',
+    errorFetchingLogs: 'هەڵە لە هێنانی لۆگەکان',
+    actionApproved: 'ئەپروڤکرا',
+    actionRevoked: 'دەسەڵات لابرا',
+    actionPasswordChanged: 'وشەی نهێنی گۆڕدرا',
+    actionExpiryExtended: 'کات درێژکرایەوە',
+    actionExpiryChanged: 'کات گۆڕدرا',
+    actionActivated: 'چالاک کرا',
+    actionDeactivated: 'ناچالاک کرا',
+    actionCompanyChanged: 'ناوی کۆمپانیا گۆڕدرا',
+    actionDeleted: 'سڕایەوە',
+    actionMadeAdmin: 'کرا بە ئەدمین',
+    actionRemovedAdmin: 'ئەدمین لابرا',
+    admin: 'ئەدمین',
+    target: 'ئامانج',
   },
   en: {
     // Header
@@ -686,6 +705,25 @@ export const translations = {
     removeAdminConfirm: 'Are you sure you want to remove admin role from this user?',
     adminRemovedSuccess: 'Admin role removed',
     errorRemovingAdmin: 'Error removing admin role',
+    
+    // Activity Log
+    activityLog: 'Activity Log',
+    activityLogTitle: 'Admin Activity Log',
+    noActivityLogs: 'No activities recorded',
+    errorFetchingLogs: 'Error fetching logs',
+    actionApproved: 'Approved',
+    actionRevoked: 'Revoked',
+    actionPasswordChanged: 'Password Changed',
+    actionExpiryExtended: 'Expiry Extended',
+    actionExpiryChanged: 'Expiry Changed',
+    actionActivated: 'Activated',
+    actionDeactivated: 'Deactivated',
+    actionCompanyChanged: 'Company Name Changed',
+    actionDeleted: 'Deleted',
+    actionMadeAdmin: 'Made Admin',
+    actionRemovedAdmin: 'Admin Removed',
+    admin: 'Admin',
+    target: 'Target',
   },
   ar: {
     // Header
@@ -1029,6 +1067,25 @@ export const translations = {
     removeAdminConfirm: 'هل أنت متأكد من إزالة دور المشرف من هذا المستخدم؟',
     adminRemovedSuccess: 'تمت إزالة دور المشرف',
     errorRemovingAdmin: 'خطأ في إزالة دور المشرف',
+    
+    // Activity Log
+    activityLog: 'سجل الأنشطة',
+    activityLogTitle: 'سجل أنشطة المشرف',
+    noActivityLogs: 'لا توجد أنشطة مسجلة',
+    errorFetchingLogs: 'خطأ في جلب السجلات',
+    actionApproved: 'تمت الموافقة',
+    actionRevoked: 'تم الإلغاء',
+    actionPasswordChanged: 'تم تغيير كلمة المرور',
+    actionExpiryExtended: 'تم تمديد الصلاحية',
+    actionExpiryChanged: 'تم تغيير الصلاحية',
+    actionActivated: 'تم التفعيل',
+    actionDeactivated: 'تم التعطيل',
+    actionCompanyChanged: 'تم تغيير اسم الشركة',
+    actionDeleted: 'تم الحذف',
+    actionMadeAdmin: 'تم جعله مشرف',
+    actionRemovedAdmin: 'تمت إزالة المشرف',
+    admin: 'المشرف',
+    target: 'الهدف',
   },
   fa: {
     // Header
@@ -1372,6 +1429,25 @@ export const translations = {
     removeAdminConfirm: 'آیا مطمئن هستید که می‌خواهید نقش ادمین را از این کاربر حذف کنید؟',
     adminRemovedSuccess: 'نقش ادمین حذف شد',
     errorRemovingAdmin: 'خطا در حذف نقش ادمین',
+    
+    // Activity Log
+    activityLog: 'گزارش فعالیت‌ها',
+    activityLogTitle: 'گزارش فعالیت‌های ادمین',
+    noActivityLogs: 'هیچ فعالیتی ثبت نشده',
+    errorFetchingLogs: 'خطا در دریافت گزارش‌ها',
+    actionApproved: 'تأیید شد',
+    actionRevoked: 'لغو شد',
+    actionPasswordChanged: 'رمز عبور تغییر کرد',
+    actionExpiryExtended: 'مدت تمدید شد',
+    actionExpiryChanged: 'مدت تغییر کرد',
+    actionActivated: 'فعال شد',
+    actionDeactivated: 'غیرفعال شد',
+    actionCompanyChanged: 'نام شرکت تغییر کرد',
+    actionDeleted: 'حذف شد',
+    actionMadeAdmin: 'ادمین شد',
+    actionRemovedAdmin: 'ادمین حذف شد',
+    admin: 'ادمین',
+    target: 'هدف',
   },
 } as const;
 

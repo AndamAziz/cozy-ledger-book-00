@@ -25,7 +25,8 @@ import {
   Power,
   Pencil,
   Trash2,
-  Crown
+  Crown,
+  History
 } from 'lucide-react';
 import {
   Select,
@@ -56,6 +57,17 @@ interface UserApproval {
   isAdmin?: boolean;
 }
 
+interface ActivityLog {
+  id: string;
+  admin_id: string;
+  admin_email: string;
+  action_type: string;
+  target_user_id: string | null;
+  target_user_email: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
+
 interface AdminPanelProps {
   onBack: () => void;
 }
@@ -74,6 +86,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showMakeAdminDialog, setShowMakeAdminDialog] = useState(false);
   const [showRemoveAdminDialog, setShowRemoveAdminDialog] = useState(false);
+  const [showActivityLogDialog, setShowActivityLogDialog] = useState(false);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [expiryDuration, setExpiryDuration] = useState('30');
   const [customExpiryDate, setCustomExpiryDate] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -121,6 +136,64 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     }
   };
 
+  const fetchActivityLogs = async () => {
+    setIsLoadingLogs(true);
+    try {
+      const { data, error } = await supabase
+        .from('admin_activity_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setActivityLogs((data || []) as ActivityLog[]);
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+      toast({
+        title: t('error'),
+        description: t('errorFetchingLogs'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  const logActivity = async (actionType: string, targetUserId: string | null, targetUserEmail: string | null, details: { action: string }) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from('admin_activity_logs').insert([{
+        admin_id: user.id,
+        admin_email: user.email || '',
+        action_type: actionType,
+        target_user_id: targetUserId,
+        target_user_email: targetUserEmail,
+        details: details as unknown as Record<string, never>
+      }]);
+    } catch (error) {
+      console.error('Error logging activity:', error);
+    }
+  };
+
+  const getActionTypeLabel = (actionType: string): string => {
+    const labels: Record<string, string> = {
+      'user_approved': t('actionApproved'),
+      'user_revoked': t('actionRevoked'),
+      'password_change': t('actionPasswordChanged'),
+      'expiry_extended': t('actionExpiryExtended'),
+      'expiry_changed': t('actionExpiryChanged'),
+      'account_activated': t('actionActivated'),
+      'account_deactivated': t('actionDeactivated'),
+      'company_name_changed': t('actionCompanyChanged'),
+      'account_deleted': t('actionDeleted'),
+      'make_admin': t('actionMadeAdmin'),
+      'remove_admin': t('actionRemovedAdmin'),
+    };
+    return labels[actionType] || actionType;
+  };
+
   const handleApprove = async () => {
     if (!selectedUser) return;
     setIsUpdating(true);
@@ -141,6 +214,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         .eq('id', selectedUser.id);
 
       if (error) throw error;
+
+      // Log the activity
+      await logActivity('user_approved', selectedUser.user_id, selectedUser.email, { action: `Approved for ${days} days` });
 
       toast({
         title: t('success'),
@@ -176,6 +252,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
       if (error) throw error;
 
+      // Log the activity
+      await logActivity('user_revoked', user.user_id, user.email, { action: 'Permission revoked' });
+
       toast({
         title: t('success'),
         description: t('permissionRevoked'),
@@ -207,7 +286,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     try {
       // Call edge function to change password (since we need service role)
       const { data, error } = await supabase.functions.invoke('admin-change-password', {
-        body: { userId: selectedUser.user_id, newPassword },
+        body: { userId: selectedUser.user_id, newPassword, targetEmail: selectedUser.email },
       });
 
       if (error) throw error;
@@ -248,6 +327,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
       if (error) throw error;
 
+      await logActivity('expiry_extended', user.user_id, user.email, { action: `Extended for ${days} days` });
+
       toast({
         title: t('success'),
         description: `${t('extendedFor')} ${days} ${t('days')}`,
@@ -277,6 +358,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         .eq('id', user.id);
 
       if (error) throw error;
+
+      await logActivity(newActiveState ? 'account_activated' : 'account_deactivated', user.user_id, user.email, { action: newActiveState ? 'Account activated' : 'Account deactivated' });
 
       toast({
         title: t('success'),
@@ -376,7 +459,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     try {
       // Call edge function to completely delete user and all their data
       const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-        body: { userId: selectedUser.user_id },
+        body: { userId: selectedUser.user_id, targetEmail: selectedUser.email },
       });
 
       if (error) throw error;
@@ -407,7 +490,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     setIsUpdating(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-make-admin', {
-        body: { userId: selectedUser.user_id },
+        body: { userId: selectedUser.user_id, targetEmail: selectedUser.email },
       });
 
       if (error) throw error;
@@ -438,7 +521,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     setIsUpdating(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-remove-admin', {
-        body: { userId: selectedUser.user_id },
+        body: { userId: selectedUser.user_id, targetEmail: selectedUser.email },
       });
 
       if (error) throw error;

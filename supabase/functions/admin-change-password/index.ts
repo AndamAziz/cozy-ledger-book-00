@@ -9,6 +9,7 @@ const corsHeaders = {
 interface ChangePasswordRequest {
   userId: string;
   newPassword: string;
+  targetEmail?: string;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -68,7 +69,7 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // Parse request body
-    const { userId, newPassword }: ChangePasswordRequest = await req.json();
+    const { userId, newPassword, targetEmail }: ChangePasswordRequest = await req.json();
 
     if (!userId || !newPassword) {
       return new Response(
@@ -97,6 +98,16 @@ serve(async (req: Request): Promise<Response> => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log the activity
+    await supabaseAdmin.from("admin_activity_logs").insert({
+      admin_id: user.id,
+      admin_email: user.email || "",
+      action_type: "password_change",
+      target_user_id: userId,
+      target_user_email: targetEmail || null,
+      details: { action: "Password changed by admin" }
+    });
 
     console.log(`Password changed for user ${userId} by admin ${user.id}`);
 
