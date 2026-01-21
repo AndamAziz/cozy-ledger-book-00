@@ -30,8 +30,8 @@ export function TabButton({ active, onClick, icon, label }: TabButtonProps) {
     <button
       onClick={onClick}
       className={cn(
-        'group relative p-3 md:p-4 rounded-2xl font-semibold transition-all duration-300',
-        'flex flex-col items-center gap-2 md:gap-3',
+        'group relative p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl font-semibold transition-all duration-300',
+        'flex flex-col items-center gap-1.5 sm:gap-2 md:gap-3',
         'border-2 overflow-hidden',
         'active:scale-95 touch-manipulation',
         active 
@@ -49,24 +49,24 @@ export function TabButton({ active, onClick, icon, label }: TabButtonProps) {
       
       {/* Icon container with enhanced styling */}
       <div className={cn(
-        'relative z-10 w-11 h-11 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-300',
+        'relative z-10 w-9 h-9 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300',
         active 
           ? `bg-gradient-to-br ${colors.icon} text-white shadow-lg ${colors.glow}` 
           : 'bg-secondary/80 text-muted-foreground group-hover:bg-secondary group-hover:text-foreground group-hover:scale-105'
       )}>
         {IconComponent ? (
           <IconComponent className={cn(
-            'h-5 w-5 md:h-6 md:w-6 transition-transform duration-300',
+            'h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 transition-transform duration-300',
             active && 'animate-pulse'
           )} />
         ) : (
-          <span className="text-xl md:text-2xl">{icon}</span>
+          <span className="text-lg sm:text-xl md:text-2xl">{icon}</span>
         )}
       </div>
       
       {/* Label with better visibility */}
       <span className={cn(
-        'relative z-10 text-xs md:text-sm font-bold transition-all duration-300',
+        'relative z-10 text-[10px] sm:text-xs md:text-sm font-bold transition-all duration-300 truncate max-w-full',
         active ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
       )}>
         {label}
@@ -74,7 +74,7 @@ export function TabButton({ active, onClick, icon, label }: TabButtonProps) {
       
       {/* Active indicator line */}
       {active && (
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 rounded-full bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 sm:w-12 h-0.5 sm:h-1 rounded-full bg-gradient-to-r from-transparent via-white/50 to-transparent" />
       )}
     </button>
   );

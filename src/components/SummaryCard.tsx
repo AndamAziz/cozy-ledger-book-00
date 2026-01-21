@@ -66,17 +66,17 @@ export function SummaryCard({ title, value, variant = 'default', fullWidth, icon
   
   return (
     <div className={cn(
-      'group relative overflow-hidden rounded-2xl border p-4 md:p-5 transition-all duration-300',
+      'group relative overflow-hidden rounded-xl sm:rounded-2xl border p-3 sm:p-4 md:p-5 transition-all duration-300',
       'bg-gradient-to-br backdrop-blur-xl',
       config.bg,
       config.border,
-      'hover:scale-[1.03] hover:shadow-2xl active:scale-[0.98]',
+      'hover:scale-[1.02] sm:hover:scale-[1.03] hover:shadow-2xl active:scale-[0.98]',
       config.glow,
       fullWidth && 'col-span-2'
     )}>
       {/* Animated background decoration */}
       <div className={cn(
-        'absolute -top-12 -right-12 w-28 h-28 rounded-full blur-2xl opacity-40 transition-all duration-500 group-hover:opacity-60 group-hover:scale-110',
+        'absolute -top-8 sm:-top-12 -right-8 sm:-right-12 w-20 sm:w-28 h-20 sm:h-28 rounded-full blur-xl sm:blur-2xl opacity-40 transition-all duration-500 group-hover:opacity-60 group-hover:scale-110',
         variant === 'income' && 'bg-success',
         variant === 'expense' && 'bg-destructive',
         variant === 'balance' && 'bg-info',
@@ -86,28 +86,28 @@ export function SummaryCard({ title, value, variant = 'default', fullWidth, icon
       )} />
       
       {/* Sparkle effect on hover */}
-      <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <Sparkles className={cn('h-4 w-4', config.color)} />
+      <div className="absolute top-2 sm:top-3 left-2 sm:left-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <Sparkles className={cn('h-3 w-3 sm:h-4 sm:w-4', config.color)} />
       </div>
       
       {/* Header */}
-      <div className="relative flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
-          {icon && <span className="text-xl md:text-2xl">{icon}</span>}
-          <h3 className="text-sm md:text-base text-muted-foreground font-medium">{title}</h3>
+      <div className="relative flex items-center justify-between mb-2.5 sm:mb-4">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+          {icon && <span className="text-base sm:text-xl md:text-2xl flex-shrink-0">{icon}</span>}
+          <h3 className="text-xs sm:text-sm md:text-base text-muted-foreground font-medium truncate">{title}</h3>
         </div>
         <div className={cn(
-          'w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center',
+          'w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0',
           'bg-gradient-to-br shadow-lg',
           config.iconBg
         )}>
-          <IconComponent className="h-5 w-5 md:h-6 md:w-6 text-white" />
+          <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />
         </div>
       </div>
       
       {/* Value with enhanced styling */}
       <div className={cn(
-        'relative text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight',
+        'relative text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight',
         config.color
       )}>
         {value}
@@ -115,7 +115,7 @@ export function SummaryCard({ title, value, variant = 'default', fullWidth, icon
       
       {/* Bottom accent line */}
       <div className={cn(
-        'absolute bottom-0 left-0 right-0 h-1 opacity-50',
+        'absolute bottom-0 left-0 right-0 h-0.5 sm:h-1 opacity-50',
         'bg-gradient-to-r from-transparent via-current to-transparent',
         config.color
       )} />

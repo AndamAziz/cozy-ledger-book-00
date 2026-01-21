@@ -77,6 +77,7 @@
 
   html {
     direction: rtl;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -84,7 +85,18 @@
     font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
     background: var(--gradient-background);
     min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Safe area for notched devices */
+  .safe-area-inset {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 

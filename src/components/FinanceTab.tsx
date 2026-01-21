@@ -89,9 +89,9 @@ export function FinanceTab({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 sm:space-y-6 md:space-y-8">
       {/* Summary Grid */}
-      <div className="grid grid-cols-2 gap-4 md:gap-5 animate-fade-in">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:gap-5 animate-fade-in">
         <SummaryCard title="کاش" value={formatCurrency(summary.totalCash)} variant="income" icon="💵" />
         <SummaryCard title="کارت" value={formatCurrency(summary.totalCard)} variant="income" icon="💳" />
         <SummaryCard title="کۆی فرۆشتن" value={formatCurrency(summary.totalIncome)} variant="income" icon="📈" />
@@ -102,60 +102,60 @@ export function FinanceTab({
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-3 gap-3 md:gap-5 animate-fade-in" style={{ animationDelay: '100ms' }}>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-5 animate-fade-in" style={{ animationDelay: '100ms' }}>
         <button 
           onClick={() => { setEditingIncome(null); setIncomeModalOpen(true); }} 
-          className="group relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-primary via-primary to-emerald-500 p-4 md:p-6 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.03] active:scale-[0.97] transition-all duration-300"
+          className="group relative overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl bg-gradient-to-br from-primary via-primary to-emerald-500 p-3 sm:p-4 md:p-6 shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/40 hover:scale-[1.02] sm:hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 touch-manipulation"
         >
           {/* Glow effect */}
-          <div className="absolute -top-8 -right-8 w-20 h-20 md:w-28 md:h-28 rounded-full bg-white/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute -top-6 sm:-top-8 -right-6 sm:-right-8 w-16 sm:w-20 md:w-28 h-16 sm:h-20 md:h-28 rounded-full bg-white/20 blur-xl sm:blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
           
-          <div className="relative flex flex-col items-center gap-2 md:gap-3">
-            <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-              <Plus className="h-6 w-6 md:h-8 md:w-8 text-white" />
+          <div className="relative flex flex-col items-center gap-1.5 sm:gap-2 md:gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-lg sm:rounded-xl md:rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+              <Plus className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-white" />
             </div>
             <div className="text-center">
-              <span className="block font-bold text-white text-sm md:text-lg">داهات</span>
-              <span className="block text-white/70 text-[10px] md:text-xs mt-0.5">Income</span>
+              <span className="block font-bold text-white text-xs sm:text-sm md:text-lg">داهات</span>
+              <span className="block text-white/70 text-[8px] sm:text-[10px] md:text-xs mt-0.5">Income</span>
             </div>
           </div>
         </button>
         
         <button 
           onClick={() => openExpenseModal('purchase')} 
-          className="group relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-accent via-accent to-amber-400 p-4 md:p-6 shadow-xl shadow-accent/25 hover:shadow-2xl hover:shadow-accent/40 hover:scale-[1.03] active:scale-[0.97] transition-all duration-300"
+          className="group relative overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl bg-gradient-to-br from-accent via-accent to-amber-400 p-3 sm:p-4 md:p-6 shadow-xl shadow-accent/25 hover:shadow-2xl hover:shadow-accent/40 hover:scale-[1.02] sm:hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 touch-manipulation"
         >
           {/* Glow effect */}
-          <div className="absolute -top-8 -right-8 w-20 h-20 md:w-28 md:h-28 rounded-full bg-white/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute -top-6 sm:-top-8 -right-6 sm:-right-8 w-16 sm:w-20 md:w-28 h-16 sm:h-20 md:h-28 rounded-full bg-white/20 blur-xl sm:blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
           
-          <div className="relative flex flex-col items-center gap-2 md:gap-3">
-            <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-              <ShoppingCart className="h-6 w-6 md:h-8 md:w-8 text-white" />
+          <div className="relative flex flex-col items-center gap-1.5 sm:gap-2 md:gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-lg sm:rounded-xl md:rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+              <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-white" />
             </div>
             <div className="text-center">
-              <span className="block font-bold text-white text-sm md:text-lg">کڕین</span>
-              <span className="block text-white/70 text-[10px] md:text-xs mt-0.5">Purchase</span>
+              <span className="block font-bold text-white text-xs sm:text-sm md:text-lg">کڕین</span>
+              <span className="block text-white/70 text-[8px] sm:text-[10px] md:text-xs mt-0.5">Purchase</span>
             </div>
           </div>
         </button>
         
         <button 
           onClick={() => openExpenseModal('cost')} 
-          className="group relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-destructive via-destructive to-rose-400 p-4 md:p-6 shadow-xl shadow-destructive/25 hover:shadow-2xl hover:shadow-destructive/40 hover:scale-[1.03] active:scale-[0.97] transition-all duration-300"
+          className="group relative overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl bg-gradient-to-br from-destructive via-destructive to-rose-400 p-3 sm:p-4 md:p-6 shadow-xl shadow-destructive/25 hover:shadow-2xl hover:shadow-destructive/40 hover:scale-[1.02] sm:hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 touch-manipulation"
         >
           {/* Glow effect */}
-          <div className="absolute -top-8 -right-8 w-20 h-20 md:w-28 md:h-28 rounded-full bg-white/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute -top-6 sm:-top-8 -right-6 sm:-right-8 w-16 sm:w-20 md:w-28 h-16 sm:h-20 md:h-28 rounded-full bg-white/20 blur-xl sm:blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
           
-          <div className="relative flex flex-col items-center gap-2 md:gap-3">
-            <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
-              <Receipt className="h-6 w-6 md:h-8 md:w-8 text-white" />
+          <div className="relative flex flex-col items-center gap-1.5 sm:gap-2 md:gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-lg sm:rounded-xl md:rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+              <Receipt className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-white" />
             </div>
             <div className="text-center">
-              <span className="block font-bold text-white text-sm md:text-lg">تێچوو</span>
-              <span className="block text-white/70 text-[10px] md:text-xs mt-0.5">Cost</span>
+              <span className="block font-bold text-white text-xs sm:text-sm md:text-lg">تێچوو</span>
+              <span className="block text-white/70 text-[8px] sm:text-[10px] md:text-xs mt-0.5">Cost</span>
             </div>
           </div>
         </button>
