@@ -270,7 +270,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   };
 
   const filteredUsers = users.filter(user =>
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (user.company_name && user.company_name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const pendingUsers = filteredUsers.filter(u => !u.is_approved);
@@ -404,7 +405,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         <div className="relative mb-6">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="گەڕان بە ئیمەیڵ..."
+            placeholder="گەڕان بە ئیمەیڵ یان ناوی کۆمپانیا..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pr-10 rounded-xl py-6 bg-secondary/30 border-border/50"
@@ -493,6 +494,12 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     <div className="flex flex-col gap-4">
                       <div className="flex flex-col md:flex-row md:items-center gap-4">
                         <div className="flex-1">
+                          {user.company_name && (
+                            <div className="flex items-center gap-1.5 text-sm font-semibold text-primary mb-1">
+                              <Building2 className="h-4 w-4" />
+                              <span>{user.company_name}</span>
+                            </div>
+                          )}
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Shield className={`h-4 w-4 ${expired ? 'text-destructive' : user.is_active === false ? 'text-muted-foreground' : 'text-success'}`} />
                             <span className={`font-medium ${user.is_active === false ? 'text-muted-foreground' : ''}`}>{user.email}</span>
