@@ -76,15 +76,9 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
                 <span className="text-[8px] text-white font-bold">✓</span>
               </div>
             </div>
-            <div>
-              <h1 className="text-lg md:text-xl font-bold text-foreground">
-                بەڕێوەبردنی داراییی
-              </h1>
-              <div className="flex items-center gap-1.5 text-muted-foreground text-sm mt-1">
-                <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
-                <span>{currentMonthLabel}</span>
-              </div>
-            </div>
+            <h1 className="text-lg md:text-xl font-bold text-foreground">
+              بەڕێوەبردنی داراییی
+            </h1>
           </div>
           
           {/* Actions */}
@@ -95,7 +89,7 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
               variant="ghost"
               onClick={onLogout}
               size="sm"
-              className="h-10 w-10 md:h-10 md:w-auto md:px-3 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              className="h-9 w-9 md:h-10 md:w-auto md:px-3 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
             >
               <LogOut className="h-4 w-4" />
               <span className="hidden md:inline mr-2 text-sm font-medium">خروج</span>
