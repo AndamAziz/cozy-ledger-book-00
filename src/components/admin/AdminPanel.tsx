@@ -594,9 +594,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                                 بەسەرچوو
                               </span>
                             )}
-                            {user.is_active !== false && !expired && daysRemaining !== null && daysRemaining <= 7 && (
+                            {user.is_active !== false && !expired && daysRemaining !== null && daysRemaining <= 10 && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-warning/20 text-warning flex items-center gap-1">
                                 <AlertTriangle className="h-3 w-3" />
+                                {daysRemaining} ڕۆژ ماوە
+                              </span>
+                            )}
+                            {user.is_active !== false && !expired && daysRemaining !== null && daysRemaining > 10 && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-success/20 text-success">
                                 {daysRemaining} ڕۆژ ماوە
                               </span>
                             )}
