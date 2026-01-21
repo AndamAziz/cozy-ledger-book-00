@@ -128,38 +128,38 @@ export function FinanceTab({
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-3 gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
+      <div className="grid grid-cols-3 gap-2 md:gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
         <Button 
           onClick={() => { setEditingIncome(null); setIncomeModalOpen(true); }} 
-          className="group btn-gradient-primary py-5 text-sm md:text-base rounded-2xl shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+          className="group btn-gradient-primary py-4 md:py-6 text-xs md:text-base rounded-xl md:rounded-2xl shadow-lg md:shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
         >
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Plus className="h-4 w-4" />
+          <div className="flex flex-col items-center gap-1 md:gap-2">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Plus className="h-4 w-4 md:h-5 md:w-5" />
             </div>
-            <span className="font-bold">داهات</span>
+            <span className="font-bold text-[10px] md:text-sm">داهات</span>
           </div>
         </Button>
         <Button 
           onClick={() => openExpenseModal('purchase')} 
-          className="group btn-gradient-accent py-5 text-sm md:text-base rounded-2xl shadow-xl shadow-accent/30 hover:shadow-accent/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+          className="group btn-gradient-accent py-4 md:py-6 text-xs md:text-base rounded-xl md:rounded-2xl shadow-lg md:shadow-xl shadow-accent/30 hover:shadow-accent/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
         >
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <ShoppingCart className="h-4 w-4" />
+          <div className="flex flex-col items-center gap-1 md:gap-2">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
             </div>
-            <span className="font-bold">Purchase</span>
+            <span className="font-bold text-[10px] md:text-sm">Purchase</span>
           </div>
         </Button>
         <Button 
           onClick={() => openExpenseModal('cost')} 
-          className="group btn-gradient-danger py-5 text-sm md:text-base rounded-2xl shadow-xl shadow-destructive/30 hover:shadow-destructive/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+          className="group btn-gradient-danger py-4 md:py-6 text-xs md:text-base rounded-xl md:rounded-2xl shadow-lg md:shadow-xl shadow-destructive/30 hover:shadow-destructive/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
         >
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Receipt className="h-4 w-4" />
+          <div className="flex flex-col items-center gap-1 md:gap-2">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Receipt className="h-4 w-4 md:h-5 md:w-5" />
             </div>
-            <span className="font-bold">Cost</span>
+            <span className="font-bold text-[10px] md:text-sm">Cost</span>
           </div>
         </Button>
       </div>
@@ -497,6 +497,7 @@ export function FinanceTab({
         editingIncome={editingIncome}
         maxDays={maxDays}
         defaultDay={defaultDay}
+        monthKey={currentMonthKey}
       />
       <ExpenseModal
         isOpen={expenseModalOpen}
@@ -506,6 +507,7 @@ export function FinanceTab({
         maxDays={maxDays}
         defaultDay={defaultDay}
         defaultExpenseType={defaultExpenseType}
+        monthKey={currentMonthKey}
       />
     </div>
   );
