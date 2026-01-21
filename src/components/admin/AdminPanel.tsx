@@ -61,6 +61,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [users, setUsers] = useState<UserApproval[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'pending' | 'inactive' | 'expired' | 'expiring'>('all');
   const [selectedUser, setSelectedUser] = useState<UserApproval | null>(null);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -383,10 +384,28 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     }
   };
 
-  const filteredUsers = users.filter(user =>
-    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (user.company_name && user.company_name.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.company_name && user.company_name.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    if (!matchesSearch) return false;
+    
+    const now = new Date();
+    const daysLeft = user.expires_at ? Math.ceil((new Date(user.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+    const isExpiredUser = user.is_approved && user.expires_at && new Date(user.expires_at) < now;
+    const isExpiringUser = user.is_approved && daysLeft !== null && daysLeft > 0 && daysLeft <= 7;
+    const isActiveUser = user.is_approved && !isExpiredUser && user.is_active;
+    
+    switch (activeFilter) {
+      case 'all': return true;
+      case 'active': return isActiveUser;
+      case 'pending': return !user.is_approved;
+      case 'inactive': return !user.is_active;
+      case 'expired': return isExpiredUser;
+      case 'expiring': return isExpiringUser;
+      default: return true;
+    }
+  });
 
   const pendingUsers = filteredUsers.filter(u => !u.is_approved);
   const approvedUsers = filteredUsers.filter(u => u.is_approved);
@@ -460,9 +479,12 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           </div>
         </header>
 
-        {/* Statistics Cards - Compact */}
+        {/* Statistics Cards - Compact & Clickable */}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3 mb-6">
-          <div className="rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 p-3">
+          <div 
+            onClick={() => setActiveFilter(activeFilter === 'all' ? 'all' : 'all')}
+            className={`rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border p-3 cursor-pointer transition-all hover:scale-105 ${activeFilter === 'all' ? 'border-primary ring-2 ring-primary/50' : 'border-primary/20'}`}
+          >
             <div className="flex flex-col items-center gap-1 text-center">
               <Users className="h-5 w-5 text-primary" />
               <p className="text-xl font-bold text-foreground">{totalUsers}</p>
@@ -470,7 +492,10 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           </div>
           
-          <div className="rounded-xl bg-gradient-to-br from-success/20 to-success/5 border border-success/20 p-3">
+          <div 
+            onClick={() => setActiveFilter(activeFilter === 'active' ? 'all' : 'active')}
+            className={`rounded-xl bg-gradient-to-br from-success/20 to-success/5 border p-3 cursor-pointer transition-all hover:scale-105 ${activeFilter === 'active' ? 'border-success ring-2 ring-success/50' : 'border-success/20'}`}
+          >
             <div className="flex flex-col items-center gap-1 text-center">
               <UserCheck className="h-5 w-5 text-success" />
               <p className="text-xl font-bold text-foreground">{totalActive}</p>
@@ -478,7 +503,10 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           </div>
           
-          <div className="rounded-xl bg-gradient-to-br from-warning/20 to-warning/5 border border-warning/20 p-3">
+          <div 
+            onClick={() => setActiveFilter(activeFilter === 'pending' ? 'all' : 'pending')}
+            className={`rounded-xl bg-gradient-to-br from-warning/20 to-warning/5 border p-3 cursor-pointer transition-all hover:scale-105 ${activeFilter === 'pending' ? 'border-warning ring-2 ring-warning/50' : 'border-warning/20'}`}
+          >
             <div className="flex flex-col items-center gap-1 text-center">
               <Clock className="h-5 w-5 text-warning" />
               <p className="text-xl font-bold text-foreground">{totalPending}</p>
@@ -486,7 +514,10 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           </div>
           
-          <div className="rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/5 border border-orange-500/20 p-3">
+          <div 
+            onClick={() => setActiveFilter(activeFilter === 'inactive' ? 'all' : 'inactive')}
+            className={`rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/5 border p-3 cursor-pointer transition-all hover:scale-105 ${activeFilter === 'inactive' ? 'border-orange-500 ring-2 ring-orange-500/50' : 'border-orange-500/20'}`}
+          >
             <div className="flex flex-col items-center gap-1 text-center">
               <Ban className="h-5 w-5 text-orange-500" />
               <p className="text-xl font-bold text-foreground">{totalInactive}</p>
@@ -494,7 +525,10 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           </div>
           
-          <div className="rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/5 border border-destructive/20 p-3">
+          <div 
+            onClick={() => setActiveFilter(activeFilter === 'expired' ? 'all' : 'expired')}
+            className={`rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/5 border p-3 cursor-pointer transition-all hover:scale-105 ${activeFilter === 'expired' ? 'border-destructive ring-2 ring-destructive/50' : 'border-destructive/20'}`}
+          >
             <div className="flex flex-col items-center gap-1 text-center">
               <UserX className="h-5 w-5 text-destructive" />
               <p className="text-xl font-bold text-foreground">{totalExpired}</p>
@@ -502,7 +536,10 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           </div>
           
-          <div className="rounded-xl bg-gradient-to-br from-info/20 to-info/5 border border-info/20 p-3">
+          <div 
+            onClick={() => setActiveFilter(activeFilter === 'expiring' ? 'all' : 'expiring')}
+            className={`rounded-xl bg-gradient-to-br from-info/20 to-info/5 border p-3 cursor-pointer transition-all hover:scale-105 ${activeFilter === 'expiring' ? 'border-info ring-2 ring-info/50' : 'border-info/20'}`}
+          >
             <div className="flex flex-col items-center gap-1 text-center">
               <TrendingUp className="h-5 w-5 text-info" />
               <p className="text-xl font-bold text-foreground">{expiringIn7Days}</p>
@@ -510,6 +547,28 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           </div>
         </div>
+        
+        {/* Active Filter Indicator */}
+        {activeFilter !== 'all' && (
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">فیلتەر:</span>
+            <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
+              {activeFilter === 'active' && 'چالاک'}
+              {activeFilter === 'pending' && 'چاوەڕوان'}
+              {activeFilter === 'inactive' && 'ناچالاک'}
+              {activeFilter === 'expired' && 'بەسەرچوو'}
+              {activeFilter === 'expiring' && 'نزیک بەسەرچوون'}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setActiveFilter('all')}
+              className="h-7 px-2"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
         {/* Search */}
         <div className="relative mb-6">
