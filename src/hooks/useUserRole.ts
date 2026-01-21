@@ -91,12 +91,10 @@ export function useUserRole(user: User | null) {
                 description: `ئەکاونتەکەت تا ${formattedDate} کارا دەبێت`,
                 duration: 10000,
               });
-              // Reset the warning flag so it can show again if needed
               hasShownExpiryWarning.current = false;
             }
           }
           
-          // Store current expires_at for comparison
           previousExpiresAt.current = approvalData.expires_at;
 
           setApprovalStatus({
@@ -134,10 +132,8 @@ export function useUserRole(user: User | null) {
       }
     };
 
-    // Initial load
     checkUserStatus(true);
 
-    // Set up realtime subscription for user_approvals changes
     const channel = supabase
       .channel('user-approval-changes')
       .on(
@@ -149,7 +145,6 @@ export function useUserRole(user: User | null) {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          // Refetch user status when approval changes
           checkUserStatus(false);
         }
       )
