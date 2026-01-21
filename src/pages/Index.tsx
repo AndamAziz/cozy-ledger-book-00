@@ -5,6 +5,7 @@ import { useFinanceData } from '@/hooks/useFinanceData';
 import { LoginForm } from '@/components/LoginForm';
 import { PendingApproval } from '@/components/PendingApproval';
 import { ExpiredSubscription } from '@/components/ExpiredSubscription';
+import { DeactivatedAccount } from '@/components/DeactivatedAccount';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { Header } from '@/components/Header';
 import { TabButton } from '@/components/TabButton';
@@ -124,6 +125,10 @@ const Index = () => {
 
   // Check if user is approved (admin is always approved)
   if (!isAdmin && approvalStatus) {
+    // Check if account is deactivated
+    if (!approvalStatus.isActive) {
+      return <DeactivatedAccount email={user?.email || ''} onLogout={logout} />;
+    }
     if (approvalStatus.isExpired && approvalStatus.expiresAt) {
       return <ExpiredSubscription email={user?.email || ''} expiresAt={approvalStatus.expiresAt} onLogout={logout} />;
     }

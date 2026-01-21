@@ -181,6 +181,7 @@ export type Database = {
           email: string
           expires_at: string | null
           id: string
+          is_active: boolean
           is_approved: boolean
           updated_at: string
           user_id: string
@@ -193,6 +194,7 @@ export type Database = {
           email: string
           expires_at?: string | null
           id?: string
+          is_active?: boolean
           is_approved?: boolean
           updated_at?: string
           user_id: string
@@ -205,6 +207,7 @@ export type Database = {
           email?: string
           expires_at?: string | null
           id?: string
+          is_active?: boolean
           is_approved?: boolean
           updated_at?: string
           user_id?: string

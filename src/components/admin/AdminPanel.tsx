@@ -19,7 +19,9 @@ import {
   UserCheck,
   UserX,
   TrendingUp,
-  Building2
+  Building2,
+  Ban,
+  Power
 } from 'lucide-react';
 import {
   Select,
@@ -42,6 +44,7 @@ interface UserApproval {
   user_id: string;
   email: string;
   is_approved: boolean;
+  is_active: boolean;
   approved_at: string | null;
   expires_at: string | null;
   created_at: string;
@@ -231,6 +234,36 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       toast({
         title: 'هەڵە',
         description: 'هەڵە لە درێژکردنەوەی کات',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleToggleActive = async (user: UserApproval) => {
+    try {
+      const newActiveState = !user.is_active;
+      
+      const { error } = await supabase
+        .from('user_approvals')
+        .update({
+          is_active: newActiveState,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سەرکەوتوو',
+        description: newActiveState ? 'هەژمارە چالاک کرایەوە' : 'هەژمارە ناچالاک کرا',
+      });
+
+      fetchUsers();
+    } catch (error) {
+      console.error('Error toggling user active status:', error);
+      toast({
+        title: 'هەڵە',
+        description: 'هەڵە لە گۆڕینی دۆخی هەژمارە',
         variant: 'destructive',
       });
     }
@@ -460,15 +493,21 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     <div className="flex flex-col gap-4">
                       <div className="flex flex-col md:flex-row md:items-center gap-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Shield className={`h-4 w-4 ${expired ? 'text-destructive' : 'text-success'}`} />
-                            <span className="font-medium">{user.email}</span>
-                            {expired && (
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <Shield className={`h-4 w-4 ${expired ? 'text-destructive' : user.is_active === false ? 'text-muted-foreground' : 'text-success'}`} />
+                            <span className={`font-medium ${user.is_active === false ? 'text-muted-foreground' : ''}`}>{user.email}</span>
+                            {user.is_active === false && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground flex items-center gap-1">
+                                <Ban className="h-3 w-3" />
+                                ناچالاک
+                              </span>
+                            )}
+                            {user.is_active !== false && expired && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/20 text-destructive">
                                 بەسەرچوو
                               </span>
                             )}
-                            {!expired && daysRemaining !== null && daysRemaining <= 7 && (
+                            {user.is_active !== false && !expired && daysRemaining !== null && daysRemaining <= 7 && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-warning/20 text-warning flex items-center gap-1">
                                 <AlertTriangle className="h-3 w-3" />
                                 {daysRemaining} ڕۆژ ماوە
@@ -530,6 +569,24 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         >
                           <Key className="h-3 w-3 ml-1" />
                           گۆڕینی وشەی نهێنی
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleActive(user)}
+                          className={`rounded-lg text-xs ${user.is_active === false ? 'text-success hover:text-success border-success/30' : 'text-warning hover:text-warning border-warning/30'}`}
+                        >
+                          {user.is_active === false ? (
+                            <>
+                              <Power className="h-3 w-3 ml-1" />
+                              چالاککردن
+                            </>
+                          ) : (
+                            <>
+                              <Ban className="h-3 w-3 ml-1" />
+                              ناچالاککردن
+                            </>
+                          )}
                         </Button>
                         <Button
                           variant="outline"
