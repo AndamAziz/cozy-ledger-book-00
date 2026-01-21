@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Building2,
   Ban,
-  Power
+  Power,
+  Pencil
 } from 'lucide-react';
 import {
   Select,
@@ -62,8 +63,10 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [selectedUser, setSelectedUser] = useState<UserApproval | null>(null);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showCompanyDialog, setShowCompanyDialog] = useState(false);
   const [expiryDuration, setExpiryDuration] = useState('30');
   const [newPassword, setNewPassword] = useState('');
+  const [newCompanyName, setNewCompanyName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
@@ -266,6 +269,42 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         description: 'هەڵە لە گۆڕینی دۆخی هەژمارە',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleChangeCompanyName = async () => {
+    if (!selectedUser) return;
+
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('user_approvals')
+        .update({
+          company_name: newCompanyName.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سەرکەوتوو',
+        description: 'ناوی کۆمپانیا گۆڕدرا',
+      });
+
+      setShowCompanyDialog(false);
+      setSelectedUser(null);
+      setNewCompanyName('');
+      fetchUsers();
+    } catch (error) {
+      console.error('Error changing company name:', error);
+      toast({
+        title: 'هەڵە',
+        description: 'هەڵە لە گۆڕینی ناوی کۆمپانیا',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -521,12 +560,6 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                               </span>
                             )}
                           </div>
-                          {user.company_name && (
-                            <div className="flex items-center gap-1.5 text-sm text-primary mb-1">
-                              <Building2 className="h-3.5 w-3.5" />
-                              <span>{user.company_name}</span>
-                            </div>
-                          )}
                           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Check className="h-3 w-3" />
@@ -564,6 +597,19 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           className="rounded-lg text-xs"
                         >
                           +١ ساڵ
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setNewCompanyName(user.company_name || '');
+                            setShowCompanyDialog(true);
+                          }}
+                          className="rounded-lg text-xs"
+                        >
+                          <Pencil className="h-3 w-3 ml-1" />
+                          ناوی کۆمپانیا
                         </Button>
                         <Button
                           variant="outline"
@@ -696,6 +742,49 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <Button
               onClick={handleChangePassword}
               disabled={isUpdating || newPassword.length < 6}
+              className="rounded-xl"
+            >
+              {isUpdating ? 'چاوەڕوانبە...' : 'گۆڕین'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Company Name Dialog */}
+      <Dialog open={showCompanyDialog} onOpenChange={setShowCompanyDialog}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>گۆڕینی ناوی کۆمپانیا</DialogTitle>
+            <DialogDescription>
+              ناوی کۆمپانیا بنووسە بۆ {selectedUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Label>ناوی کۆمپانیا</Label>
+            <Input
+              type="text"
+              value={newCompanyName}
+              onChange={(e) => setNewCompanyName(e.target.value)}
+              placeholder="ناوی کۆمپانیا"
+              className="mt-2 rounded-xl"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCompanyDialog(false);
+                setNewCompanyName('');
+              }}
+              className="rounded-xl"
+            >
+              پاشگەزبوونەوە
+            </Button>
+            <Button
+              onClick={handleChangeCompanyName}
+              disabled={isUpdating}
               className="rounded-xl"
             >
               {isUpdating ? 'چاوەڕوانبە...' : 'گۆڕین'}
