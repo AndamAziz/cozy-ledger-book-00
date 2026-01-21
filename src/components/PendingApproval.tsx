@@ -65,13 +65,19 @@ export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
             </div>
 
             {/* Waiting Message */}
-            <div className="bg-warning/10 rounded-2xl p-6 mb-6 border border-warning/20">
+            <div className="bg-warning/10 rounded-2xl p-6 mb-6 border border-warning/20 animate-pulse">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-warning/20 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-warning/20 flex items-center justify-center flex-shrink-0 animate-bounce" style={{ animationDuration: '2s' }}>
                   <Clock className="h-6 w-6 text-warning" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-2">چاوەڕوانی ئەپروڤکردن</h3>
+                  <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-warning"></span>
+                    </span>
+                    چاوەڕوانی ئەپروڤکردن
+                  </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     هەژمارەکەت پێویستی بە ئەپروڤکردن لەلایەن بەڕێوەبەرەوە هەیە. 
                     تکایە لەڕێی وەتسئەپەوە نامە بنێرە بۆ ئەپروڤکردنی خێرا.
