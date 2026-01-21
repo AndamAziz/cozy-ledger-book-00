@@ -1,0 +1,552 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Users, 
+  Check, 
+  X, 
+  Clock, 
+  Calendar,
+  Shield,
+  Key,
+  RefreshCw,
+  ChevronLeft,
+  Search,
+  AlertTriangle
+} from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+interface UserApproval {
+  id: string;
+  user_id: string;
+  email: string;
+  is_approved: boolean;
+  approved_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+}
+
+interface AdminPanelProps {
+  onBack: () => void;
+}
+
+export function AdminPanel({ onBack }: AdminPanelProps) {
+  const [users, setUsers] = useState<UserApproval[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUser, setSelectedUser] = useState<UserApproval | null>(null);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [expiryDuration, setExpiryDuration] = useState('30');
+  const [newPassword, setNewPassword] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_approvals')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      // Filter out admin users
+      const nonAdminUsers = data?.filter(u => u.email !== 'andam@outlook.com') || [];
+      setUsers(nonAdminUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: 'هەڵە',
+        description: 'هەڵە لە هێنانی بەکارهێنەران',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selectedUser) return;
+    setIsUpdating(true);
+
+    try {
+      const days = parseInt(expiryDuration);
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + days);
+
+      const { error } = await supabase
+        .from('user_approvals')
+        .update({
+          is_approved: true,
+          approved_at: new Date().toISOString(),
+          expires_at: expiresAt.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selectedUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سەرکەوتوو',
+        description: `بەکارهێنەر ئەپروڤ کرا بۆ ${days} ڕۆژ`,
+      });
+
+      setShowApproveDialog(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error approving user:', error);
+      toast({
+        title: 'هەڵە',
+        description: 'هەڵە لە ئەپروڤکردن',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleRevoke = async (user: UserApproval) => {
+    try {
+      const { error } = await supabase
+        .from('user_approvals')
+        .update({
+          is_approved: false,
+          approved_at: null,
+          expires_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سەرکەوتوو',
+        description: 'دەسەڵاتی بەکارهێنەر لابرا',
+      });
+
+      fetchUsers();
+    } catch (error) {
+      console.error('Error revoking user:', error);
+      toast({
+        title: 'هەڵە',
+        description: 'هەڵە لە لابردنی دەسەڵات',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!selectedUser || !newPassword) return;
+    if (newPassword.length < 6) {
+      toast({
+        title: 'هەڵە',
+        description: 'وشەی نهێنی دەبێت لانیکەم ٦ پیت بێت',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      // Call edge function to change password (since we need service role)
+      const { data, error } = await supabase.functions.invoke('admin-change-password', {
+        body: { userId: selectedUser.user_id, newPassword },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'سەرکەوتوو',
+        description: 'وشەی نهێنی گۆڕدرا',
+      });
+
+      setShowPasswordDialog(false);
+      setSelectedUser(null);
+      setNewPassword('');
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast({
+        title: 'هەڵە',
+        description: 'هەڵە لە گۆڕینی وشەی نهێنی',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleExtendExpiry = async (user: UserApproval, days: number) => {
+    try {
+      const currentExpiry = user.expires_at ? new Date(user.expires_at) : new Date();
+      const newExpiry = new Date(Math.max(currentExpiry.getTime(), Date.now()));
+      newExpiry.setDate(newExpiry.getDate() + days);
+
+      const { error } = await supabase
+        .from('user_approvals')
+        .update({
+          expires_at: newExpiry.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'سەرکەوتوو',
+        description: `کات درێژکرایەوە بۆ ${days} ڕۆژ`,
+      });
+
+      fetchUsers();
+    } catch (error) {
+      console.error('Error extending expiry:', error);
+      toast({
+        title: 'هەڵە',
+        description: 'هەڵە لە درێژکردنەوەی کات',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const filteredUsers = users.filter(user =>
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const pendingUsers = filteredUsers.filter(u => !u.is_approved);
+  const approvedUsers = filteredUsers.filter(u => u.is_approved);
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('ku-Arab', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const isExpired = (expiresAt: string | null) => {
+    if (!expiresAt) return false;
+    return new Date(expiresAt) < new Date();
+  };
+
+  const getDaysRemaining = (expiresAt: string | null) => {
+    if (!expiresAt) return null;
+    const days = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return days;
+  };
+
+  return (
+    <div className="min-h-screen p-3 md:p-6">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onBack}
+            className="rounded-xl"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-l from-primary via-success to-foreground bg-clip-text text-transparent">
+              پانێلی ئەدمین
+            </h1>
+            <p className="text-muted-foreground text-sm">بەڕێوەبردنی بەکارهێنەران</p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={fetchUsers}
+            className="rounded-xl"
+          >
+            <RefreshCw className={`h-4 w-4 ml-2 ${isLoading ? 'animate-spin' : ''}`} />
+            نوێکردنەوە
+          </Button>
+        </div>
+
+        {/* Search */}
+        <div className="relative mb-6">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            placeholder="گەڕان بە ئیمەیڵ..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-10 rounded-xl py-6 bg-secondary/30 border-border/50"
+          />
+        </div>
+
+        {/* Pending Users */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-warning" />
+            چاوەڕوانی ئەپروڤکردن ({pendingUsers.length})
+          </h2>
+          
+          {pendingUsers.length === 0 ? (
+            <div className="rounded-2xl bg-secondary/20 border border-border/30 p-8 text-center">
+              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">هیچ بەکارهێنەرێک چاوەڕوان نییە</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingUsers.map((user) => (
+                <div
+                  key={user.id}
+                  className="rounded-2xl bg-card/60 backdrop-blur-xl border border-warning/30 p-4 md:p-5"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Shield className="h-4 w-4 text-warning" />
+                        <span className="font-medium">{user.email}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        تۆمارکرا: {formatDate(user.created_at)}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowApproveDialog(true);
+                        }}
+                        className="bg-success hover:bg-success/90 rounded-xl"
+                      >
+                        <Check className="h-4 w-4 ml-2" />
+                        ئەپروڤکردن
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Approved Users */}
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5 text-success" />
+            بەکارهێنەرانی چالاک ({approvedUsers.length})
+          </h2>
+          
+          {approvedUsers.length === 0 ? (
+            <div className="rounded-2xl bg-secondary/20 border border-border/30 p-8 text-center">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">هیچ بەکارهێنەرێکی چالاک نییە</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {approvedUsers.map((user) => {
+                const expired = isExpired(user.expires_at);
+                const daysRemaining = getDaysRemaining(user.expires_at);
+                
+                return (
+                  <div
+                    key={user.id}
+                    className={`rounded-2xl bg-card/60 backdrop-blur-xl border p-4 md:p-5 ${
+                      expired ? 'border-destructive/30' : 'border-success/30'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col md:flex-row md:items-center gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Shield className={`h-4 w-4 ${expired ? 'text-destructive' : 'text-success'}`} />
+                            <span className="font-medium">{user.email}</span>
+                            {expired && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/20 text-destructive">
+                                بەسەرچوو
+                              </span>
+                            )}
+                            {!expired && daysRemaining !== null && daysRemaining <= 7 && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-warning/20 text-warning flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                {daysRemaining} ڕۆژ ماوە
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Check className="h-3 w-3" />
+                              ئەپروڤ: {formatDate(user.approved_at)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              بەسەردەچێت: {formatDate(user.expires_at)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleExtendExpiry(user, 30)}
+                          className="rounded-lg text-xs"
+                        >
+                          +٣٠ ڕۆژ
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleExtendExpiry(user, 90)}
+                          className="rounded-lg text-xs"
+                        >
+                          +٩٠ ڕۆژ
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleExtendExpiry(user, 365)}
+                          className="rounded-lg text-xs"
+                        >
+                          +١ ساڵ
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowPasswordDialog(true);
+                          }}
+                          className="rounded-lg text-xs"
+                        >
+                          <Key className="h-3 w-3 ml-1" />
+                          گۆڕینی وشەی نهێنی
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRevoke(user)}
+                          className="rounded-lg text-xs text-destructive hover:text-destructive"
+                        >
+                          <X className="h-3 w-3 ml-1" />
+                          لابردن
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Approve Dialog */}
+      <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>ئەپروڤکردنی بەکارهێنەر</DialogTitle>
+            <DialogDescription>
+              بۆ چەند ڕۆژ دەسەڵات بدەیت بەم بەکارهێنەرە؟
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Label>ماوەی بەکارهێنان</Label>
+            <Select value={expiryDuration} onValueChange={setExpiryDuration}>
+              <SelectTrigger className="mt-2 rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">١ ڕۆژ</SelectItem>
+                <SelectItem value="7">١ هەفتە</SelectItem>
+                <SelectItem value="30">١ مانگ</SelectItem>
+                <SelectItem value="90">٣ مانگ</SelectItem>
+                <SelectItem value="180">٦ مانگ</SelectItem>
+                <SelectItem value="365">١ ساڵ</SelectItem>
+                <SelectItem value="730">٢ ساڵ</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowApproveDialog(false)}
+              className="rounded-xl"
+            >
+              پاشگەزبوونەوە
+            </Button>
+            <Button
+              onClick={handleApprove}
+              disabled={isUpdating}
+              className="bg-success hover:bg-success/90 rounded-xl"
+            >
+              {isUpdating ? 'چاوەڕوانبە...' : 'ئەپروڤکردن'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>گۆڕینی وشەی نهێنی</DialogTitle>
+            <DialogDescription>
+              وشەی نهێنی نوێ بنووسە بۆ {selectedUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Label>وشەی نهێنی نوێ</Label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="لانیکەم ٦ پیت"
+              className="mt-2 rounded-xl"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPasswordDialog(false);
+                setNewPassword('');
+              }}
+              className="rounded-xl"
+            >
+              پاشگەزبوونەوە
+            </Button>
+            <Button
+              onClick={handleChangePassword}
+              disabled={isUpdating || newPassword.length < 6}
+              className="rounded-xl"
+            >
+              {isUpdating ? 'چاوەڕوانبە...' : 'گۆڕین'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
