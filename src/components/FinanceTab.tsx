@@ -170,8 +170,8 @@ export function FinanceTab({
             <span className="text-2xl">📅</span>
           </div>
           <div>
-            <span className="block">داهاتی ڕۆژانە</span>
-            <span className="text-sm font-normal text-muted-foreground">{incomeData.length} تۆمار</span>
+            <span className="block">{t('dailyIncomeTitle')}</span>
+            <span className="text-sm font-normal text-muted-foreground">{incomeData.length} {t('records')}</span>
           </div>
         </h3>
         {incomeData.length === 0 ? (
@@ -179,8 +179,8 @@ export function FinanceTab({
             <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-5 shadow-inner">
               <span className="text-5xl opacity-60">📅</span>
             </div>
-            <p className="text-base font-medium">هیچ داهاتێک نییە</p>
-            <p className="text-sm text-muted-foreground/70 mt-2">کلیک لەسەر "داهات" بۆ زیادکردن</p>
+            <p className="text-base font-medium">{t('noIncomeYet')}</p>
+            <p className="text-sm text-muted-foreground/70 mt-2">{t('clickToAddIncome')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -205,7 +205,7 @@ export function FinanceTab({
                         </div>
                         <div>
                           <div className="font-bold text-foreground text-base md:text-lg font-mono tracking-wide">{dateStr}</div>
-                          <div className="text-sm text-muted-foreground">ڕۆژی {income.day}</div>
+                          <div className="text-sm text-muted-foreground">{t('dayNumber')} {income.day}</div>
                         </div>
                       </div>
                       <div className="text-success font-bold text-lg md:text-2xl">{formatCurrency(income.total)}</div>
@@ -232,9 +232,9 @@ export function FinanceTab({
                         </button>
                         <button 
                           onClick={() => {
-                            if (confirm('دڵنیایت؟')) {
+                            if (confirm(t('areYouSure'))) {
                               onDeleteIncome(income.id);
-                              toast({ title: 'سەرکەوتوو', description: 'داهات سڕایەوە' });
+                              toast({ title: t('success'), description: t('incomeDeleted') });
                             }
                           }}
                           className="p-2.5 rounded-xl bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 hover:scale-110 active:scale-95"
@@ -258,8 +258,8 @@ export function FinanceTab({
             <ShoppingCart className="h-6 w-6 text-white" />
           </div>
           <div>
-            <span className="block">Purchase (کڕین)</span>
-            <span className="text-sm font-normal text-muted-foreground">{purchaseData.length} تۆمار</span>
+            <span className="block">{t('purchaseTitle')}</span>
+            <span className="text-sm font-normal text-muted-foreground">{purchaseData.length} {t('records')}</span>
           </div>
         </h3>
         {purchaseData.length === 0 ? (
@@ -267,8 +267,8 @@ export function FinanceTab({
             <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-5 shadow-inner">
               <ShoppingCart className="h-12 w-12 opacity-60" />
             </div>
-            <p className="text-base font-medium">هیچ کڕینێک نییە</p>
-            <p className="text-sm text-muted-foreground/70 mt-2">کلیک لەسەر "Purchase" بۆ زیادکردن</p>
+            <p className="text-base font-medium">{t('noPurchaseYet')}</p>
+            <p className="text-sm text-muted-foreground/70 mt-2">{t('clickToAddPurchase')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -310,9 +310,9 @@ export function FinanceTab({
                         </button>
                         <button 
                           onClick={() => {
-                            if (confirm('دڵنیایت؟')) {
+                            if (confirm(t('areYouSure'))) {
                               onDeleteExpense(expense.id);
-                              toast({ title: 'سەرکەوتوو', description: 'کڕین سڕایەوە' });
+                              toast({ title: t('success'), description: t('purchaseDeleted') });
                             }
                           }}
                           className="p-2.5 rounded-xl bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 hover:scale-110 active:scale-95"
@@ -336,8 +336,8 @@ export function FinanceTab({
             <Receipt className="h-6 w-6 text-white" />
           </div>
           <div>
-            <span className="block">Cost (تێچوو)</span>
-            <span className="text-sm font-normal text-muted-foreground">{costData.length} تۆمار</span>
+            <span className="block">{t('costTitle')}</span>
+            <span className="text-sm font-normal text-muted-foreground">{costData.length} {t('records')}</span>
           </div>
         </h3>
         {costData.length === 0 ? (
@@ -345,8 +345,8 @@ export function FinanceTab({
             <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-5 shadow-inner">
               <Receipt className="h-12 w-12 opacity-60" />
             </div>
-            <p className="text-base font-medium">هیچ تێچووێک نییە</p>
-            <p className="text-sm text-muted-foreground/70 mt-2">کلیک لەسەر "Cost" بۆ زیادکردن</p>
+            <p className="text-base font-medium">{t('noCostYet')}</p>
+            <p className="text-sm text-muted-foreground/70 mt-2">{t('clickToAddCost')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -388,9 +388,9 @@ export function FinanceTab({
                         </button>
                         <button 
                           onClick={() => {
-                            if (confirm('دڵنیایت؟')) {
+                            if (confirm(t('areYouSure'))) {
                               onDeleteExpense(expense.id);
-                              toast({ title: 'سەرکەوتوو', description: 'تێچوو سڕایەوە' });
+                              toast({ title: t('success'), description: t('costDeleted') });
                             }
                           }}
                           className="p-2.5 rounded-xl bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 hover:scale-110 active:scale-95"
