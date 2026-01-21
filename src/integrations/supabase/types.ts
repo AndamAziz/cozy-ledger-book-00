@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_activity_logs: {
+        Row: {
+          action_type: string
+          admin_email: string
+          admin_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          target_user_email: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_email: string
+          admin_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_user_email?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_email?: string
+          admin_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_user_email?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       cigarettes: {
         Row: {
           alert_level: number

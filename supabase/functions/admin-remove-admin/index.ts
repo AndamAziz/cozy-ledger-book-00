@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { userId } = await req.json()
+    const { userId, targetEmail } = await req.json()
 
     if (!userId) {
       return new Response(
@@ -80,6 +80,16 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    // Log the activity
+    await supabase.from("admin_activity_logs").insert({
+      admin_id: user.id,
+      admin_email: user.email || "",
+      action_type: "remove_admin",
+      target_user_id: userId,
+      target_user_email: targetEmail || null,
+      details: { action: "Admin role removed from user" }
+    });
 
     console.log(`Admin role removed from user ${userId} by ${user.id}`)
 
