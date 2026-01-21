@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Mail, Lock, LogIn, UserPlus, Building2, Eye, EyeOff } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -18,6 +19,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,8 +27,8 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
 
     if (!email || !password) {
       toast({
-        title: 'هەڵە',
-        description: 'تکایە هەموو خانەکان پڕبکەوە',
+        title: t('error'),
+        description: t('error'),
         variant: 'destructive',
       });
       setIsLoading(false);
@@ -35,8 +37,8 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
 
     if (password.length < 6) {
       toast({
-        title: 'هەڵە',
-        description: 'وشەی نهێنی دەبێت لانیکەم ٦ پیت بێت',
+        title: t('error'),
+        description: t('error'),
         variant: 'destructive',
       });
       setIsLoading(false);
@@ -45,8 +47,8 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
 
     if (isSignupMode && !companyName.trim()) {
       toast({
-        title: 'هەڵە',
-        description: 'تکایە ناوی کۆمپانیاکەت بنووسە',
+        title: t('error'),
+        description: t('error'),
         variant: 'destructive',
       });
       setIsLoading(false);
@@ -59,13 +61,13 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
 
     if (result.success) {
       toast({
-        title: 'سەرکەوتوو',
-        description: isSignupMode ? 'هەژمارەکەت دروست کرا' : 'بەخێرهاتیت',
+        title: t('success'),
+        description: t('success'),
       });
     } else {
       toast({
-        title: 'هەڵە',
-        description: result.error || 'هەڵەیەک ڕویدا',
+        title: t('error'),
+        description: result.error || t('error'),
         variant: 'destructive',
       });
     }
@@ -93,15 +95,15 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
 
       if (error) {
         toast({
-          title: 'هەڵە',
-          description: error.message || 'هەڵەیەک ڕویدا لە چوونەژوورەوە بە Google',
+          title: t('error'),
+          description: error.message || t('error'),
           variant: 'destructive',
         });
       }
     } catch (err) {
       toast({
-        title: 'هەڵە',
-        description: 'هەڵەیەک ڕویدا',
+        title: t('error'),
+        description: t('error'),
         variant: 'destructive',
       });
     } finally {
@@ -133,10 +135,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 <div className="absolute -top-1 -right-1 text-xl animate-pulse">✨</div>
               </div>
               <h1 className="text-2xl font-bold text-primary mb-2">
-                بەڕێوەبردنی داراییی
+                {t('financialManagement')}
               </h1>
               <p className="text-slate-400 text-sm">
-                {isSignupMode ? 'هەژمارەی نوێ دروست بکە' : 'بچۆ ژوورەوە بۆ بەڕێوەبردنی حسابەکانت'}
+                {isSignupMode ? t('signup') : t('login')}
               </p>
             </div>
             
@@ -151,7 +153,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                     : 'text-slate-400 hover:text-slate-300'
                 }`}
               >
-                چوونەژوورەوە
+                {t('login')}
               </button>
               <button
                 type="button"
@@ -162,7 +164,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                     : 'text-slate-400 hover:text-slate-300'
                 }`}
               >
-                تۆمارکردن
+                {t('signup')}
               </button>
             </div>
             
@@ -184,7 +186,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
                     peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
                     peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
-                    ناوی کۆمپانیا
+                    {t('companyName')}
                   </label>
                 </div>
               )}
@@ -205,7 +207,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
                   peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
                   peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
-                  ئیمەیڵ
+                  {t('email')}
                 </label>
               </div>
               
@@ -225,7 +227,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
                   peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
                   peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
-                  وشەی نهێنی
+                  {t('password')}
                 </label>
                 <button
                   type="button"
@@ -242,19 +244,19 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 text-base font-bold rounded-xl transition-all duration-300 mt-2"
                 disabled={isLoading}
               >
-                {isLoading ? (
+              {isLoading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>چاوەڕوانبە...</span>
+                    <span>{t('loading')}</span>
                   </div>
                 ) : isSignupMode ? (
                   <div className="flex items-center gap-2">
-                    <span>تۆمارکردن</span>
+                    <span>{t('signup')}</span>
                     <UserPlus className="h-5 w-5" />
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span>چوونەژوورەوە</span>
+                    <span>{t('login')}</span>
                     <LogIn className="h-5 w-5" />
                   </div>
                 )}
@@ -282,7 +284,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               {isGoogleLoading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>چاوەڕوانبە...</span>
+                  <span>{t('loading')}</span>
                 </div>
               ) : (
                 <>
@@ -304,7 +306,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  <span>چوونەژوورەوە بە Google</span>
+                  <span>{t('loginWithGoogle')}</span>
                 </>
               )}
             </Button>
@@ -312,14 +314,13 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
             {/* Footer */}
             <div className="text-center mt-6">
               <p className="text-slate-500 text-sm">
-                {isSignupMode ? 'هەژمارت هەیە؟ ' : 'هەژمارت نییە؟ '}
                 <button
                   type="button"
                   onClick={() => switchTab(!isSignupMode)}
                   className="text-primary hover:text-success font-semibold transition-colors"
                   disabled={isLoading}
                 >
-                  {isSignupMode ? 'چوونەژوورەوە' : 'تۆمارکردن'}
+                  {isSignupMode ? t('login') : t('signup')}
                 </button>
               </p>
             </div>
