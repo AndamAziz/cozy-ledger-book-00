@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, Calendar, Wallet, Building2, Clock } from 'lucide-react';
+import { LogOut, Calendar, Building2, Clock } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
 
 interface HeaderProps {
@@ -66,22 +66,12 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
 
         {/* Title & Actions Row */}
         <div className="flex items-center justify-between gap-3">
-          {/* Logo & Title */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex-shrink-0">
-              <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br from-primary to-success flex items-center justify-center shadow-lg">
-                <Wallet className="h-6 w-6 md:h-7 md:w-7 text-primary-foreground" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-success border-2 border-card flex items-center justify-center">
-                <span className="text-[8px] text-white font-bold">✓</span>
-              </div>
-            </div>
-            <h1 className="text-lg md:text-xl font-bold text-foreground">
-              بەڕێوەبردنی داراییی
-            </h1>
-          </div>
+          {/* Title Only */}
+          <h1 className="text-lg md:text-xl font-bold text-foreground">
+            بەڕێوەبردنی داراییی
+          </h1>
           
-          {/* Actions */}
+          {/* Actions - Improved */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <MonthPicker value={currentMonthKey} onChange={onMonthChange} />
             
@@ -89,10 +79,10 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
               variant="ghost"
               onClick={onLogout}
               size="sm"
-              className="h-9 w-9 md:h-10 md:w-auto md:px-3 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              className="h-9 px-2.5 md:px-3 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center gap-1.5"
             >
               <LogOut className="h-4 w-4" />
-              <span className="hidden md:inline mr-2 text-sm font-medium">خروج</span>
+              <span className="text-xs md:text-sm font-medium">خروج</span>
             </Button>
           </div>
         </div>
