@@ -356,17 +356,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     
     setIsUpdating(true);
     try {
-      // Delete from user_approvals table
-      const { error } = await supabase
-        .from('user_approvals')
-        .delete()
-        .eq('id', selectedUser.id);
+      // Call edge function to completely delete user and all their data
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId: selectedUser.user_id },
+      });
 
       if (error) throw error;
 
       toast({
         title: 'سەرکەوتوو',
-        description: 'هەژمارەکە سڕایەوە',
+        description: 'هەژمارەکە و هەموو داتاکانی بە تەواوی سڕانەوە',
       });
 
       setShowDeleteDialog(false);
