@@ -15,6 +15,7 @@ import { FinanceTab } from '@/components/FinanceTab';
 import { InventoryTab } from '@/components/InventoryTab';
 import { SalesTab } from '@/components/SalesTab';
 import { ReportsTab } from '@/components/ReportsTab';
+import { SplashScreen } from '@/components/SplashScreen';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
@@ -117,14 +118,7 @@ const Index = () => {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   if (isLoading || (isAuthenticated && roleLoading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-success mx-auto mb-4 flex items-center justify-center text-3xl animate-pulse">💰</div>
-          <p className="text-muted-foreground">چاوەڕوانبە...</p>
-        </div>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   if (!isAuthenticated) {
