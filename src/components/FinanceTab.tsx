@@ -7,6 +7,7 @@ import { Income, Expense, ExpenseType } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
 import { Plus, Minus, Pencil, Trash2, ShoppingCart, Receipt } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface FinanceTabProps {
   incomeData: Income[];
@@ -51,6 +52,7 @@ export function FinanceTab({
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [defaultExpenseType, setDefaultExpenseType] = useState<ExpenseType>('cost');
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   // Separate expenses by type
   const purchaseData = expenseData.filter(exp => exp.expenseType === 'purchase');
@@ -63,10 +65,10 @@ export function FinanceTab({
   const handleIncomeSubmit = (income: Omit<Income, 'id'>) => {
     if (editingIncome) {
       onUpdateIncome(editingIncome.id, income);
-      toast({ title: 'سەرکەوتوو', description: 'داهات نوێکرایەوە' });
+      toast({ title: t('success'), description: t('income') + ' ' + t('update') });
     } else {
       onAddIncome(income);
-      toast({ title: 'سەرکەوتوو', description: 'داهات زیادکرا' });
+      toast({ title: t('success'), description: t('income') + ' ' + t('add') });
     }
     setEditingIncome(null);
   };
@@ -74,10 +76,10 @@ export function FinanceTab({
   const handleExpenseSubmit = (expense: Omit<Expense, 'id'>) => {
     if (editingExpense) {
       onUpdateExpense(editingExpense.id, expense);
-      toast({ title: 'سەرکەوتوو', description: expense.expenseType === 'purchase' ? 'کڕین نوێکرایەوە' : 'تێچوو نوێکرایەوە' });
+      toast({ title: t('success'), description: expense.expenseType === 'purchase' ? t('purchase') : t('cost') });
     } else {
       onAddExpense(expense);
-      toast({ title: 'سەرکەوتوو', description: expense.expenseType === 'purchase' ? 'کڕین زیادکرا' : 'تێچوو زیادکرا' });
+      toast({ title: t('success'), description: expense.expenseType === 'purchase' ? t('purchase') : t('cost') });
     }
     setEditingExpense(null);
   };
@@ -92,13 +94,13 @@ export function FinanceTab({
     <div className="space-y-5 sm:space-y-6 md:space-y-8">
       {/* Summary Grid */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:gap-5 animate-fade-in">
-        <SummaryCard title="کاش" value={formatCurrency(summary.totalCash)} variant="income" icon="💵" />
-        <SummaryCard title="کارت" value={formatCurrency(summary.totalCard)} variant="income" icon="💳" />
-        <SummaryCard title="کۆی فرۆشتن" value={formatCurrency(summary.totalIncome)} variant="income" icon="📈" />
-        <SummaryCard title="کۆی مەسرەف" value={formatCurrency(summary.totalExpense)} variant="expense" icon="📉" />
-        <SummaryCard title="Purchase" value={formatCurrency(totalPurchase)} variant="accent" icon="🛒" />
-        <SummaryCard title="Cost" value={formatCurrency(totalCost)} variant="expense" icon="🧾" />
-        <SummaryCard title="پارەی ماوە" value={formatCurrency(summary.balance)} variant="balance" icon="💰" fullWidth />
+        <SummaryCard title={t('cash')} value={formatCurrency(summary.totalCash)} variant="income" icon="💵" />
+        <SummaryCard title={t('card')} value={formatCurrency(summary.totalCard)} variant="income" icon="💳" />
+        <SummaryCard title={t('totalSales')} value={formatCurrency(summary.totalIncome)} variant="income" icon="📈" />
+        <SummaryCard title={t('totalExpense')} value={formatCurrency(summary.totalExpense)} variant="expense" icon="📉" />
+        <SummaryCard title={t('purchase')} value={formatCurrency(totalPurchase)} variant="accent" icon="🛒" />
+        <SummaryCard title={t('cost')} value={formatCurrency(totalCost)} variant="expense" icon="🧾" />
+        <SummaryCard title={t('balance')} value={formatCurrency(summary.balance)} variant="balance" icon="💰" fullWidth />
       </div>
 
       {/* Action Buttons */}
@@ -116,7 +118,7 @@ export function FinanceTab({
               <Plus className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-white" />
             </div>
             <div className="text-center">
-              <span className="block font-bold text-white text-xs sm:text-sm md:text-lg">داهات</span>
+              <span className="block font-bold text-white text-xs sm:text-sm md:text-lg">{t('income')}</span>
               <span className="block text-white/70 text-[8px] sm:text-[10px] md:text-xs mt-0.5">Income</span>
             </div>
           </div>
@@ -135,7 +137,7 @@ export function FinanceTab({
               <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-white" />
             </div>
             <div className="text-center">
-              <span className="block font-bold text-white text-xs sm:text-sm md:text-lg">کڕین</span>
+              <span className="block font-bold text-white text-xs sm:text-sm md:text-lg">{t('purchase')}</span>
               <span className="block text-white/70 text-[8px] sm:text-[10px] md:text-xs mt-0.5">Purchase</span>
             </div>
           </div>
@@ -154,7 +156,7 @@ export function FinanceTab({
               <Receipt className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-white" />
             </div>
             <div className="text-center">
-              <span className="block font-bold text-white text-xs sm:text-sm md:text-lg">تێچوو</span>
+              <span className="block font-bold text-white text-xs sm:text-sm md:text-lg">{t('cost')}</span>
               <span className="block text-white/70 text-[8px] sm:text-[10px] md:text-xs mt-0.5">Cost</span>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { formatCurrency } from '@/lib/format';
 import { Package, Plus, Pencil, Trash2, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface InventoryTabProps {
   cigaretteData: Cigarette[];
@@ -40,14 +41,15 @@ export function InventoryTab({
   const [editingCigarette, setEditingCigarette] = useState<Cigarette | null>(null);
   const [editingStock, setEditingStock] = useState<Cigarette | null>(null);
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const handleCigaretteSubmit = (cigarette: Omit<Cigarette, 'id' | 'boxes' | 'extraPacks'>) => {
     if (editingCigarette) {
       onUpdateCigarette(editingCigarette.id, cigarette);
-      toast({ title: 'سەرکەوتوو', description: 'جگەرە نوێکرایەوە' });
+      toast({ title: t('success'), description: t('update') });
     } else {
       onAddCigarette(cigarette);
-      toast({ title: 'سەرکەوتوو', description: 'جگەرەی نوێ زیادکرا' });
+      toast({ title: t('success'), description: t('add') });
     }
     setEditingCigarette(null);
   };
@@ -56,33 +58,33 @@ export function InventoryTab({
     onAddStock(cigaretteId, boxes, extraPacks);
     const cig = cigaretteData.find(c => c.id === cigaretteId);
     const message = boxes > 0 && extraPacks > 0 
-      ? `${boxes} بۆکس و ${extraPacks} پاکەت زیادکرا بۆ ${cig?.name}`
+      ? `${boxes} ${t('boxes')} + ${extraPacks} ${t('packs')} → ${cig?.name}`
       : boxes > 0 
-        ? `${boxes} بۆکس زیادکرا بۆ ${cig?.name}`
-        : `${extraPacks} پاکەت زیادکرا بۆ ${cig?.name}`;
-    toast({ title: 'سەرکەوتوو', description: message });
+        ? `${boxes} ${t('boxes')} → ${cig?.name}`
+        : `${extraPacks} ${t('packs')} → ${cig?.name}`;
+    toast({ title: t('success'), description: message });
   };
 
   const handleEditStock = (id: string | number, boxes: number, extraPacks: number) => {
     onUpdateStock(id, boxes, extraPacks);
-    toast({ title: 'سەرکەوتوو', description: 'کۆگا نوێکرایەوە' });
+    toast({ title: t('success'), description: t('update') });
   };
 
   const getStatus = (cig: Cigarette) => {
     const totalPacks = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
-    if (totalPacks === 0) return { text: 'بەردەست نییە', class: 'status-unavailable' };
-    if (totalPacks <= cig.alertLevel) return { text: 'کەمە', class: 'status-low' };
-    return { text: 'بەردەستە', class: 'status-available' };
+    if (totalPacks === 0) return { text: t('unavailable'), class: 'status-unavailable' };
+    if (totalPacks <= cig.alertLevel) return { text: t('low'), class: 'status-low' };
+    return { text: t('available'), class: 'status-available' };
   };
 
   return (
     <div className="space-y-6">
       {/* Summary Grid */}
       <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in">
-        <SummaryCard title="جۆرەکان" value={summary.totalCigaretteTypes.toString()} variant="stock" icon="🚬" />
-        <SummaryCard title="کۆی بۆکس" value={summary.totalBoxes.toString()} variant="stock" icon="📦" />
-        <SummaryCard title="کۆی پاکەت" value={summary.totalPacks.toString()} variant="stock" icon="📋" />
-        <SummaryCard title="بەهای کۆگا" value={formatCurrency(summary.totalStockValue)} variant="balance" icon="💎" />
+        <SummaryCard title={t('types')} value={summary.totalCigaretteTypes.toString()} variant="stock" icon="🚬" />
+        <SummaryCard title={t('totalBoxes')} value={summary.totalBoxes.toString()} variant="stock" icon="📦" />
+        <SummaryCard title={t('totalPacks')} value={summary.totalPacks.toString()} variant="stock" icon="📋" />
+        <SummaryCard title={t('stockValue')} value={formatCurrency(summary.totalStockValue)} variant="balance" icon="💎" />
       </div>
 
       {/* Action Buttons */}
@@ -91,15 +93,15 @@ export function InventoryTab({
           onClick={() => { setEditingCigarette(null); setCigaretteModalOpen(true); }} 
           className="btn-gradient-accent py-5 rounded-xl shadow-lg shadow-accent/20 hover:shadow-accent/40 hover:scale-[1.02] transition-all duration-300"
         >
-          <Plus className="h-5 w-5 ml-2" />
-          جۆری نوێ
+          <Plus className="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+          {t('addNewType')}
         </Button>
         <Button 
           onClick={() => setStockModalOpen(true)} 
           className="btn-gradient-info py-5 rounded-xl shadow-lg shadow-info/20 hover:shadow-info/40 hover:scale-[1.02] transition-all duration-300"
         >
-          <Package className="h-5 w-5 ml-2" />
-          زیادکردن
+          <Package className="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+          {t('addStock')}
         </Button>
       </div>
 
@@ -109,7 +111,7 @@ export function InventoryTab({
           <div className="w-24 h-24 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-4">
             <span className="text-5xl opacity-50">📦</span>
           </div>
-          <p className="text-sm">هیچ جگەرەیەک نییە</p>
+          <p className="text-sm">{t('noData')}</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -146,19 +148,19 @@ export function InventoryTab({
 
                   <div className="grid grid-cols-4 gap-2 mb-5">
                     <div className="bg-background/40 backdrop-blur-sm p-3 rounded-xl text-center border border-border/30">
-                      <div className="text-[10px] text-muted-foreground uppercase mb-1">بۆکس</div>
+                      <div className="text-[10px] text-muted-foreground uppercase mb-1">{t('boxes')}</div>
                       <div className="text-lg font-bold text-info">{cig.boxes}</div>
                     </div>
                     <div className="bg-background/40 backdrop-blur-sm p-3 rounded-xl text-center border border-border/30">
-                      <div className="text-[10px] text-muted-foreground uppercase mb-1">پاکەت</div>
+                      <div className="text-[10px] text-muted-foreground uppercase mb-1">{t('packs')}</div>
                       <div className="text-lg font-bold text-success">{totalPacks}</div>
                     </div>
                     <div className="bg-background/40 backdrop-blur-sm p-3 rounded-xl text-center border border-border/30">
-                      <div className="text-[10px] text-muted-foreground uppercase mb-1">نرخ</div>
+                      <div className="text-[10px] text-muted-foreground uppercase mb-1">{t('sellPrice')}</div>
                       <div className="text-lg font-bold text-accent">£{cig.sellPrice}</div>
                     </div>
                     <div className="bg-background/40 backdrop-blur-sm p-3 rounded-xl text-center border border-border/30">
-                      <div className="text-[10px] text-muted-foreground uppercase mb-1">بەها</div>
+                      <div className="text-[10px] text-muted-foreground uppercase mb-1">{t('total')}</div>
                       <div className="text-lg font-bold text-foreground">{formatCurrency(totalValue)}</div>
                     </div>
                   </div>
@@ -170,8 +172,8 @@ export function InventoryTab({
                       className="flex-1 rounded-xl hover:bg-info/10 hover:text-info transition-colors"
                       onClick={() => { setEditingStock(cig); setEditStockModalOpen(true); }}
                     >
-                      <Settings className="h-4 w-4 ml-1" />
-                      کۆگا
+                      <Settings className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
+                      {t('inventory')}
                     </Button>
                     <Button
                       variant="secondary"
@@ -179,16 +181,16 @@ export function InventoryTab({
                       className="flex-1 rounded-xl hover:bg-accent/10 hover:text-accent transition-colors"
                       onClick={() => { setEditingCigarette(cig); setCigaretteModalOpen(true); }}
                     >
-                      <Pencil className="h-4 w-4 ml-1" />
-                      دەستکاری
+                      <Pencil className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
+                      {t('edit')}
                     </Button>
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => {
-                        if (confirm('دڵنیایت؟')) {
+                        if (confirm(t('confirmDelete'))) {
                           onDeleteCigarette(cig.id);
-                          toast({ title: 'سەرکەوتوو', description: 'جگەرە سڕایەوە' });
+                          toast({ title: t('success'), description: t('delete') });
                         }
                       }}
                       className="rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors"

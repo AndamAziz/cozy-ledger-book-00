@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useFinanceData } from '@/hooks/useFinanceData';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { LoginForm } from '@/components/LoginForm';
 import { PendingApproval } from '@/components/PendingApproval';
 import { ExpiredSubscription } from '@/components/ExpiredSubscription';
@@ -32,6 +33,7 @@ interface DashboardProps {
 
 const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEmail }: DashboardProps) => {
   const { logout } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
   const financeData = useFinanceData();
 
@@ -41,8 +43,8 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
   return (
     <>
       <Helmet>
-        <title>{companyName ? `${companyName} - ` : ''}بەڕێوەبردنی داراییی - {financeData.getCurrentMonthLabel()}</title>
-        <meta name="description" content="سیستەمی بەڕێوەبردنی داراییی و کۆگای جگەرە" />
+        <title>{companyName ? `${companyName} - ` : ''}{t('financialManagement')} - {financeData.getCurrentMonthLabel()}</title>
+        <meta name="description" content={t('splashSubtitle')} />
       </Helmet>
 
       <div className="min-h-screen p-2 sm:p-3 md:p-6 safe-area-inset">
@@ -58,9 +60,9 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-lg shadow-info/30">
                     <Users className="h-5 w-5 sm:h-6 sm:w-6 text-info-foreground" />
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-foreground text-sm sm:text-base">پانێلی ئەدمین</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">بەڕێوەبردنی بەکارهێنەران</p>
+                  <div className="text-start">
+                    <p className="font-bold text-foreground text-sm sm:text-base">{t('adminPanel')}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">{t('users')}</p>
                   </div>
                 </div>
                 {/* Decorative gradient */}
@@ -87,10 +89,10 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           {/* Tab Navigation */}
           <div className="relative mb-4 sm:mb-6 md:mb-8 no-print">
             <div className="grid grid-cols-4 gap-1.5 sm:gap-2 md:gap-3 p-2 sm:p-2.5 md:p-3 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/20">
-              <TabButton active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon="💰" label="داراییی" />
-              <TabButton active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon="📦" label="کۆگا" />
-              <TabButton active={activeTab === 'sales'} onClick={() => setActiveTab('sales')} icon="🛒" label="فرۆشتن" />
-              <TabButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon="📊" label="ڕاپۆرت" />
+              <TabButton active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon="💰" label={t('finance')} />
+              <TabButton active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon="📦" label={t('inventory')} />
+              <TabButton active={activeTab === 'sales'} onClick={() => setActiveTab('sales')} icon="🛒" label={t('sales')} />
+              <TabButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon="📊" label={t('reports')} />
             </div>
           </div>
 
