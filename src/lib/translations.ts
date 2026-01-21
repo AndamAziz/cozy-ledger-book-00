@@ -270,6 +270,23 @@ export const translations = {
     unit: 'یەکە',
     profit: 'قازانج',
     
+    // Finance Tab details
+    dailyIncomeTitle: 'داهاتی ڕۆژانە',
+    records: 'تۆمار',
+    noIncomeYet: 'هیچ داهاتێک نییە',
+    clickToAddIncome: 'کلیک لەسەر "داهات" بۆ زیادکردن',
+    purchaseTitle: 'کڕین',
+    noPurchaseYet: 'هیچ کڕینێک نییە',
+    clickToAddPurchase: 'کلیک لەسەر "کڕین" بۆ زیادکردن',
+    costTitle: 'تێچوو',
+    noCostYet: 'هیچ تێچووێک نییە',
+    clickToAddCost: 'کلیک لەسەر "تێچوو" بۆ زیادکردن',
+    areYouSure: 'دڵنیایت؟',
+    incomeDeleted: 'داهات سڕایەوە',
+    purchaseDeleted: 'کڕین سڕایەوە',
+    costDeleted: 'تێچوو سڕایەوە',
+    dayNumber: 'ڕۆژی',
+    
     // Expiry extension toast
     expiryExtended: 'کاتی بەکارهێنان درێژکرایەوە!',
     accountValidUntil: 'ئەکاونتەکەت تا کارا دەبێت',
@@ -542,6 +559,23 @@ export const translations = {
     pack: 'unit',
     unit: 'unit',
     profit: 'Profit',
+    
+    // Finance Tab details
+    dailyIncomeTitle: 'Daily Income',
+    records: 'records',
+    noIncomeYet: 'No income yet',
+    clickToAddIncome: 'Click "Income" to add',
+    purchaseTitle: 'Purchase',
+    noPurchaseYet: 'No purchases yet',
+    clickToAddPurchase: 'Click "Purchase" to add',
+    costTitle: 'Cost',
+    noCostYet: 'No costs yet',
+    clickToAddCost: 'Click "Cost" to add',
+    areYouSure: 'Are you sure?',
+    incomeDeleted: 'Income deleted',
+    purchaseDeleted: 'Purchase deleted',
+    costDeleted: 'Cost deleted',
+    dayNumber: 'Day',
     
     // Expiry extension toast
     expiryExtended: 'Subscription extended!',
@@ -816,6 +850,23 @@ export const translations = {
     unit: 'وحدة',
     profit: 'الربح',
     
+    // Finance Tab details
+    dailyIncomeTitle: 'الدخل اليومي',
+    records: 'سجلات',
+    noIncomeYet: 'لا يوجد دخل بعد',
+    clickToAddIncome: 'انقر على "الدخل" للإضافة',
+    purchaseTitle: 'المشتريات',
+    noPurchaseYet: 'لا توجد مشتريات بعد',
+    clickToAddPurchase: 'انقر على "المشتريات" للإضافة',
+    costTitle: 'التكاليف',
+    noCostYet: 'لا توجد تكاليف بعد',
+    clickToAddCost: 'انقر على "التكاليف" للإضافة',
+    areYouSure: 'هل أنت متأكد؟',
+    incomeDeleted: 'تم حذف الدخل',
+    purchaseDeleted: 'تم حذف المشتريات',
+    costDeleted: 'تم حذف التكاليف',
+    dayNumber: 'اليوم',
+    
     // Expiry extension toast
     expiryExtended: 'تم تمديد الاشتراك!',
     accountValidUntil: 'حسابك صالح حتى',
@@ -1088,6 +1139,23 @@ export const translations = {
     pack: 'واحد',
     unit: 'واحد',
     profit: 'سود',
+    
+    // Finance Tab details
+    dailyIncomeTitle: 'درآمد روزانه',
+    records: 'رکورد',
+    noIncomeYet: 'هنوز درآمدی وجود ندارد',
+    clickToAddIncome: 'برای افزودن روی "درآمد" کلیک کنید',
+    purchaseTitle: 'خریدها',
+    noPurchaseYet: 'هنوز خریدی وجود ندارد',
+    clickToAddPurchase: 'برای افزودن روی "خرید" کلیک کنید',
+    costTitle: 'هزینه‌ها',
+    noCostYet: 'هنوز هزینه‌ای وجود ندارد',
+    clickToAddCost: 'برای افزودن روی "هزینه" کلیک کنید',
+    areYouSure: 'آیا مطمئن هستید؟',
+    incomeDeleted: 'درآمد حذف شد',
+    purchaseDeleted: 'خرید حذف شد',
+    costDeleted: 'هزینه حذف شد',
+    dayNumber: 'روز',
     
     // Expiry extension toast
     expiryExtended: 'اشتراک تمدید شد!',
