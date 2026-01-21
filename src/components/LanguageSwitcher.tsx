@@ -8,9 +8,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import kurdistanFlag from '@/assets/flags/kurdistan.png';
 
-const languages: { code: Language; label: string; flag: string }[] = [
-  { code: 'ku', label: 'کوردی', flag: '🇮🇶' },
+interface LanguageOption {
+  code: Language;
+  label: string;
+  flag: string;
+  isImage?: boolean;
+}
+
+const languages: LanguageOption[] = [
+  { code: 'ku', label: 'کوردی', flag: kurdistanFlag, isImage: true },
   { code: 'en', label: 'English', flag: '🇬🇧' },
   { code: 'ar', label: 'العربية', flag: '🇸🇦' },
   { code: 'fa', label: 'فارسی', flag: '🇮🇷' },
@@ -30,9 +38,13 @@ export function LanguageSwitcher() {
           className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-lg bg-info/15 hover:bg-info/25 border border-info/30 transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info" />
-          <span className="text-sm sm:text-base font-bold text-info">
-            {currentLang.flag}
-          </span>
+          {currentLang.isImage ? (
+            <img src={currentLang.flag} alt={currentLang.label} className="h-4 w-5 sm:h-5 sm:w-6 rounded-sm object-cover" />
+          ) : (
+            <span className="text-sm sm:text-base font-bold text-info">
+              {currentLang.flag}
+            </span>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[140px]">
@@ -44,7 +56,11 @@ export function LanguageSwitcher() {
               language === lang.code ? 'bg-primary/10 text-primary' : ''
             }`}
           >
-            <span className="text-lg">{lang.flag}</span>
+            {lang.isImage ? (
+              <img src={lang.flag} alt={lang.label} className="h-4 w-5 rounded-sm object-cover" />
+            ) : (
+              <span className="text-lg">{lang.flag}</span>
+            )}
             <span className="font-medium">{lang.label}</span>
           </DropdownMenuItem>
         ))}
