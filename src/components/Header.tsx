@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, Building2, Clock } from 'lucide-react';
+import { LogOut, Building2, Globe } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface HeaderProps {
@@ -15,12 +14,12 @@ interface HeaderProps {
 
 export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout, companyName }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 1000);
+    }, 60000); // Update every minute for date only
 
     return () => clearInterval(timer);
   }, []);
@@ -37,11 +36,8 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
     return `${dayName}, ${day} ${month} ${year}`;
   };
 
-  const formatTime = (date: Date) => {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+  const toggleLanguage = () => {
+    setLanguage(language === 'ku' ? 'en' : 'ku');
   };
 
   return (
@@ -58,13 +54,18 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
           </div>
         )}
 
-        {/* Date & Time Row */}
+        {/* Date & Language Row */}
         <div className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl bg-secondary/40 border border-border/20">
           <span className="text-[10px] sm:text-xs md:text-sm text-foreground truncate">{formatDate(currentTime)}</span>
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-            <span className="text-base sm:text-lg md:text-xl font-mono font-bold text-primary">{formatTime(currentTime)}</span>
-            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-          </div>
+          <button
+            onClick={toggleLanguage}
+            className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 px-3 py-1.5 rounded-lg bg-info/15 hover:bg-info/25 border border-info/30 transition-all duration-200 hover:scale-105 active:scale-95"
+          >
+            <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info" />
+            <span className="text-sm sm:text-base font-bold text-info">
+              {language === 'ku' ? 'EN' : 'کو'}
+            </span>
+          </button>
         </div>
 
         {/* Title & Actions Row */}
@@ -74,9 +75,8 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
             {t('financialManagement')}
           </h1>
           
-          {/* Actions - Improved */}
+          {/* Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-            <LanguageSwitcher />
             <MonthPicker value={currentMonthKey} onChange={onMonthChange} />
             
             <Button
