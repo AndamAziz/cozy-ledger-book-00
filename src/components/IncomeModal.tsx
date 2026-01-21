@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Modal } from './Modal';
 import { Income } from '@/types/finance';
 import { Calendar, Wallet, CreditCard } from 'lucide-react';
+import { DayPicker } from './DayPicker';
 
 interface IncomeModalProps {
   isOpen: boolean;
@@ -13,9 +14,10 @@ interface IncomeModalProps {
   editingIncome?: Income | null;
   maxDays: number;
   defaultDay: number;
+  monthKey: string;
 }
 
-export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays, defaultDay }: IncomeModalProps) {
+export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays, defaultDay, monthKey }: IncomeModalProps) {
   const [day, setDay] = useState(defaultDay);
   const [cash, setCash] = useState('');
   const [card, setCard] = useState('');
@@ -61,14 +63,11 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
             </div>
             ڕۆژ
           </Label>
-          <Input
-            type="number"
-            min={1}
-            max={maxDays}
+          <DayPicker
             value={day}
-            onChange={(e) => setDay(parseInt(e.target.value) || 1)}
-            className="h-14 text-lg bg-secondary/50 border-white/10 rounded-xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-            required
+            onChange={setDay}
+            maxDays={maxDays}
+            monthKey={monthKey}
           />
         </div>
         

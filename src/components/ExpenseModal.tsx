@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Modal } from './Modal';
 import { Expense, ExpenseType } from '@/types/finance';
 import { Calendar, PoundSterling, FileText, ShoppingCart, Receipt } from 'lucide-react';
+import { DayPicker } from './DayPicker';
 
 interface ExpenseModalProps {
   isOpen: boolean;
@@ -15,9 +16,10 @@ interface ExpenseModalProps {
   maxDays: number;
   defaultDay: number;
   defaultExpenseType?: ExpenseType;
+  monthKey: string;
 }
 
-export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDays, defaultDay, defaultExpenseType = 'cost' }: ExpenseModalProps) {
+export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDays, defaultDay, defaultExpenseType = 'cost', monthKey }: ExpenseModalProps) {
   const [day, setDay] = useState(defaultDay);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -102,14 +104,11 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
             </div>
             ڕۆژ
           </Label>
-          <Input
-            type="number"
-            min={1}
-            max={maxDays}
+          <DayPicker
             value={day}
-            onChange={(e) => setDay(parseInt(e.target.value) || 1)}
-            className="h-14 text-lg bg-secondary/50 border-white/10 rounded-xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-            required
+            onChange={setDay}
+            maxDays={maxDays}
+            monthKey={monthKey}
           />
         </div>
         
