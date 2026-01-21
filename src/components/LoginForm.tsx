@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, LogIn, Wallet, Sparkles, UserPlus, Building2 } from 'lucide-react';
+import { Mail, Lock, LogIn, UserPlus, Building2, Eye, EyeOff } from 'lucide-react';
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -16,6 +14,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
   const [companyName, setCompanyName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSignupMode, setIsSignupMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,150 +71,188 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
     setIsLoading(false);
   };
 
+  const switchTab = (signup: boolean) => {
+    setIsSignupMode(signup);
+    setEmail('');
+    setPassword('');
+    setCompanyName('');
+    setShowPassword(false);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 relative overflow-hidden safe-area-inset">
-      {/* Background decorations - hidden on small mobile for performance */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-        <div className="absolute top-10 sm:top-20 left-5 sm:left-10 w-48 sm:w-72 h-48 sm:h-72 rounded-full bg-primary/15 sm:bg-primary/20 blur-[80px] sm:blur-[100px] animate-pulse" />
-        <div className="absolute bottom-10 sm:bottom-20 right-5 sm:right-10 w-56 sm:w-80 h-56 sm:h-80 rounded-full bg-success/15 sm:bg-success/20 blur-[80px] sm:blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 sm:w-96 h-64 sm:h-96 rounded-full bg-info/10 blur-[100px] sm:blur-[120px]" />
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/4 -left-20 w-72 h-72 rounded-full bg-primary/20 blur-[120px]" />
+        <div className="absolute bottom-1/4 -right-20 w-80 h-80 rounded-full bg-success/15 blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-info/10 blur-[150px]" />
       </div>
       
-      {/* Floating elements - smaller on mobile */}
-      <div className="absolute top-12 sm:top-20 right-4 sm:right-20 w-12 sm:w-16 h-12 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary/20 to-transparent border border-primary/20 flex items-center justify-center animate-bounce" style={{ animationDuration: '3s' }}>
-        <span className="text-lg sm:text-2xl">💰</span>
-      </div>
-      <div className="absolute bottom-20 sm:bottom-32 left-4 sm:left-16 w-10 sm:w-14 h-10 sm:h-14 rounded-lg sm:rounded-xl bg-gradient-to-br from-success/20 to-transparent border border-success/20 flex items-center justify-center animate-bounce" style={{ animationDuration: '4s', animationDelay: '0.5s' }}>
-        <span className="text-base sm:text-xl">📊</span>
-      </div>
-      <div className="hidden sm:flex absolute top-1/3 left-20 w-12 h-12 rounded-lg bg-gradient-to-br from-accent/20 to-transparent border border-accent/20 items-center justify-center animate-bounce" style={{ animationDuration: '3.5s', animationDelay: '1s' }}>
-        <span className="text-lg">📈</span>
-      </div>
-      
-      <div className="w-full max-w-md relative z-10 animate-scale-in">
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-primary/20 bg-card/60 backdrop-blur-2xl shadow-2xl shadow-primary/10">
-          {/* Top gradient bar */}
-          <div className="h-1 sm:h-1.5 bg-gradient-to-l from-primary via-success to-info" />
+      <div className="w-full max-w-[440px] relative z-10 animate-scale-in">
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-2xl">
+          {/* Top decoration line */}
+          <div className="h-1 bg-gradient-to-r from-primary via-info to-primary" />
           
-          <div className="p-5 sm:p-8 md:p-10">
+          <div className="p-6 sm:p-10">
             {/* Logo & Title */}
-            <div className="text-center mb-6 sm:mb-10">
-              <div className="relative inline-block mb-4 sm:mb-6">
-                <div className="w-18 h-18 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary via-primary to-success mx-auto flex items-center justify-center shadow-2xl shadow-primary/40" style={{ width: '4.5rem', height: '4.5rem' }}>
-                  <Wallet className="h-9 w-9 sm:h-12 sm:w-12 text-primary-foreground" />
+            <div className="text-center mb-8">
+              <div className="relative inline-block mb-4">
+                <div className="w-20 h-20 rounded-[20px] bg-gradient-to-br from-primary to-success mx-auto flex items-center justify-center shadow-xl shadow-primary/30">
+                  <span className="text-4xl">💼</span>
                 </div>
-                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-success flex items-center justify-center shadow-lg animate-pulse">
-                  <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-success-foreground" />
-                </div>
+                <div className="absolute -top-1 -right-1 text-xl animate-pulse">✨</div>
               </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-l from-primary via-success to-foreground bg-clip-text text-transparent mb-2 sm:mb-3">
+              <h1 className="text-2xl font-bold text-primary mb-2">
                 بەڕێوەبردنی داراییی
               </h1>
-              <p className="text-muted-foreground text-xs sm:text-sm md:text-base leading-relaxed">
+              <p className="text-slate-400 text-sm">
                 {isSignupMode ? 'هەژمارەی نوێ دروست بکە' : 'بچۆ ژوورەوە بۆ بەڕێوەبردنی حسابەکانت'}
               </p>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+            {/* Tabs */}
+            <div className="flex gap-2 mb-8 bg-slate-800/50 p-1.5 rounded-xl">
+              <button
+                type="button"
+                onClick={() => switchTab(false)}
+                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                  !isSignupMode 
+                    ? 'bg-gradient-to-r from-primary to-success text-white shadow-lg shadow-primary/30' 
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                چوونەژوورەوە
+              </button>
+              <button
+                type="button"
+                onClick={() => switchTab(true)}
+                className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                  isSignupMode 
+                    ? 'bg-gradient-to-r from-primary to-success text-white shadow-lg shadow-primary/30' 
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                تۆمارکردن
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Company Name - Only in signup mode */}
               {isSignupMode && (
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="companyName" className="text-muted-foreground flex items-center gap-2 text-xs sm:text-sm">
-                    <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+                <div className="relative group">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                    <Building2 className="w-5 h-5" />
+                  </span>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder=" "
+                    disabled={isLoading}
+                    className="peer w-full py-4 pr-12 pl-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                  />
+                  <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
+                    peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                    peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                     ناوی کۆمپانیا
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="companyName"
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="ناوی کۆمپانیا بنووسە"
-                      required={isSignupMode}
-                      disabled={isLoading}
-                      className="bg-secondary/30 border-border/50 rounded-xl h-12 sm:h-14 pr-4 text-sm sm:text-base focus:border-primary/50 focus:ring-primary/20 transition-all"
-                    />
-                  </div>
+                  </label>
                 </div>
               )}
               
-              <div className="space-y-1.5 sm:space-y-2">
-                <Label htmlFor="email" className="text-muted-foreground flex items-center gap-2 text-xs sm:text-sm">
-                  <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+              {/* Email */}
+              <div className="relative group">
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                  <Mail className="w-5 h-5" />
+                </span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder=" "
+                  disabled={isLoading}
+                  className="peer w-full py-4 pr-12 pl-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                />
+                <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
+                  peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                  peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                   ئیمەیڵ
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="ئیمەیڵ بنووسە"
-                    required
-                    disabled={isLoading}
-                    className="bg-secondary/30 border-border/50 rounded-xl h-12 sm:h-14 pr-4 text-sm sm:text-base focus:border-primary/50 focus:ring-primary/20 transition-all"
-                  />
-                </div>
+                </label>
               </div>
               
-              <div className="space-y-1.5 sm:space-y-2">
-                <Label htmlFor="password" className="text-muted-foreground flex items-center gap-2 text-xs sm:text-sm">
-                  <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+              {/* Password */}
+              <div className="relative group">
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                  <Lock className="w-5 h-5" />
+                </span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder=" "
+                  disabled={isLoading}
+                  className="peer w-full py-4 pr-12 pl-12 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                />
+                <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
+                  peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                  peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                   وشەی نهێنی
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="وشەی نهێنی بنووسە"
-                    required
-                    disabled={isLoading}
-                    className="bg-secondary/30 border-border/50 rounded-xl h-12 sm:h-14 pr-4 text-sm sm:text-base focus:border-primary/50 focus:ring-primary/20 transition-all"
-                  />
-                </div>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-primary transition-colors p-1"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
               
+              {/* Submit Button */}
               <Button 
                 type="submit" 
-                className="w-full btn-gradient-primary h-12 sm:h-14 text-base sm:text-lg font-bold rounded-xl shadow-xl shadow-primary/30 hover:shadow-primary/50 active:scale-[0.98] hover:scale-[1.02] transition-all duration-300 mt-3 sm:mt-4"
+                className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 text-base font-bold rounded-xl transition-all duration-300 mt-2"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    <span className="text-sm sm:text-base">چاوەڕوانبە...</span>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>چاوەڕوانبە...</span>
                   </div>
                 ) : isSignupMode ? (
                   <div className="flex items-center gap-2">
-                    <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span>تۆمارکردن</span>
+                    <UserPlus className="h-5 w-5" />
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <LogIn className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span>چوونەژوورەوە</span>
+                    <LogIn className="h-5 w-5" />
                   </div>
                 )}
               </Button>
             </form>
             
-            {/* Toggle signup/login */}
-            <div className="mt-4 sm:mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => setIsSignupMode(!isSignupMode)}
-                className="text-primary hover:underline text-xs sm:text-sm transition-colors py-2 px-4 -m-2 touch-manipulation"
-                disabled={isLoading}
-              >
-                {isSignupMode ? 'هەژمارم هەیە، چوونەژوورەوە' : 'هەژمارم نییە، تۆمارکردن'}
-              </button>
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-700/50"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-3 bg-slate-900/80 text-slate-500">یان</span>
+              </div>
             </div>
             
             {/* Footer */}
-            <div className="mt-5 sm:mt-8 pt-4 sm:pt-6 border-t border-border/30 text-center">
-              <p className="text-[10px] sm:text-xs text-muted-foreground">
-                سیستەمی بەڕێوەبردنی داراییی و کۆگای جگەرە
+            <div className="text-center">
+              <p className="text-slate-500 text-sm">
+                {isSignupMode ? 'هەژمارت هەیە؟ ' : 'هەژمارت نییە؟ '}
+                <button
+                  type="button"
+                  onClick={() => switchTab(!isSignupMode)}
+                  className="text-primary hover:text-success font-semibold transition-colors"
+                  disabled={isLoading}
+                >
+                  {isSignupMode ? 'چوونەژوورەوە' : 'تۆمارکردن'}
+                </button>
               </p>
             </div>
           </div>
