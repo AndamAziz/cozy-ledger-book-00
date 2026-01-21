@@ -747,30 +747,6 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleExtendExpiry(user, 30)}
-                          className="rounded-lg text-xs"
-                        >
-                          +٣٠ ڕۆژ
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleExtendExpiry(user, 90)}
-                          className="rounded-lg text-xs"
-                        >
-                          +٩٠ ڕۆژ
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleExtendExpiry(user, 365)}
-                          className="rounded-lg text-xs"
-                        >
-                          +١ ساڵ
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
                           onClick={() => {
                             setSelectedUser(user);
                             setNewCompanyName(user.company_name || '');
