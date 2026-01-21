@@ -25,7 +25,8 @@ export const translations = {
     // Inventory Tab
     types: 'جۆرەکان',
     totalBoxes: 'کۆی بۆکس',
-    totalPacks: 'کۆی پاکەت',
+    totalPacks: 'کۆی دانە',
+    totalUnits: 'کۆی یەکە',
     stockValue: 'بەهای کۆگا',
     unavailable: 'بەردەست نییە',
     low: 'کەمە',
@@ -34,21 +35,28 @@ export const translations = {
     addStock: 'زیادکردنی کۆگا',
     editStock: 'دەستکاری کۆگا',
     numberOfBoxes: 'ژمارەی بۆکس',
-    numberOfPacks: 'ژمارەی پاکەت',
-    separatePacks: 'ژمارەی پاکەت (جیا)',
+    numberOfPacks: 'ژمارەی دانە',
+    numberOfUnits: 'ژمارەی یەکە',
+    separatePacks: 'ژمارەی دانە (جیا)',
+    separateUnits: 'یەکەی جیا',
     update: 'نوێکردنەوە',
     add: 'زیادکردن',
     
     // Sales Tab
     todaySales: 'فرۆشتنی ئەمڕۆ',
     monthlySales: 'فرۆشتنی مانگانە',
-    cigaretteProfit: 'قازانجی جگەرە',
+    productProfit: 'قازانجی بەرهەم',
+    cigaretteProfit: 'قازانجی بەرهەم',
     recordSale: 'تۆمارکردنی فرۆشتن',
     day: 'ڕۆژ',
-    cigaretteType: 'جۆری جگەرە',
-    selectCigarette: 'جگەرە هەڵبژێرە...',
-    packsCount: 'ژمارەی پاکەت',
-    packPrice: 'نرخی پاکەت',
+    productType: 'جۆری بەرهەم',
+    cigaretteType: 'جۆری بەرهەم',
+    selectProduct: 'بەرهەم هەڵبژێرە...',
+    selectCigarette: 'بەرهەم هەڵبژێرە...',
+    packsCount: 'ژمارەی دانە',
+    unitsCount: 'ژمارەی یەکە',
+    packPrice: 'نرخی دانە',
+    unitPrice: 'نرخی یەکە',
     total: 'کۆ',
     
     // Reports Tab
@@ -69,16 +77,20 @@ export const translations = {
     editIncome: 'دەستکاری داهات',
     addExpense: 'زیادکردنی خەرجی',
     editExpense: 'دەستکاری خەرجی',
-    addCigarette: 'زیادکردنی جگەرە',
-    editCigarette: 'دەستکاری جگەرە',
+    addProduct: 'زیادکردنی بەرهەم',
+    editProduct: 'دەستکاری بەرهەم',
+    addCigarette: 'زیادکردنی بەرهەم',
+    editCigarette: 'دەستکاری بەرهەم',
     name: 'ناو',
     boxPrice: 'نرخی بۆکس',
-    packsPerBox: 'پاکەت لە بۆکسێک',
+    packsPerBox: 'دانە لە بۆکسێک',
+    unitsPerBox: 'یەکە لە بۆکسێک',
     sellPrice: 'نرخی فرۆشتن',
     alertLevel: 'ئاستی ئاگاداری',
     description: 'تێبینی',
     amount: 'بڕ',
     expenseType: 'جۆری خەرجی',
+    product: 'بەرهەم',
     
     // Login
     login: 'چوونەژوورەوە',
@@ -99,7 +111,8 @@ export const translations = {
     // Alerts
     lowStockAlert: 'ئاگادارکردنەوە - کۆگا کەمە!',
     only: 'تەنها',
-    packs: 'پاکەت',
+    packs: 'دانە',
+    units: 'یەکە',
     
     // Common
     delete: 'سڕینەوە',
@@ -179,7 +192,8 @@ export const translations = {
     
     // Stock
     boxes: 'بۆکس',
-    pack: 'پاکەت',
+    pack: 'دانە',
+    unit: 'یەکە',
     profit: 'قازانج',
   },
   en: {
@@ -206,7 +220,8 @@ export const translations = {
     // Inventory Tab
     types: 'Types',
     totalBoxes: 'Total Boxes',
-    totalPacks: 'Total Packs',
+    totalPacks: 'Total Units',
+    totalUnits: 'Total Units',
     stockValue: 'Stock Value',
     unavailable: 'Unavailable',
     low: 'Low',
@@ -215,21 +230,28 @@ export const translations = {
     addStock: 'Add Stock',
     editStock: 'Edit Stock',
     numberOfBoxes: 'Number of Boxes',
-    numberOfPacks: 'Number of Packs',
-    separatePacks: 'Separate Packs',
+    numberOfPacks: 'Number of Units',
+    numberOfUnits: 'Number of Units',
+    separatePacks: 'Separate Units',
+    separateUnits: 'Separate Units',
     update: 'Update',
     add: 'Add',
     
     // Sales Tab
     todaySales: "Today's Sales",
     monthlySales: 'Monthly Sales',
-    cigaretteProfit: 'Cigarette Profit',
+    productProfit: 'Product Profit',
+    cigaretteProfit: 'Product Profit',
     recordSale: 'Record Sale',
     day: 'Day',
-    cigaretteType: 'Cigarette Type',
-    selectCigarette: 'Select cigarette...',
-    packsCount: 'Packs Count',
-    packPrice: 'Pack Price',
+    productType: 'Product Type',
+    cigaretteType: 'Product Type',
+    selectProduct: 'Select product...',
+    selectCigarette: 'Select product...',
+    packsCount: 'Units Count',
+    unitsCount: 'Units Count',
+    packPrice: 'Unit Price',
+    unitPrice: 'Unit Price',
     total: 'Total',
     
     // Reports Tab
@@ -250,16 +272,20 @@ export const translations = {
     editIncome: 'Edit Income',
     addExpense: 'Add Expense',
     editExpense: 'Edit Expense',
-    addCigarette: 'Add Cigarette',
-    editCigarette: 'Edit Cigarette',
+    addProduct: 'Add Product',
+    editProduct: 'Edit Product',
+    addCigarette: 'Add Product',
+    editCigarette: 'Edit Product',
     name: 'Name',
     boxPrice: 'Box Price',
-    packsPerBox: 'Packs Per Box',
+    packsPerBox: 'Units Per Box',
+    unitsPerBox: 'Units Per Box',
     sellPrice: 'Sell Price',
     alertLevel: 'Alert Level',
     description: 'Description',
     amount: 'Amount',
     expenseType: 'Expense Type',
+    product: 'Product',
     
     // Login
     login: 'Login',
@@ -280,7 +306,8 @@ export const translations = {
     // Alerts
     lowStockAlert: 'Alert - Low Stock!',
     only: 'Only',
-    packs: 'packs',
+    packs: 'units',
+    units: 'units',
     
     // Common
     delete: 'Delete',
@@ -360,7 +387,8 @@ export const translations = {
     
     // Stock
     boxes: 'boxes',
-    pack: 'pack',
+    pack: 'unit',
+    unit: 'unit',
     profit: 'Profit',
   },
 } as const;

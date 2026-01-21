@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from './Modal';
 import { Cigarette } from '@/types/finance';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface EditStockModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface EditStockModalProps {
 export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditStockModalProps) {
   const [boxes, setBoxes] = useState(0);
   const [extraPacks, setExtraPacks] = useState(0);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (cigarette) {
@@ -32,10 +34,10 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="دەستکاری کۆگا">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('editStock')}>
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
-          <Label className="text-muted-foreground">ژمارەی بۆکس</Label>
+          <Label className="text-muted-foreground">{t('numberOfBoxes')}</Label>
           <Input
             type="number"
             min={0}
@@ -47,7 +49,7 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
         </div>
         
         <div className="space-y-2">
-          <Label className="text-muted-foreground">ژمارەی پاکەت (جیا)</Label>
+          <Label className="text-muted-foreground">{t('separateUnits')}</Label>
           <Input
             type="number"
             min={0}
@@ -59,7 +61,7 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
         </div>
         
         <Button type="submit" className="w-full btn-gradient-info py-6 text-lg">
-          نوێکردنەوە
+          {t('update')}
         </Button>
       </form>
     </Modal>
