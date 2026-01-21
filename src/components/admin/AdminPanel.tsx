@@ -396,6 +396,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const totalPending = users.filter(u => !u.is_approved).length;
   const totalApproved = users.filter(u => u.is_approved).length;
   const totalExpired = users.filter(u => u.is_approved && u.expires_at && new Date(u.expires_at) < new Date()).length;
+  const totalInactive = users.filter(u => !u.is_active).length;
   const totalActive = totalApproved - totalExpired;
   const expiringIn7Days = users.filter(u => {
     if (!u.is_approved || !u.expires_at) return false;
@@ -460,7 +461,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         </header>
 
         {/* Statistics Cards - Compact */}
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-3 mb-6">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3 mb-6">
           <div className="rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 p-3">
             <div className="flex flex-col items-center gap-1 text-center">
               <Users className="h-5 w-5 text-primary" />
@@ -485,6 +486,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           </div>
           
+          <div className="rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/5 border border-orange-500/20 p-3">
+            <div className="flex flex-col items-center gap-1 text-center">
+              <Ban className="h-5 w-5 text-orange-500" />
+              <p className="text-xl font-bold text-foreground">{totalInactive}</p>
+              <p className="text-[10px] text-muted-foreground">ناچالاک</p>
+            </div>
+          </div>
+          
           <div className="rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/5 border border-destructive/20 p-3">
             <div className="flex flex-col items-center gap-1 text-center">
               <UserX className="h-5 w-5 text-destructive" />
@@ -493,7 +502,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           </div>
           
-          <div className="rounded-xl bg-gradient-to-br from-info/20 to-info/5 border border-info/20 p-3 col-span-3 md:col-span-1">
+          <div className="rounded-xl bg-gradient-to-br from-info/20 to-info/5 border border-info/20 p-3">
             <div className="flex flex-col items-center gap-1 text-center">
               <TrendingUp className="h-5 w-5 text-info" />
               <p className="text-xl font-bold text-foreground">{expiringIn7Days}</p>
