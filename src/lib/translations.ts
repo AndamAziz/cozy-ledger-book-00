@@ -338,6 +338,11 @@ export const translations = {
     errorMakingAdmin: 'هەڵە لە کردن بە ئەدمین',
     alreadyAdmin: 'ئەم بەکارهێنەرە پێشتر ئەدمینە',
     adminBadge: 'ئەدمین',
+    removeAdmin: 'لابردنی ئەدمین',
+    removeAdminTitle: 'لابردنی ڕۆڵی ئەدمین',
+    removeAdminConfirm: 'ئایا دڵنیایت دەتەوێت ڕۆڵی ئەدمین لاببەیت لەم بەکارهێنەرە؟',
+    adminRemovedSuccess: 'ڕۆڵی ئەدمین لابرا',
+    errorRemovingAdmin: 'هەڵە لە لابردنی ڕۆڵی ئەدمین',
   },
   en: {
     // Header
@@ -676,6 +681,11 @@ export const translations = {
     errorMakingAdmin: 'Error making admin',
     alreadyAdmin: 'This user is already an admin',
     adminBadge: 'Admin',
+    removeAdmin: 'Remove Admin',
+    removeAdminTitle: 'Remove Admin Role',
+    removeAdminConfirm: 'Are you sure you want to remove admin role from this user?',
+    adminRemovedSuccess: 'Admin role removed',
+    errorRemovingAdmin: 'Error removing admin role',
   },
   ar: {
     // Header
@@ -1014,6 +1024,11 @@ export const translations = {
     errorMakingAdmin: 'خطأ في جعل المستخدم مشرفاً',
     alreadyAdmin: 'هذا المستخدم مشرف بالفعل',
     adminBadge: 'مشرف',
+    removeAdmin: 'إزالة المشرف',
+    removeAdminTitle: 'إزالة دور المشرف',
+    removeAdminConfirm: 'هل أنت متأكد من إزالة دور المشرف من هذا المستخدم؟',
+    adminRemovedSuccess: 'تمت إزالة دور المشرف',
+    errorRemovingAdmin: 'خطأ في إزالة دور المشرف',
   },
   fa: {
     // Header
@@ -1352,6 +1367,11 @@ export const translations = {
     errorMakingAdmin: 'خطا در تبدیل به ادمین',
     alreadyAdmin: 'این کاربر قبلاً ادمین است',
     adminBadge: 'ادمین',
+    removeAdmin: 'حذف ادمین',
+    removeAdminTitle: 'حذف نقش ادمین',
+    removeAdminConfirm: 'آیا مطمئن هستید که می‌خواهید نقش ادمین را از این کاربر حذف کنید؟',
+    adminRemovedSuccess: 'نقش ادمین حذف شد',
+    errorRemovingAdmin: 'خطا در حذف نقش ادمین',
   },
 } as const;
 

@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.admin-make-admin]
 verify_jwt = false
+
+[functions.admin-remove-admin]
+verify_jwt = false

@@ -73,6 +73,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [showExpiryDialog, setShowExpiryDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showMakeAdminDialog, setShowMakeAdminDialog] = useState(false);
+  const [showRemoveAdminDialog, setShowRemoveAdminDialog] = useState(false);
   const [expiryDuration, setExpiryDuration] = useState('30');
   const [customExpiryDate, setCustomExpiryDate] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -424,6 +425,37 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       toast({
         title: t('error'),
         description: t('errorMakingAdmin'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleRemoveAdmin = async () => {
+    if (!selectedUser) return;
+    
+    setIsUpdating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-remove-admin', {
+        body: { userId: selectedUser.user_id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: t('success'),
+        description: t('adminRemovedSuccess'),
+      });
+
+      setShowRemoveAdminDialog(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error removing admin:', error);
+      toast({
+        title: t('error'),
+        description: t('errorRemovingAdmin'),
         variant: 'destructive',
       });
     } finally {
@@ -863,6 +895,20 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                             {t('makeAdmin')}
                           </Button>
                         )}
+                        {user.isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowRemoveAdminDialog(true);
+                            }}
+                            className="rounded-lg text-xs text-warning hover:text-warning border-warning/30"
+                          >
+                            <Crown className="h-3 w-3 ml-1" />
+                            {t('removeAdmin')}
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -1187,6 +1233,44 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               className="rounded-xl bg-primary hover:bg-primary/90"
             >
               {isUpdating ? t('approving') : t('makeAdmin')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Admin Dialog */}
+      <Dialog open={showRemoveAdminDialog} onOpenChange={setShowRemoveAdminDialog}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-warning">
+              <Crown className="h-5 w-5" />
+              {t('removeAdminTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('removeAdminConfirm')}
+              <br />
+              <span className="font-medium">{selectedUser?.company_name || selectedUser?.email}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRemoveAdminDialog(false);
+                setSelectedUser(null);
+              }}
+              className="rounded-xl"
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={handleRemoveAdmin}
+              disabled={isUpdating}
+              variant="destructive"
+              className="rounded-xl"
+            >
+              {isUpdating ? t('approving') : t('removeAdmin')}
             </Button>
           </DialogFooter>
         </DialogContent>
