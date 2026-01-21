@@ -6,6 +6,7 @@ import { LoginForm } from '@/components/LoginForm';
 import { PendingApproval } from '@/components/PendingApproval';
 import { ExpiredSubscription } from '@/components/ExpiredSubscription';
 import { DeactivatedAccount } from '@/components/DeactivatedAccount';
+import { ExpiryWarningBanner } from '@/components/ExpiryWarningBanner';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { Header } from '@/components/Header';
 import { TabButton } from '@/components/TabButton';
@@ -16,7 +17,7 @@ import { SalesTab } from '@/components/SalesTab';
 import { ReportsTab } from '@/components/ReportsTab';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
-import { Settings, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 type TabType = 'finance' | 'inventory' | 'sales' | 'reports';
 
@@ -24,9 +25,11 @@ interface DashboardProps {
   onOpenAdmin: () => void;
   isAdmin: boolean;
   companyName?: string | null;
+  daysUntilExpiry?: number | null;
+  userEmail?: string;
 }
 
-const Dashboard = ({ onOpenAdmin, isAdmin, companyName }: DashboardProps) => {
+const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEmail }: DashboardProps) => {
   const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
   const financeData = useFinanceData();
@@ -63,6 +66,11 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName }: DashboardProps) => {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-info/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </Button>
             </div>
+          )}
+
+          {/* Expiry Warning Banner */}
+          {daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry <= 10 && userEmail && (
+            <ExpiryWarningBanner daysUntilExpiry={daysUntilExpiry} email={userEmail} />
           )}
 
           <Header
@@ -146,6 +154,8 @@ const Index = () => {
       onOpenAdmin={() => setShowAdminPanel(true)} 
       isAdmin={isAdmin} 
       companyName={approvalStatus?.companyName}
+      daysUntilExpiry={approvalStatus?.daysUntilExpiry}
+      userEmail={user?.email}
     />
   );
 };
