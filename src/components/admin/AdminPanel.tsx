@@ -24,7 +24,8 @@ import {
   Ban,
   Power,
   Pencil,
-  Trash2
+  Trash2,
+  Crown
 } from 'lucide-react';
 import {
   Select,
@@ -52,6 +53,7 @@ interface UserApproval {
   expires_at: string | null;
   created_at: string;
   company_name: string | null;
+  isAdmin?: boolean;
 }
 
 interface AdminPanelProps {
@@ -70,6 +72,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [showCompanyDialog, setShowCompanyDialog] = useState(false);
   const [showExpiryDialog, setShowExpiryDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showMakeAdminDialog, setShowMakeAdminDialog] = useState(false);
   const [expiryDuration, setExpiryDuration] = useState('30');
   const [customExpiryDate, setCustomExpiryDate] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -91,9 +94,20 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
       if (error) throw error;
       
-      // Filter out admin users
-      const nonAdminUsers = data?.filter(u => u.email !== 'andam@outlook.com') || [];
-      setUsers(nonAdminUsers);
+      // Filter out admin users based on email (keep for display but mark them)
+      const { data: adminRoles } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+      
+      const adminUserIds = new Set(adminRoles?.filter(r => r.role === 'admin').map(r => r.user_id) || []);
+      
+      // Mark admins and filter out the main admin
+      const usersWithAdminStatus = data?.map(u => ({
+        ...u,
+        isAdmin: adminUserIds.has(u.user_id)
+      })).filter(u => u.email !== 'andam@outlook.com') || [];
+      
+      setUsers(usersWithAdminStatus);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -379,6 +393,37 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       toast({
         title: t('error'),
         description: t('errorDeletingAccount'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleMakeAdmin = async () => {
+    if (!selectedUser) return;
+    
+    setIsUpdating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-make-admin', {
+        body: { userId: selectedUser.user_id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: t('success'),
+        description: t('adminMadeSuccess'),
+      });
+
+      setShowMakeAdminDialog(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error making admin:', error);
+      toast({
+        title: t('error'),
+        description: t('errorMakingAdmin'),
         variant: 'destructive',
       });
     } finally {
@@ -690,6 +735,12 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Shield className={`h-4 w-4 ${expired ? 'text-destructive' : user.is_active === false ? 'text-muted-foreground' : 'text-success'}`} />
                             <span className={`font-medium ${user.is_active === false ? 'text-muted-foreground' : ''}`}>{user.email}</span>
+                            {user.isAdmin && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary flex items-center gap-1">
+                                <Crown className="h-3 w-3" />
+                                {t('adminBadge')}
+                              </span>
+                            )}
                             {user.is_active === false && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground flex items-center gap-1">
                                 <Ban className="h-3 w-3" />
@@ -798,6 +849,20 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           <X className="h-3 w-3 ml-1" />
                           {t('revoke')}
                         </Button>
+                        {!user.isAdmin && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowMakeAdminDialog(true);
+                            }}
+                            className="rounded-lg text-xs text-primary hover:text-primary border-primary/30"
+                          >
+                            <Crown className="h-3 w-3 ml-1" />
+                            {t('makeAdmin')}
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -1083,6 +1148,45 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               className="rounded-xl"
             >
               {isUpdating ? t('approving') : t('delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Make Admin Dialog */}
+      <Dialog open={showMakeAdminDialog} onOpenChange={setShowMakeAdminDialog}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-primary" />
+              {t('makeAdminTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('makeAdminConfirm')}
+              <br />
+              <span className="font-medium">{selectedUser?.company_name || selectedUser?.email}</span>
+              <br />
+              <span className="text-warning font-medium mt-2 block">{t('makeAdminWarning')}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowMakeAdminDialog(false);
+                setSelectedUser(null);
+              }}
+              className="rounded-xl"
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={handleMakeAdmin}
+              disabled={isUpdating}
+              className="rounded-xl bg-primary hover:bg-primary/90"
+            >
+              {isUpdating ? t('approving') : t('makeAdmin')}
             </Button>
           </DialogFooter>
         </DialogContent>
