@@ -581,86 +581,89 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           />
         </div>
 
-        {/* Pending Users */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Clock className="h-5 w-5 text-warning" />
-            چاوەڕوانی ئەپروڤکردن ({pendingUsers.length})
-          </h2>
-          
-          {pendingUsers.length === 0 ? (
-            <div className="rounded-2xl bg-secondary/20 border border-border/30 p-8 text-center">
-              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">هیچ بەکارهێنەرێک چاوەڕوان نییە</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {pendingUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className="rounded-2xl bg-card/60 backdrop-blur-xl border border-warning/30 p-4 md:p-5"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Shield className="h-4 w-4 text-warning" />
-                        <span className="font-medium">{user.email}</span>
-                      </div>
-                      {user.company_name && (
-                        <div className="flex items-center gap-1.5 text-sm text-primary mb-1">
-                          <Building2 className="h-3.5 w-3.5" />
-                          <span>{user.company_name}</span>
+        {/* Pending Users - Only show when filter is 'all' or 'pending' */}
+        {(activeFilter === 'all' || activeFilter === 'pending') && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Clock className="h-5 w-5 text-warning" />
+              چاوەڕوانی ئەپروڤکردن ({pendingUsers.length})
+            </h2>
+            
+            {pendingUsers.length === 0 ? (
+              <div className="rounded-2xl bg-secondary/20 border border-border/30 p-8 text-center">
+                <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <p className="text-muted-foreground">هیچ بەکارهێنەرێک چاوەڕوان نییە</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pendingUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className="rounded-2xl bg-card/60 backdrop-blur-xl border border-warning/30 p-4 md:p-5"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Shield className="h-4 w-4 text-warning" />
+                          <span className="font-medium">{user.email}</span>
                         </div>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        تۆمارکرا: {formatDate(user.created_at)}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setShowApproveDialog(true);
-                        }}
-                        size="sm"
-                        className="bg-success hover:bg-success/90 rounded-lg text-xs"
-                      >
-                        <Check className="h-3 w-3 ml-1" />
-                        ئەپروڤ
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setShowDeleteDialog(true);
-                        }}
-                        className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
-                      >
-                        <Trash2 className="h-3 w-3 ml-1" />
-                        سڕینەوە
-                      </Button>
+                        {user.company_name && (
+                          <div className="flex items-center gap-1.5 text-sm text-primary mb-1">
+                            <Building2 className="h-3.5 w-3.5" />
+                            <span>{user.company_name}</span>
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          تۆمارکرا: {formatDate(user.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowApproveDialog(true);
+                          }}
+                          size="sm"
+                          className="bg-success hover:bg-success/90 rounded-lg text-xs"
+                        >
+                          <Check className="h-3 w-3 ml-1" />
+                          ئەپروڤ
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowDeleteDialog(true);
+                          }}
+                          className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
+                        >
+                          <Trash2 className="h-3 w-3 ml-1" />
+                          سڕینەوە
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Approved Users */}
-        <div>
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Users className="h-5 w-5 text-success" />
-            بەکارهێنەرانی چالاک ({approvedUsers.length})
-          </h2>
-          
-          {approvedUsers.length === 0 ? (
-            <div className="rounded-2xl bg-secondary/20 border border-border/30 p-8 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">هیچ بەکارهێنەرێکی چالاک نییە</p>
-            </div>
-          ) : (
+        {/* Approved Users - Only show when filter is not 'pending' */}
+        {activeFilter !== 'pending' && (
+          <div>
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Users className="h-5 w-5 text-success" />
+              بەکارهێنەرانی چالاک ({approvedUsers.length})
+            </h2>
+            
+            {approvedUsers.length === 0 ? (
+              <div className="rounded-2xl bg-secondary/20 border border-border/30 p-8 text-center">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <p className="text-muted-foreground">هیچ بەکارهێنەرێکی چالاک نییە</p>
+              </div>
+            ) : (
             <div className="space-y-3">
               {approvedUsers.map((user) => {
                 const expired = isExpired(user.expires_at);
@@ -836,7 +839,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               })}
             </div>
           )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Approve Dialog */}
