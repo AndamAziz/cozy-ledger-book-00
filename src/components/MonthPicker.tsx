@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { format, setMonth, setYear, getMonth, getYear } from 'date-fns';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,6 +7,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface MonthPickerProps {
   value: string; // Format: 'YYYY-MM'
@@ -15,23 +15,9 @@ interface MonthPickerProps {
   className?: string;
 }
 
-const MONTHS = [
-  { value: 0, label: 'کانوونی دووەم' },
-  { value: 1, label: 'شوبات' },
-  { value: 2, label: 'ئازار' },
-  { value: 3, label: 'نیسان' },
-  { value: 4, label: 'ئایار' },
-  { value: 5, label: 'حوزەیران' },
-  { value: 6, label: 'تەممووز' },
-  { value: 7, label: 'ئاب' },
-  { value: 8, label: 'ئەیلوول' },
-  { value: 9, label: 'تشرینی یەکەم' },
-  { value: 10, label: 'تشرینی دووەم' },
-  { value: 11, label: 'کانوونی یەکەم' },
-];
-
 export function MonthPicker({ value, onChange, className }: MonthPickerProps) {
   const [open, setOpen] = useState(false);
+  const { t, dir } = useLanguage();
   
   // Parse current value
   const [yearStr, monthStr] = value.split('-');
@@ -80,7 +66,7 @@ export function MonthPicker({ value, onChange, className }: MonthPickerProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={handlePrevYear}
+              onClick={dir === 'rtl' ? handleNextYear : handlePrevYear}
               className="h-8 w-8 rounded-lg hover:bg-primary/10"
             >
               <ChevronRight className="h-4 w-4" />
@@ -89,7 +75,7 @@ export function MonthPicker({ value, onChange, className }: MonthPickerProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleNextYear}
+              onClick={dir === 'rtl' ? handlePrevYear : handleNextYear}
               className="h-8 w-8 rounded-lg hover:bg-primary/10"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -98,15 +84,15 @@ export function MonthPicker({ value, onChange, className }: MonthPickerProps) {
           
           {/* Month Grid */}
           <div className="grid grid-cols-3 gap-2">
-            {MONTHS.map((month) => {
-              const isSelected = viewYear === currentYear && month.value === currentMonth;
-              const isCurrentMonth = viewYear === new Date().getFullYear() && month.value === new Date().getMonth();
+            {Array.from({ length: 12 }, (_, i) => {
+              const isSelected = viewYear === currentYear && i === currentMonth;
+              const isCurrentMonth = viewYear === new Date().getFullYear() && i === new Date().getMonth();
               
               return (
                 <Button
-                  key={month.value}
+                  key={i}
                   variant="ghost"
-                  onClick={() => handleMonthSelect(month.value)}
+                  onClick={() => handleMonthSelect(i)}
                   className={cn(
                     "h-10 text-sm rounded-lg transition-all duration-200",
                     isSelected && "bg-primary text-primary-foreground hover:bg-primary/90",
@@ -114,7 +100,7 @@ export function MonthPicker({ value, onChange, className }: MonthPickerProps) {
                     !isSelected && !isCurrentMonth && "hover:bg-primary/10"
                   )}
                 >
-                  {String(month.value + 1).padStart(2, '0')}
+                  {String(i + 1).padStart(2, '0')}
                 </Button>
               );
             })}
@@ -132,7 +118,7 @@ export function MonthPicker({ value, onChange, className }: MonthPickerProps) {
               }}
               className="flex-1 rounded-lg text-xs"
             >
-              ئەم مانگە
+              {t('thisMonth')}
             </Button>
             <Button
               variant="outline"
@@ -146,7 +132,7 @@ export function MonthPicker({ value, onChange, className }: MonthPickerProps) {
               }}
               className="flex-1 rounded-lg text-xs"
             >
-              مانگی پێشوو
+              {t('previousMonth')}
             </Button>
           </div>
         </div>
