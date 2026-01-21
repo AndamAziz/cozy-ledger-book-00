@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { 
   Users, 
   Check, 
@@ -58,6 +59,7 @@ interface AdminPanelProps {
 }
 
 export function AdminPanel({ onBack }: AdminPanelProps) {
+  const { t } = useLanguage();
   const [users, setUsers] = useState<UserApproval[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -95,8 +97,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
-        title: 'هەڵە',
-        description: 'هەڵە لە هێنانی بەکارهێنەران',
+        title: t('error'),
+        description: t('errorFetchingUsers'),
         variant: 'destructive',
       });
     } finally {
@@ -126,8 +128,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       if (error) throw error;
 
       toast({
-        title: 'سەرکەوتوو',
-        description: `بەکارهێنەر ئەپروڤ کرا بۆ ${days} ڕۆژ`,
+        title: t('success'),
+        description: `${t('approvedFor')} ${days} ${t('days')}`,
       });
 
       setShowApproveDialog(false);
@@ -136,8 +138,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     } catch (error) {
       console.error('Error approving user:', error);
       toast({
-        title: 'هەڵە',
-        description: 'هەڵە لە ئەپروڤکردن',
+        title: t('error'),
+        description: t('errorApproving'),
         variant: 'destructive',
       });
     } finally {
@@ -160,16 +162,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       if (error) throw error;
 
       toast({
-        title: 'سەرکەوتوو',
-        description: 'دەسەڵاتی بەکارهێنەر لابرا',
+        title: t('success'),
+        description: t('permissionRevoked'),
       });
 
       fetchUsers();
     } catch (error) {
       console.error('Error revoking user:', error);
       toast({
-        title: 'هەڵە',
-        description: 'هەڵە لە لابردنی دەسەڵات',
+        title: t('error'),
+        description: t('errorRevoking'),
         variant: 'destructive',
       });
     }
@@ -179,8 +181,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     if (!selectedUser || !newPassword) return;
     if (newPassword.length < 6) {
       toast({
-        title: 'هەڵە',
-        description: 'وشەی نهێنی دەبێت لانیکەم ٦ پیت بێت',
+        title: t('error'),
+        description: t('passwordMin6'),
         variant: 'destructive',
       });
       return;
@@ -196,8 +198,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       if (error) throw error;
 
       toast({
-        title: 'سەرکەوتوو',
-        description: 'وشەی نهێنی گۆڕدرا',
+        title: t('success'),
+        description: t('passwordChanged'),
       });
 
       setShowPasswordDialog(false);
@@ -206,8 +208,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     } catch (error) {
       console.error('Error changing password:', error);
       toast({
-        title: 'هەڵە',
-        description: 'هەڵە لە گۆڕینی وشەی نهێنی',
+        title: t('error'),
+        description: t('errorChangingPassword'),
         variant: 'destructive',
       });
     } finally {
@@ -232,16 +234,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       if (error) throw error;
 
       toast({
-        title: 'سەرکەوتوو',
-        description: `کات درێژکرایەوە بۆ ${days} ڕۆژ`,
+        title: t('success'),
+        description: `${t('extendedFor')} ${days} ${t('days')}`,
       });
 
       fetchUsers();
     } catch (error) {
       console.error('Error extending expiry:', error);
       toast({
-        title: 'هەڵە',
-        description: 'هەڵە لە درێژکردنەوەی کات',
+        title: t('error'),
+        description: t('errorExtending'),
         variant: 'destructive',
       });
     }
@@ -262,16 +264,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       if (error) throw error;
 
       toast({
-        title: 'سەرکەوتوو',
-        description: newActiveState ? 'هەژمارە چالاک کرایەوە' : 'هەژمارە ناچالاک کرا',
+        title: t('success'),
+        description: newActiveState ? t('accountActivated') : t('accountDeactivatedAdmin'),
       });
 
       fetchUsers();
     } catch (error) {
       console.error('Error toggling user active status:', error);
       toast({
-        title: 'هەڵە',
-        description: 'هەڵە لە گۆڕینی دۆخی هەژمارە',
+        title: t('error'),
+        description: t('errorTogglingStatus'),
         variant: 'destructive',
       });
     }
@@ -296,8 +298,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       if (error) throw error;
 
       toast({
-        title: 'سەرکەوتوو',
-        description: 'کاتی بەسەرچوون گۆڕدرا',
+        title: t('success'),
+        description: t('expiryChanged'),
       });
 
       setShowExpiryDialog(false);
@@ -307,8 +309,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     } catch (error) {
       console.error('Error setting custom expiry:', error);
       toast({
-        title: 'هەڵە',
-        description: 'هەڵە لە گۆڕینی کاتی بەسەرچوون',
+        title: t('error'),
+        description: t('errorChangingExpiry'),
         variant: 'destructive',
       });
     } finally {
@@ -332,8 +334,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       if (error) throw error;
 
       toast({
-        title: 'سەرکەوتوو',
-        description: 'ناوی کۆمپانیا گۆڕدرا',
+        title: t('success'),
+        description: t('companyNameChanged'),
       });
 
       setShowCompanyDialog(false);
@@ -343,8 +345,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     } catch (error) {
       console.error('Error changing company name:', error);
       toast({
-        title: 'هەڵە',
-        description: 'هەڵە لە گۆڕینی ناوی کۆمپانیا',
+        title: t('error'),
+        description: t('errorChangingCompanyName'),
         variant: 'destructive',
       });
     } finally {
@@ -365,8 +367,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       if (error) throw error;
 
       toast({
-        title: 'سەرکەوتوو',
-        description: 'هەژمارەکە و هەموو داتاکانی بە تەواوی سڕانەوە',
+        title: t('success'),
+        description: t('accountDeleted'),
       });
 
       setShowDeleteDialog(false);
@@ -375,8 +377,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     } catch (error) {
       console.error('Error deleting account:', error);
       toast({
-        title: 'هەڵە',
-        description: 'هەڵە لە سڕینەوەی هەژمارە',
+        title: t('error'),
+        description: t('errorDeletingAccount'),
         variant: 'destructive',
       });
     } finally {
@@ -462,9 +464,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               </Button>
               <div>
                 <h1 className="text-lg md:text-xl font-bold text-foreground">
-                  پانێڵی ئەدمین
+                  {t('adminPanel')}
                 </h1>
-                <p className="text-xs text-muted-foreground">بەڕێوەبردنی بەکارهێنەران</p>
+                <p className="text-xs text-muted-foreground">{t('userManagement')}</p>
               </div>
             </div>
             <Button
@@ -474,7 +476,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               className="h-9 px-2.5 md:px-3 rounded-lg flex items-center gap-1.5"
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="text-xs md:text-sm">نوێکردنەوە</span>
+              <span className="text-xs md:text-sm">{t('refresh')}</span>
             </Button>
           </div>
         </header>
@@ -488,7 +490,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <div className="flex flex-col items-center gap-1 text-center">
               <Users className="h-5 w-5 text-primary" />
               <p className="text-xl font-bold text-foreground">{totalUsers}</p>
-              <p className="text-[10px] text-muted-foreground">کۆی گشتی</p>
+              <p className="text-[10px] text-muted-foreground">{t('totalAll')}</p>
             </div>
           </div>
           
@@ -499,7 +501,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <div className="flex flex-col items-center gap-1 text-center">
               <UserCheck className="h-5 w-5 text-success" />
               <p className="text-xl font-bold text-foreground">{totalActive}</p>
-              <p className="text-[10px] text-muted-foreground">چالاک</p>
+              <p className="text-[10px] text-muted-foreground">{t('active')}</p>
             </div>
           </div>
           
@@ -510,7 +512,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <div className="flex flex-col items-center gap-1 text-center">
               <Clock className="h-5 w-5 text-warning" />
               <p className="text-xl font-bold text-foreground">{totalPending}</p>
-              <p className="text-[10px] text-muted-foreground">چاوەڕوان</p>
+              <p className="text-[10px] text-muted-foreground">{t('waiting')}</p>
             </div>
           </div>
           
@@ -521,7 +523,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <div className="flex flex-col items-center gap-1 text-center">
               <Ban className="h-5 w-5 text-orange-500" />
               <p className="text-xl font-bold text-foreground">{totalInactive}</p>
-              <p className="text-[10px] text-muted-foreground">ناچالاک</p>
+              <p className="text-[10px] text-muted-foreground">{t('inactive')}</p>
             </div>
           </div>
           
@@ -532,7 +534,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <div className="flex flex-col items-center gap-1 text-center">
               <UserX className="h-5 w-5 text-destructive" />
               <p className="text-xl font-bold text-foreground">{totalExpired}</p>
-              <p className="text-[10px] text-muted-foreground">بەسەرچوو</p>
+              <p className="text-[10px] text-muted-foreground">{t('expired')}</p>
             </div>
           </div>
           
@@ -543,7 +545,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <div className="flex flex-col items-center gap-1 text-center">
               <TrendingUp className="h-5 w-5 text-info" />
               <p className="text-xl font-bold text-foreground">{expiringIn7Days}</p>
-              <p className="text-[10px] text-muted-foreground">نزیک بەسەرچوون</p>
+              <p className="text-[10px] text-muted-foreground">{t('expiring')}</p>
             </div>
           </div>
         </div>
@@ -551,13 +553,13 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         {/* Active Filter Indicator */}
         {activeFilter !== 'all' && (
           <div className="mb-4 flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">فیلتەر:</span>
+            <span className="text-sm text-muted-foreground">{t('filter')}:</span>
             <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
-              {activeFilter === 'active' && 'چالاک'}
-              {activeFilter === 'pending' && 'چاوەڕوان'}
-              {activeFilter === 'inactive' && 'ناچالاک'}
-              {activeFilter === 'expired' && 'بەسەرچوو'}
-              {activeFilter === 'expiring' && 'نزیک بەسەرچوون'}
+              {activeFilter === 'active' && t('active')}
+              {activeFilter === 'pending' && t('waiting')}
+              {activeFilter === 'inactive' && t('inactive')}
+              {activeFilter === 'expired' && t('expired')}
+              {activeFilter === 'expiring' && t('expiring')}
             </span>
             <Button
               variant="ghost"
@@ -574,7 +576,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         <div className="relative mb-6">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="گەڕان بە ئیمەیڵ یان ناوی کۆمپانیا..."
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pr-10 rounded-xl py-6 bg-secondary/30 border-border/50"
@@ -586,13 +588,13 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           <div className="mb-8">
             <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
               <Clock className="h-5 w-5 text-warning" />
-              چاوەڕوانی ئەپروڤکردن ({pendingUsers.length})
+              {t('pendingApproval')} ({pendingUsers.length})
             </h2>
             
             {pendingUsers.length === 0 ? (
               <div className="rounded-2xl bg-secondary/20 border border-border/30 p-8 text-center">
                 <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-                <p className="text-muted-foreground">هیچ بەکارهێنەرێک چاوەڕوان نییە</p>
+                <p className="text-muted-foreground">{t('noPendingUsers')}</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -614,7 +616,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           </div>
                         )}
                         <p className="text-xs text-muted-foreground">
-                          تۆمارکرا: {formatDate(user.created_at)}
+                          {t('registeredAt')}: {formatDate(user.created_at)}
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -627,7 +629,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           className="bg-success hover:bg-success/90 rounded-lg text-xs"
                         >
                           <Check className="h-3 w-3 ml-1" />
-                          ئەپروڤ
+                          {t('approve')}
                         </Button>
                         <Button
                           variant="outline"
@@ -639,7 +641,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
                         >
                           <Trash2 className="h-3 w-3 ml-1" />
-                          سڕینەوە
+                          {t('delete')}
                         </Button>
                       </div>
                     </div>
@@ -655,13 +657,13 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
               <Users className="h-5 w-5 text-success" />
-              بەکارهێنەرانی چالاک ({approvedUsers.length})
+              {t('activeUsers')} ({approvedUsers.length})
             </h2>
             
             {approvedUsers.length === 0 ? (
               <div className="rounded-2xl bg-secondary/20 border border-border/30 p-8 text-center">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-                <p className="text-muted-foreground">هیچ بەکارهێنەرێکی چالاک نییە</p>
+                <p className="text-muted-foreground">{t('noActiveUsers')}</p>
               </div>
             ) : (
             <div className="space-y-3">
@@ -691,34 +693,34 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                             {user.is_active === false && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground flex items-center gap-1">
                                 <Ban className="h-3 w-3" />
-                                ناچالاک
+                                {t('inactive')}
                               </span>
                             )}
                             {user.is_active !== false && expired && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/20 text-destructive">
-                                بەسەرچوو
+                                {t('expired')}
                               </span>
                             )}
                             {user.is_active !== false && !expired && daysRemaining !== null && daysRemaining <= 10 && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-warning/20 text-warning flex items-center gap-1">
                                 <AlertTriangle className="h-3 w-3" />
-                                {daysRemaining} ڕۆژ ماوە
+                                {daysRemaining} {t('daysRemaining')}
                               </span>
                             )}
                             {user.is_active !== false && !expired && daysRemaining !== null && daysRemaining > 10 && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-success/20 text-success">
-                                {daysRemaining} ڕۆژ ماوە
+                                {daysRemaining} {t('daysRemaining')}
                               </span>
                             )}
                           </div>
                           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Check className="h-3 w-3" />
-                              ئەپروڤ: {formatDate(user.approved_at)}
+                              {t('approvedAt')}: {formatDate(user.approved_at)}
                             </span>
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              بەسەردەچێت: {formatDate(user.expires_at)}
+                              {t('expiresAt')}: {formatDate(user.expires_at)}
                             </span>
                           </div>
                         </div>
@@ -742,7 +744,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           className="rounded-lg text-xs border-primary/30 text-primary hover:text-primary"
                         >
                           <Calendar className="h-3 w-3 ml-1" />
-                          گۆڕینی کات
+                          {t('changeExpiry')}
                         </Button>
                         <Button
                           variant="outline"
@@ -755,7 +757,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           className="rounded-lg text-xs"
                         >
                           <Pencil className="h-3 w-3 ml-1" />
-                          ناوی کۆمپانیا
+                          {t('companyName')}
                         </Button>
                         <Button
                           variant="outline"
@@ -767,7 +769,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           className="rounded-lg text-xs"
                         >
                           <Key className="h-3 w-3 ml-1" />
-                          گۆڕینی وشەی نهێنی
+                          {t('changePasswordTitle')}
                         </Button>
                         <Button
                           variant="outline"
@@ -778,12 +780,12 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           {user.is_active === false ? (
                             <>
                               <Power className="h-3 w-3 ml-1" />
-                              چالاککردن
+                              {t('activate')}
                             </>
                           ) : (
                             <>
                               <Ban className="h-3 w-3 ml-1" />
-                              ناچالاککردن
+                              {t('deactivate')}
                             </>
                           )}
                         </Button>
@@ -794,7 +796,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           className="rounded-lg text-xs text-destructive hover:text-destructive"
                         >
                           <X className="h-3 w-3 ml-1" />
-                          لابردن
+                          {t('revoke')}
                         </Button>
                         <Button
                           variant="outline"
@@ -806,7 +808,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
                         >
                           <Trash2 className="h-3 w-3 ml-1" />
-                          سڕینەوە
+                          {t('delete')}
                         </Button>
                       </div>
                     </div>
@@ -823,26 +825,26 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>ئەپروڤکردنی بەکارهێنەر</DialogTitle>
+            <DialogTitle>{t('approveUserTitle')}</DialogTitle>
             <DialogDescription>
-              بۆ چەند ڕۆژ دەسەڵات بدەیت بەم بەکارهێنەرە؟
+              {t('approveUserDesc')}
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label>ماوەی بەکارهێنان</Label>
+            <Label>{t('usageDuration')}</Label>
             <Select value={expiryDuration} onValueChange={setExpiryDuration}>
               <SelectTrigger className="mt-2 rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">١ ڕۆژ</SelectItem>
-                <SelectItem value="7">١ هەفتە</SelectItem>
-                <SelectItem value="30">١ مانگ</SelectItem>
-                <SelectItem value="90">٣ مانگ</SelectItem>
-                <SelectItem value="180">٦ مانگ</SelectItem>
-                <SelectItem value="365">١ ساڵ</SelectItem>
-                <SelectItem value="730">٢ ساڵ</SelectItem>
+                <SelectItem value="1">{t('oneDay')}</SelectItem>
+                <SelectItem value="7">{t('oneWeek')}</SelectItem>
+                <SelectItem value="30">{t('oneMonth')}</SelectItem>
+                <SelectItem value="90">{t('threeMonths')}</SelectItem>
+                <SelectItem value="180">{t('sixMonths')}</SelectItem>
+                <SelectItem value="365">{t('oneYear')}</SelectItem>
+                <SelectItem value="730">{t('twoYears')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -853,14 +855,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               onClick={() => setShowApproveDialog(false)}
               className="rounded-xl"
             >
-              پاشگەزبوونەوە
+              {t('cancel')}
             </Button>
             <Button
               onClick={handleApprove}
               disabled={isUpdating}
               className="bg-success hover:bg-success/90 rounded-xl"
             >
-              {isUpdating ? 'چاوەڕوانبە...' : 'ئەپروڤکردن'}
+              {isUpdating ? t('approving') : t('approve')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -870,19 +872,19 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>گۆڕینی وشەی نهێنی</DialogTitle>
+            <DialogTitle>{t('changePasswordTitle')}</DialogTitle>
             <DialogDescription>
-              وشەی نهێنی نوێ بنووسە بۆ {selectedUser?.email}
+              {t('newPasswordFor')} {selectedUser?.email}
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label>وشەی نهێنی نوێ</Label>
+            <Label>{t('newPassword')}</Label>
             <Input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="لانیکەم ٦ پیت"
+              placeholder={t('atLeast6Chars')}
               className="mt-2 rounded-xl"
             />
           </div>
@@ -896,14 +898,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               }}
               className="rounded-xl"
             >
-              پاشگەزبوونەوە
+              {t('cancel')}
             </Button>
             <Button
               onClick={handleChangePassword}
               disabled={isUpdating || newPassword.length < 6}
               className="rounded-xl"
             >
-              {isUpdating ? 'چاوەڕوانبە...' : 'گۆڕین'}
+              {isUpdating ? t('approving') : t('changing')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -913,19 +915,19 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       <Dialog open={showCompanyDialog} onOpenChange={setShowCompanyDialog}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>گۆڕینی ناوی کۆمپانیا</DialogTitle>
+            <DialogTitle>{t('changeCompanyTitle')}</DialogTitle>
             <DialogDescription>
-              ناوی کۆمپانیا بنووسە بۆ {selectedUser?.email}
+              {t('companyNameFor')} {selectedUser?.email}
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            <Label>ناوی کۆمپانیا</Label>
+            <Label>{t('companyName')}</Label>
             <Input
               type="text"
               value={newCompanyName}
               onChange={(e) => setNewCompanyName(e.target.value)}
-              placeholder="ناوی کۆمپانیا"
+              placeholder={t('companyName')}
               className="mt-2 rounded-xl"
             />
           </div>
@@ -939,14 +941,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               }}
               className="rounded-xl"
             >
-              پاشگەزبوونەوە
+              {t('cancel')}
             </Button>
             <Button
               onClick={handleChangeCompanyName}
               disabled={isUpdating}
               className="rounded-xl"
             >
-              {isUpdating ? 'چاوەڕوانبە...' : 'گۆڕین'}
+              {isUpdating ? t('approving') : t('changing')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -956,15 +958,15 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       <Dialog open={showExpiryDialog} onOpenChange={setShowExpiryDialog}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>گۆڕینی کاتی بەسەرچوون</DialogTitle>
+            <DialogTitle>{t('changeExpiryTitle')}</DialogTitle>
             <DialogDescription>
-              کاتی بەسەرچوونی نوێ دیاری بکە بۆ {selectedUser?.company_name || selectedUser?.email}
+              {t('expiryDateFor')} {selectedUser?.company_name || selectedUser?.email}
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4 space-y-4">
             <div>
-              <Label>ڕێکەوتی بەسەرچوون</Label>
+              <Label>{t('expiryDateLabel')}</Label>
               <Input
                 type="date"
                 value={customExpiryDate}
@@ -985,7 +987,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                 }}
                 className="rounded-lg text-xs"
               >
-                ١ هەفتە
+                {t('oneWeek')}
               </Button>
               <Button
                 type="button"
@@ -998,7 +1000,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                 }}
                 className="rounded-lg text-xs"
               >
-                ١ مانگ
+                {t('oneMonth')}
               </Button>
               <Button
                 type="button"
@@ -1011,7 +1013,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                 }}
                 className="rounded-lg text-xs"
               >
-                ٣ مانگ
+                {t('threeMonths')}
               </Button>
               <Button
                 type="button"
@@ -1024,7 +1026,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                 }}
                 className="rounded-lg text-xs"
               >
-                ١ ساڵ
+                {t('oneYear')}
               </Button>
             </div>
           </div>
@@ -1038,14 +1040,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               }}
               className="rounded-xl"
             >
-              پاشگەزبوونەوە
+              {t('cancel')}
             </Button>
             <Button
               onClick={handleSetCustomExpiry}
               disabled={isUpdating || !customExpiryDate}
               className="rounded-xl"
             >
-              {isUpdating ? 'چاوەڕوانبە...' : 'گۆڕین'}
+              {isUpdating ? t('approving') : t('changing')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1055,11 +1057,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-destructive">سڕینەوەی هەژمارە</DialogTitle>
+            <DialogTitle className="text-destructive">{t('deleteAccountTitle')}</DialogTitle>
             <DialogDescription>
-              ئایا دڵنیایت لە سڕینەوەی هەژمارەی {selectedUser?.company_name || selectedUser?.email}؟
+              {t('deleteAccountConfirm')} {selectedUser?.company_name || selectedUser?.email}?
               <br />
-              <span className="text-destructive font-medium">ئەم کردارە ناگەڕێتەوە!</span>
+              <span className="text-destructive font-medium">{t('actionNotReversible')}</span>
             </DialogDescription>
           </DialogHeader>
 
@@ -1072,7 +1074,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               }}
               className="rounded-xl"
             >
-              پاشگەزبوونەوە
+              {t('cancel')}
             </Button>
             <Button
               onClick={handleDeleteAccount}
@@ -1080,7 +1082,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               variant="destructive"
               className="rounded-xl"
             >
-              {isUpdating ? 'چاوەڕوانبە...' : 'سڕینەوە'}
+              {isUpdating ? t('approving') : t('delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
