@@ -15,7 +15,10 @@ import {
   RefreshCw,
   ChevronLeft,
   Search,
-  AlertTriangle
+  AlertTriangle,
+  UserCheck,
+  UserX,
+  TrendingUp
 } from 'lucide-react';
 import {
   Select,
@@ -237,6 +240,18 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
   const pendingUsers = filteredUsers.filter(u => !u.is_approved);
   const approvedUsers = filteredUsers.filter(u => u.is_approved);
+  
+  // Statistics calculations
+  const totalUsers = users.length;
+  const totalPending = users.filter(u => !u.is_approved).length;
+  const totalApproved = users.filter(u => u.is_approved).length;
+  const totalExpired = users.filter(u => u.is_approved && u.expires_at && new Date(u.expires_at) < new Date()).length;
+  const totalActive = totalApproved - totalExpired;
+  const expiringIn7Days = users.filter(u => {
+    if (!u.is_approved || !u.expires_at) return false;
+    const daysLeft = Math.ceil((new Date(u.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return daysLeft > 0 && daysLeft <= 7;
+  }).length;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
@@ -285,6 +300,69 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <RefreshCw className={`h-4 w-4 ml-2 ${isLoading ? 'animate-spin' : ''}`} />
             نوێکردنەوە
           </Button>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+          <div className="rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{totalUsers}</p>
+                <p className="text-xs text-muted-foreground">کۆی بەکارهێنەران</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="rounded-2xl bg-gradient-to-br from-success/20 to-success/5 border border-success/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center">
+                <UserCheck className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{totalActive}</p>
+                <p className="text-xs text-muted-foreground">چالاک</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="rounded-2xl bg-gradient-to-br from-warning/20 to-warning/5 border border-warning/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-warning/20 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-warning" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{totalPending}</p>
+                <p className="text-xs text-muted-foreground">چاوەڕوان</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="rounded-2xl bg-gradient-to-br from-destructive/20 to-destructive/5 border border-destructive/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center">
+                <UserX className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{totalExpired}</p>
+                <p className="text-xs text-muted-foreground">بەسەرچوو</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="rounded-2xl bg-gradient-to-br from-info/20 to-info/5 border border-info/20 p-4 col-span-2 md:col-span-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-info/20 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-info" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{expiringIn7Days}</p>
+                <p className="text-xs text-muted-foreground">بەسەردەچێت (٧ڕۆژ)</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Search */}
