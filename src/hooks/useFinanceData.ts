@@ -22,7 +22,10 @@ function isCurrentMonth(monthKey: string) {
 export function useFinanceData() {
   const { user } = useAuth();
   const [currentMonthKey, setCurrentMonthKey] = useState(() => {
-    return localStorage.getItem('selectedMonthKey') || '2025-12';
+    // Always default to current month
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return localStorage.getItem('selectedMonthKey') || currentMonth;
   });
   
   const [incomeData, setIncomeData] = useState<Income[]>([]);
