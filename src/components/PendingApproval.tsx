@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Clock, MessageCircle, LogOut, Sparkles, Shield } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PendingApprovalProps {
   email: string;
@@ -7,10 +8,16 @@ interface PendingApprovalProps {
 }
 
 export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
+  const { t, language } = useLanguage();
+  
   const handleWhatsAppContact = () => {
-    const message = encodeURIComponent(
-      `سڵاو، من ${email} ئەکاونتم دروست کردووە لە City Taxperts ئەپ و داوای ئەپروڤکردن دەکەم.`
-    );
+    const messages = {
+      ku: `سڵاو، من ${email} ئەکاونتم دروست کردووە لە City Taxperts ئەپ و داوای ئەپروڤکردن دەکەم.`,
+      en: `Hello, I (${email}) have created an account on City Taxperts app and request approval.`,
+      ar: `مرحباً، أنا ${email} أنشأت حساباً في تطبيق City Taxperts وأطلب الموافقة.`,
+      fa: `سلام، من ${email} حسابی در اپلیکیشن City Taxperts ایجاد کردم و درخواست تأیید دارم.`,
+    };
+    const message = encodeURIComponent(messages[language]);
     window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
   };
 
@@ -53,10 +60,10 @@ export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
               </div>
 
               <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-l from-warning via-primary to-foreground bg-clip-text text-transparent mb-3">
-                بەخێربێیت! 🎉
+                {t('welcome')} 🎉
               </h1>
               <p className="text-muted-foreground text-sm md:text-base mb-2">
-                هەژمارەکەت سەرکەوتوانە دروست کرا
+                {t('accountCreatedSuccess')}
               </p>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border/50">
                 <Shield className="h-4 w-4 text-primary" />
@@ -76,11 +83,10 @@ export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-warning"></span>
                     </span>
-                    چاوەڕوانی ئەپروڤکردن
+                    {t('pendingApproval')}
                   </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    هەژمارەکەت پێویستی بە ئەپروڤکردن لەلایەن بەڕێوەبەرەوە هەیە. 
-                    تکایە لەڕێی وەتسئەپەوە نامە بنێرە بۆ ئەپروڤکردنی خێرا.
+                    {t('accountPendingMessage')}
                   </p>
                 </div>
               </div>
@@ -93,12 +99,12 @@ export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
             >
               <div className="flex items-center gap-3">
                 <MessageCircle className="h-6 w-6" />
-                پەیوەندی لەڕێی وەتسئەپ
+                {t('contactViaWhatsApp')}
               </div>
             </Button>
 
             <p className="text-center text-xs text-muted-foreground mb-6">
-              ژمارە: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
+              {t('phoneNumber')}: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
             </p>
 
             {/* Logout Button */}
@@ -109,14 +115,14 @@ export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
             >
               <div className="flex items-center gap-2">
                 <LogOut className="h-4 w-4" />
-                چوونەدەرەوە
+                {t('logout')}
               </div>
             </Button>
 
             {/* Footer */}
             <div className="mt-8 pt-6 border-t border-border/30 text-center">
               <p className="text-xs text-muted-foreground">
-                بەڕێوەبەری گشتی: andam@outlook.com
+                {t('adminEmail')}: andam@outlook.com
               </p>
             </div>
           </div>

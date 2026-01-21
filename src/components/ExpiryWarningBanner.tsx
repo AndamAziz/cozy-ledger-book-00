@@ -1,6 +1,7 @@
 import { AlertTriangle, MessageCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ExpiryWarningBannerProps {
   daysUntilExpiry: number;
@@ -9,15 +10,20 @@ interface ExpiryWarningBannerProps {
 
 export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBannerProps) {
   const [isDismissed, setIsDismissed] = useState(false);
+  const { t, language } = useLanguage();
 
   if (isDismissed || daysUntilExpiry > 10) {
     return null;
   }
 
   const handleWhatsAppContact = () => {
-    const message = encodeURIComponent(
-      `سڵاو، کاتی بەکارهێنانی ئەکاونتم (${email}) لە City Taxperts ئەپ نزیکە لە بەسەرچوون و داوای درێژکردنەوەی دەکەم.`
-    );
+    const messages = {
+      ku: `سڵاو، کاتی بەکارهێنانی ئەکاونتم (${email}) لە City Taxperts ئەپ نزیکە لە بەسەرچوون و داوای درێژکردنەوەی دەکەم.`,
+      en: `Hello, my subscription for account (${email}) on City Taxperts app is about to expire. I request a renewal.`,
+      ar: `مرحباً، اشتراك حسابي (${email}) في تطبيق City Taxperts على وشك الانتهاء. أطلب التجديد.`,
+      fa: `سلام، اشتراک حساب من (${email}) در اپلیکیشن City Taxperts در حال انقضا است. درخواست تمدید دارم.`,
+    };
+    const message = encodeURIComponent(messages[language]);
     window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
   };
 
@@ -52,12 +58,12 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-foreground mb-1">
             {daysUntilExpiry === 1 
-              ? '⚠️ بەیانی کاتی بەکارهێنان بەسەردەچێت!' 
-              : `${daysUntilExpiry} ڕۆژ ماوە بۆ بەسەرچوونی کاتی بەکارهێنان`
+              ? `⚠️ ${t('expiryTomorrow')}` 
+              : `${daysUntilExpiry} ${t('expiryWarning')}`
             }
           </h3>
           <p className="text-sm text-muted-foreground">
-            تکایە پەیوەندی بە بەڕێوەبەرەوە بکە بۆ درێژکردنەوەی کاتی بەکارهێنانی ئەپەکە.
+            {t('contactAdmin')}
           </p>
         </div>
 
@@ -67,7 +73,7 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
           className="bg-[#25D366] hover:bg-[#20BD5A] text-white flex-shrink-0"
         >
           <MessageCircle className="h-4 w-4 ml-2" />
-          پەیوەندی
+          {t('contact')}
         </Button>
       </div>
     </div>

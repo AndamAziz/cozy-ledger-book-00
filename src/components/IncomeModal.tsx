@@ -6,6 +6,7 @@ import { Modal } from './Modal';
 import { Income } from '@/types/finance';
 import { Calendar, Wallet, CreditCard } from 'lucide-react';
 import { DayPicker } from './DayPicker';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface IncomeModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
   const [day, setDay] = useState(defaultDay);
   const [cash, setCash] = useState('');
   const [card, setCard] = useState('');
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (editingIncome) {
@@ -51,7 +53,7 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
-      title={editingIncome ? 'دەستکاری داهات' : 'زیادکردنی داهات'}
+      title={editingIncome ? t('editIncome') : t('addIncome')}
       icon={<Wallet className="h-6 w-6 text-white" />}
       variant="primary"
     >
@@ -61,7 +63,7 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
             <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
               <Calendar className="h-4 w-4 text-primary" />
             </div>
-            ڕۆژ
+            {t('day')}
           </Label>
           <DayPicker
             value={day}
@@ -77,7 +79,7 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
               <div className="w-8 h-8 rounded-lg bg-success/20 flex items-center justify-center">
                 <Wallet className="h-4 w-4 text-success" />
               </div>
-              کاش £
+              {t('cash')} £
             </Label>
             <Input
               type="text"
@@ -94,7 +96,7 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
               <div className="w-8 h-8 rounded-lg bg-info/20 flex items-center justify-center">
                 <CreditCard className="h-4 w-4 text-info" />
               </div>
-              کارت £
+              {t('card')} £
             </Label>
             <Input
               type="text"
@@ -109,7 +111,7 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
         </div>
         
         <Button type="submit" className="w-full btn-gradient-primary py-7 text-lg font-bold rounded-2xl shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all">
-          {editingIncome ? 'نوێکردنەوە' : 'زیادکردن'}
+          {editingIncome ? t('update') : t('add')}
         </Button>
       </form>
     </Modal>

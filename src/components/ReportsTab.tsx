@@ -6,6 +6,7 @@ import { formatCurrency } from '@/lib/format';
 import { generatePDFReport } from '@/lib/pdfGenerator';
 import { FileDown, Share2, TrendingUp, Package, ShoppingCart, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ReportsTabProps {
   incomeData: Income[];
@@ -33,6 +34,7 @@ export function ReportsTab({
   currentMonthLabel,
 }: ReportsTabProps) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const netProfit = summary.balance + summary.cigaretteProfit;
 
   const handleDownloadPDF = () => {
@@ -49,16 +51,16 @@ export function ReportsTab({
           totalCard: summary.totalCard || 0,
         },
       });
-      toast({ title: 'سەرکەوتوو', description: 'ڕاپۆرتی PDF داگیرا' });
+      toast({ title: t('success'), description: t('pdfDownloaded') });
     } catch (error) {
-      toast({ title: 'هەڵە', description: 'نەتوانرا ڕاپۆرت دروست بکرێت', variant: 'destructive' });
+      toast({ title: t('error'), description: t('couldNotGenerateReport'), variant: 'destructive' });
     }
   };
 
   const handleShare = async () => {
     const shareData = {
-      title: `ڕاپۆرتی داراییی - ${currentMonthLabel}`,
-      text: `کۆی داهات: ${formatCurrency(summary.totalIncome)}\nکۆی خەرجی: ${formatCurrency(summary.totalExpense)}\nقازانجی پاک: ${formatCurrency(netProfit)}`,
+      title: `${t('reportOf')} ${currentMonthLabel}`,
+      text: `${t('totalIncome')}: ${formatCurrency(summary.totalIncome)}\n${t('totalExpense')}: ${formatCurrency(summary.totalExpense)}\n${t('netProfit')}: ${formatCurrency(netProfit)}`,
     };
     
     if (navigator.share) {
@@ -69,7 +71,7 @@ export function ReportsTab({
       }
     } else {
       await navigator.clipboard.writeText(shareData.text);
-      toast({ title: 'سەرکەوتوو', description: 'ڕاپۆرت کۆپی کرا' });
+      toast({ title: t('success'), description: t('reportCopied') });
     }
   };
 
@@ -117,7 +119,7 @@ export function ReportsTab({
               <TrendingUp className="h-6 w-6 text-primary-foreground" />
             </div>
             <h2 className="text-xl font-bold bg-gradient-to-l from-primary to-foreground bg-clip-text text-transparent">
-              ڕاپۆرتی {currentMonthLabel}
+              {t('reportOf')} {currentMonthLabel}
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -126,7 +128,7 @@ export function ReportsTab({
               className="btn-gradient-primary py-5 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300"
             >
               <FileDown className="h-5 w-5 ml-2" />
-              داگرتنی PDF
+              {t('downloadPDF')}
             </Button>
             <Button 
               onClick={handleShare} 
@@ -134,7 +136,7 @@ export function ReportsTab({
               className="py-5 rounded-xl hover:bg-secondary hover:scale-[1.02] transition-all duration-300"
             >
               <Share2 className="h-5 w-5 ml-2" />
-              هاوبەشکردن
+              {t('share')}
             </Button>
           </div>
         </div>
@@ -142,10 +144,10 @@ export function ReportsTab({
 
       {/* Summary Grid */}
       <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
-        <SummaryCard title="کۆی داهات" value={formatCurrency(summary.totalIncome)} variant="income" icon="📈" />
-        <SummaryCard title="کۆی خەرجی" value={formatCurrency(summary.totalExpense)} variant="expense" icon="📉" />
-        <SummaryCard title="قازانجی پاک" value={formatCurrency(netProfit)} variant="balance" icon="💎" />
-        <SummaryCard title="بەهای کۆگا" value={formatCurrency(summary.totalStockValue)} variant="stock" icon="📦" />
+        <SummaryCard title={t('totalIncome')} value={formatCurrency(summary.totalIncome)} variant="income" icon="📈" />
+        <SummaryCard title={t('totalExpense')} value={formatCurrency(summary.totalExpense)} variant="expense" icon="📉" />
+        <SummaryCard title={t('netProfit')} value={formatCurrency(netProfit)} variant="balance" icon="💎" />
+        <SummaryCard title={t('stockValue')} value={formatCurrency(summary.totalStockValue)} variant="stock" icon="📦" />
       </div>
 
       {/* Charts Section */}
@@ -156,7 +158,7 @@ export function ReportsTab({
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
               <span className="text-xl">📊</span>
             </div>
-            بەراوردی داهات و خەرجی
+            {t('incomeExpenseComparison')}
           </h3>
           <IncomeExpenseComparison 
             totalIncome={summary.totalIncome}
@@ -171,7 +173,7 @@ export function ReportsTab({
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center">
               <span className="text-xl">🥧</span>
             </div>
-            فرۆشتن بە جۆر
+            {t('salesByType')}
           </h3>
           <SalesByProductChart salesData={salesData} cigaretteData={cigaretteData} />
         </div>
@@ -183,7 +185,7 @@ export function ReportsTab({
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-success/20 to-success/5 flex items-center justify-center">
             <span className="text-xl">📈</span>
           </div>
-          داهاتی ڕۆژانە
+          {t('dailyIncome')}
         </h3>
         <DailyIncomeChart data={incomeData} />
       </div>
@@ -194,7 +196,7 @@ export function ReportsTab({
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-info/20 to-info/5 flex items-center justify-center">
             <span className="text-xl">💰</span>
           </div>
-          قازانجی ڕۆژانە
+          {t('dailyProfit')}
         </h3>
         <ProfitChart salesData={salesData} />
       </div>
@@ -206,7 +208,7 @@ export function ReportsTab({
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
               <ShoppingCart className="h-5 w-5 text-primary" />
             </div>
-            فرۆشتن بە جۆر
+            {t('salesByType')}
           </h3>
           <div className="space-y-3">
             {salesByType.map((item, index) => (
@@ -220,12 +222,12 @@ export function ReportsTab({
                   </div>
                   <div>
                     <div className="font-bold text-foreground">{item.name}</div>
-                    <div className="text-sm text-muted-foreground">{item.packs} پاکەت فرۆشراوە</div>
+                    <div className="text-sm text-muted-foreground">{item.packs} {t('packsSold')}</div>
                   </div>
                 </div>
                 <div className="text-left">
                   <div className="text-success font-bold text-lg">{formatCurrency(item.revenue)}</div>
-                  <div className="text-xs text-info">قازانج: {formatCurrency(item.profit)}</div>
+                  <div className="text-xs text-info">{t('profit')}: {formatCurrency(item.profit)}</div>
                 </div>
               </div>
             ))}
@@ -233,7 +235,7 @@ export function ReportsTab({
           <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 p-6 mt-5 text-center">
             <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-primary/20 blur-2xl" />
             <div className="relative">
-              <div className="text-sm text-foreground/80 mb-2">کۆی گشتی فرۆشتن</div>
+              <div className="text-sm text-foreground/80 mb-2">{t('totalSalesValue')}</div>
               <div className="text-3xl font-bold bg-gradient-to-l from-primary to-success bg-clip-text text-transparent">
                 {formatCurrency(salesByType.reduce((sum, s) => sum + s.revenue, 0))}
               </div>
@@ -248,14 +250,14 @@ export function ReportsTab({
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-info/20 to-info/5 flex items-center justify-center">
             <Package className="h-5 w-5 text-info" />
           </div>
-          ڕاپۆرتی کۆگا بە بۆکس
+          {t('stockReportByBox')}
         </h3>
         {boxReport.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <div className="w-16 h-16 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-3">
               <Package className="h-8 w-8 opacity-50" />
             </div>
-            <p className="text-sm">هیچ بۆکسێک نییە</p>
+            <p className="text-sm">{t('noBoxes')}</p>
           </div>
         ) : (
           <>
@@ -271,7 +273,7 @@ export function ReportsTab({
                     </div>
                     <div>
                       <div className="font-bold text-foreground">{item.name}</div>
-                      <div className="text-sm text-muted-foreground">{item.boxes} بۆکس</div>
+                      <div className="text-sm text-muted-foreground">{item.boxes} {t('boxes')}</div>
                     </div>
                   </div>
                   <div className="text-info font-bold text-lg">{formatCurrency(item.value)}</div>
@@ -281,7 +283,7 @@ export function ReportsTab({
             <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 p-6 mt-5 text-center">
               <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-info/20 blur-2xl" />
               <div className="relative">
-                <div className="text-sm text-foreground/80 mb-2">کۆی گشتی بەهای بۆکسەکان</div>
+                <div className="text-sm text-foreground/80 mb-2">{t('totalBoxValue')}</div>
                 <div className="text-3xl font-bold text-info">{formatCurrency(totalBoxValue)}</div>
               </div>
             </div>
@@ -293,16 +295,16 @@ export function ReportsTab({
       <div className="glass-card p-5 md:p-6 animate-fade-in" style={{ animationDelay: '700ms' }}>
         <h3 className="text-lg font-bold text-foreground mb-5 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-success/20 to-success/5 flex items-center justify-center">
-            <span className="text-xl">🚬</span>
+            <span className="text-xl">📦</span>
           </div>
-          ڕاپۆرتی کۆگا بە پاکەت
+          {t('stockReportByPack')}
         </h3>
         {packReport.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <div className="w-16 h-16 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-3">
-              <span className="text-3xl opacity-50">🚬</span>
+              <span className="text-3xl opacity-50">📦</span>
             </div>
-            <p className="text-sm">هیچ پاکەتێک نییە</p>
+            <p className="text-sm">{t('noPacks')}</p>
           </div>
         ) : (
           <>
@@ -318,7 +320,7 @@ export function ReportsTab({
                     </div>
                     <div>
                       <div className="font-bold text-foreground">{item.name}</div>
-                      <div className="text-sm text-muted-foreground">{item.packs} پاکەت</div>
+                      <div className="text-sm text-muted-foreground">{item.packs} {t('packs')}</div>
                     </div>
                   </div>
                   <div className="text-success font-bold text-lg">{formatCurrency(item.value)}</div>
@@ -328,7 +330,7 @@ export function ReportsTab({
             <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 p-6 mt-5 text-center">
               <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-success/20 blur-2xl" />
               <div className="relative">
-                <div className="text-sm text-foreground/80 mb-2">کۆی گشتی بەهای پاکەتەکان</div>
+                <div className="text-sm text-foreground/80 mb-2">{t('totalPackValue')}</div>
                 <div className="text-3xl font-bold text-success">{formatCurrency(totalPackValue)}</div>
               </div>
             </div>
@@ -343,7 +345,7 @@ export function ReportsTab({
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/5 flex items-center justify-center">
               <Wallet className="h-5 w-5 text-destructive" />
             </div>
-            کورتەی خەرجییەکان
+            {t('expensesSummary')}
           </h3>
           <div className="space-y-3">
             {expenseData.map((exp, index) => (
@@ -357,7 +359,7 @@ export function ReportsTab({
                   </div>
                   <div>
                     <div className="font-bold text-foreground">{exp.description}</div>
-                    <div className="text-sm text-muted-foreground">Day {exp.day}</div>
+                    <div className="text-sm text-muted-foreground">{t('day')} {exp.day}</div>
                   </div>
                 </div>
                 <div className="text-destructive font-bold text-lg">{formatCurrency(exp.amount)}</div>
@@ -367,7 +369,7 @@ export function ReportsTab({
           <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-destructive/20 via-destructive/10 to-transparent border border-destructive/30 p-6 mt-5 text-center">
             <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-destructive/20 blur-2xl" />
             <div className="relative">
-              <div className="text-sm text-foreground/80 mb-2">کۆی گشتی خەرجی</div>
+              <div className="text-sm text-foreground/80 mb-2">{t('totalExpenseValue')}</div>
               <div className="text-3xl font-bold text-destructive">{formatCurrency(summary.totalExpense)}</div>
             </div>
           </div>
