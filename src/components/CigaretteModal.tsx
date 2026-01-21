@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from './Modal';
 import { Cigarette } from '@/types/finance';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CigaretteModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
   const [packsPerBox, setPacksPerBox] = useState(10);
   const [sellPrice, setSellPrice] = useState(0);
   const [alertLevel, setAlertLevel] = useState(20);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (editingCigarette) {
@@ -56,16 +58,16 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
-      title={editingCigarette ? 'دەستکاری جگەرە' : 'زیادکردنی جۆری جگەرە'}
+      title={editingCigarette ? t('editProduct') : t('addProduct')}
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
-          <Label className="text-muted-foreground">ناوی جگەرە</Label>
+          <Label className="text-muted-foreground">{t('name')}</Label>
           <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="وەک: Marlboro Gold"
+            placeholder={t('name')}
             className="bg-secondary/50 border-border"
             required
           />
@@ -73,7 +75,7 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
         
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-muted-foreground">نرخی بۆکس £</Label>
+            <Label className="text-muted-foreground">{t('boxPrice')} £</Label>
             <Input
               type="number"
               min={0}
@@ -85,7 +87,7 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-muted-foreground">پاکەت لە بۆکس</Label>
+            <Label className="text-muted-foreground">{t('packsPerBox')}</Label>
             <Input
               type="number"
               min={1}
@@ -99,7 +101,7 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
         
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-muted-foreground">نرخی فرۆشتن (پاکەت) £</Label>
+            <Label className="text-muted-foreground">{t('sellPrice')} £</Label>
             <Input
               type="number"
               min={0}
@@ -111,7 +113,7 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-muted-foreground">ئاستی ئاگاداری (پاکەت)</Label>
+            <Label className="text-muted-foreground">{t('alertLevel')}</Label>
             <Input
               type="number"
               min={0}
@@ -124,14 +126,14 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
         </div>
         
         <div className="bg-info/10 p-4 rounded-xl">
-          <Label className="text-info text-sm">نرخی پاکەت (ئۆتۆماتیک):</Label>
+          <Label className="text-info text-sm">{t('unitPrice')}:</Label>
           <div className="text-2xl font-bold text-info mt-1">
             £{packPrice.toFixed(2)}
           </div>
         </div>
         
         <Button type="submit" className="w-full btn-gradient-accent py-6 text-lg">
-          {editingCigarette ? 'نوێکردنەوە' : 'زیادکردن'}
+          {editingCigarette ? t('update') : t('add')}
         </Button>
       </form>
     </Modal>

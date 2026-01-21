@@ -81,9 +81,9 @@ export function InventoryTab({
     <div className="space-y-6">
       {/* Summary Grid */}
       <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in">
-        <SummaryCard title={t('types')} value={summary.totalCigaretteTypes.toString()} variant="stock" icon="🚬" />
-        <SummaryCard title={t('totalBoxes')} value={summary.totalBoxes.toString()} variant="stock" icon="📦" />
-        <SummaryCard title={t('totalPacks')} value={summary.totalPacks.toString()} variant="stock" icon="📋" />
+        <SummaryCard title={t('types')} value={summary.totalCigaretteTypes.toString()} variant="stock" icon="📦" />
+        <SummaryCard title={t('totalBoxes')} value={summary.totalBoxes.toString()} variant="stock" icon="📋" />
+        <SummaryCard title={t('totalPacks')} value={summary.totalPacks.toString()} variant="stock" icon="🔢" />
         <SummaryCard title={t('stockValue')} value={formatCurrency(summary.totalStockValue)} variant="balance" icon="💎" />
       </div>
 
@@ -132,7 +132,7 @@ export function InventoryTab({
                   <div className="flex justify-between items-start mb-5">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-info/20 to-info/5 flex items-center justify-center">
-                        <span className="text-2xl">🚬</span>
+                        <span className="text-2xl">📦</span>
                       </div>
                       <h4 className="text-lg font-bold text-foreground">{cig.name}</h4>
                     </div>

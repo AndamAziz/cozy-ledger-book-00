@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Modal } from './Modal';
 import { Cigarette, Sale } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SellModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
   const [selectedId, setSelectedId] = useState<string>('');
   const [packs, setPacks] = useState(1);
   const [packPrice, setPackPrice] = useState(0);
+  const { t } = useLanguage();
 
   const selectedCigarette = useMemo(() => {
     return cigarettes.find(c => c.id.toString() === selectedId);
@@ -43,7 +45,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
     if (selectedCigarette) {
       const totalAvailable = (selectedCigarette.boxes * selectedCigarette.packsPerBox) + (selectedCigarette.extraPacks || 0);
       if (packs > totalAvailable) {
-        alert(`کۆگا بەس نییە! تەنها ${totalAvailable} پاکەت هەیە.`);
+        alert(`${t('low')}! ${t('only')} ${totalAvailable} ${t('packs')}.`);
         return;
       }
 
@@ -65,10 +67,10 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="تۆمارکردنی فرۆشتن">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('recordSale')}>
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
-          <Label className="text-muted-foreground">ڕۆژ</Label>
+          <Label className="text-muted-foreground">{t('day')}</Label>
           <Input
             type="number"
             min={1}
@@ -81,17 +83,17 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
         </div>
 
         <div className="space-y-2">
-          <Label className="text-muted-foreground">جۆری جگەرە</Label>
+          <Label className="text-muted-foreground">{t('productType')}</Label>
           <Select value={selectedId} onValueChange={setSelectedId}>
             <SelectTrigger className="bg-secondary/50 border-border">
-              <SelectValue placeholder="جگەرە هەڵبژێرە..." />
+              <SelectValue placeholder={t('selectProduct')} />
             </SelectTrigger>
             <SelectContent>
               {cigarettes.map((cig) => {
                 const totalPacks = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
                 return (
                   <SelectItem key={cig.id} value={cig.id.toString()}>
-                    {cig.name} ({totalPacks} پاکەت)
+                    {cig.name} ({totalPacks} {t('packs')})
                   </SelectItem>
                 );
               })}
@@ -101,7 +103,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
         
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-muted-foreground">ژمارەی پاکەت</Label>
+            <Label className="text-muted-foreground">{t('packsCount')}</Label>
             <Input
               type="number"
               min={1}
@@ -112,7 +114,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-muted-foreground">نرخ (پاکەت) £</Label>
+            <Label className="text-muted-foreground">{t('unitPrice')} £</Label>
             <Input
               type="number"
               min={0}
@@ -126,14 +128,14 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
         </div>
         
         <div className="bg-success/10 p-5 rounded-xl text-center">
-          <Label className="text-success text-sm">کۆی گشتی</Label>
+          <Label className="text-success text-sm">{t('total')}</Label>
           <div className="text-3xl font-bold text-success mt-1">
             {formatCurrency(total)}
           </div>
         </div>
         
         <Button type="submit" className="w-full btn-gradient-primary py-6 text-lg">
-          تۆمارکردن
+          {t('recordSale')}
         </Button>
       </form>
     </Modal>

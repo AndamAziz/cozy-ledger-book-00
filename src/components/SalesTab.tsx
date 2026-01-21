@@ -48,7 +48,7 @@ export function SalesTab({
       <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in">
         <SummaryCard title={t('todaySales')} value={formatCurrency(summary.todaySales)} variant="income" icon="📅" />
         <SummaryCard title={t('monthlySales')} value={formatCurrency(summary.monthSales)} variant="income" icon="📊" />
-        <SummaryCard title={t('cigaretteProfit')} value={formatCurrency(summary.cigaretteProfit)} variant="balance" icon="💰" fullWidth />
+        <SummaryCard title={t('productProfit')} value={formatCurrency(summary.cigaretteProfit)} variant="balance" icon="💰" fullWidth />
       </div>
 
       {/* Action Button */}
@@ -67,14 +67,14 @@ export function SalesTab({
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
             <span className="text-xl">📋</span>
           </div>
-          مێژووی فرۆشتن
+          {t('sales')}
         </h3>
         {salesData.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-4">
               <span className="text-4xl opacity-50">🛒</span>
             </div>
-            <p className="text-sm">هیچ فرۆشتنێک نییە</p>
+            <p className="text-sm">{t('noData')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -106,23 +106,23 @@ export function SalesTab({
                       <div className="flex gap-4 text-xs md:text-sm">
                         <div className="flex items-center gap-1.5">
                           <span className="text-muted-foreground">📦</span>
-                          <span className="text-foreground font-medium">{sale.packs} پاکەت</span>
+                          <span className="text-foreground font-medium">{sale.packs} {t('packs')}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className="text-muted-foreground">💵</span>
                           <span className="text-foreground font-medium">{formatCurrency(sale.packPrice)}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-info">قازانج:</span>
+                          <span className="text-info">{t('profit')}:</span>
                           <span className="text-info font-semibold">{formatCurrency(sale.profit)}</span>
                         </div>
                       </div>
                       
                       <button 
                         onClick={() => {
-                          if (confirm('دڵنیایت؟ پاکەتەکان دەگەڕێنەوە بۆ کۆگا.')) {
+                          if (confirm(t('confirmDelete'))) {
                             onDeleteSale(sale.id);
-                            toast({ title: 'سەرکەوتوو', description: 'فرۆشتن سڕایەوە و پاکەتەکان گەڕانەوە' });
+                            toast({ title: t('success'), description: t('delete') });
                           }
                         }}
                         className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all duration-200 hover:scale-105"
