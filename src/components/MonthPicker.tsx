@@ -1,0 +1,156 @@
+import { useState } from 'react';
+import { format, setMonth, setYear, getMonth, getYear } from 'date-fns';
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+
+interface MonthPickerProps {
+  value: string; // Format: 'YYYY-MM'
+  onChange: (value: string) => void;
+  className?: string;
+}
+
+const MONTHS = [
+  { value: 0, label: 'کانوونی دووەم' },
+  { value: 1, label: 'شوبات' },
+  { value: 2, label: 'ئازار' },
+  { value: 3, label: 'نیسان' },
+  { value: 4, label: 'ئایار' },
+  { value: 5, label: 'حوزەیران' },
+  { value: 6, label: 'تەممووز' },
+  { value: 7, label: 'ئاب' },
+  { value: 8, label: 'ئەیلوول' },
+  { value: 9, label: 'تشرینی یەکەم' },
+  { value: 10, label: 'تشرینی دووەم' },
+  { value: 11, label: 'کانوونی یەکەم' },
+];
+
+export function MonthPicker({ value, onChange, className }: MonthPickerProps) {
+  const [open, setOpen] = useState(false);
+  
+  // Parse current value
+  const [yearStr, monthStr] = value.split('-');
+  const currentYear = parseInt(yearStr) || new Date().getFullYear();
+  const currentMonth = parseInt(monthStr) - 1 || 0; // 0-indexed
+  
+  const [viewYear, setViewYear] = useState(currentYear);
+  
+  const handleMonthSelect = (monthIndex: number) => {
+    const newValue = `${viewYear}-${String(monthIndex + 1).padStart(2, '0')}`;
+    onChange(newValue);
+    setOpen(false);
+  };
+  
+  const handlePrevYear = () => {
+    setViewYear(prev => prev - 1);
+  };
+  
+  const handleNextYear = () => {
+    setViewYear(prev => prev + 1);
+  };
+  
+  const displayLabel = `${String(currentMonth + 1).padStart(2, '0')} / ${currentYear}`;
+  
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "w-[150px] md:w-[180px] bg-secondary/50 border-border/50 rounded-xl hover:bg-secondary/80 transition-colors justify-start text-right font-normal",
+            className
+          )}
+        >
+          <Calendar className="h-4 w-4 ml-2 text-primary" />
+          <span>{displayLabel}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent 
+        className="w-[280px] p-0 rounded-xl border-border/50 bg-card/95 backdrop-blur-xl pointer-events-auto" 
+        align="start"
+      >
+        <div className="p-4">
+          {/* Year Navigation */}
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handlePrevYear}
+              className="h-8 w-8 rounded-lg hover:bg-primary/10"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <span className="text-lg font-bold text-foreground">{viewYear}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleNextYear}
+              className="h-8 w-8 rounded-lg hover:bg-primary/10"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Month Grid */}
+          <div className="grid grid-cols-3 gap-2">
+            {MONTHS.map((month) => {
+              const isSelected = viewYear === currentYear && month.value === currentMonth;
+              const isCurrentMonth = viewYear === new Date().getFullYear() && month.value === new Date().getMonth();
+              
+              return (
+                <Button
+                  key={month.value}
+                  variant="ghost"
+                  onClick={() => handleMonthSelect(month.value)}
+                  className={cn(
+                    "h-10 text-sm rounded-lg transition-all duration-200",
+                    isSelected && "bg-primary text-primary-foreground hover:bg-primary/90",
+                    !isSelected && isCurrentMonth && "bg-accent text-accent-foreground",
+                    !isSelected && !isCurrentMonth && "hover:bg-primary/10"
+                  )}
+                >
+                  {String(month.value + 1).padStart(2, '0')}
+                </Button>
+              );
+            })}
+          </div>
+          
+          {/* Quick Actions */}
+          <div className="mt-4 pt-4 border-t border-border/50 flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const now = new Date();
+                setViewYear(now.getFullYear());
+                handleMonthSelect(now.getMonth());
+              }}
+              className="flex-1 rounded-lg text-xs"
+            >
+              ئەم مانگە
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const now = new Date();
+                const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+                const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+                setViewYear(prevYear);
+                handleMonthSelect(prevMonth);
+              }}
+              className="flex-1 rounded-lg text-xs"
+            >
+              مانگی پێشوو
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

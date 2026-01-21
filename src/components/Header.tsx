@@ -1,8 +1,6 @@
-import { MONTH_OPTIONS } from '@/types/finance';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { LogOut, Calendar, Wallet, ChevronDown } from 'lucide-react';
-
+import { LogOut, Calendar, Wallet } from 'lucide-react';
+import { MonthPicker } from '@/components/MonthPicker';
 interface HeaderProps {
   currentMonthKey: string;
   currentMonthLabel: string;
@@ -41,25 +39,7 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
         
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <Select value={currentMonthKey} onValueChange={onMonthChange}>
-            <SelectTrigger className="w-[150px] md:w-[180px] bg-secondary/50 border-border/50 rounded-xl hover:bg-secondary/80 transition-colors">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                <SelectValue placeholder="مانگ هەڵبژێرە" />
-              </div>
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-border/50 bg-card/95 backdrop-blur-xl">
-              {MONTH_OPTIONS.map((month) => (
-                <SelectItem 
-                  key={month.key} 
-                  value={month.key}
-                  className="rounded-lg focus:bg-primary/10 focus:text-foreground"
-                >
-                  {month.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MonthPicker value={currentMonthKey} onChange={onMonthChange} />
           
           <Button
             variant="ghost"
