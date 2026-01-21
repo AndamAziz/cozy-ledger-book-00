@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, Calendar, Building2, Clock } from 'lucide-react';
+import { LogOut, Building2, Clock } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface HeaderProps {
   currentMonthKey: string;
@@ -13,6 +15,7 @@ interface HeaderProps {
 
 export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout, companyName }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -68,11 +71,12 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
         <div className="flex items-center justify-between gap-2 sm:gap-3">
           {/* Title Only */}
           <h1 className="text-base sm:text-lg md:text-xl font-bold text-foreground truncate">
-            بەڕێوەبردنی داراییی
+            {t('financialManagement')}
           </h1>
           
           {/* Actions - Improved */}
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            <LanguageSwitcher />
             <MonthPicker value={currentMonthKey} onChange={onMonthChange} />
             
             <Button
@@ -82,7 +86,7 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
               className="h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center gap-1 sm:gap-1.5 touch-manipulation"
             >
               <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="text-[10px] sm:text-xs md:text-sm font-medium hidden xs:inline">خروج</span>
+              <span className="text-[10px] sm:text-xs md:text-sm font-medium hidden xs:inline">{t('logout')}</span>
             </Button>
           </div>
         </div>

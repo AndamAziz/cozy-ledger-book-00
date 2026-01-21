@@ -6,6 +6,7 @@ import { Cigarette, Sale } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
 import { ShoppingCart, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface SalesTabProps {
   salesData: Sale[];
@@ -34,19 +35,20 @@ export function SalesTab({
 }: SalesTabProps) {
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const handleSaleSubmit = (sale: Omit<Sale, 'id'>, cigaretteId: string | number) => {
     onAddSale(sale, cigaretteId);
-    toast({ title: 'سەرکەوتوو', description: 'فرۆشتن تۆمارکرا' });
+    toast({ title: t('success'), description: t('recordSale') });
   };
 
   return (
     <div className="space-y-6">
       {/* Summary Grid */}
       <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in">
-        <SummaryCard title="فرۆشتنی ئەمڕۆ" value={formatCurrency(summary.todaySales)} variant="income" icon="📅" />
-        <SummaryCard title="کۆی مانگ" value={formatCurrency(summary.monthSales)} variant="income" icon="📊" />
-        <SummaryCard title="قازانجی جگەرە" value={formatCurrency(summary.cigaretteProfit)} variant="balance" icon="💰" fullWidth />
+        <SummaryCard title={t('todaySales')} value={formatCurrency(summary.todaySales)} variant="income" icon="📅" />
+        <SummaryCard title={t('monthlySales')} value={formatCurrency(summary.monthSales)} variant="income" icon="📊" />
+        <SummaryCard title={t('cigaretteProfit')} value={formatCurrency(summary.cigaretteProfit)} variant="balance" icon="💰" fullWidth />
       </div>
 
       {/* Action Button */}
@@ -55,8 +57,8 @@ export function SalesTab({
         className="w-full btn-gradient-primary py-6 text-lg rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.01] transition-all duration-300 animate-fade-in"
         style={{ animationDelay: '100ms' }}
       >
-        <ShoppingCart className="h-6 w-6 ml-2" />
-        تۆمارکردنی فرۆشتن
+        <ShoppingCart className="h-6 w-6 ltr:mr-2 rtl:ml-2" />
+        {t('recordSale')}
       </Button>
 
       {/* Sales List */}
