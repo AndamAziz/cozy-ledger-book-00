@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
-import { Ban, MessageCircle, LogOut, Shield, Phone } from 'lucide-react';
+import { Ban, MessageCircle, LogOut, Shield } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DeactivatedAccountProps {
   email: string;
@@ -7,10 +8,16 @@ interface DeactivatedAccountProps {
 }
 
 export function DeactivatedAccount({ email, onLogout }: DeactivatedAccountProps) {
+  const { t, language } = useLanguage();
+  
   const handleWhatsAppContact = () => {
-    const message = encodeURIComponent(
-      `سڵاو، من ${email} هەژمارەکەم ناچالاک کراوە، تکایە چالاکی بکەرەوە.`
-    );
+    const messages = {
+      ku: `سڵاو، من ${email} هەژمارەکەم ناچالاک کراوە، تکایە چالاکی بکەرەوە.`,
+      en: `Hello, my account (${email}) has been deactivated. Please reactivate it.`,
+      ar: `مرحباً، تم تعطيل حسابي (${email})، يرجى إعادة تفعيله.`,
+      fa: `سلام، حساب من (${email}) غیرفعال شده است. لطفاً آن را مجدداً فعال کنید.`,
+    };
+    const message = encodeURIComponent(messages[language]);
     window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
   };
 
@@ -47,7 +54,7 @@ export function DeactivatedAccount({ email, onLogout }: DeactivatedAccountProps)
               </div>
 
               <h1 className="text-2xl md:text-3xl font-bold text-destructive mb-3">
-                هەژمارە ناچالاکە
+                {t('accountDeactivated')}
               </h1>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border/50">
                 <Shield className="h-4 w-4 text-muted-foreground" />
@@ -67,11 +74,10 @@ export function DeactivatedAccount({ email, onLogout }: DeactivatedAccountProps)
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
                     </span>
-                    هەژمارەکەت ناچالاک کراوە
+                    {t('accountDeactivatedTitle')}
                   </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    تکایە پەیوەندی بە بەڕێوەبەرەوە بکە بۆ چالاککردنەوەی هەژمارەکەت.
-                    داتاکانت پارێزراوە و کاتێک چالاک کرایەوە دەتوانیت بەردەوام بیت.
+                    {t('accountDeactivatedMessage')}
                   </p>
                 </div>
               </div>
@@ -84,12 +90,12 @@ export function DeactivatedAccount({ email, onLogout }: DeactivatedAccountProps)
             >
               <div className="flex items-center gap-3">
                 <MessageCircle className="h-6 w-6" />
-                پەیوەندی لەڕێی وەتسئەپ
+                {t('contactViaWhatsApp')}
               </div>
             </Button>
 
             <p className="text-center text-xs text-muted-foreground mb-6">
-              ژمارە: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
+              {t('phoneNumber')}: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
             </p>
 
             {/* Logout Button */}
@@ -100,14 +106,14 @@ export function DeactivatedAccount({ email, onLogout }: DeactivatedAccountProps)
             >
               <div className="flex items-center gap-2">
                 <LogOut className="h-4 w-4" />
-                چوونەدەرەوە
+                {t('logout')}
               </div>
             </Button>
 
             {/* Footer */}
             <div className="mt-8 pt-6 border-t border-border/30 text-center">
               <p className="text-xs text-muted-foreground">
-                بەڕێوەبەری گشتی: andam@outlook.com
+                {t('adminEmail')}: andam@outlook.com
               </p>
             </div>
           </div>

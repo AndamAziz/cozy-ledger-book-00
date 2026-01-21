@@ -27,7 +27,7 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string; errorKey?: string }> => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
@@ -36,18 +36,18 @@ export function useAuth() {
 
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          return { success: false, error: 'ئیمەیڵ یان وشەی نهێنی هەڵەیە' };
+          return { success: false, errorKey: 'invalidCredentials' };
         }
         return { success: false, error: error.message };
       }
 
       return { success: true };
     } catch (err) {
-      return { success: false, error: 'هەڵەیەک ڕویدا' };
+      return { success: false, errorKey: 'errorOccurred' };
     }
   }, []);
 
-  const signup = useCallback(async (email: string, password: string, companyName: string): Promise<{ success: boolean; error?: string }> => {
+  const signup = useCallback(async (email: string, password: string, companyName: string): Promise<{ success: boolean; error?: string; errorKey?: string }> => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -59,7 +59,7 @@ export function useAuth() {
 
       if (error) {
         if (error.message.includes('User already registered')) {
-          return { success: false, error: 'ئەم ئیمەیڵە پێشتر تۆمار کراوە' };
+          return { success: false, errorKey: 'emailAlreadyRegistered' };
         }
         return { success: false, error: error.message };
       }
@@ -77,7 +77,7 @@ export function useAuth() {
 
       return { success: true };
     } catch (err) {
-      return { success: false, error: 'هەڵەیەک ڕویدا' };
+      return { success: false, errorKey: 'errorOccurred' };
     }
   }, []);
 

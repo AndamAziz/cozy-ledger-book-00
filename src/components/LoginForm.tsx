@@ -269,7 +269,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 <div className="w-full border-t border-slate-700/50"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-slate-900/80 text-slate-500">یان</span>
+                <span className="px-3 bg-slate-900/80 text-slate-500">—</span>
               </div>
             </div>
             

@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, MessageCircle, LogOut, Calendar, Shield } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ExpiredSubscriptionProps {
   email: string;
@@ -8,14 +9,27 @@ interface ExpiredSubscriptionProps {
 }
 
 export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubscriptionProps) {
+  const { t, language } = useLanguage();
+  
   const handleWhatsAppContact = () => {
-    const message = encodeURIComponent(
-      `سڵاو، کاتی بەکارهێنانی ئەکاونتم (${email}) لە City Taxperts ئەپ بەسەرچووە و داوای درێژکردنەوەی دەکەم.`
-    );
+    const messages = {
+      ku: `سڵاو، کاتی بەکارهێنانی ئەکاونتم (${email}) لە City Taxperts ئەپ بەسەرچووە و داوای درێژکردنەوەی دەکەم.`,
+      en: `Hello, my subscription for account (${email}) on City Taxperts app has expired. I request a renewal.`,
+      ar: `مرحباً، انتهت صلاحية اشتراك حسابي (${email}) في تطبيق City Taxperts. أطلب التجديد.`,
+      fa: `سلام، اشتراک حساب من (${email}) در اپلیکیشن City Taxperts منقضی شده است. درخواست تمدید دارم.`,
+    };
+    const message = encodeURIComponent(messages[language]);
     window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
   };
 
-  const expiredDate = new Date(expiresAt).toLocaleDateString('ku-Arab', {
+  const localeMap = {
+    ku: 'ku-Arab',
+    en: 'en-US',
+    ar: 'ar-SA',
+    fa: 'fa-IR',
+  };
+
+  const expiredDate = new Date(expiresAt).toLocaleDateString(localeMap[language], {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -44,7 +58,7 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
               </div>
 
               <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-l from-destructive via-warning to-foreground bg-clip-text text-transparent mb-3">
-                کاتی بەکارهێنان بەسەرچوو
+                {t('accountExpired')}
               </h1>
               
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/50 border border-border/50 mb-4">
@@ -60,12 +74,12 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
                   <Calendar className="h-6 w-6 text-destructive" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground mb-2">بەروار: {expiredDate}</h3>
+                  <h3 className="font-semibold text-foreground mb-2">{t('expiryDate')}: {expiredDate}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    ماوەی بەکارهێنانی ئەپەکە بەسەرچووە. تکایە لە ماوەی <span className="text-destructive font-bold">٧ ڕۆژ</span> دا پەیوەندی بە بەڕێوەبەرەوە بکە بۆ دووبارە بەکارهێنانەوەی ئەپەکە.
+                    {t('accountExpiredMessage')}
                   </p>
                   <p className="text-xs text-muted-foreground mt-3 bg-secondary/50 p-2 rounded-lg">
-                    ⚠️ داتاکانت پارێزراون و لەدوای نوێکردنەوە دەتوانی بەکاریان بهێنیت.
+                    ⚠️ {t('dataPreserved')}
                   </p>
                 </div>
               </div>
@@ -78,12 +92,12 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
             >
               <div className="flex items-center gap-3">
                 <MessageCircle className="h-6 w-6" />
-                پەیوەندی بۆ نوێکردنەوە
+                {t('contactForRenewalBtn')}
               </div>
             </Button>
 
             <p className="text-center text-xs text-muted-foreground mb-6">
-              ژمارە: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
+              {t('phoneNumber')}: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
             </p>
 
             {/* Logout Button */}
@@ -94,14 +108,14 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
             >
               <div className="flex items-center gap-2">
                 <LogOut className="h-4 w-4" />
-                چوونەدەرەوە
+                {t('logout')}
               </div>
             </Button>
 
             {/* Footer */}
             <div className="mt-8 pt-6 border-t border-border/30 text-center">
               <p className="text-xs text-muted-foreground">
-                بەڕێوەبەری گشتی: andam@outlook.com
+                {t('adminEmail')}: andam@outlook.com
               </p>
             </div>
           </div>

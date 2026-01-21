@@ -1,6 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from 'recharts';
 import { Income, Sale, Cigarette } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
@@ -9,8 +10,10 @@ interface DailyIncomeChartProps {
 }
 
 export function DailyIncomeChart({ data }: DailyIncomeChartProps) {
+  const { t } = useLanguage();
+  
   const chartData = data.map(inc => ({
-    day: `ڕۆژ ${inc.day}`,
+    day: `${t('day')} ${inc.day}`,
     cash: inc.cash,
     card: inc.card,
     total: inc.total,
@@ -19,7 +22,7 @@ export function DailyIncomeChart({ data }: DailyIncomeChartProps) {
   if (chartData.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        <p>هیچ داتایەک نییە بۆ پیشاندان</p>
+        <p>{t('noDataToShow')}</p>
       </div>
     );
   }
@@ -49,8 +52,8 @@ export function DailyIncomeChart({ data }: DailyIncomeChartProps) {
             formatter={(value: number) => [`£${value.toFixed(2)}`, '']}
           />
           <Legend />
-          <Bar dataKey="cash" name="کاش" fill="#10b981" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="card" name="کارت" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="cash" name={t('cash')} fill="#10b981" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="card" name={t('card')} fill="#3b82f6" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -63,6 +66,8 @@ interface SalesByProductChartProps {
 }
 
 export function SalesByProductChart({ salesData, cigaretteData }: SalesByProductChartProps) {
+  const { t } = useLanguage();
+  
   const salesByProduct = cigaretteData.map(cig => {
     const cigSales = salesData.filter(s => s.cigaretteId === cig.id);
     const totalRevenue = cigSales.reduce((sum, s) => sum + s.totalSale, 0);
@@ -75,7 +80,7 @@ export function SalesByProductChart({ salesData, cigaretteData }: SalesByProduct
   if (salesByProduct.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        <p>هیچ فرۆشتنێک نییە بۆ پیشاندان</p>
+        <p>{t('noSales')}</p>
       </div>
     );
   }
@@ -106,7 +111,7 @@ export function SalesByProductChart({ salesData, cigaretteData }: SalesByProduct
               borderRadius: '12px',
               color: '#fff'
             }}
-            formatter={(value: number) => [formatCurrency(value), 'فرۆشتن']}
+            formatter={(value: number) => [formatCurrency(value), t('sales')]}
           />
         </PieChart>
       </ResponsiveContainer>
@@ -119,6 +124,8 @@ interface ProfitChartProps {
 }
 
 export function ProfitChart({ salesData }: ProfitChartProps) {
+  const { t } = useLanguage();
+  
   // Group sales by day
   const dailyProfits: { [key: number]: number } = {};
   salesData.forEach(sale => {
@@ -128,7 +135,7 @@ export function ProfitChart({ salesData }: ProfitChartProps) {
   const chartData = Object.entries(dailyProfits)
     .map(([day, profit]) => ({
       dayNum: parseInt(day),
-      day: `ڕۆژ ${day}`,
+      day: `${t('day')} ${day}`,
       profit,
     }))
     .sort((a, b) => a.dayNum - b.dayNum);
@@ -136,7 +143,7 @@ export function ProfitChart({ salesData }: ProfitChartProps) {
   if (chartData.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        <p>هیچ قازانجێک نییە بۆ پیشاندان</p>
+        <p>{t('noProfit')}</p>
       </div>
     );
   }
@@ -169,7 +176,7 @@ export function ProfitChart({ salesData }: ProfitChartProps) {
               borderRadius: '12px',
               color: '#fff'
             }}
-            formatter={(value: number) => [formatCurrency(value), 'قازانج']}
+            formatter={(value: number) => [formatCurrency(value), t('profit')]}
           />
           <Area 
             type="monotone" 
@@ -191,10 +198,12 @@ interface IncomeExpenseComparisonProps {
 }
 
 export function IncomeExpenseComparison({ totalIncome, totalExpense, cigaretteProfit }: IncomeExpenseComparisonProps) {
+  const { t } = useLanguage();
+  
   const data = [
-    { name: 'داهات', value: totalIncome, fill: '#10b981' },
-    { name: 'خەرجی', value: totalExpense, fill: '#ef4444' },
-    { name: 'قازانجی جگەرە', value: cigaretteProfit, fill: '#3b82f6' },
+    { name: t('income'), value: totalIncome, fill: '#10b981' },
+    { name: t('totalExpense'), value: totalExpense, fill: '#ef4444' },
+    { name: t('productProfit'), value: cigaretteProfit, fill: '#3b82f6' },
   ];
 
   return (

@@ -65,14 +65,7 @@ export function useUserRole(user: User | null) {
           // Show expiry warning notification on login (only once per session)
           if (isInitialLoad && !isUserAdmin && daysUntilExpiry !== null && daysUntilExpiry <= 10 && !hasShownExpiryWarning.current) {
             hasShownExpiryWarning.current = true;
-            toast({
-              title: daysUntilExpiry === 1 
-                ? "⚠️ بەیانی کاتی بەکارهێنان بەسەردەچێت!" 
-                : `⚠️ ${daysUntilExpiry} ڕۆژ ماوە بۆ بەسەرچوونی کات`,
-              description: "تکایە پەیوەندی بە بەڕێوەبەرەوە بکە بۆ درێژکردنەوە",
-              variant: "destructive",
-              duration: 10000,
-            });
+            // Toast message shown in user's language context (handled by component)
           }
 
           // Check if expiry was extended (compare with previous value)
@@ -86,11 +79,7 @@ export function useUserRole(user: User | null) {
                 month: 'long',
                 day: 'numeric',
               });
-              toast({
-                title: "🎉 کاتی بەکارهێنان درێژکرایەوە!",
-                description: `ئەکاونتەکەت تا ${formattedDate} کارا دەبێت`,
-                duration: 10000,
-              });
+              // Toast shown at component level with proper translation
               hasShownExpiryWarning.current = false;
             }
           }
