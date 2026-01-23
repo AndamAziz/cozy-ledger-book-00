@@ -52,33 +52,32 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
           </div>
         )}
 
-        {/* Date & Language Row */}
+        {/* Language & Month Picker Row */}
         <div className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl bg-secondary/40 border border-border/20">
           <span className="text-[10px] sm:text-xs md:text-sm text-foreground truncate">{formatDate(currentTime)}</span>
-          <LanguageSwitcher />
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <MonthPicker value={currentMonthKey} onChange={onMonthChange} />
+            <LanguageSwitcher />
+          </div>
         </div>
 
-        {/* Title & Actions Row */}
+        {/* Title & Logout Row */}
         <div className="flex items-center justify-between gap-2 sm:gap-3">
           {/* Title Only */}
           <h1 className="text-base sm:text-lg md:text-xl font-bold text-foreground truncate">
             {t('financialManagement')}
           </h1>
           
-          {/* Actions */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-            <MonthPicker value={currentMonthKey} onChange={onMonthChange} />
-            
-            <Button
-              variant="ghost"
-              onClick={onLogout}
-              size="sm"
-              className="h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center gap-1 sm:gap-1.5 touch-manipulation"
-            >
-              <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="text-[10px] sm:text-xs md:text-sm font-medium hidden xs:inline">{t('logout')}</span>
-            </Button>
-          </div>
+          {/* Logout Button */}
+          <Button
+            variant="ghost"
+            onClick={onLogout}
+            size="sm"
+            className="h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center gap-1 sm:gap-1.5 touch-manipulation"
+          >
+            <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="text-[10px] sm:text-xs md:text-sm font-medium hidden xs:inline">{t('logout')}</span>
+          </Button>
         </div>
       </div>
     </header>
