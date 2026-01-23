@@ -105,6 +105,7 @@ export function useFinanceData() {
           boxes: cig.boxes,
           extraPacks: cig.extra_packs,
           alertLevel: cig.alert_level,
+          unitType: (cig.unit_type as 'box' | 'meter' | 'piece' | 'kg' | 'liter' | 'pack') || 'box',
         }))
       );
 
@@ -270,6 +271,7 @@ export function useFinanceData() {
         alert_level: cigarette.alertLevel,
         boxes: 0,
         extra_packs: 0,
+        unit_type: cigarette.unitType || 'box',
       })
       .select()
       .single();
@@ -287,6 +289,7 @@ export function useFinanceData() {
           boxes: data.boxes,
           extraPacks: data.extra_packs,
           alertLevel: data.alert_level,
+          unitType: (data.unit_type as 'box' | 'meter' | 'piece' | 'kg' | 'liter' | 'pack') || 'box',
         },
       ]);
     }

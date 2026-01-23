@@ -4,9 +4,9 @@ import { SummaryCard } from './SummaryCard';
 import { CigaretteModal } from './CigaretteModal';
 import { AddStockModal } from './AddStockModal';
 import { EditStockModal } from './EditStockModal';
-import { Cigarette } from '@/types/finance';
+import { Cigarette, UnitType } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
-import { Package, Plus, Pencil, Trash2, Settings, AlertTriangle, CheckCircle2, XCircle, Boxes, Hash, TrendingUp } from 'lucide-react';
+import { Package, Plus, Pencil, Trash2, Settings, AlertTriangle, CheckCircle2, XCircle, Boxes, Hash, TrendingUp, Ruler, Scale, Droplets, Box } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -172,8 +172,10 @@ export function InventoryTab({
                     </div>
                     <div>
                       <h4 className="text-base font-bold text-foreground leading-tight">{cig.name}</h4>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {cig.packsPerBox} {t('unitsPerBox')}
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <span>{cig.packsPerBox} {t('unitsPerBox')}</span>
+                        <span className="text-muted-foreground/50">•</span>
+                        <span>{t(`unitType${(cig.unitType || 'box').charAt(0).toUpperCase() + (cig.unitType || 'box').slice(1)}` as any)}</span>
                       </p>
                     </div>
                   </div>

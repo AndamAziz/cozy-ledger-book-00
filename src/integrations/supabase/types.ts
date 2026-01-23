@@ -59,6 +59,7 @@ export type Database = {
           name: string
           pack_price: number
           packs_per_box: number
+          unit_type: string
           user_id: string
         }
         Insert: {
@@ -72,6 +73,7 @@ export type Database = {
           name: string
           pack_price?: number
           packs_per_box?: number
+          unit_type?: string
           user_id: string
         }
         Update: {
@@ -85,6 +87,7 @@ export type Database = {
           name?: string
           pack_price?: number
           packs_per_box?: number
+          unit_type?: string
           user_id?: string
         }
         Relationships: []
