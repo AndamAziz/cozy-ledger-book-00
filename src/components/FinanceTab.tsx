@@ -204,7 +204,6 @@ export function FinanceTab({
                         </div>
                         <div>
                           <div className="font-bold text-foreground text-base md:text-lg font-mono tracking-wide">{dateStr}</div>
-                          <div className="text-sm text-muted-foreground">{t('dayNumber')} {income.day}</div>
                         </div>
                       </div>
                       <div className="text-success font-bold text-lg md:text-2xl">{formatCurrency(income.total)}</div>
