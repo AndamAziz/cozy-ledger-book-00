@@ -6,7 +6,7 @@ import { AddStockModal } from './AddStockModal';
 import { EditStockModal } from './EditStockModal';
 import { Cigarette } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
-import { Package, Plus, Pencil, Trash2, Settings } from 'lucide-react';
+import { Package, Plus, Pencil, Trash2, Settings, AlertTriangle, CheckCircle2, XCircle, Boxes, Hash, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -58,10 +58,10 @@ export function InventoryTab({
     onAddStock(cigaretteId, boxes, extraPacks);
     const cig = cigaretteData.find(c => c.id === cigaretteId);
     const message = boxes > 0 && extraPacks > 0 
-      ? `${boxes} ${t('boxes')} + ${extraPacks} ${t('packs')} → ${cig?.name}`
+      ? `${boxes} ${t('boxes')} + ${extraPacks} ${t('units')} → ${cig?.name}`
       : boxes > 0 
         ? `${boxes} ${t('boxes')} → ${cig?.name}`
-        : `${extraPacks} ${t('packs')} → ${cig?.name}`;
+        : `${extraPacks} ${t('units')} → ${cig?.name}`;
     toast({ title: t('success'), description: message });
   };
 
@@ -72,9 +72,27 @@ export function InventoryTab({
 
   const getStatus = (cig: Cigarette) => {
     const totalPacks = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
-    if (totalPacks === 0) return { text: t('unavailable'), class: 'status-unavailable' };
-    if (totalPacks <= cig.alertLevel) return { text: t('low'), class: 'status-low' };
-    return { text: t('available'), class: 'status-available' };
+    if (totalPacks === 0) return { 
+      text: t('outOfStock'), 
+      variant: 'destructive' as const,
+      icon: XCircle
+    };
+    if (totalPacks <= cig.alertLevel) return { 
+      text: t('lowStock'), 
+      variant: 'warning' as const,
+      icon: AlertTriangle
+    };
+    return { 
+      text: t('inStock'), 
+      variant: 'success' as const,
+      icon: CheckCircle2
+    };
+  };
+
+  // Format number - show dash for zero values
+  const formatNum = (num: number | undefined) => {
+    if (num === undefined || num === null || num === 0) return '—';
+    return num.toLocaleString();
   };
 
   return (
@@ -82,8 +100,8 @@ export function InventoryTab({
       {/* Summary Grid */}
       <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in">
         <SummaryCard title={t('types')} value={summary.totalCigaretteTypes.toString()} variant="stock" icon="📦" />
-        <SummaryCard title={t('totalBoxes')} value={summary.totalBoxes.toString()} variant="stock" icon="📋" />
-        <SummaryCard title={t('totalPacks')} value={summary.totalPacks.toString()} variant="stock" icon="🔢" />
+        <SummaryCard title={t('totalBoxes')} value={formatNum(summary.totalBoxes)} variant="stock" icon="📋" />
+        <SummaryCard title={t('totalUnits')} value={formatNum(summary.totalPacks)} variant="stock" icon="🔢" />
         <SummaryCard title={t('stockValue')} value={formatCurrency(summary.totalStockValue)} variant="balance" icon="💎" />
       </div>
 
@@ -94,7 +112,7 @@ export function InventoryTab({
           className="btn-gradient-accent py-5 rounded-xl shadow-lg shadow-accent/20 hover:shadow-accent/40 hover:scale-[1.02] transition-all duration-300"
         >
           <Plus className="h-5 w-5 ltr:mr-2 rtl:ml-2" />
-          {t('addNewType')}
+          {t('addNewProduct')}
         </Button>
         <Button 
           onClick={() => setStockModalOpen(true)} 
@@ -109,95 +127,164 @@ export function InventoryTab({
       {cigaretteData.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground animate-fade-in">
           <div className="w-24 h-24 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-4">
-            <span className="text-5xl opacity-50">📦</span>
+            <Package className="w-12 h-12 text-muted-foreground/50" />
           </div>
-          <p className="text-sm">{t('noData')}</p>
+          <p className="text-base font-medium mb-1">{t('noProductsYet')}</p>
+          <p className="text-sm text-muted-foreground">{t('clickToAddProduct')}</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {cigaretteData.map((cig, index) => {
-            const totalPacks = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
-            const totalValue = totalPacks * cig.packPrice;
+            const totalUnits = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
+            const totalValue = totalUnits * cig.packPrice;
             const status = getStatus(cig);
+            const StatusIcon = status.icon;
 
             return (
               <div 
                 key={cig.id} 
-                className="group relative overflow-hidden rounded-2xl border border-info/20 bg-gradient-to-br from-info/10 via-transparent to-transparent p-5 hover:border-info/40 hover:shadow-xl hover:shadow-info/10 transition-all duration-300 animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
+                className="group relative overflow-hidden rounded-2xl border bg-card p-5 hover:shadow-xl transition-all duration-300 animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-info/10 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                {/* Status indicator bar */}
+                <div className={cn(
+                  'absolute top-0 left-0 right-0 h-1',
+                  status.variant === 'success' && 'bg-success',
+                  status.variant === 'warning' && 'bg-warning',
+                  status.variant === 'destructive' && 'bg-destructive'
+                )} />
                 
-                <div className="relative">
-                  <div className="flex justify-between items-start mb-5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-info/20 to-info/5 flex items-center justify-center">
-                        <span className="text-2xl">📦</span>
-                      </div>
-                      <h4 className="text-lg font-bold text-foreground">{cig.name}</h4>
-                    </div>
-                    <span className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-bold',
-                      status.class === 'status-available' && 'bg-success/20 text-success border border-success/30',
-                      status.class === 'status-low' && 'bg-warning/20 text-warning border border-warning/30',
-                      status.class === 'status-unavailable' && 'bg-destructive/20 text-destructive border border-destructive/30'
+                {/* Header */}
+                <div className="flex justify-between items-start mb-4 pt-2">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'w-11 h-11 rounded-xl flex items-center justify-center',
+                      status.variant === 'success' && 'bg-success/10',
+                      status.variant === 'warning' && 'bg-warning/10',
+                      status.variant === 'destructive' && 'bg-destructive/10'
                     )}>
-                      {status.text}
-                    </span>
+                      <Package className={cn(
+                        'w-5 h-5',
+                        status.variant === 'success' && 'text-success',
+                        status.variant === 'warning' && 'text-warning',
+                        status.variant === 'destructive' && 'text-destructive'
+                      )} />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-foreground leading-tight">{cig.name}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {cig.packsPerBox} {t('unitsPerBox')}
+                      </p>
+                    </div>
                   </div>
+                  <div className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold',
+                    status.variant === 'success' && 'bg-success/10 text-success',
+                    status.variant === 'warning' && 'bg-warning/10 text-warning',
+                    status.variant === 'destructive' && 'bg-destructive/10 text-destructive'
+                  )}>
+                    <StatusIcon className="w-3.5 h-3.5" />
+                    <span>{status.text}</span>
+                  </div>
+                </div>
 
-                  <div className="grid grid-cols-4 gap-2 mb-5">
-                    <div className="bg-background/40 backdrop-blur-sm p-3 rounded-xl text-center border border-border/30">
-                      <div className="text-[10px] text-muted-foreground uppercase mb-1">{t('boxes')}</div>
-                      <div className="text-lg font-bold text-info">{cig.boxes}</div>
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {/* Boxes */}
+                  <div className="bg-secondary/30 rounded-xl p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-muted-foreground mb-1">
+                      <Boxes className="w-3.5 h-3.5" />
+                      <span className="text-[10px] uppercase font-medium">{t('boxes')}</span>
                     </div>
-                    <div className="bg-background/40 backdrop-blur-sm p-3 rounded-xl text-center border border-border/30">
-                      <div className="text-[10px] text-muted-foreground uppercase mb-1">{t('packs')}</div>
-                      <div className="text-lg font-bold text-success">{totalPacks}</div>
-                    </div>
-                    <div className="bg-background/40 backdrop-blur-sm p-3 rounded-xl text-center border border-border/30">
-                      <div className="text-[10px] text-muted-foreground uppercase mb-1">{t('sellPrice')}</div>
-                      <div className="text-lg font-bold text-accent">£{cig.sellPrice}</div>
-                    </div>
-                    <div className="bg-background/40 backdrop-blur-sm p-3 rounded-xl text-center border border-border/30">
-                      <div className="text-[10px] text-muted-foreground uppercase mb-1">{t('total')}</div>
-                      <div className="text-lg font-bold text-foreground">{formatCurrency(totalValue)}</div>
+                    <div className={cn(
+                      'text-xl font-bold',
+                      cig.boxes === 0 ? 'text-muted-foreground/50' : 'text-info'
+                    )}>
+                      {formatNum(cig.boxes)}
                     </div>
                   </div>
+                  
+                  {/* Total Units */}
+                  <div className="bg-secondary/30 rounded-xl p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-muted-foreground mb-1">
+                      <Hash className="w-3.5 h-3.5" />
+                      <span className="text-[10px] uppercase font-medium">{t('totalUnits')}</span>
+                    </div>
+                    <div className={cn(
+                      'text-xl font-bold',
+                      totalUnits === 0 ? 'text-muted-foreground/50' : 'text-success'
+                    )}>
+                      {formatNum(totalUnits)}
+                    </div>
+                  </div>
+                  
+                  {/* Sell Price */}
+                  <div className="bg-secondary/30 rounded-xl p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-muted-foreground mb-1">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      <span className="text-[10px] uppercase font-medium">{t('sellPrice')}</span>
+                    </div>
+                    <div className="text-xl font-bold text-accent">
+                      £{cig.sellPrice}
+                    </div>
+                  </div>
+                  
+                  {/* Total Value */}
+                  <div className="bg-secondary/30 rounded-xl p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-muted-foreground mb-1">
+                      <span className="text-[10px] uppercase font-medium">💰 {t('value')}</span>
+                    </div>
+                    <div className={cn(
+                      'text-xl font-bold',
+                      totalValue === 0 ? 'text-muted-foreground/50' : 'text-foreground'
+                    )}>
+                      {totalValue === 0 ? '—' : formatCurrency(totalValue)}
+                    </div>
+                  </div>
+                </div>
 
-                  <div className="flex gap-2 pt-4 border-t border-border/30">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="flex-1 rounded-xl hover:bg-info/10 hover:text-info transition-colors"
-                      onClick={() => { setEditingStock(cig); setEditStockModalOpen(true); }}
-                    >
-                      <Settings className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
-                      {t('inventory')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="flex-1 rounded-xl hover:bg-accent/10 hover:text-accent transition-colors"
-                      onClick={() => { setEditingCigarette(cig); setCigaretteModalOpen(true); }}
-                    >
-                      <Pencil className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
-                      {t('edit')}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        if (confirm(t('confirmDelete'))) {
-                          onDeleteCigarette(cig.id);
-                          toast({ title: t('success'), description: t('delete') });
-                        }
-                      }}
-                      className="rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                {/* Extra Units indicator */}
+                {(cig.extraPacks || 0) > 0 && (
+                  <div className="mb-4 px-3 py-2 bg-info/5 border border-info/20 rounded-lg">
+                    <p className="text-xs text-info">
+                      <span className="font-medium">{t('looseUnits')}:</span> {cig.extraPacks} {t('units')}
+                    </p>
                   </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-3 border-t border-border/50">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1 rounded-xl hover:bg-info/10 hover:text-info transition-colors"
+                    onClick={() => { setEditingStock(cig); setEditStockModalOpen(true); }}
+                  >
+                    <Settings className="h-4 w-4 ltr:mr-1.5 rtl:ml-1.5" />
+                    {t('stock')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1 rounded-xl hover:bg-accent/10 hover:text-accent transition-colors"
+                    onClick={() => { setEditingCigarette(cig); setCigaretteModalOpen(true); }}
+                  >
+                    <Pencil className="h-4 w-4 ltr:mr-1.5 rtl:ml-1.5" />
+                    {t('edit')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(t('confirmDelete'))) {
+                        onDeleteCigarette(cig.id);
+                        toast({ title: t('success'), description: t('delete') });
+                      }
+                    }}
+                    className="rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors px-3"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             );
