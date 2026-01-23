@@ -4,8 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Modal } from './Modal';
-import { Cigarette } from '@/types/finance';
-import { Package, Boxes, Hash } from 'lucide-react';
+import { Cigarette, UnitType } from '@/types/finance';
+import { Package, Boxes, Hash, Box, Ruler, Scale, Droplets } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +16,15 @@ interface AddStockModalProps {
   cigarettes: Cigarette[];
 }
 
+const unitTypeIcons: Record<UnitType, React.ReactNode> = {
+  box: <Box className="w-4 h-4" />,
+  meter: <Ruler className="w-4 h-4" />,
+  piece: <Hash className="w-4 h-4" />,
+  kg: <Scale className="w-4 h-4" />,
+  liter: <Droplets className="w-4 h-4" />,
+  pack: <Package className="w-4 h-4" />,
+};
+
 export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStockModalProps) {
   const [selectedId, setSelectedId] = useState<string>('');
   const [boxes, setBoxes] = useState<string>('');
@@ -24,10 +33,56 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
 
   const selectedProduct = cigarettes.find(c => c.id.toString() === selectedId);
 
+  // Get dynamic labels based on unit type
+  const getUnitLabels = (unitType: UnitType) => {
+    switch (unitType) {
+      case 'meter':
+        return { 
+          containerLabel: t('unitTypeMeter'),
+          looseLabel: t('looseUnits'),
+          unitName: t('unitTypeMeter')
+        };
+      case 'kg':
+        return { 
+          containerLabel: t('unitTypeKg'),
+          looseLabel: t('looseUnits'),
+          unitName: t('unitTypeKg')
+        };
+      case 'liter':
+        return { 
+          containerLabel: t('unitTypeLiter'),
+          looseLabel: t('looseUnits'),
+          unitName: t('unitTypeLiter')
+        };
+      case 'piece':
+        return { 
+          containerLabel: t('unitTypePiece'),
+          looseLabel: t('looseUnits'),
+          unitName: t('unitTypePiece')
+        };
+      case 'pack':
+        return { 
+          containerLabel: t('unitTypePack'),
+          looseLabel: t('looseUnits'),
+          unitName: t('unitTypePack')
+        };
+      default:
+        return { 
+          containerLabel: t('boxes'),
+          looseLabel: t('looseUnits'),
+          unitName: t('units')
+        };
+    }
+  };
+
+  const labels = selectedProduct 
+    ? getUnitLabels(selectedProduct.unitType || 'box')
+    : getUnitLabels('box');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const boxesNum = parseInt(boxes) || 0;
-    const packsNum = parseInt(extraPacks) || 0;
+    const boxesNum = parseFloat(boxes) || 0;
+    const packsNum = parseFloat(extraPacks) || 0;
     if (selectedId && (boxesNum > 0 || packsNum > 0)) {
       onSubmit(selectedId, boxesNum, packsNum);
       setSelectedId('');
@@ -37,8 +92,8 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
     }
   };
 
-  const boxesNum = parseInt(boxes) || 0;
-  const packsNum = parseInt(extraPacks) || 0;
+  const boxesNum = parseFloat(boxes) || 0;
+  const packsNum = parseFloat(extraPacks) || 0;
   const isValid = selectedId && (boxesNum > 0 || packsNum > 0);
 
   // Calculate preview of units being added
@@ -58,11 +113,14 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
             <SelectContent>
               {cigarettes.map((cig) => {
                 const totalPacks = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
+                const unitType = cig.unitType || 'box';
+                const unitLabel = getUnitLabels(unitType).unitName;
                 return (
                   <SelectItem key={cig.id} value={cig.id.toString()}>
                     <span className="flex items-center gap-2">
+                      {unitTypeIcons[unitType]}
                       <span>{cig.name}</span>
-                      <span className="text-muted-foreground text-sm">({totalPacks} {t('units')})</span>
+                      <span className="text-muted-foreground text-sm">({totalPacks} {unitLabel})</span>
                     </span>
                   </SelectItem>
                 );
@@ -75,7 +133,10 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
         {selectedProduct && (
           <div className="bg-info/5 border border-info/20 rounded-xl p-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{t('unitsPerBox')}:</span>
+              <span className="text-muted-foreground flex items-center gap-2">
+                {unitTypeIcons[selectedProduct.unitType || 'box']}
+                {t('unitsPerBox')}:
+              </span>
               <span className="font-semibold text-info">{selectedProduct.packsPerBox}</span>
             </div>
           </div>
@@ -86,11 +147,12 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
           <div className="space-y-2">
             <Label className="text-muted-foreground text-base flex items-center gap-2">
               <Boxes className="w-4 h-4" />
-              {t('boxes')}
+              {labels.containerLabel}
             </Label>
             <Input
               type="number"
               min={0}
+              step={0.01}
               value={boxes}
               onChange={(e) => setBoxes(e.target.value)}
               placeholder="0"
@@ -104,11 +166,12 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
           <div className="space-y-2">
             <Label className="text-muted-foreground text-base flex items-center gap-2">
               <Hash className="w-4 h-4" />
-              {t('looseUnits')}
+              {labels.looseLabel}
             </Label>
             <Input
               type="number"
               min={0}
+              step={0.01}
               value={extraPacks}
               onChange={(e) => setExtraPacks(e.target.value)}
               placeholder="0"

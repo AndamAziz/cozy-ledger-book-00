@@ -4,9 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Modal } from './Modal';
-import { Cigarette, Sale } from '@/types/finance';
+import { Cigarette, Sale, UnitType } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Box, Ruler, Hash, Scale, Droplets, Package } from 'lucide-react';
 
 interface SellModalProps {
   isOpen: boolean;
@@ -17,11 +18,20 @@ interface SellModalProps {
   defaultDay: number;
 }
 
+const unitTypeIcons: Record<UnitType, React.ReactNode> = {
+  box: <Box className="w-4 h-4" />,
+  meter: <Ruler className="w-4 h-4" />,
+  piece: <Hash className="w-4 h-4" />,
+  kg: <Scale className="w-4 h-4" />,
+  liter: <Droplets className="w-4 h-4" />,
+  pack: <Package className="w-4 h-4" />,
+};
+
 export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defaultDay }: SellModalProps) {
   const [day, setDay] = useState(defaultDay);
   const [selectedId, setSelectedId] = useState<string>('');
-  const [packs, setPacks] = useState(1);
-  const [packPrice, setPackPrice] = useState(0);
+  const [packs, setPacks] = useState<string>('1');
+  const [packPrice, setPackPrice] = useState<string>('');
   const { t } = useLanguage();
 
   const selectedCigarette = useMemo(() => {
@@ -30,7 +40,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
 
   useEffect(() => {
     if (selectedCigarette) {
-      setPackPrice(selectedCigarette.sellPrice);
+      setPackPrice(selectedCigarette.sellPrice.toString());
     }
   }, [selectedCigarette]);
 
@@ -38,14 +48,62 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
     setDay(defaultDay);
   }, [defaultDay]);
 
-  const total = useMemo(() => packs * packPrice, [packs, packPrice]);
+  const packsNum = parseFloat(packs) || 0;
+  const packPriceNum = parseFloat(packPrice) || 0;
+  const total = useMemo(() => packsNum * packPriceNum, [packsNum, packPriceNum]);
+
+  // Get dynamic labels based on unit type
+  const getUnitLabels = (unitType: UnitType) => {
+    switch (unitType) {
+      case 'meter':
+        return { 
+          quantityLabel: t('unitTypeMeter'),
+          priceLabel: t('pricePerMeter'),
+          unitName: t('unitTypeMeter')
+        };
+      case 'kg':
+        return { 
+          quantityLabel: t('unitTypeKg'),
+          priceLabel: t('pricePerKg'),
+          unitName: t('unitTypeKg')
+        };
+      case 'liter':
+        return { 
+          quantityLabel: t('unitTypeLiter'),
+          priceLabel: t('pricePerLiter'),
+          unitName: t('unitTypeLiter')
+        };
+      case 'piece':
+        return { 
+          quantityLabel: t('unitTypePiece'),
+          priceLabel: t('pricePerPiece'),
+          unitName: t('unitTypePiece')
+        };
+      case 'pack':
+        return { 
+          quantityLabel: t('unitTypePack'),
+          priceLabel: t('pricePerUnit'),
+          unitName: t('unitTypePack')
+        };
+      default:
+        return { 
+          quantityLabel: t('unitsCount'),
+          priceLabel: t('unitPrice'),
+          unitName: t('units')
+        };
+    }
+  };
+
+  const labels = selectedCigarette 
+    ? getUnitLabels(selectedCigarette.unitType || 'box')
+    : getUnitLabels('box');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedCigarette) {
       const totalAvailable = (selectedCigarette.boxes * selectedCigarette.packsPerBox) + (selectedCigarette.extraPacks || 0);
-      if (packs > totalAvailable) {
-        alert(`${t('low')}! ${t('only')} ${totalAvailable} ${t('packs')}.`);
+      if (packsNum > totalAvailable) {
+        alert(`${t('low')}! ${t('only')} ${totalAvailable} ${labels.unitName}.`);
         return;
       }
 
@@ -53,15 +111,15 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
         day,
         cigaretteId: selectedCigarette.id,
         cigaretteName: selectedCigarette.name,
-        packs,
-        packPrice,
+        packs: packsNum,
+        packPrice: packPriceNum,
         totalSale: total,
-        profit: total - (packs * selectedCigarette.packPrice),
+        profit: total - (packsNum * selectedCigarette.packPrice),
       }, selectedCigarette.id);
 
       setSelectedId('');
-      setPacks(1);
-      setPackPrice(0);
+      setPacks('1');
+      setPackPrice('');
       onClose();
     }
   };
@@ -91,36 +149,60 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
             <SelectContent>
               {cigarettes.map((cig) => {
                 const totalPacks = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
+                const unitType = cig.unitType || 'box';
+                const unitLabel = getUnitLabels(unitType).unitName;
                 return (
                   <SelectItem key={cig.id} value={cig.id.toString()}>
-                    {cig.name} ({totalPacks} {t('packs')})
+                    <span className="flex items-center gap-2">
+                      {unitTypeIcons[unitType]}
+                      <span>{cig.name}</span>
+                      <span className="text-muted-foreground text-sm">({totalPacks} {unitLabel})</span>
+                    </span>
                   </SelectItem>
                 );
               })}
             </SelectContent>
           </Select>
         </div>
+
+        {/* Show selected product info */}
+        {selectedCigarette && (
+          <div className="bg-info/5 border border-info/20 rounded-xl p-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground flex items-center gap-2">
+                {unitTypeIcons[selectedCigarette.unitType || 'box']}
+                {t(`unitType${(selectedCigarette.unitType || 'box').charAt(0).toUpperCase() + (selectedCigarette.unitType || 'box').slice(1)}` as any)}
+              </span>
+              <span className="font-semibold text-info">
+                {((selectedCigarette.boxes * selectedCigarette.packsPerBox) + (selectedCigarette.extraPacks || 0))} {labels.unitName}
+              </span>
+            </div>
+          </div>
+        )}
         
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-muted-foreground">{t('packsCount')}</Label>
+            <Label className="text-muted-foreground">{labels.quantityLabel}</Label>
             <Input
               type="number"
-              min={1}
+              min={0.01}
+              step={0.01}
               value={packs}
-              onChange={(e) => setPacks(parseInt(e.target.value) || 1)}
+              onChange={(e) => setPacks(e.target.value)}
+              placeholder="1"
               className="bg-secondary/50 border-border"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-muted-foreground">{t('unitPrice')} £</Label>
+            <Label className="text-muted-foreground">{labels.priceLabel} £</Label>
             <Input
               type="number"
               min={0}
               step={0.01}
               value={packPrice}
-              onChange={(e) => setPackPrice(parseFloat(e.target.value) || 0)}
+              onChange={(e) => setPackPrice(e.target.value)}
+              placeholder="0"
               className="bg-secondary/50 border-border"
               required
             />
