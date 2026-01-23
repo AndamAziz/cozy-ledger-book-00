@@ -3,9 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from './Modal';
-import { Cigarette } from '@/types/finance';
+import { Cigarette, UnitType } from '@/types/finance';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Boxes, Hash, Settings } from 'lucide-react';
+import { Boxes, Hash, Settings, Box, Ruler, Scale, Droplets, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface EditStockModalProps {
@@ -14,6 +14,15 @@ interface EditStockModalProps {
   onSubmit: (id: string | number, boxes: number, extraPacks: number) => void;
   cigarette: Cigarette | null;
 }
+
+const unitTypeIcons: Record<UnitType, React.ReactNode> = {
+  box: <Box className="w-4 h-4" />,
+  meter: <Ruler className="w-4 h-4" />,
+  piece: <Hash className="w-4 h-4" />,
+  kg: <Scale className="w-4 h-4" />,
+  liter: <Droplets className="w-4 h-4" />,
+  pack: <Package className="w-4 h-4" />,
+};
 
 export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditStockModalProps) {
   const [boxes, setBoxes] = useState<string>('');
@@ -27,16 +36,62 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
     }
   }, [cigarette]);
 
+  // Get dynamic labels based on unit type
+  const getUnitLabels = (unitType: UnitType) => {
+    switch (unitType) {
+      case 'meter':
+        return { 
+          containerLabel: t('unitTypeMeter'),
+          looseLabel: t('looseUnits'),
+          unitName: t('unitTypeMeter')
+        };
+      case 'kg':
+        return { 
+          containerLabel: t('unitTypeKg'),
+          looseLabel: t('looseUnits'),
+          unitName: t('unitTypeKg')
+        };
+      case 'liter':
+        return { 
+          containerLabel: t('unitTypeLiter'),
+          looseLabel: t('looseUnits'),
+          unitName: t('unitTypeLiter')
+        };
+      case 'piece':
+        return { 
+          containerLabel: t('unitTypePiece'),
+          looseLabel: t('looseUnits'),
+          unitName: t('unitTypePiece')
+        };
+      case 'pack':
+        return { 
+          containerLabel: t('unitTypePack'),
+          looseLabel: t('looseUnits'),
+          unitName: t('unitTypePack')
+        };
+      default:
+        return { 
+          containerLabel: t('boxes'),
+          looseLabel: t('looseUnits'),
+          unitName: t('units')
+        };
+    }
+  };
+
+  const labels = cigarette 
+    ? getUnitLabels(cigarette.unitType || 'box')
+    : getUnitLabels('box');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (cigarette) {
-      onSubmit(cigarette.id, parseInt(boxes) || 0, parseInt(extraPacks) || 0);
+      onSubmit(cigarette.id, parseFloat(boxes) || 0, parseFloat(extraPacks) || 0);
       onClose();
     }
   };
 
-  const boxesNum = parseInt(boxes) || 0;
-  const packsNum = parseInt(extraPacks) || 0;
+  const boxesNum = parseFloat(boxes) || 0;
+  const packsNum = parseFloat(extraPacks) || 0;
   const totalUnits = cigarette ? (boxesNum * cigarette.packsPerBox) + packsNum : 0;
 
   return (
@@ -51,7 +106,10 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
         {/* Product Info Header */}
         {cigarette && (
           <div className="bg-secondary/30 rounded-xl p-4 mb-4">
-            <h3 className="text-lg font-bold text-foreground mb-1">{cigarette.name}</h3>
+            <h3 className="text-lg font-bold text-foreground mb-1 flex items-center gap-2">
+              {unitTypeIcons[cigarette.unitType || 'box']}
+              {cigarette.name}
+            </h3>
             <p className="text-sm text-muted-foreground">
               {cigarette.packsPerBox} {t('unitsPerBox')}
             </p>
@@ -63,11 +121,12 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
           <div className="space-y-2">
             <Label className="text-muted-foreground flex items-center gap-2">
               <Boxes className="w-4 h-4" />
-              {t('boxes')}
+              {labels.containerLabel}
             </Label>
             <Input
               type="number"
               min={0}
+              step={0.01}
               value={boxes}
               onChange={(e) => setBoxes(e.target.value)}
               placeholder="0"
@@ -81,11 +140,12 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
           <div className="space-y-2">
             <Label className="text-muted-foreground flex items-center gap-2">
               <Hash className="w-4 h-4" />
-              {t('looseUnits')}
+              {labels.looseLabel}
             </Label>
             <Input
               type="number"
               min={0}
+              step={0.01}
               value={extraPacks}
               onChange={(e) => setExtraPacks(e.target.value)}
               placeholder="0"
@@ -105,7 +165,7 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
               "text-2xl font-bold",
               totalUnits === 0 ? "text-muted-foreground" : "text-info"
             )}>
-              {totalUnits === 0 ? '—' : totalUnits}
+              {totalUnits}
             </span>
           </div>
         </div>

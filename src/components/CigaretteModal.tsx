@@ -26,44 +26,49 @@ const unitTypeIcons: Record<UnitType, React.ReactNode> = {
 
 export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: CigaretteModalProps) {
   const [name, setName] = useState('');
-  const [boxPrice, setBoxPrice] = useState(0);
-  const [packsPerBox, setPacksPerBox] = useState(1);
-  const [sellPrice, setSellPrice] = useState(0);
-  const [alertLevel, setAlertLevel] = useState(20);
+  const [boxPrice, setBoxPrice] = useState<string>('');
+  const [packsPerBox, setPacksPerBox] = useState<string>('1');
+  const [sellPrice, setSellPrice] = useState<string>('');
+  const [alertLevel, setAlertLevel] = useState<string>('20');
   const [unitType, setUnitType] = useState<UnitType>('box');
   const { t } = useLanguage();
 
   useEffect(() => {
     if (editingCigarette) {
       setName(editingCigarette.name);
-      setBoxPrice(editingCigarette.boxPrice);
-      setPacksPerBox(editingCigarette.packsPerBox);
-      setSellPrice(editingCigarette.sellPrice);
-      setAlertLevel(editingCigarette.alertLevel);
+      setBoxPrice(editingCigarette.boxPrice.toString());
+      setPacksPerBox(editingCigarette.packsPerBox.toString());
+      setSellPrice(editingCigarette.sellPrice.toString());
+      setAlertLevel(editingCigarette.alertLevel.toString());
       setUnitType(editingCigarette.unitType || 'box');
     } else {
       setName('');
-      setBoxPrice(0);
-      setPacksPerBox(1);
-      setSellPrice(0);
-      setAlertLevel(20);
+      setBoxPrice('');
+      setPacksPerBox('1');
+      setSellPrice('');
+      setAlertLevel('20');
       setUnitType('box');
     }
   }, [editingCigarette]);
 
+  const boxPriceNum = parseFloat(boxPrice) || 0;
+  const packsPerBoxNum = parseFloat(packsPerBox) || 1;
+  const sellPriceNum = parseFloat(sellPrice) || 0;
+  const alertLevelNum = parseInt(alertLevel) || 20;
+
   const packPrice = useMemo(() => {
-    return boxPrice / (packsPerBox || 1);
-  }, [boxPrice, packsPerBox]);
+    return boxPriceNum / (packsPerBoxNum || 1);
+  }, [boxPriceNum, packsPerBoxNum]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
       name,
-      boxPrice,
-      packsPerBox,
+      boxPrice: boxPriceNum,
+      packsPerBox: packsPerBoxNum,
       packPrice,
-      sellPrice,
-      alertLevel,
+      sellPrice: sellPriceNum,
+      alertLevel: alertLevelNum,
       unitType,
     });
     onClose();
@@ -75,36 +80,42 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
       case 'meter':
         return { 
           containerLabel: t('unitTypeMeter'), 
+          containerPriceLabel: t('pricePerMeter'),
           unitsLabel: t('unitsPerContainer'),
           priceLabel: t('pricePerMeter')
         };
       case 'kg':
         return { 
           containerLabel: t('unitTypeKg'), 
+          containerPriceLabel: t('pricePerKg'),
           unitsLabel: t('unitsPerContainer'),
           priceLabel: t('pricePerKg')
         };
       case 'liter':
         return { 
           containerLabel: t('unitTypeLiter'), 
+          containerPriceLabel: t('pricePerLiter'),
           unitsLabel: t('unitsPerContainer'),
           priceLabel: t('pricePerLiter')
         };
       case 'piece':
         return { 
           containerLabel: t('unitTypePiece'), 
+          containerPriceLabel: t('pricePerPiece'),
           unitsLabel: t('piecesPerContainer'),
           priceLabel: t('pricePerPiece')
         };
       case 'pack':
         return { 
           containerLabel: t('unitTypePack'), 
+          containerPriceLabel: t('pricePerUnit'),
           unitsLabel: t('unitsPerPack'),
           priceLabel: t('pricePerUnit')
         };
       default:
         return { 
           containerLabel: t('unitTypeBox'), 
+          containerPriceLabel: t('boxPrice'),
           unitsLabel: t('unitsPerBox'),
           priceLabel: t('unitPrice')
         };
@@ -184,13 +195,14 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
         {/* Pricing Grid */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-muted-foreground">{t('boxPrice')} £</Label>
+            <Label className="text-muted-foreground">{labels.containerPriceLabel} £</Label>
             <Input
               type="number"
               min={0}
               step={0.01}
               value={boxPrice}
-              onChange={(e) => setBoxPrice(parseFloat(e.target.value) || 0)}
+              onChange={(e) => setBoxPrice(e.target.value)}
+              placeholder="0"
               className="bg-secondary/50 border-border"
               required
             />
@@ -202,7 +214,8 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
               min={0.01}
               step={0.01}
               value={packsPerBox}
-              onChange={(e) => setPacksPerBox(parseFloat(e.target.value) || 1)}
+              onChange={(e) => setPacksPerBox(e.target.value)}
+              placeholder="1"
               className="bg-secondary/50 border-border"
               required
             />
@@ -217,7 +230,8 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
               min={0}
               step={0.01}
               value={sellPrice}
-              onChange={(e) => setSellPrice(parseFloat(e.target.value) || 0)}
+              onChange={(e) => setSellPrice(e.target.value)}
+              placeholder="0"
               className="bg-secondary/50 border-border"
               required
             />
@@ -228,7 +242,8 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
               type="number"
               min={0}
               value={alertLevel}
-              onChange={(e) => setAlertLevel(parseInt(e.target.value) || 20)}
+              onChange={(e) => setAlertLevel(e.target.value)}
+              placeholder="20"
               className="bg-secondary/50 border-border"
               required
             />
