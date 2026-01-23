@@ -102,12 +102,12 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('addStock')} icon={<Package className="w-5 h-5" />} variant="info">
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         {/* Product Selection */}
         <div className="space-y-2">
-          <Label className="text-muted-foreground text-base">{t('selectProduct')}</Label>
+          <Label className="text-muted-foreground text-sm sm:text-base">{t('selectProduct')}</Label>
           <Select value={selectedId} onValueChange={setSelectedId}>
-            <SelectTrigger className="bg-secondary/50 border-border h-14 text-lg">
+            <SelectTrigger className="bg-secondary/50 border-border h-12 sm:h-14 text-base sm:text-lg">
               <SelectValue placeholder={t('selectProductPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
@@ -131,8 +131,8 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
 
         {/* Show product info when selected */}
         {selectedProduct && (
-          <div className="bg-info/5 border border-info/20 rounded-xl p-3">
-            <div className="flex items-center justify-between text-sm">
+          <div className="bg-info/5 border border-info/20 rounded-xl p-2.5 sm:p-3">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
               <span className="text-muted-foreground flex items-center gap-2">
                 {unitTypeIcons[selectedProduct.unitType || 'box']}
                 {t('unitsPerBox')}:
@@ -143,10 +143,10 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
         )}
         
         {/* Input Grid */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div className="space-y-2">
-            <Label className="text-muted-foreground text-base flex items-center gap-2">
-              <Boxes className="w-4 h-4" />
+            <Label className="text-muted-foreground text-sm sm:text-base flex items-center gap-2">
+              <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {labels.containerLabel}
             </Label>
             <Input
@@ -157,15 +157,15 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
               onChange={(e) => setBoxes(e.target.value)}
               placeholder="0"
               className={cn(
-                "bg-secondary/50 border-border h-14 text-lg text-center",
+                "bg-secondary/50 border-border h-12 sm:h-14 text-base sm:text-lg text-center",
                 boxesNum > 0 && "border-info/50 bg-info/5"
               )}
             />
           </div>
           
           <div className="space-y-2">
-            <Label className="text-muted-foreground text-base flex items-center gap-2">
-              <Hash className="w-4 h-4" />
+            <Label className="text-muted-foreground text-sm sm:text-base flex items-center gap-2">
+              <Hash className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {labels.looseLabel}
             </Label>
             <Input
@@ -176,7 +176,7 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
               onChange={(e) => setExtraPacks(e.target.value)}
               placeholder="0"
               className={cn(
-                "bg-secondary/50 border-border h-14 text-lg text-center",
+                "bg-secondary/50 border-border h-12 sm:h-14 text-base sm:text-lg text-center",
                 packsNum > 0 && "border-success/50 bg-success/5"
               )}
             />
@@ -185,18 +185,18 @@ export function AddStockModal({ isOpen, onClose, onSubmit, cigarettes }: AddStoc
 
         {/* Preview of what will be added */}
         {isValid && (
-          <div className="bg-success/5 border border-success/20 rounded-xl p-4">
-            <p className="text-sm text-success font-medium mb-2">{t('willBeAdded')}:</p>
+          <div className="bg-success/5 border border-success/20 rounded-xl p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-success font-medium mb-1 sm:mb-2">{t('willBeAdded')}:</p>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t('totalUnits')}</span>
-              <span className="text-2xl font-bold text-success">+{totalUnitsAdding}</span>
+              <span className="text-muted-foreground text-sm">{t('totalUnits')}</span>
+              <span className="text-xl sm:text-2xl font-bold text-success">+{totalUnitsAdding}</span>
             </div>
           </div>
         )}
         
         <Button 
           type="submit" 
-          className="w-full btn-gradient-info py-6 text-lg" 
+          className="w-full btn-gradient-info py-5 sm:py-6 text-base sm:text-lg rounded-xl sm:rounded-2xl" 
           disabled={!isValid}
         >
           {t('addStock')}

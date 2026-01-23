@@ -46,7 +46,7 @@ export function Modal({ isOpen, onClose, title, children, icon, variant = 'prima
   const styles = variantStyles[variant];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop with blur */}
       <div 
         className="absolute inset-0 bg-background/90 backdrop-blur-xl"
@@ -55,28 +55,28 @@ export function Modal({ isOpen, onClose, title, children, icon, variant = 'prima
       
       {/* Modal content */}
       <div 
-        className="relative w-full max-w-md animate-scale-in"
+        className="relative w-full sm:max-w-md max-h-[90dvh] sm:max-h-[85vh] sm:mx-4 animate-scale-in flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={`glass-card rounded-3xl border ${styles.border} shadow-2xl ${styles.glow} overflow-hidden`}>
+        <div className={`glass-card rounded-t-3xl sm:rounded-3xl border ${styles.border} shadow-2xl ${styles.glow} overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[85vh]`}>
           {/* Decorative glow */}
-          <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-gradient-to-br from-primary/30 to-transparent blur-3xl" />
-          <div className="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-gradient-to-br from-info/20 to-transparent blur-3xl" />
+          <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-gradient-to-br from-primary/30 to-transparent blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-gradient-to-br from-info/20 to-transparent blur-3xl pointer-events-none" />
           
-          {/* Header with gradient */}
-          <div className={`relative bg-gradient-to-l ${styles.gradient} px-6 py-6 border-b border-white/10`}>
+          {/* Header with gradient - fixed at top */}
+          <div className={`relative bg-gradient-to-l ${styles.gradient} px-5 sm:px-6 py-4 sm:py-6 border-b border-white/10 flex-shrink-0`}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 {icon && (
-                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${styles.iconBg} flex items-center justify-center shadow-lg`}>
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br ${styles.iconBg} flex items-center justify-center shadow-lg flex-shrink-0`}>
                     {icon}
                   </div>
                 )}
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">
+                  <h2 className="text-lg sm:text-xl font-bold text-foreground">
                     {title}
                   </h2>
-                  <div className="flex items-center gap-1 mt-1 text-muted-foreground text-sm">
+                  <div className="flex items-center gap-1 mt-0.5 sm:mt-1 text-muted-foreground text-xs sm:text-sm">
                     <Sparkles className="h-3 w-3" />
                     <span>{t('fillForm')}</span>
                   </div>
@@ -84,15 +84,15 @@ export function Modal({ isOpen, onClose, title, children, icon, variant = 'prima
               </div>
               <button
                 onClick={onClose}
-                className="w-10 h-10 rounded-xl bg-secondary/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-destructive/20 hover:text-destructive hover:scale-110 active:scale-95 transition-all duration-200"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-secondary/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-destructive/20 hover:text-destructive hover:scale-110 active:scale-95 transition-all duration-200 flex-shrink-0"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
           </div>
           
-          {/* Content */}
-          <div className="relative p-6 md:p-7">
+          {/* Content - scrollable */}
+          <div className="relative p-4 sm:p-6 md:p-7 overflow-y-auto flex-1 overscroll-contain">
             {children}
           </div>
         </div>

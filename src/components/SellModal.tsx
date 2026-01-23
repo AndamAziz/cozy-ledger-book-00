@@ -128,9 +128,9 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('recordSale')}>
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         <div className="space-y-2">
-          <Label className="text-muted-foreground">{t('day')}</Label>
+          <Label className="text-muted-foreground text-sm sm:text-base">{t('day')}</Label>
           <DayPicker
             value={day}
             onChange={setDay}
@@ -140,9 +140,9 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
         </div>
 
         <div className="space-y-2">
-          <Label className="text-muted-foreground">{t('productType')}</Label>
+          <Label className="text-muted-foreground text-sm sm:text-base">{t('productType')}</Label>
           <Select value={selectedId} onValueChange={setSelectedId}>
-            <SelectTrigger className="bg-secondary/50 border-border">
+            <SelectTrigger className="bg-secondary/50 border-border h-12 sm:h-14">
               <SelectValue placeholder={t('selectProduct')} />
             </SelectTrigger>
             <SelectContent>
@@ -166,8 +166,8 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
 
         {/* Show selected product info */}
         {selectedCigarette && (
-          <div className="bg-info/5 border border-info/20 rounded-xl p-3">
-            <div className="flex items-center justify-between text-sm">
+          <div className="bg-info/5 border border-info/20 rounded-xl p-2.5 sm:p-3">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
               <span className="text-muted-foreground flex items-center gap-2">
                 {unitTypeIcons[selectedCigarette.unitType || 'box']}
                 {t(`unitType${(selectedCigarette.unitType || 'box').charAt(0).toUpperCase() + (selectedCigarette.unitType || 'box').slice(1)}` as any)}
@@ -179,9 +179,9 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
           </div>
         )}
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div className="space-y-2">
-            <Label className="text-muted-foreground">{labels.quantityLabel}</Label>
+            <Label className="text-muted-foreground text-xs sm:text-sm">{labels.quantityLabel}</Label>
             <Input
               type="number"
               min={0.01}
@@ -189,12 +189,12 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
               value={packs}
               onChange={(e) => setPacks(e.target.value)}
               placeholder="1"
-              className="bg-secondary/50 border-border"
+              className="bg-secondary/50 border-border h-12 sm:h-14 text-base"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-muted-foreground">{labels.priceLabel} £</Label>
+            <Label className="text-muted-foreground text-xs sm:text-sm">{labels.priceLabel} £</Label>
             <Input
               type="number"
               min={0}
@@ -202,20 +202,20 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
               value={packPrice}
               onChange={(e) => setPackPrice(e.target.value)}
               placeholder="0"
-              className="bg-secondary/50 border-border"
+              className="bg-secondary/50 border-border h-12 sm:h-14 text-base"
               required
             />
           </div>
         </div>
         
-        <div className="bg-success/10 p-5 rounded-xl text-center">
-          <Label className="text-success text-sm">{t('total')}</Label>
-          <div className="text-3xl font-bold text-success mt-1">
+        <div className="bg-success/10 p-4 sm:p-5 rounded-xl text-center">
+          <Label className="text-success text-xs sm:text-sm">{t('total')}</Label>
+          <div className="text-2xl sm:text-3xl font-bold text-success mt-1">
             {formatCurrency(total)}
           </div>
         </div>
         
-        <Button type="submit" className="w-full btn-gradient-primary py-6 text-lg">
+        <Button type="submit" className="w-full btn-gradient-primary py-5 sm:py-6 text-base sm:text-lg rounded-xl sm:rounded-2xl">
           {t('recordSale')}
         </Button>
       </form>

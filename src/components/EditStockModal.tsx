@@ -102,25 +102,25 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
       icon={<Settings className="w-5 h-5" />}
       variant="info"
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         {/* Product Info Header */}
         {cigarette && (
-          <div className="bg-secondary/30 rounded-xl p-4 mb-4">
-            <h3 className="text-lg font-bold text-foreground mb-1 flex items-center gap-2">
+          <div className="bg-secondary/30 rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-bold text-foreground mb-1 flex items-center gap-2">
               {unitTypeIcons[cigarette.unitType || 'box']}
               {cigarette.name}
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               {cigarette.packsPerBox} {t('unitsPerBox')}
             </p>
           </div>
         )}
 
         {/* Input Grid */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div className="space-y-2">
-            <Label className="text-muted-foreground flex items-center gap-2">
-              <Boxes className="w-4 h-4" />
+            <Label className="text-muted-foreground flex items-center gap-2 text-sm sm:text-base">
+              <Boxes className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {labels.containerLabel}
             </Label>
             <Input
@@ -131,15 +131,15 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
               onChange={(e) => setBoxes(e.target.value)}
               placeholder="0"
               className={cn(
-                "bg-secondary/50 border-border h-14 text-lg text-center",
+                "bg-secondary/50 border-border h-12 sm:h-14 text-base sm:text-lg text-center",
                 boxesNum > 0 && "border-info/50 bg-info/5"
               )}
             />
           </div>
           
           <div className="space-y-2">
-            <Label className="text-muted-foreground flex items-center gap-2">
-              <Hash className="w-4 h-4" />
+            <Label className="text-muted-foreground flex items-center gap-2 text-sm sm:text-base">
+              <Hash className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {labels.looseLabel}
             </Label>
             <Input
@@ -150,7 +150,7 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
               onChange={(e) => setExtraPacks(e.target.value)}
               placeholder="0"
               className={cn(
-                "bg-secondary/50 border-border h-14 text-lg text-center",
+                "bg-secondary/50 border-border h-12 sm:h-14 text-base sm:text-lg text-center",
                 packsNum > 0 && "border-success/50 bg-success/5"
               )}
             />
@@ -158,11 +158,11 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
         </div>
 
         {/* Total Units Preview */}
-        <div className="bg-info/5 border border-info/20 rounded-xl p-4">
+        <div className="bg-info/5 border border-info/20 rounded-xl p-3 sm:p-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">{t('totalUnits')}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">{t('totalUnits')}</span>
             <span className={cn(
-              "text-2xl font-bold",
+              "text-xl sm:text-2xl font-bold",
               totalUnits === 0 ? "text-muted-foreground" : "text-info"
             )}>
               {totalUnits}
@@ -170,7 +170,7 @@ export function EditStockModal({ isOpen, onClose, onSubmit, cigarette }: EditSto
           </div>
         </div>
         
-        <Button type="submit" className="w-full btn-gradient-info py-6 text-lg">
+        <Button type="submit" className="w-full btn-gradient-info py-5 sm:py-6 text-base sm:text-lg rounded-xl sm:rounded-2xl">
           {t('update')}
         </Button>
       </form>

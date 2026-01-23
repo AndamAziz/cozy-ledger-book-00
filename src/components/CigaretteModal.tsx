@@ -130,25 +130,25 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
       onClose={onClose} 
       title={editingCigarette ? t('editProduct') : t('addProduct')}
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
         {/* Product Name */}
         <div className="space-y-2">
-          <Label className="text-muted-foreground">{t('name')}</Label>
+          <Label className="text-muted-foreground text-sm sm:text-base">{t('name')}</Label>
           <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t('name')}
-            className="bg-secondary/50 border-border"
+            className="bg-secondary/50 border-border h-12 sm:h-14 text-base"
             required
           />
         </div>
 
         {/* Unit Type Selection */}
         <div className="space-y-2">
-          <Label className="text-muted-foreground">{t('unitType')}</Label>
+          <Label className="text-muted-foreground text-sm sm:text-base">{t('unitType')}</Label>
           <Select value={unitType} onValueChange={(value: UnitType) => setUnitType(value)}>
-            <SelectTrigger className="bg-secondary/50 border-border h-12">
+            <SelectTrigger className="bg-secondary/50 border-border h-12 sm:h-14">
               <SelectValue placeholder={t('selectUnitType')} />
             </SelectTrigger>
             <SelectContent className="bg-popover border-border">
@@ -193,9 +193,9 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
         </div>
         
         {/* Pricing Grid */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div className="space-y-2">
-            <Label className="text-muted-foreground">{labels.containerPriceLabel} £</Label>
+            <Label className="text-muted-foreground text-xs sm:text-sm">{labels.containerPriceLabel} £</Label>
             <Input
               type="number"
               min={0}
@@ -203,12 +203,12 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
               value={boxPrice}
               onChange={(e) => setBoxPrice(e.target.value)}
               placeholder="0"
-              className="bg-secondary/50 border-border"
+              className="bg-secondary/50 border-border h-12 sm:h-14 text-base"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-muted-foreground">{labels.unitsLabel}</Label>
+            <Label className="text-muted-foreground text-xs sm:text-sm">{labels.unitsLabel}</Label>
             <Input
               type="number"
               min={0.01}
@@ -216,15 +216,15 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
               value={packsPerBox}
               onChange={(e) => setPacksPerBox(e.target.value)}
               placeholder="1"
-              className="bg-secondary/50 border-border"
+              className="bg-secondary/50 border-border h-12 sm:h-14 text-base"
               required
             />
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div className="space-y-2">
-            <Label className="text-muted-foreground">{t('sellPrice')} £</Label>
+            <Label className="text-muted-foreground text-xs sm:text-sm">{t('sellPrice')} £</Label>
             <Input
               type="number"
               min={0}
@@ -232,33 +232,33 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
               value={sellPrice}
               onChange={(e) => setSellPrice(e.target.value)}
               placeholder="0"
-              className="bg-secondary/50 border-border"
+              className="bg-secondary/50 border-border h-12 sm:h-14 text-base"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-muted-foreground">{t('alertLevel')}</Label>
+            <Label className="text-muted-foreground text-xs sm:text-sm">{t('alertLevel')}</Label>
             <Input
               type="number"
               min={0}
               value={alertLevel}
               onChange={(e) => setAlertLevel(e.target.value)}
               placeholder="20"
-              className="bg-secondary/50 border-border"
+              className="bg-secondary/50 border-border h-12 sm:h-14 text-base"
               required
             />
           </div>
         </div>
         
         {/* Calculated Unit Price */}
-        <div className="bg-info/10 p-4 rounded-xl">
-          <Label className="text-info text-sm">{labels.priceLabel}:</Label>
-          <div className="text-2xl font-bold text-info mt-1">
+        <div className="bg-info/10 p-3 sm:p-4 rounded-xl">
+          <Label className="text-info text-xs sm:text-sm">{labels.priceLabel}:</Label>
+          <div className="text-xl sm:text-2xl font-bold text-info mt-1">
             £{packPrice.toFixed(2)}
           </div>
         </div>
         
-        <Button type="submit" className="w-full btn-gradient-accent py-6 text-lg">
+        <Button type="submit" className="w-full btn-gradient-accent py-5 sm:py-6 text-base sm:text-lg rounded-xl sm:rounded-2xl">
           {editingCigarette ? t('update') : t('add')}
         </Button>
       </form>
