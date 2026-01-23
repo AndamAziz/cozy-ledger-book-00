@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Modal } from './Modal';
@@ -9,6 +8,7 @@ import { formatCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Box, Ruler, Hash, Scale, Droplets, Package } from 'lucide-react';
 import { DayPicker } from './DayPicker';
+import { NumericInput } from './NumericInput';
 
 interface SellModalProps {
   isOpen: boolean;
@@ -182,27 +182,19 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div className="space-y-2">
             <Label className="text-muted-foreground text-xs sm:text-sm">{labels.quantityLabel}</Label>
-            <Input
-              type="number"
-              min={0.01}
-              step={0.01}
+            <NumericInput
               value={packs}
-              onChange={(e) => setPacks(e.target.value)}
+              onChange={setPacks}
               placeholder="1"
-              className="bg-secondary/50 border-border h-12 sm:h-14 text-base"
               required
             />
           </div>
           <div className="space-y-2">
             <Label className="text-muted-foreground text-xs sm:text-sm">{labels.priceLabel} £</Label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
+            <NumericInput
               value={packPrice}
-              onChange={(e) => setPackPrice(e.target.value)}
+              onChange={setPackPrice}
               placeholder="0"
-              className="bg-secondary/50 border-border h-12 sm:h-14 text-base"
               required
             />
           </div>
