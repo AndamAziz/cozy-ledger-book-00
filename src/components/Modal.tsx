@@ -46,7 +46,7 @@ export function Modal({ isOpen, onClose, title, children, icon, variant = 'prima
   const styles = variantStyles[variant];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center pt-8 sm:pt-0">
       {/* Backdrop with blur */}
       <div 
         className="absolute inset-0 bg-background/90 backdrop-blur-xl"
@@ -55,10 +55,10 @@ export function Modal({ isOpen, onClose, title, children, icon, variant = 'prima
       
       {/* Modal content */}
       <div 
-        className="relative w-full sm:max-w-md max-h-[90dvh] sm:max-h-[85vh] sm:mx-4 animate-scale-in flex flex-col"
+        className="relative w-full sm:max-w-md max-h-[85dvh] sm:max-h-[85vh] sm:mx-4 animate-scale-in flex flex-col mx-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={`glass-card rounded-t-3xl sm:rounded-3xl border ${styles.border} shadow-2xl ${styles.glow} overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[85vh]`}>
+        <div className={`glass-card rounded-2xl sm:rounded-3xl border ${styles.border} shadow-2xl ${styles.glow} overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[85vh]`}>
           {/* Decorative glow */}
           <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-gradient-to-br from-primary/30 to-transparent blur-3xl pointer-events-none" />
           <div className="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-gradient-to-br from-info/20 to-transparent blur-3xl pointer-events-none" />
