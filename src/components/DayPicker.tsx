@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { formatDate } from '@/lib/format';
 
 interface DayPickerProps {
   value: number;
@@ -45,7 +46,7 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
     setOpen(false);
   };
   
-  const displayLabel = `${t('dayOf')} ${value}`;
+  const displayLabel = formatDate(value, monthKey);
   
   // Generate calendar grid
   const calendarDays = [];
@@ -88,8 +89,7 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
           )}
         >
           <Calendar className="h-5 w-5 ml-3 text-primary" />
-          <span className="font-semibold">{displayLabel}</span>
-          <span className="text-muted-foreground text-sm mr-auto">({month}/{year})</span>
+          <span className="font-semibold font-mono">{displayLabel}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent 

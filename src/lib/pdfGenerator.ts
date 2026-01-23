@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Income, Expense, Cigarette, Sale } from '@/types/finance';
+import { formatCurrentDate } from '@/lib/format';
 
 interface ReportData {
   monthLabel: string;
@@ -19,19 +20,21 @@ interface ReportData {
   };
 }
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 // Convert month key like "2025-01" or "01 / 2025" to "January 2025"
 function formatMonthLabel(label: string): string {
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-  
   // Handle format "01 / 2025"
   const slashMatch = label.match(/(\d{2})\s*\/\s*(\d{4})/);
   if (slashMatch) {
     const monthIndex = parseInt(slashMatch[1], 10) - 1;
     const year = slashMatch[2];
-    return `${monthNames[monthIndex]} ${year}`;
+    return `${MONTH_NAMES[monthIndex]} ${year}`;
   }
   
   // Handle format "2025-01"
@@ -39,10 +42,31 @@ function formatMonthLabel(label: string): string {
   if (dashMatch) {
     const year = dashMatch[1];
     const monthIndex = parseInt(dashMatch[2], 10) - 1;
-    return `${monthNames[monthIndex]} ${year}`;
+    return `${MONTH_NAMES[monthIndex]} ${year}`;
   }
   
   return label;
+}
+
+// Format day with month abbreviation: "1-Jan-2026"
+function formatDayWithMonth(day: number, monthLabel: string): string {
+  // Handle format "01 / 2025"
+  const slashMatch = monthLabel.match(/(\d{2})\s*\/\s*(\d{4})/);
+  if (slashMatch) {
+    const monthIndex = parseInt(slashMatch[1], 10) - 1;
+    const year = slashMatch[2];
+    return `${day}-${MONTH_ABBR[monthIndex]}-${year}`;
+  }
+  
+  // Handle format "2025-01"
+  const dashMatch = monthLabel.match(/(\d{4})-(\d{2})/);
+  if (dashMatch) {
+    const year = dashMatch[1];
+    const monthIndex = parseInt(dashMatch[2], 10) - 1;
+    return `${day}-${MONTH_ABBR[monthIndex]}-${year}`;
+  }
+  
+  return `Day ${day}`;
 }
 
 // Format currency properly
@@ -126,9 +150,9 @@ export function generatePDFReport(data: ReportData): void {
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Day', 'Cash', 'Card', 'Total', 'Note']],
+      head: [['Date', 'Cash', 'Card', 'Total', 'Note']],
       body: incomeData.map(inc => [
-        `Day ${inc.day}`,
+        formatDayWithMonth(inc.day, monthLabel),
         formatMoney(inc.cash),
         formatMoney(inc.card),
         formatMoney(inc.total),
@@ -167,9 +191,9 @@ export function generatePDFReport(data: ReportData): void {
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Day', 'Description', 'Amount']],
+      head: [['Date', 'Description', 'Amount']],
       body: purchases.map(exp => [
-        `Day ${exp.day}`,
+        formatDayWithMonth(exp.day, monthLabel),
         exp.description ? (exp.description.length > 40 ? exp.description.substring(0, 40) + '...' : exp.description) : '-',
         formatMoney(exp.amount),
       ]),
@@ -206,9 +230,9 @@ export function generatePDFReport(data: ReportData): void {
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Day', 'Description', 'Amount']],
+      head: [['Date', 'Description', 'Amount']],
       body: costs.map(exp => [
-        `Day ${exp.day}`,
+        formatDayWithMonth(exp.day, monthLabel),
         exp.description ? (exp.description.length > 40 ? exp.description.substring(0, 40) + '...' : exp.description) : '-',
         formatMoney(exp.amount),
       ]),
@@ -293,9 +317,9 @@ export function generatePDFReport(data: ReportData): void {
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Day', 'Product', 'Packs', 'Total Sale', 'Profit']],
+      head: [['Date', 'Product', 'Packs', 'Total Sale', 'Profit']],
       body: salesData.map(sale => [
-        `Day ${sale.day}`,
+        formatDayWithMonth(sale.day, monthLabel),
         sale.cigaretteName || '-',
         (typeof sale.packs === 'number' ? sale.packs : 0).toString(),
         formatMoney(sale.totalSale),
@@ -317,8 +341,7 @@ export function generatePDFReport(data: ReportData): void {
 
   // Footer
   const pageCount = doc.getNumberOfPages();
-  const today = new Date();
-  const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+  const dateStr = formatCurrentDate();
   
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);

@@ -4,7 +4,7 @@ import { SummaryCard } from './SummaryCard';
 import { IncomeModal } from './IncomeModal';
 import { ExpenseModal } from './ExpenseModal';
 import { Income, Expense, ExpenseType } from '@/types/finance';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { Plus, Minus, Pencil, Trash2, ShoppingCart, Receipt } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -185,8 +185,7 @@ export function FinanceTab({
         ) : (
           <div className="space-y-4">
             {incomeData.map((income, index) => {
-              const [year, month] = currentMonthKey.split('-');
-              const dateStr = `${income.day.toString().padStart(2, '0')}-${month}-${year}`;
+              const dateStr = formatDate(income.day, currentMonthKey);
               
               return (
                 <div 
@@ -273,8 +272,7 @@ export function FinanceTab({
         ) : (
           <div className="space-y-4">
             {purchaseData.map((expense, index) => {
-              const [year, month] = currentMonthKey.split('-');
-              const dateStr = `${expense.day.toString().padStart(2, '0')}-${month}-${year}`;
+              const dateStr = formatDate(expense.day, currentMonthKey);
               
               return (
                 <div 
@@ -351,8 +349,7 @@ export function FinanceTab({
         ) : (
           <div className="space-y-4">
             {costData.map((expense, index) => {
-              const [year, month] = currentMonthKey.split('-');
-              const dateStr = `${expense.day.toString().padStart(2, '0')}-${month}-${year}`;
+              const dateStr = formatDate(expense.day, currentMonthKey);
               
               return (
                 <div 

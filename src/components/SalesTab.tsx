@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { SummaryCard } from './SummaryCard';
 import { SellModal } from './SellModal';
 import { Cigarette, Sale } from '@/types/finance';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { ShoppingCart, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -79,8 +79,7 @@ export function SalesTab({
         ) : (
           <div className="space-y-3">
             {salesData.map((sale, index) => {
-              const [year, month] = currentMonthKey.split('-');
-              const dateStr = `${sale.day.toString().padStart(2, '0')}-${month}-${year}`;
+              const dateStr = formatDate(sale.day, currentMonthKey);
               
               return (
                 <div 

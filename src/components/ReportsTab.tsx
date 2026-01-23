@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { SummaryCard } from './SummaryCard';
 import { DailyIncomeChart, SalesByProductChart, ProfitChart, IncomeExpenseComparison } from './Charts';
 import { Cigarette, Sale, Income, Expense } from '@/types/finance';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { generatePDFReport } from '@/lib/pdfGenerator';
 import { FileDown, Share2, TrendingUp, Package, ShoppingCart, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ interface ReportsTabProps {
     totalCard: number;
   };
   currentMonthLabel: string;
+  currentMonthKey: string;
 }
 
 export function ReportsTab({
@@ -32,6 +33,7 @@ export function ReportsTab({
   salesData,
   summary,
   currentMonthLabel,
+  currentMonthKey,
 }: ReportsTabProps) {
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -359,7 +361,7 @@ export function ReportsTab({
                   </div>
                   <div>
                     <div className="font-bold text-foreground">{exp.description}</div>
-                    <div className="text-sm text-muted-foreground">{t('day')} {exp.day}</div>
+                    <div className="text-sm text-muted-foreground font-mono">{formatDate(exp.day, currentMonthKey)}</div>
                   </div>
                 </div>
                 <div className="text-destructive font-bold text-lg">{formatCurrency(exp.amount)}</div>
