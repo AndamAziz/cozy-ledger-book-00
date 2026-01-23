@@ -17,6 +17,8 @@ export interface Expense {
   expenseType: ExpenseType;
 }
 
+export type UnitType = 'box' | 'meter' | 'piece' | 'kg' | 'liter' | 'pack';
+
 export interface Cigarette {
   id: string | number;
   name: string;
@@ -27,6 +29,7 @@ export interface Cigarette {
   alertLevel: number;
   boxes: number;
   extraPacks: number;
+  unitType: UnitType;
 }
 
 export interface Sale {

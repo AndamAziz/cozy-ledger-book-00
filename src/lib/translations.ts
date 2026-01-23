@@ -53,6 +53,24 @@ export const translations = {
     selectProductPlaceholder: 'بەرهەمێک هەڵبژێرە...',
     willBeAdded: 'زیاد دەکرێت',
     
+    // Unit Types
+    unitType: 'جۆری یەکە',
+    selectUnitType: 'جۆری یەکە هەڵبژێرە',
+    unitTypeBox: 'بۆکس',
+    unitTypePiece: 'دانە',
+    unitTypePack: 'پاکەت',
+    unitTypeMeter: 'مەتر',
+    unitTypeKg: 'کیلۆگرام',
+    unitTypeLiter: 'لیتر',
+    unitsPerContainer: 'یەکە لە کۆنتەینەرێک',
+    piecesPerContainer: 'دانە لە کۆنتەینەرێک',
+    unitsPerPack: 'یەکە لە پاکەتێک',
+    pricePerMeter: 'نرخی مەترێک',
+    pricePerKg: 'نرخی کیلۆیەک',
+    pricePerLiter: 'نرخی لیترێک',
+    pricePerPiece: 'نرخی دانەیەک',
+    pricePerUnit: 'نرخی یەکەیەک',
+    
     // Sales Tab
     todaySales: 'فرۆشتنی ئەمڕۆ',
     monthlySales: 'فرۆشتنی مانگانە',
@@ -425,6 +443,24 @@ export const translations = {
     stock: 'Stock',
     selectProductPlaceholder: 'Select a product...',
     willBeAdded: 'Will be added',
+    
+    // Unit Types
+    unitType: 'Unit Type',
+    selectUnitType: 'Select unit type',
+    unitTypeBox: 'Box',
+    unitTypePiece: 'Piece',
+    unitTypePack: 'Pack',
+    unitTypeMeter: 'Meter',
+    unitTypeKg: 'Kilogram',
+    unitTypeLiter: 'Liter',
+    unitsPerContainer: 'Units per container',
+    piecesPerContainer: 'Pieces per container',
+    unitsPerPack: 'Units per pack',
+    pricePerMeter: 'Price per meter',
+    pricePerKg: 'Price per kg',
+    pricePerLiter: 'Price per liter',
+    pricePerPiece: 'Price per piece',
+    pricePerUnit: 'Price per unit',
     
     // Sales Tab
     todaySales: "Today's Sales",
@@ -799,6 +835,24 @@ export const translations = {
     selectProductPlaceholder: 'اختر منتجاً...',
     willBeAdded: 'سيتم إضافة',
     
+    // Unit Types
+    unitType: 'نوع الوحدة',
+    selectUnitType: 'اختر نوع الوحدة',
+    unitTypeBox: 'صندوق',
+    unitTypePiece: 'قطعة',
+    unitTypePack: 'علبة',
+    unitTypeMeter: 'متر',
+    unitTypeKg: 'كيلوغرام',
+    unitTypeLiter: 'لتر',
+    unitsPerContainer: 'وحدات لكل حاوية',
+    piecesPerContainer: 'قطع لكل حاوية',
+    unitsPerPack: 'وحدات لكل علبة',
+    pricePerMeter: 'السعر لكل متر',
+    pricePerKg: 'السعر لكل كيلو',
+    pricePerLiter: 'السعر لكل لتر',
+    pricePerPiece: 'السعر لكل قطعة',
+    pricePerUnit: 'السعر لكل وحدة',
+    
     // Sales Tab
     todaySales: 'مبيعات اليوم',
     monthlySales: 'المبيعات الشهرية',
@@ -1171,6 +1225,24 @@ export const translations = {
     stock: 'موجودی',
     selectProductPlaceholder: 'محصول انتخاب کنید...',
     willBeAdded: 'اضافه خواهد شد',
+    
+    // Unit Types
+    unitType: 'نوع واحد',
+    selectUnitType: 'نوع واحد را انتخاب کنید',
+    unitTypeBox: 'جعبه',
+    unitTypePiece: 'عدد',
+    unitTypePack: 'بسته',
+    unitTypeMeter: 'متر',
+    unitTypeKg: 'کیلوگرم',
+    unitTypeLiter: 'لیتر',
+    unitsPerContainer: 'واحد در هر ظرف',
+    piecesPerContainer: 'عدد در هر ظرف',
+    unitsPerPack: 'واحد در هر بسته',
+    pricePerMeter: 'قیمت هر متر',
+    pricePerKg: 'قیمت هر کیلو',
+    pricePerLiter: 'قیمت هر لیتر',
+    pricePerPiece: 'قیمت هر عدد',
+    pricePerUnit: 'قیمت هر واحد',
     
     // Sales Tab
     todaySales: 'فروش امروز',
