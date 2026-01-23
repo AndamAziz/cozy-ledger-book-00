@@ -89,9 +89,9 @@ export function InventoryTab({
     };
   };
 
-  // Format number - show dash for zero values
+  // Format number - always show the number including zero
   const formatNum = (num: number | undefined) => {
-    if (num === undefined || num === null || num === 0) return '—';
+    if (num === undefined || num === null) return '0';
     return num.toLocaleString();
   };
 
@@ -234,11 +234,8 @@ export function InventoryTab({
                     <div className="flex items-center justify-center gap-1.5 text-muted-foreground mb-1">
                       <span className="text-[10px] uppercase font-medium">💰 {t('value')}</span>
                     </div>
-                    <div className={cn(
-                      'text-xl font-bold',
-                      totalValue === 0 ? 'text-muted-foreground/50' : 'text-foreground'
-                    )}>
-                      {totalValue === 0 ? '—' : formatCurrency(totalValue)}
+                    <div className="text-xl font-bold text-foreground">
+                      {formatCurrency(totalValue)}
                     </div>
                   </div>
                 </div>

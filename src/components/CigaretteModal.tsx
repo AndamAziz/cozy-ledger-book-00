@@ -16,7 +16,7 @@ interface CigaretteModalProps {
 export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: CigaretteModalProps) {
   const [name, setName] = useState('');
   const [boxPrice, setBoxPrice] = useState(0);
-  const [packsPerBox, setPacksPerBox] = useState(10);
+  const [packsPerBox, setPacksPerBox] = useState(1);
   const [sellPrice, setSellPrice] = useState(0);
   const [alertLevel, setAlertLevel] = useState(20);
   const { t } = useLanguage();
@@ -31,7 +31,7 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
     } else {
       setName('');
       setBoxPrice(0);
-      setPacksPerBox(10);
+      setPacksPerBox(1);
       setSellPrice(0);
       setAlertLevel(20);
     }
@@ -87,12 +87,13 @@ export function CigaretteModal({ isOpen, onClose, onSubmit, editingCigarette }: 
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-muted-foreground">{t('packsPerBox')}</Label>
+            <Label className="text-muted-foreground">{t('unitsPerBox')}</Label>
             <Input
               type="number"
-              min={1}
+              min={0.01}
+              step={0.01}
               value={packsPerBox}
-              onChange={(e) => setPacksPerBox(parseInt(e.target.value) || 10)}
+              onChange={(e) => setPacksPerBox(parseFloat(e.target.value) || 1)}
               className="bg-secondary/50 border-border"
               required
             />
