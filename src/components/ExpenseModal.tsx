@@ -60,49 +60,49 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
       icon={isPurchase ? <ShoppingCart className="h-6 w-6 text-white" /> : <Receipt className="h-6 w-6 text-white" />}
       variant={isPurchase ? "accent" : "danger"}
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Expense Type Toggle */}
-        <div className="space-y-3">
-          <Label className="text-foreground font-medium flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center">
-              <FileText className="h-4 w-4 text-muted-foreground" />
+        <div className="space-y-2 sm:space-y-3">
+          <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-secondary/50 flex items-center justify-center">
+              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
             </div>
             {t('expenseType')}
           </Label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setExpenseType('purchase')}
-              className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+              className={`p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-1.5 sm:gap-2 ${
                 expenseType === 'purchase'
                   ? 'border-accent bg-accent/20 text-accent'
                   : 'border-white/10 bg-secondary/30 text-muted-foreground hover:border-white/20'
               }`}
             >
-              <ShoppingCart className="h-6 w-6" />
-              <span className="font-semibold text-sm">{t('purchase')}</span>
-              <span className="text-xs opacity-70">{t('purchaseDesc')}</span>
+              <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="font-semibold text-xs sm:text-sm">{t('purchase')}</span>
+              <span className="text-[10px] sm:text-xs opacity-70 hidden sm:block">{t('purchaseDesc')}</span>
             </button>
             <button
               type="button"
               onClick={() => setExpenseType('cost')}
-              className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+              className={`p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-1.5 sm:gap-2 ${
                 expenseType === 'cost'
                   ? 'border-destructive bg-destructive/20 text-destructive'
                   : 'border-white/10 bg-secondary/30 text-muted-foreground hover:border-white/20'
               }`}
             >
-              <Receipt className="h-6 w-6" />
-              <span className="font-semibold text-sm">{t('cost')}</span>
-              <span className="text-xs opacity-70">{t('costDesc')}</span>
+              <Receipt className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="font-semibold text-xs sm:text-sm">{t('cost')}</span>
+              <span className="text-[10px] sm:text-xs opacity-70 hidden sm:block">{t('costDesc')}</span>
             </button>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-foreground font-medium flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Calendar className="h-4 w-4 text-primary" />
+        <div className="space-y-2 sm:space-y-3">
+          <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
             </div>
             {t('day')}
           </Label>
@@ -114,10 +114,10 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
           />
         </div>
         
-        <div className="space-y-3">
-          <Label className="text-foreground font-medium flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isPurchase ? 'bg-accent/20' : 'bg-destructive/20'}`}>
-              <PoundSterling className={`h-4 w-4 ${isPurchase ? 'text-accent' : 'text-destructive'}`} />
+        <div className="space-y-2 sm:space-y-3">
+          <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
+            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center ${isPurchase ? 'bg-accent/20' : 'bg-destructive/20'}`}>
+              <PoundSterling className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isPurchase ? 'text-accent' : 'text-destructive'}`} />
             </div>
             {t('amount')} £
           </Label>
@@ -127,7 +127,7 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
             placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className={`h-14 text-lg bg-secondary/50 border-white/10 rounded-xl transition-all ${
+            className={`h-12 sm:h-14 text-base sm:text-lg bg-secondary/50 border-white/10 rounded-xl transition-all ${
               isPurchase 
                 ? 'focus:border-accent/50 focus:ring-2 focus:ring-accent/20' 
                 : 'focus:border-destructive/50 focus:ring-2 focus:ring-destructive/20'
@@ -136,10 +136,10 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
           />
         </div>
         
-        <div className="space-y-3">
-          <Label className="text-foreground font-medium flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center">
-              <FileText className="h-4 w-4 text-muted-foreground" />
+        <div className="space-y-2 sm:space-y-3">
+          <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-secondary/50 flex items-center justify-center">
+              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
             </div>
             {t('description')}
           </Label>
@@ -147,14 +147,14 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={isPurchase ? t('purchasePlaceholder') : t('costPlaceholder')}
-            className="bg-secondary/50 border-white/10 rounded-xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 min-h-[100px] text-base transition-all resize-none"
+            className="bg-secondary/50 border-white/10 rounded-xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 min-h-[70px] sm:min-h-[100px] text-sm sm:text-base transition-all resize-none"
             required
           />
         </div>
         
         <Button 
           type="submit" 
-          className={`w-full py-7 text-lg font-bold rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all ${
+          className={`w-full py-5 sm:py-7 text-base sm:text-lg font-bold rounded-xl sm:rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all ${
             isPurchase 
               ? 'btn-gradient-accent shadow-accent/30 hover:shadow-accent/50' 
               : 'btn-gradient-danger shadow-destructive/30 hover:shadow-destructive/50'
