@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from './Modal';
 import { Income } from '@/types/finance';
 import { Calendar, Wallet, CreditCard } from 'lucide-react';
 import { DayPicker } from './DayPicker';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { NumericInput } from './NumericInput';
 
 interface IncomeModalProps {
   isOpen: boolean;
@@ -81,13 +81,11 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
               </div>
               {t('cash')} £
             </Label>
-            <Input
-              type="text"
-              inputMode="decimal"
-              placeholder="0.00"
+            <NumericInput
               value={cash}
-              onChange={(e) => setCash(e.target.value)}
-              className="h-12 sm:h-14 text-base sm:text-lg bg-secondary/50 border-white/10 rounded-xl focus:border-success/50 focus:ring-2 focus:ring-success/20 transition-all"
+              onChange={setCash}
+              placeholder="0.00"
+              className="focus:border-success/50 focus:ring-2 focus:ring-success/20"
               required
             />
           </div>
@@ -98,13 +96,11 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
               </div>
               {t('card')} £
             </Label>
-            <Input
-              type="text"
-              inputMode="decimal"
-              placeholder="0.00"
+            <NumericInput
               value={card}
-              onChange={(e) => setCard(e.target.value)}
-              className="h-12 sm:h-14 text-base sm:text-lg bg-secondary/50 border-white/10 rounded-xl focus:border-info/50 focus:ring-2 focus:ring-info/20 transition-all"
+              onChange={setCard}
+              placeholder="0.00"
+              className="focus:border-info/50 focus:ring-2 focus:ring-info/20"
               required
             />
           </div>

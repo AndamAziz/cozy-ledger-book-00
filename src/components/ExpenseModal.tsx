@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from './Modal';
@@ -8,6 +7,7 @@ import { Expense, ExpenseType } from '@/types/finance';
 import { Calendar, PoundSterling, FileText, ShoppingCart, Receipt } from 'lucide-react';
 import { DayPicker } from './DayPicker';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { NumericInput } from './NumericInput';
 
 interface ExpenseModalProps {
   isOpen: boolean;
@@ -121,17 +121,14 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
             </div>
             {t('amount')} £
           </Label>
-          <Input
-            type="text"
-            inputMode="decimal"
-            placeholder="0.00"
+          <NumericInput
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className={`h-12 sm:h-14 text-base sm:text-lg bg-secondary/50 border-white/10 rounded-xl transition-all ${
-              isPurchase 
-                ? 'focus:border-accent/50 focus:ring-2 focus:ring-accent/20' 
-                : 'focus:border-destructive/50 focus:ring-2 focus:ring-destructive/20'
-            }`}
+            onChange={setAmount}
+            placeholder="0.00"
+            className={isPurchase 
+              ? 'focus:border-accent/50 focus:ring-2 focus:ring-accent/20' 
+              : 'focus:border-destructive/50 focus:ring-2 focus:ring-destructive/20'
+            }
             required
           />
         </div>
