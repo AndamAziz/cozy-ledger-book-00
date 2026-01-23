@@ -146,6 +146,7 @@ export function SalesTab({
         cigarettes={cigaretteData}
         maxDays={maxDays}
         defaultDay={defaultDay}
+        monthKey={currentMonthKey}
       />
     </div>
   );

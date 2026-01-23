@@ -8,6 +8,7 @@ import { Cigarette, Sale, UnitType } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Box, Ruler, Hash, Scale, Droplets, Package } from 'lucide-react';
+import { DayPicker } from './DayPicker';
 
 interface SellModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface SellModalProps {
   cigarettes: Cigarette[];
   maxDays: number;
   defaultDay: number;
+  monthKey: string;
 }
 
 const unitTypeIcons: Record<UnitType, React.ReactNode> = {
@@ -27,7 +29,7 @@ const unitTypeIcons: Record<UnitType, React.ReactNode> = {
   pack: <Package className="w-4 h-4" />,
 };
 
-export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defaultDay }: SellModalProps) {
+export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defaultDay, monthKey }: SellModalProps) {
   const [day, setDay] = useState(defaultDay);
   const [selectedId, setSelectedId] = useState<string>('');
   const [packs, setPacks] = useState<string>('1');
@@ -129,14 +131,11 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
           <Label className="text-muted-foreground">{t('day')}</Label>
-          <Input
-            type="number"
-            min={1}
-            max={maxDays}
+          <DayPicker
             value={day}
-            onChange={(e) => setDay(parseInt(e.target.value) || 1)}
-            className="bg-secondary/50 border-border"
-            required
+            onChange={setDay}
+            maxDays={maxDays}
+            monthKey={monthKey}
           />
         </div>
 
