@@ -93,26 +93,25 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[320px] p-0 rounded-xl border-border/50 bg-card/95 backdrop-blur-xl pointer-events-auto" 
+        className="w-[320px] p-0 rounded-xl border-border/50 bg-card/95 backdrop-blur-xl pointer-events-auto max-h-[80vh] overflow-auto" 
         align="center"
-        side="top"
         sideOffset={8}
-        avoidCollisions={false}
+        collisionPadding={16}
       >
-        <div className="p-4">
+        <div className="p-3">
           {/* Month Header */}
-          <div className="flex items-center justify-center mb-4 pb-3 border-b border-border/40">
-            <span className="text-lg font-bold text-foreground">
+          <div className="flex items-center justify-center mb-3 pb-2 border-b border-border/40">
+            <span className="text-base font-bold text-foreground">
               {month} / {year}
             </span>
           </div>
           
           {/* Day Names Header */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
+          <div className="grid grid-cols-7 gap-0.5 mb-1">
             {dayNames.map((name, index) => (
               <div 
                 key={index} 
-                className="h-8 flex items-center justify-center text-xs font-medium text-muted-foreground"
+                className="h-7 flex items-center justify-center text-xs font-medium text-muted-foreground"
               >
                 {name}
               </div>
@@ -120,12 +119,12 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
           </div>
           
           {/* Calendar Grid */}
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {weeks.map((week, weekIndex) => (
-              <div key={weekIndex} className="grid grid-cols-7 gap-1">
+              <div key={weekIndex} className="grid grid-cols-7 gap-0.5">
                 {week.map((day, dayIndex) => {
                   if (day === null) {
-                    return <div key={dayIndex} className="h-10" />;
+                    return <div key={dayIndex} className="h-8" />;
                   }
                   
                   const isSelected = day === value;
@@ -138,7 +137,7 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
                       variant="ghost"
                       onClick={() => handleDaySelect(day)}
                       className={cn(
-                        "h-10 w-full p-0 font-medium rounded-lg transition-all duration-200",
+                        "h-8 w-full p-0 text-sm font-medium rounded-md transition-all duration-200",
                         isSelected && "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md",
                         !isSelected && isToday && "bg-accent text-accent-foreground",
                         !isSelected && !isToday && "hover:bg-primary/10"
@@ -153,14 +152,14 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
           </div>
           
           {/* Quick Actions */}
-          <div className="mt-4 pt-4 border-t border-border/50 flex gap-2">
+          <div className="mt-3 pt-3 border-t border-border/50 flex gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => handleDaySelect(currentDay || 1)}
               disabled={!isCurrentMonth}
-              className="flex-1 rounded-lg text-xs"
+              className="flex-1 rounded-md text-xs h-8"
             >
               {t('today')}
             </Button>
@@ -169,7 +168,7 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
               variant="outline"
               size="sm"
               onClick={() => handleDaySelect(1)}
-              className="flex-1 rounded-lg text-xs"
+              className="flex-1 rounded-md text-xs h-8"
             >
               {t('firstDay')}
             </Button>
@@ -178,7 +177,7 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
               variant="outline"
               size="sm"
               onClick={() => handleDaySelect(maxDays)}
-              className="flex-1 rounded-lg text-xs"
+              className="flex-1 rounded-md text-xs h-8"
             >
               {t('day')} {maxDays}
             </Button>
