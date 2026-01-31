@@ -94,9 +94,10 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
       </PopoverTrigger>
       <PopoverContent 
         className="w-[320px] p-0 rounded-xl border-border/50 bg-card/95 backdrop-blur-xl pointer-events-auto" 
-        align="start"
+        align="center"
         side="top"
         sideOffset={8}
+        avoidCollisions={false}
       >
         <div className="p-4">
           {/* Month Header */}
