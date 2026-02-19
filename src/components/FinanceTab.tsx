@@ -200,13 +200,13 @@ export function FinanceTab({
                       <span className="text-success font-bold text-[13px] font-mono leading-none">{income.day}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      {/* Cash + Card pills */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <div className="flex items-center gap-1 bg-success/10 px-1.5 py-0.5 rounded-md">
+                      {/* Cash + Card pills — always stacked vertically for consistency */}
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1 bg-success/10 px-1.5 py-0.5 rounded-md w-fit">
                           <Banknote className="h-3 w-3 text-success flex-shrink-0" />
                           <span className="text-success text-[11px] font-semibold font-mono">{formatCurrency(income.cash)}</span>
                         </div>
-                        <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md">
+                        <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md w-fit">
                           <CreditCard className="h-3 w-3 text-info flex-shrink-0" />
                           <span className="text-info text-[11px] font-semibold font-mono">{formatCurrency(income.card)}</span>
                         </div>
