@@ -89,22 +89,22 @@ export function SalesTab({
                   className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 px-3 py-2.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 active:scale-[0.99] transition-all duration-200"
                   style={{ animationDelay: `${index * 40}ms` }}
                 >
-                  {/* Top row: day badge + name/date + total + delete */}
-                  <div className="flex items-center gap-2">
-                    {/* Day badge */}
-                    <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/20 flex items-center justify-center">
-                      <span className="text-primary font-bold text-xs font-mono leading-none">{sale.day}</span>
+                  {/* Single row: day badge + name/pills + total + delete */}
+                  <div className="flex items-center gap-3">
+                    {/* Day badge — rounded-full circle, fixed size */}
+                    <div className="w-9 h-9 flex-shrink-0 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/30 flex items-center justify-center shadow-sm">
+                      <span className="text-primary font-bold text-[13px] font-mono leading-none">{sale.day}</span>
                     </div>
 
-                    {/* Name + pills */}
+                    {/* Name + pills — always stacked vertically */}
                     <div className="flex-1 min-w-0">
                       <p className="text-foreground text-xs font-semibold truncate leading-tight">{sale.cigaretteName}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <div className="flex items-center gap-1 bg-secondary/60 px-1.5 py-0.5 rounded-md">
+                      <div className="flex flex-col gap-0.5 mt-0.5">
+                        <div className="flex items-center gap-1 bg-secondary/60 px-1.5 py-0.5 rounded-md w-fit">
                           <Package className="h-2.5 w-2.5 text-muted-foreground flex-shrink-0" />
                           <span className="text-muted-foreground text-[11px] font-mono">{sale.packs} {t('packs')}</span>
                         </div>
-                        <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md">
+                        <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md w-fit">
                           <TrendingUp className="h-2.5 w-2.5 text-info flex-shrink-0" />
                           <span className="text-info text-[11px] font-semibold font-mono">{formatCurrency(sale.profit)}</span>
                         </div>
@@ -112,7 +112,7 @@ export function SalesTab({
                     </div>
 
                     {/* Total */}
-                    <div className="text-success font-bold text-sm font-mono flex-shrink-0">{formatCurrency(sale.totalSale)}</div>
+                    <div className="text-success font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(sale.totalSale)}</div>
 
                     {/* Delete */}
                     <button
