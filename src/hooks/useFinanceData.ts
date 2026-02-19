@@ -19,6 +19,22 @@ function isCurrentMonth(monthKey: string) {
   return now.getFullYear() === year && (now.getMonth() + 1) === month;
 }
 
+export interface PrevMonthSummary {
+  totalCash: number;
+  totalCard: number;
+  totalIncome: number;
+  totalExpense: number;
+  totalPurchase: number;
+  totalCost: number;
+  balance: number;
+}
+
+function getPrevMonthKey(monthKey: string): string {
+  const { year, month } = parseMonthKey(monthKey);
+  const prevDate = new Date(year, month - 2, 1); // month-2 because month is 1-indexed
+  return `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+}
+
 export function useFinanceData() {
   const { user } = useAuth();
   const [currentMonthKey, setCurrentMonthKey] = useState(() => {
@@ -32,6 +48,7 @@ export function useFinanceData() {
   const [expenseData, setExpenseData] = useState<Expense[]>([]);
   const [cigaretteData, setCigaretteData] = useState<Cigarette[]>([]);
   const [salesData, setSalesData] = useState<Sale[]>([]);
+  const [prevMonthSummary, setPrevMonthSummary] = useState<PrevMonthSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load data from database
@@ -44,34 +61,24 @@ export function useFinanceData() {
     setIsLoading(true);
 
     try {
-      // Load incomes
-      const { data: incomes } = await supabase
-        .from('incomes')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('month_key', currentMonthKey)
-        .order('day', { ascending: true });
+      const prevMonthKey = getPrevMonthKey(currentMonthKey);
 
-      // Load expenses
-      const { data: expenses } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('month_key', currentMonthKey);
-
-      // Load cigarettes
-      const { data: cigarettes } = await supabase
-        .from('cigarettes')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('month_key', currentMonthKey);
-
-      // Load sales
-      const { data: sales } = await supabase
-        .from('sales')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('month_key', currentMonthKey);
+      // Load current + previous month data in parallel
+      const [
+        { data: incomes },
+        { data: expenses },
+        { data: cigarettes },
+        { data: sales },
+        { data: prevIncomes },
+        { data: prevExpenses },
+      ] = await Promise.all([
+        supabase.from('incomes').select('*').eq('user_id', user.id).eq('month_key', currentMonthKey).order('day', { ascending: true }),
+        supabase.from('expenses').select('*').eq('user_id', user.id).eq('month_key', currentMonthKey),
+        supabase.from('cigarettes').select('*').eq('user_id', user.id).eq('month_key', currentMonthKey),
+        supabase.from('sales').select('*').eq('user_id', user.id).eq('month_key', currentMonthKey),
+        supabase.from('incomes').select('cash, card').eq('user_id', user.id).eq('month_key', prevMonthKey),
+        supabase.from('expenses').select('amount, expense_type').eq('user_id', user.id).eq('month_key', prevMonthKey),
+      ]);
 
       setIncomeData(
         (incomes || []).map((inc) => ({
@@ -121,6 +128,22 @@ export function useFinanceData() {
           profit: Number(sale.profit),
         }))
       );
+      // Compute previous month summary
+      const prevCash = (prevIncomes || []).reduce((s, i) => s + Number(i.cash), 0);
+      const prevCard = (prevIncomes || []).reduce((s, i) => s + Number(i.card), 0);
+      const prevIncome = prevCash + prevCard;
+      const prevPurchase = (prevExpenses || []).filter(e => e.expense_type === 'purchase').reduce((s, e) => s + Number(e.amount), 0);
+      const prevCost = (prevExpenses || []).filter(e => e.expense_type !== 'purchase').reduce((s, e) => s + Number(e.amount), 0);
+      const prevExpense = prevPurchase + prevCost;
+      setPrevMonthSummary({
+        totalCash: prevCash,
+        totalCard: prevCard,
+        totalIncome: prevIncome,
+        totalExpense: prevExpense,
+        totalPurchase: prevPurchase,
+        totalCost: prevCost,
+        balance: prevIncome - prevExpense,
+      });
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -540,5 +563,6 @@ export function useFinanceData() {
     getCurrentMonthLabel,
     getDefaultDay,
     getMaxDays,
+    prevMonthSummary,
   };
 }
