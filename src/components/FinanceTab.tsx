@@ -195,24 +195,25 @@ export function FinanceTab({
                 >
                   {/* Single row: day badge + pills + total + actions */}
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 flex-shrink-0 rounded-lg bg-gradient-to-br from-success/25 to-success/10 border border-success/20 flex items-center justify-center">
-                      <span className="text-success font-bold text-sm font-mono leading-none">{income.day}</span>
+                    {/* Day badge — fixed circle, same on all devices */}
+                    <div className="w-9 h-9 flex-shrink-0 rounded-full bg-gradient-to-br from-success/30 to-success/10 border border-success/30 flex items-center justify-center shadow-sm">
+                      <span className="text-success font-bold text-[13px] font-mono leading-none">{income.day}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       {/* Cash + Card pills */}
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <div className="flex items-center gap-1 bg-success/10 px-1.5 py-0.5 rounded-md">
-                          <Banknote className="h-2.5 w-2.5 text-success flex-shrink-0" />
+                          <Banknote className="h-3 w-3 text-success flex-shrink-0" />
                           <span className="text-success text-[11px] font-semibold font-mono">{formatCurrency(income.cash)}</span>
                         </div>
                         <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md">
-                          <CreditCard className="h-2.5 w-2.5 text-info flex-shrink-0" />
+                          <CreditCard className="h-3 w-3 text-info flex-shrink-0" />
                           <span className="text-info text-[11px] font-semibold font-mono">{formatCurrency(income.card)}</span>
                         </div>
                       </div>
                     </div>
-                    {/* Total */}
-                    <div className="text-success font-bold text-sm font-mono flex-shrink-0">{formatCurrency(income.total)}</div>
+                    {/* Total — fixed size, no responsive variants */}
+                    <div className="text-success font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(income.total)}</div>
                     {/* Actions */}
                     <div className="flex gap-1 flex-shrink-0">
                       <button
