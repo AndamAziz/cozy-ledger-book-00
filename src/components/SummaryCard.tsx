@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Wallet, ShoppingCart, Receipt, Banknote, CreditCard, Scale } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ShoppingCart, Receipt, Banknote, CreditCard, Scale, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 
 interface SummaryCardProps {
   title: string;
@@ -8,6 +8,8 @@ interface SummaryCardProps {
   fullWidth?: boolean;
   icon?: string;
   delay?: number;
+  /** Percentage change vs previous month. Positive = up, negative = down, null = no data */
+  trend?: number | null;
 }
 
 const variantConfig = {
@@ -123,9 +125,20 @@ const variantConfig = {
   },
 };
 
-export function SummaryCard({ title, value, variant = 'default', fullWidth, delay = 0 }: SummaryCardProps) {
+export function SummaryCard({ title, value, variant = 'default', fullWidth, delay = 0, trend }: SummaryCardProps) {
   const config = variantConfig[variant] ?? variantConfig.default;
   const IconComponent = config.icon;
+
+  // Trend display helpers
+  const hasTrend = trend !== null && trend !== undefined;
+  const isUp = hasTrend && trend! > 0;
+  const isDown = hasTrend && trend! < 0;
+  const isFlat = hasTrend && trend! === 0;
+
+  // For expense/cost variants, up is bad (red) and down is good (green)
+  const isExpenseVariant = variant === 'expense' || variant === 'cost' || variant === 'purchase';
+  const trendGood = isExpenseVariant ? isDown : isUp;
+  const trendBad = isExpenseVariant ? isUp : isDown;
 
   return (
     <div
@@ -158,6 +171,21 @@ export function SummaryCard({ title, value, variant = 'default', fullWidth, dela
             </div>
             <h3 className="text-xs sm:text-sm font-semibold text-muted-foreground truncate leading-tight">{title}</h3>
           </div>
+
+          {/* Trend badge */}
+          {hasTrend && (
+            <div className={cn(
+              'flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[10px] font-bold flex-shrink-0 transition-all duration-300',
+              trendGood && 'bg-success/15 text-success',
+              trendBad && 'bg-destructive/15 text-destructive',
+              isFlat && 'bg-muted text-muted-foreground',
+            )}>
+              {isUp && <ArrowUp className="h-2.5 w-2.5" />}
+              {isDown && <ArrowDown className="h-2.5 w-2.5" />}
+              {isFlat && <Minus className="h-2.5 w-2.5" />}
+              <span>{isFlat ? '0%' : `${Math.abs(trend!).toFixed(1)}%`}</span>
+            </div>
+          )}
         </div>
 
         {/* Value */}
