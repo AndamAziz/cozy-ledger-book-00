@@ -93,7 +93,12 @@ export function DayPicker({ value, onChange, maxDays, monthKey, className }: Day
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[320px] p-0 rounded-xl border-border/50 bg-card/95 backdrop-blur-xl pointer-events-auto max-h-[80vh] overflow-auto" 
+        className="w-[320px] p-0 rounded-xl border-border/50 bg-card/95 backdrop-blur-xl pointer-events-auto max-h-[80vh] overflow-auto
+          data-[state=open]:animate-in data-[state=closed]:animate-out
+          data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0
+          data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4
+          data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95
+          duration-200" 
         align="center"
         sideOffset={8}
         collisionPadding={16}
