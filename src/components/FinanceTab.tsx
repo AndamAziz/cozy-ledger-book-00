@@ -193,10 +193,10 @@ export function FinanceTab({
                   className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-success/10 via-success/5 to-transparent border border-success/20 px-3 py-2.5 hover:border-success/40 hover:shadow-lg hover:shadow-success/10 active:scale-[0.99] transition-all duration-200"
                   style={{ animationDelay: `${index * 40}ms` }}
                 >
-                  {/* Top row: day badge + total + actions */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-gradient-to-br from-success/25 to-success/10 border border-success/20 flex items-center justify-center">
-                      <span className="text-success font-bold text-xs font-mono leading-none">{income.day}</span>
+                  {/* Single row: day badge + pills + total + actions */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 flex-shrink-0 rounded-lg bg-gradient-to-br from-success/25 to-success/10 border border-success/20 flex items-center justify-center">
+                      <span className="text-success font-bold text-sm font-mono leading-none">{income.day}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       {/* Cash + Card pills */}
