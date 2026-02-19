@@ -193,27 +193,26 @@ export function FinanceTab({
                   className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-success/10 via-success/5 to-transparent border border-success/20 px-3 py-2.5 hover:border-success/40 hover:shadow-lg hover:shadow-success/10 active:scale-[0.99] transition-all duration-200"
                   style={{ animationDelay: `${index * 40}ms` }}
                 >
-                  <div className="flex items-center gap-3">
-                    {/* Day badge */}
-                    <div className="w-9 h-9 flex-shrink-0 rounded-lg bg-gradient-to-br from-success/25 to-success/10 border border-success/20 flex items-center justify-center">
-                      <span className="text-success font-bold text-sm font-mono leading-none">{income.day}</span>
+                  {/* Top row: day badge + total + actions */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-gradient-to-br from-success/25 to-success/10 border border-success/20 flex items-center justify-center">
+                      <span className="text-success font-bold text-xs font-mono leading-none">{income.day}</span>
                     </div>
-
-                    {/* Cash + Card pills */}
-                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-1 bg-success/10 px-2 py-1 rounded-lg">
-                        <Banknote className="h-3 w-3 text-success flex-shrink-0" />
-                        <span className="text-success text-xs font-semibold font-mono">{formatCurrency(income.cash)}</span>
-                      </div>
-                      <div className="flex items-center gap-1 bg-info/10 px-2 py-1 rounded-lg">
-                        <CreditCard className="h-3 w-3 text-info flex-shrink-0" />
-                        <span className="text-info text-xs font-semibold font-mono">{formatCurrency(income.card)}</span>
+                    <div className="flex-1 min-w-0">
+                      {/* Cash + Card pills */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="flex items-center gap-1 bg-success/10 px-1.5 py-0.5 rounded-md">
+                          <Banknote className="h-2.5 w-2.5 text-success flex-shrink-0" />
+                          <span className="text-success text-[11px] font-semibold font-mono">{formatCurrency(income.cash)}</span>
+                        </div>
+                        <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md">
+                          <CreditCard className="h-2.5 w-2.5 text-info flex-shrink-0" />
+                          <span className="text-info text-[11px] font-semibold font-mono">{formatCurrency(income.card)}</span>
+                        </div>
                       </div>
                     </div>
-
                     {/* Total */}
                     <div className="text-success font-bold text-sm font-mono flex-shrink-0">{formatCurrency(income.total)}</div>
-
                     {/* Actions */}
                     <div className="flex gap-1 flex-shrink-0">
                       <button
