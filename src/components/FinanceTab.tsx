@@ -93,14 +93,14 @@ export function FinanceTab({
   return (
     <div className="space-y-5 sm:space-y-6 md:space-y-8">
       {/* Summary Grid */}
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:gap-5 animate-fade-in">
-        <SummaryCard title={t('cash')} value={formatCurrency(summary.totalCash)} variant="income" icon="💵" />
-        <SummaryCard title={t('card')} value={formatCurrency(summary.totalCard)} variant="income" icon="💳" />
-        <SummaryCard title={t('totalSales')} value={formatCurrency(summary.totalIncome)} variant="income" icon="📈" />
-        <SummaryCard title={t('totalExpense')} value={formatCurrency(summary.totalExpense)} variant="expense" icon="📉" />
-        <SummaryCard title={t('purchase')} value={formatCurrency(totalPurchase)} variant="accent" icon="🛒" />
-        <SummaryCard title={t('cost')} value={formatCurrency(totalCost)} variant="expense" icon="🧾" />
-        <SummaryCard title={t('balance')} value={formatCurrency(summary.balance)} variant="balance" icon="💰" fullWidth />
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:gap-5">
+        <SummaryCard title={t('cash')}         value={formatCurrency(summary.totalCash)}    variant="cash"     delay={0} />
+        <SummaryCard title={t('card')}         value={formatCurrency(summary.totalCard)}    variant="card"     delay={60} />
+        <SummaryCard title={t('totalSales')}   value={formatCurrency(summary.totalIncome)}  variant="income"   delay={120} />
+        <SummaryCard title={t('totalExpense')} value={formatCurrency(summary.totalExpense)} variant="expense"  delay={180} />
+        <SummaryCard title={t('purchase')}     value={formatCurrency(totalPurchase)}        variant="purchase" delay={240} />
+        <SummaryCard title={t('cost')}         value={formatCurrency(totalCost)}            variant="cost"     delay={300} />
+        <SummaryCard title={t('balance')}      value={formatCurrency(summary.balance)}      variant="balance"  delay={360} fullWidth />
       </div>
 
       {/* Action Buttons */}
