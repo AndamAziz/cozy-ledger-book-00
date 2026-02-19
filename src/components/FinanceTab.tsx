@@ -5,7 +5,7 @@ import { IncomeModal } from './IncomeModal';
 import { ExpenseModal } from './ExpenseModal';
 import { Income, Expense, ExpenseType } from '@/types/finance';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { Plus, Minus, Pencil, Trash2, ShoppingCart, Receipt } from 'lucide-react';
+import { Plus, Pencil, Trash2, ShoppingCart, Receipt, Banknote, CreditCard, TrendingUp, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -164,82 +164,70 @@ export function FinanceTab({
       </div>
 
 
-      <div className="glass-card p-5 md:p-7 animate-fade-in" style={{ animationDelay: '200ms' }}>
-        <h3 className="text-lg md:text-xl font-bold text-foreground mb-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-success to-emerald-400 flex items-center justify-center shadow-lg shadow-success/30">
-            <span className="text-2xl">📅</span>
+      {/* Income List */}
+      <div className="glass-card p-4 md:p-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
+        <h3 className="text-base md:text-lg font-bold text-foreground mb-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-success to-emerald-400 flex items-center justify-center shadow-md shadow-success/30">
+            <TrendingUp className="h-4 w-4 text-white" />
           </div>
           <div>
             <span className="block">{t('dailyIncomeTitle')}</span>
-            <span className="text-sm font-normal text-muted-foreground">{incomeData.length} {t('records')}</span>
+            <span className="text-xs font-normal text-muted-foreground">{incomeData.length} {t('records')}</span>
           </div>
         </h3>
         {incomeData.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-5 shadow-inner">
-              <span className="text-5xl opacity-60">📅</span>
+          <div className="text-center py-10 text-muted-foreground">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-3 shadow-inner">
+              <TrendingUp className="h-8 w-8 opacity-40" />
             </div>
-            <p className="text-base font-medium">{t('noIncomeYet')}</p>
-            <p className="text-sm text-muted-foreground/70 mt-2">{t('clickToAddIncome')}</p>
+            <p className="text-sm font-medium">{t('noIncomeYet')}</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">{t('clickToAddIncome')}</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {incomeData.map((income, index) => {
               const dateStr = formatDate(income.day, currentMonthKey);
-              
               return (
-                <div 
-                  key={income.id} 
-                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-l from-success/10 via-success/5 to-transparent border border-success/20 p-4 md:p-5 hover:border-success/40 hover:shadow-xl hover:shadow-success/10 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                <div
+                  key={income.id}
+                  className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-success/10 via-success/5 to-transparent border border-success/20 px-3 py-2.5 hover:border-success/40 hover:shadow-lg hover:shadow-success/10 active:scale-[0.99] transition-all duration-200"
+                  style={{ animationDelay: `${index * 40}ms` }}
                 >
-                  {/* Glow effect */}
-                  <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-success/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                  
-                  <div className="relative flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-success/30 to-success/10 border border-success/20 flex items-center justify-center text-success font-bold text-lg md:text-xl font-mono shadow-inner">
-                          {income.day}
-                        </div>
-                        <div>
-                          <div className="font-bold text-foreground text-base md:text-lg font-mono tracking-wide">{dateStr}</div>
-                        </div>
-                      </div>
-                      <div className="text-success font-bold text-lg md:text-2xl">{formatCurrency(income.total)}</div>
+                  <div className="flex items-center gap-3">
+                    {/* Day badge */}
+                    <div className="w-9 h-9 flex-shrink-0 rounded-lg bg-gradient-to-br from-success/25 to-success/10 border border-success/20 flex items-center justify-center">
+                      <span className="text-success font-bold text-sm font-mono leading-none">{income.day}</span>
                     </div>
-                    
-                    <div className="flex items-center justify-between border-t border-border/40 pt-4">
-                      <div className="flex gap-5 text-sm md:text-base">
-                        <div className="flex items-center gap-2 bg-success/10 px-3 py-1.5 rounded-xl">
-                          <span className="text-lg">💵</span>
-                          <span className="text-foreground font-semibold">{formatCurrency(income.cash)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 bg-info/10 px-3 py-1.5 rounded-xl">
-                          <span className="text-lg">💳</span>
-                          <span className="text-foreground font-semibold">{formatCurrency(income.card)}</span>
-                        </div>
+
+                    {/* Cash + Card pills */}
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-1 bg-success/10 px-2 py-1 rounded-lg">
+                        <Banknote className="h-3 w-3 text-success flex-shrink-0" />
+                        <span className="text-success text-xs font-semibold font-mono">{formatCurrency(income.cash)}</span>
                       </div>
-                      
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => { setEditingIncome(income); setIncomeModalOpen(true); }}
-                          className="p-2.5 rounded-xl bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-110 active:scale-95"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if (confirm(t('areYouSure'))) {
-                              onDeleteIncome(income.id);
-                              toast({ title: t('success'), description: t('incomeDeleted') });
-                            }
-                          }}
-                          className="p-2.5 rounded-xl bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 hover:scale-110 active:scale-95"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                      <div className="flex items-center gap-1 bg-info/10 px-2 py-1 rounded-lg">
+                        <CreditCard className="h-3 w-3 text-info flex-shrink-0" />
+                        <span className="text-info text-xs font-semibold font-mono">{formatCurrency(income.card)}</span>
                       </div>
+                    </div>
+
+                    {/* Total */}
+                    <div className="text-success font-bold text-sm font-mono flex-shrink-0">{formatCurrency(income.total)}</div>
+
+                    {/* Actions */}
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => { setEditingIncome(income); setIncomeModalOpen(true); }}
+                        className="p-1.5 rounded-lg bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-95"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={() => { if (confirm(t('areYouSure'))) { onDeleteIncome(income.id); toast({ title: t('success'), description: t('incomeDeleted') }); } }}
+                        className="p-1.5 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 active:scale-95"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -250,73 +238,63 @@ export function FinanceTab({
       </div>
 
       {/* Purchase List */}
-      <div className="glass-card p-5 md:p-7 animate-fade-in" style={{ animationDelay: '300ms' }}>
-        <h3 className="text-lg md:text-xl font-bold text-foreground mb-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-amber-400 flex items-center justify-center shadow-lg shadow-accent/30">
-            <ShoppingCart className="h-6 w-6 text-white" />
+      <div className="glass-card p-4 md:p-6 animate-fade-in" style={{ animationDelay: '300ms' }}>
+        <h3 className="text-base md:text-lg font-bold text-foreground mb-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent to-amber-400 flex items-center justify-center shadow-md shadow-accent/30">
+            <ShoppingCart className="h-4 w-4 text-white" />
           </div>
           <div>
             <span className="block">{t('purchaseTitle')}</span>
-            <span className="text-sm font-normal text-muted-foreground">{purchaseData.length} {t('records')}</span>
+            <span className="text-xs font-normal text-muted-foreground">{purchaseData.length} {t('records')}</span>
           </div>
         </h3>
         {purchaseData.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-5 shadow-inner">
-              <ShoppingCart className="h-12 w-12 opacity-60" />
+          <div className="text-center py-10 text-muted-foreground">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-3 shadow-inner">
+              <ShoppingCart className="h-8 w-8 opacity-40" />
             </div>
-            <p className="text-base font-medium">{t('noPurchaseYet')}</p>
-            <p className="text-sm text-muted-foreground/70 mt-2">{t('clickToAddPurchase')}</p>
+            <p className="text-sm font-medium">{t('noPurchaseYet')}</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">{t('clickToAddPurchase')}</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {purchaseData.map((expense, index) => {
               const dateStr = formatDate(expense.day, currentMonthKey);
-              
               return (
-                <div 
-                  key={expense.id} 
-                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-l from-accent/10 via-accent/5 to-transparent border border-accent/20 p-4 md:p-5 hover:border-accent/40 hover:shadow-xl hover:shadow-accent/10 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                <div
+                  key={expense.id}
+                  className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-accent/10 via-accent/5 to-transparent border border-accent/20 px-3 py-2.5 hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10 active:scale-[0.99] transition-all duration-200"
+                  style={{ animationDelay: `${index * 40}ms` }}
                 >
-                  <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-accent/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                  
-                  <div className="relative flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-accent/30 to-accent/10 border border-accent/20 flex items-center justify-center text-accent font-bold text-lg md:text-xl font-mono shadow-inner">
-                          {expense.day}
-                        </div>
-                        <div>
-                          <div className="font-bold text-foreground text-base md:text-lg font-mono tracking-wide">{dateStr}</div>
-                          <div className="text-sm text-muted-foreground truncate max-w-[200px] md:max-w-[300px]">
-                            {expense.description}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-accent font-bold text-lg md:text-2xl">{formatCurrency(expense.amount)}</div>
+                  <div className="flex items-center gap-3">
+                    {/* Day badge */}
+                    <div className="w-9 h-9 flex-shrink-0 rounded-lg bg-gradient-to-br from-accent/25 to-accent/10 border border-accent/20 flex items-center justify-center">
+                      <span className="text-accent font-bold text-sm font-mono leading-none">{expense.day}</span>
                     </div>
-                    
-                    <div className="flex items-center justify-end border-t border-border/40 pt-4">
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => { setEditingExpense(expense); setDefaultExpenseType('purchase'); setExpenseModalOpen(true); }}
-                          className="p-2.5 rounded-xl bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-110 active:scale-95"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if (confirm(t('areYouSure'))) {
-                              onDeleteExpense(expense.id);
-                              toast({ title: t('success'), description: t('purchaseDeleted') });
-                            }
-                          }}
-                          className="p-2.5 rounded-xl bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 hover:scale-110 active:scale-95"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+
+                    {/* Description */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-foreground text-xs font-medium truncate">{expense.description}</p>
+                      <p className="text-muted-foreground text-[10px] mt-0.5 font-mono">{dateStr}</p>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="text-accent font-bold text-sm font-mono flex-shrink-0">{formatCurrency(expense.amount)}</div>
+
+                    {/* Actions */}
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => { setEditingExpense(expense); setDefaultExpenseType('purchase'); setExpenseModalOpen(true); }}
+                        className="p-1.5 rounded-lg bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-95"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={() => { if (confirm(t('areYouSure'))) { onDeleteExpense(expense.id); toast({ title: t('success'), description: t('purchaseDeleted') }); } }}
+                        className="p-1.5 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 active:scale-95"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -327,73 +305,63 @@ export function FinanceTab({
       </div>
 
       {/* Cost List */}
-      <div className="glass-card p-5 md:p-7 animate-fade-in" style={{ animationDelay: '400ms' }}>
-        <h3 className="text-lg md:text-xl font-bold text-foreground mb-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-destructive to-rose-400 flex items-center justify-center shadow-lg shadow-destructive/30">
-            <Receipt className="h-6 w-6 text-white" />
+      <div className="glass-card p-4 md:p-6 animate-fade-in" style={{ animationDelay: '400ms' }}>
+        <h3 className="text-base md:text-lg font-bold text-foreground mb-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-destructive to-rose-400 flex items-center justify-center shadow-md shadow-destructive/30">
+            <Receipt className="h-4 w-4 text-white" />
           </div>
           <div>
             <span className="block">{t('costTitle')}</span>
-            <span className="text-sm font-normal text-muted-foreground">{costData.length} {t('records')}</span>
+            <span className="text-xs font-normal text-muted-foreground">{costData.length} {t('records')}</span>
           </div>
         </h3>
         {costData.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-5 shadow-inner">
-              <Receipt className="h-12 w-12 opacity-60" />
+          <div className="text-center py-10 text-muted-foreground">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-3 shadow-inner">
+              <Receipt className="h-8 w-8 opacity-40" />
             </div>
-            <p className="text-base font-medium">{t('noCostYet')}</p>
-            <p className="text-sm text-muted-foreground/70 mt-2">{t('clickToAddCost')}</p>
+            <p className="text-sm font-medium">{t('noCostYet')}</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">{t('clickToAddCost')}</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {costData.map((expense, index) => {
               const dateStr = formatDate(expense.day, currentMonthKey);
-              
               return (
-                <div 
-                  key={expense.id} 
-                  className="group relative overflow-hidden rounded-2xl bg-gradient-to-l from-destructive/10 via-destructive/5 to-transparent border border-destructive/20 p-4 md:p-5 hover:border-destructive/40 hover:shadow-xl hover:shadow-destructive/10 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                <div
+                  key={expense.id}
+                  className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-destructive/10 via-destructive/5 to-transparent border border-destructive/20 px-3 py-2.5 hover:border-destructive/40 hover:shadow-lg hover:shadow-destructive/10 active:scale-[0.99] transition-all duration-200"
+                  style={{ animationDelay: `${index * 40}ms` }}
                 >
-                  <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-destructive/20 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                  
-                  <div className="relative flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-destructive/30 to-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive font-bold text-lg md:text-xl font-mono shadow-inner">
-                          {expense.day}
-                        </div>
-                        <div>
-                          <div className="font-bold text-foreground text-base md:text-lg font-mono tracking-wide">{dateStr}</div>
-                          <div className="text-sm text-muted-foreground truncate max-w-[200px] md:max-w-[300px]">
-                            {expense.description}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-destructive font-bold text-lg md:text-2xl">{formatCurrency(expense.amount)}</div>
+                  <div className="flex items-center gap-3">
+                    {/* Day badge */}
+                    <div className="w-9 h-9 flex-shrink-0 rounded-lg bg-gradient-to-br from-destructive/25 to-destructive/10 border border-destructive/20 flex items-center justify-center">
+                      <span className="text-destructive font-bold text-sm font-mono leading-none">{expense.day}</span>
                     </div>
-                    
-                    <div className="flex items-center justify-end border-t border-border/40 pt-4">
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => { setEditingExpense(expense); setDefaultExpenseType('cost'); setExpenseModalOpen(true); }}
-                          className="p-2.5 rounded-xl bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-110 active:scale-95"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if (confirm(t('areYouSure'))) {
-                              onDeleteExpense(expense.id);
-                              toast({ title: t('success'), description: t('costDeleted') });
-                            }
-                          }}
-                          className="p-2.5 rounded-xl bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 hover:scale-110 active:scale-95"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+
+                    {/* Description */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-foreground text-xs font-medium truncate">{expense.description}</p>
+                      <p className="text-muted-foreground text-[10px] mt-0.5 font-mono">{dateStr}</p>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="text-destructive font-bold text-sm font-mono flex-shrink-0">{formatCurrency(expense.amount)}</div>
+
+                    {/* Actions */}
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => { setEditingExpense(expense); setDefaultExpenseType('cost'); setExpenseModalOpen(true); }}
+                        className="p-1.5 rounded-lg bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200 active:scale-95"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={() => { if (confirm(t('areYouSure'))) { onDeleteExpense(expense.id); toast({ title: t('success'), description: t('costDeleted') }); } }}
+                        className="p-1.5 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 active:scale-95"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     </div>
                   </div>
                 </div>
