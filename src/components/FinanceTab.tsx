@@ -5,7 +5,7 @@ import { IncomeModal } from './IncomeModal';
 import { ExpenseModal } from './ExpenseModal';
 import { Income, Expense, ExpenseType } from '@/types/finance';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { Plus, Pencil, Trash2, ShoppingCart, Receipt, Banknote, CreditCard, TrendingUp, Calendar } from 'lucide-react';
+import { Plus, Pencil, Trash2, ShoppingCart, Receipt, Banknote, CreditCard, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
