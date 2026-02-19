@@ -267,19 +267,19 @@ export function FinanceTab({
                   style={{ animationDelay: `${index * 40}ms` }}
                 >
                   <div className="flex items-center gap-3">
-                    {/* Day badge */}
-                    <div className="w-9 h-9 flex-shrink-0 rounded-lg bg-gradient-to-br from-accent/25 to-accent/10 border border-accent/20 flex items-center justify-center">
-                      <span className="text-accent font-bold text-sm font-mono leading-none">{expense.day}</span>
+                    {/* Day badge — rounded-full circle, fixed size */}
+                    <div className="w-9 h-9 flex-shrink-0 rounded-full bg-gradient-to-br from-accent/30 to-accent/10 border border-accent/30 flex items-center justify-center shadow-sm">
+                      <span className="text-accent font-bold text-[13px] font-mono leading-none">{expense.day}</span>
                     </div>
 
-                    {/* Description */}
+                    {/* Description — two-line stacked */}
                     <div className="flex-1 min-w-0">
                       <p className="text-foreground text-xs font-medium truncate">{expense.description}</p>
                       <p className="text-muted-foreground text-[10px] mt-0.5 font-mono">{dateStr}</p>
                     </div>
 
                     {/* Amount */}
-                    <div className="text-accent font-bold text-sm font-mono flex-shrink-0">{formatCurrency(expense.amount)}</div>
+                    <div className="text-accent font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(expense.amount)}</div>
 
                     {/* Actions */}
                     <div className="flex gap-1 flex-shrink-0">
@@ -334,19 +334,19 @@ export function FinanceTab({
                   style={{ animationDelay: `${index * 40}ms` }}
                 >
                   <div className="flex items-center gap-3">
-                    {/* Day badge */}
-                    <div className="w-9 h-9 flex-shrink-0 rounded-lg bg-gradient-to-br from-destructive/25 to-destructive/10 border border-destructive/20 flex items-center justify-center">
-                      <span className="text-destructive font-bold text-sm font-mono leading-none">{expense.day}</span>
+                    {/* Day badge — rounded-full circle, fixed size */}
+                    <div className="w-9 h-9 flex-shrink-0 rounded-full bg-gradient-to-br from-destructive/30 to-destructive/10 border border-destructive/30 flex items-center justify-center shadow-sm">
+                      <span className="text-destructive font-bold text-[13px] font-mono leading-none">{expense.day}</span>
                     </div>
 
-                    {/* Description */}
+                    {/* Description — two-line stacked */}
                     <div className="flex-1 min-w-0">
                       <p className="text-foreground text-xs font-medium truncate">{expense.description}</p>
                       <p className="text-muted-foreground text-[10px] mt-0.5 font-mono">{dateStr}</p>
                     </div>
 
                     {/* Amount */}
-                    <div className="text-destructive font-bold text-sm font-mono flex-shrink-0">{formatCurrency(expense.amount)}</div>
+                    <div className="text-destructive font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(expense.amount)}</div>
 
                     {/* Actions */}
                     <div className="flex gap-1 flex-shrink-0">
