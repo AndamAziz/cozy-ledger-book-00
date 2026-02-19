@@ -128,60 +128,66 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('recordSale')}>
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-        <div className="space-y-2">
-          <Label className="text-muted-foreground text-sm sm:text-base">{t('day')}</Label>
-          <DayPicker
-            value={day}
-            onChange={setDay}
-            maxDays={maxDays}
-            monthKey={monthKey}
-          />
+      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+
+        {/* Day + Product side by side */}
+        <div className="grid grid-cols-1 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs font-medium flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 text-primary">📅</span>
+              {t('day')}
+            </Label>
+            <DayPicker
+              value={day}
+              onChange={setDay}
+              maxDays={maxDays}
+              monthKey={monthKey}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs font-medium">{t('productType')}</Label>
+            <Select value={selectedId} onValueChange={setSelectedId}>
+              <SelectTrigger className="bg-secondary/50 border-border h-11 sm:h-13 text-sm">
+                <SelectValue placeholder={t('selectProduct')} />
+              </SelectTrigger>
+              <SelectContent>
+                {cigarettes.map((cig) => {
+                  const totalPacks = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
+                  const unitType = cig.unitType || 'box';
+                  const unitLabel = getUnitLabels(unitType).unitName;
+                  return (
+                    <SelectItem key={cig.id} value={cig.id.toString()}>
+                      <span className="flex items-center gap-2">
+                        {unitTypeIcons[unitType]}
+                        <span>{cig.name}</span>
+                        <span className="text-muted-foreground text-xs">({totalPacks} {unitLabel})</span>
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label className="text-muted-foreground text-sm sm:text-base">{t('productType')}</Label>
-          <Select value={selectedId} onValueChange={setSelectedId}>
-            <SelectTrigger className="bg-secondary/50 border-border h-12 sm:h-14">
-              <SelectValue placeholder={t('selectProduct')} />
-            </SelectTrigger>
-            <SelectContent>
-              {cigarettes.map((cig) => {
-                const totalPacks = (cig.boxes * cig.packsPerBox) + (cig.extraPacks || 0);
-                const unitType = cig.unitType || 'box';
-                const unitLabel = getUnitLabels(unitType).unitName;
-                return (
-                  <SelectItem key={cig.id} value={cig.id.toString()}>
-                    <span className="flex items-center gap-2">
-                      {unitTypeIcons[unitType]}
-                      <span>{cig.name}</span>
-                      <span className="text-muted-foreground text-sm">({totalPacks} {unitLabel})</span>
-                    </span>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Show selected product info */}
+        {/* Selected product stock badge */}
         {selectedCigarette && (
-          <div className="bg-info/5 border border-info/20 rounded-xl p-2.5 sm:p-3">
-            <div className="flex items-center justify-between text-xs sm:text-sm">
-              <span className="text-muted-foreground flex items-center gap-2">
-                {unitTypeIcons[selectedCigarette.unitType || 'box']}
-                {t(`unitType${(selectedCigarette.unitType || 'box').charAt(0).toUpperCase() + (selectedCigarette.unitType || 'box').slice(1)}` as any)}
-              </span>
-              <span className="font-semibold text-info">
-                {((selectedCigarette.boxes * selectedCigarette.packsPerBox) + (selectedCigarette.extraPacks || 0))} {labels.unitName}
-              </span>
-            </div>
+          <div className="bg-info/8 border border-info/20 rounded-lg px-3 py-2 flex items-center justify-between">
+            <span className="text-muted-foreground text-xs flex items-center gap-1.5">
+              {unitTypeIcons[selectedCigarette.unitType || 'box']}
+              {t(`unitType${(selectedCigarette.unitType || 'box').charAt(0).toUpperCase() + (selectedCigarette.unitType || 'box').slice(1)}` as any)}
+            </span>
+            <span className="font-bold text-info text-sm">
+              {((selectedCigarette.boxes * selectedCigarette.packsPerBox) + (selectedCigarette.extraPacks || 0))} {labels.unitName}
+            </span>
           </div>
         )}
         
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <div className="space-y-2">
-            <Label className="text-muted-foreground text-xs sm:text-sm">{labels.quantityLabel}</Label>
+        {/* Quantity + Price */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs font-medium">{labels.quantityLabel}</Label>
             <NumericInput
               value={packs}
               onChange={setPacks}
@@ -189,8 +195,8 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-muted-foreground text-xs sm:text-sm">{labels.priceLabel} £</Label>
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs font-medium">{labels.priceLabel} £</Label>
             <NumericInput
               value={packPrice}
               onChange={setPackPrice}
@@ -200,14 +206,15 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
           </div>
         </div>
         
-        <div className="bg-success/10 p-4 sm:p-5 rounded-xl text-center">
-          <Label className="text-success text-xs sm:text-sm">{t('total')}</Label>
-          <div className="text-2xl sm:text-3xl font-bold text-success mt-1">
+        {/* Total */}
+        <div className="bg-success/10 border border-success/20 px-4 py-3 rounded-xl flex items-center justify-between">
+          <Label className="text-success text-xs font-medium">{t('total')}</Label>
+          <div className="text-2xl font-bold text-success">
             {formatCurrency(total)}
           </div>
         </div>
         
-        <Button type="submit" className="w-full btn-gradient-primary py-5 sm:py-6 text-base sm:text-lg rounded-xl sm:rounded-2xl">
+        <Button type="submit" className="w-full btn-gradient-primary py-4 sm:py-5 text-base font-bold rounded-xl">
           {t('recordSale')}
         </Button>
       </form>
