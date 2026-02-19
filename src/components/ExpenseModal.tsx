@@ -60,101 +60,88 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
       icon={isPurchase ? <ShoppingCart className="h-6 w-6 text-white" /> : <Receipt className="h-6 w-6 text-white" />}
       variant={isPurchase ? "accent" : "danger"}
     >
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        {/* Expense Type Toggle */}
-        <div className="space-y-2 sm:space-y-3">
-          <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-secondary/50 flex items-center justify-center">
-              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-            </div>
-            {t('expenseType')}
-          </Label>
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => setExpenseType('purchase')}
-              className={`p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-1.5 sm:gap-2 ${
-                expenseType === 'purchase'
-                  ? 'border-accent bg-accent/20 text-accent'
-                  : 'border-white/10 bg-secondary/30 text-muted-foreground hover:border-white/20'
-              }`}
-            >
-              <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
-              <span className="font-semibold text-xs sm:text-sm">{t('purchase')}</span>
-              <span className="text-[10px] sm:text-xs opacity-70 hidden sm:block">{t('purchaseDesc')}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setExpenseType('cost')}
-              className={`p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-1.5 sm:gap-2 ${
-                expenseType === 'cost'
-                  ? 'border-destructive bg-destructive/20 text-destructive'
-                  : 'border-white/10 bg-secondary/30 text-muted-foreground hover:border-white/20'
-              }`}
-            >
-              <Receipt className="h-5 w-5 sm:h-6 sm:w-6" />
-              <span className="font-semibold text-xs sm:text-sm">{t('cost')}</span>
-              <span className="text-[10px] sm:text-xs opacity-70 hidden sm:block">{t('costDesc')}</span>
-            </button>
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-5">
+        {/* Expense Type Toggle - compact horizontal pill style */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setExpenseType('purchase')}
+            className={`py-2.5 px-3 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-2 ${
+              expenseType === 'purchase'
+                ? 'border-accent bg-accent/20 text-accent'
+                : 'border-white/10 bg-secondary/30 text-muted-foreground hover:border-white/20'
+            }`}
+          >
+            <ShoppingCart className="h-4 w-4 shrink-0" />
+            <span className="font-semibold text-xs sm:text-sm">{t('purchase')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpenseType('cost')}
+            className={`py-2.5 px-3 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-2 ${
+              expenseType === 'cost'
+                ? 'border-destructive bg-destructive/20 text-destructive'
+                : 'border-white/10 bg-secondary/30 text-muted-foreground hover:border-white/20'
+            }`}
+          >
+            <Receipt className="h-4 w-4 shrink-0" />
+            <span className="font-semibold text-xs sm:text-sm">{t('cost')}</span>
+          </button>
         </div>
 
-        <div className="space-y-2 sm:space-y-3">
-          <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-            </div>
-            {t('day')}
-          </Label>
-          <DayPicker
-            value={day}
-            onChange={setDay}
-            maxDays={maxDays}
-            monthKey={monthKey}
-          />
+        {/* Day + Amount side by side on mobile */}
+        <div className="grid grid-cols-1 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs font-medium flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-primary" />
+              {t('day')}
+            </Label>
+            <DayPicker
+              value={day}
+              onChange={setDay}
+              maxDays={maxDays}
+              monthKey={monthKey}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className={`text-xs font-medium flex items-center gap-1.5 ${isPurchase ? 'text-accent' : 'text-destructive'}`}>
+              <PoundSterling className="h-3.5 w-3.5" />
+              {t('amount')} £
+            </Label>
+            <NumericInput
+              value={amount}
+              onChange={setAmount}
+              placeholder="0.00"
+              className={isPurchase 
+                ? 'focus:border-accent/50 focus:ring-2 focus:ring-accent/20' 
+                : 'focus:border-destructive/50 focus:ring-2 focus:ring-destructive/20'
+              }
+              required
+            />
+          </div>
         </div>
         
-        <div className="space-y-2 sm:space-y-3">
-          <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
-            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center ${isPurchase ? 'bg-accent/20' : 'bg-destructive/20'}`}>
-              <PoundSterling className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isPurchase ? 'text-accent' : 'text-destructive'}`} />
-            </div>
-            {t('amount')} £
-          </Label>
-          <NumericInput
-            value={amount}
-            onChange={setAmount}
-            placeholder="0.00"
-            className={isPurchase 
-              ? 'focus:border-accent/50 focus:ring-2 focus:ring-accent/20' 
-              : 'focus:border-destructive/50 focus:ring-2 focus:ring-destructive/20'
-            }
-            required
-          />
-        </div>
-        
-        <div className="space-y-2 sm:space-y-3">
-          <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-secondary/50 flex items-center justify-center">
-              <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-            </div>
+        <div className="space-y-1.5">
+          <Label className="text-muted-foreground text-xs font-medium flex items-center gap-1.5">
+            <FileText className="h-3.5 w-3.5" />
             {t('description')}
           </Label>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={isPurchase ? t('purchasePlaceholder') : t('costPlaceholder')}
-            className="bg-secondary/50 border-white/10 rounded-xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 min-h-[70px] sm:min-h-[100px] text-sm sm:text-base transition-all resize-none"
+            className="bg-secondary/50 border-white/10 rounded-xl focus:border-primary/50 focus:ring-2 focus:ring-primary/20 min-h-[64px] sm:min-h-[90px] text-sm transition-all resize-none"
             required
           />
         </div>
         
         <Button 
           type="submit" 
-          className={`w-full py-5 sm:py-7 text-base sm:text-lg font-bold rounded-xl sm:rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all ${
+          className={`w-full py-4 sm:py-6 text-base font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all ${
             isPurchase 
-              ? 'btn-gradient-accent shadow-accent/30 hover:shadow-accent/50' 
-              : 'btn-gradient-danger shadow-destructive/30 hover:shadow-destructive/50'
+              ? 'btn-gradient-accent shadow-accent/30' 
+              : 'btn-gradient-danger shadow-destructive/30'
           }`}
         >
           {editingExpense ? t('update') : t('add')}
