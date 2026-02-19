@@ -8,7 +8,6 @@ import { formatCurrency, formatDate } from '@/lib/format';
 import { Plus, Pencil, Trash2, ShoppingCart, Receipt, Banknote, CreditCard, TrendingUp, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import type { PrevMonthSummary } from '@/hooks/useFinanceData';
 
 interface FinanceTabProps {
   incomeData: Income[];
@@ -23,7 +22,6 @@ interface FinanceTabProps {
   maxDays: number;
   defaultDay: number;
   currentMonthKey: string;
-  prevMonthSummary: PrevMonthSummary | null;
   onAddIncome: (income: Omit<Income, 'id'>) => void;
   onUpdateIncome: (id: string | number, income: Omit<Income, 'id'>) => void;
   onDeleteIncome: (id: string | number) => void;
@@ -40,7 +38,6 @@ export function FinanceTab({
   maxDays,
   defaultDay,
   currentMonthKey,
-  prevMonthSummary,
   onAddIncome,
   onUpdateIncome,
   onDeleteIncome,
@@ -63,13 +60,6 @@ export function FinanceTab({
 
   const totalPurchase = purchaseData.reduce((sum, exp) => sum + exp.amount, 0);
   const totalCost = costData.reduce((sum, exp) => sum + exp.amount, 0);
-
-  // Trend calculation: % change from previous month
-  const calcTrend = (current: number, prev: number): number | null => {
-    if (!prevMonthSummary) return null;
-    if (prev === 0) return current > 0 ? 100 : null;
-    return ((current - prev) / prev) * 100;
-  };
 
 
   const handleIncomeSubmit = (income: Omit<Income, 'id'>) => {
@@ -104,13 +94,13 @@ export function FinanceTab({
     <div className="space-y-5 sm:space-y-6 md:space-y-8">
       {/* Summary Grid */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:gap-5">
-        <SummaryCard title={t('cash')}         value={formatCurrency(summary.totalCash)}    variant="cash"     delay={0}   trend={calcTrend(summary.totalCash, prevMonthSummary?.totalCash ?? 0)} />
-        <SummaryCard title={t('card')}         value={formatCurrency(summary.totalCard)}    variant="card"     delay={60}  trend={calcTrend(summary.totalCard, prevMonthSummary?.totalCard ?? 0)} />
-        <SummaryCard title={t('totalSales')}   value={formatCurrency(summary.totalIncome)}  variant="income"   delay={120} trend={calcTrend(summary.totalIncome, prevMonthSummary?.totalIncome ?? 0)} />
-        <SummaryCard title={t('totalExpense')} value={formatCurrency(summary.totalExpense)} variant="expense"  delay={180} trend={calcTrend(summary.totalExpense, prevMonthSummary?.totalExpense ?? 0)} />
-        <SummaryCard title={t('purchase')}     value={formatCurrency(totalPurchase)}        variant="purchase" delay={240} trend={calcTrend(totalPurchase, prevMonthSummary?.totalPurchase ?? 0)} />
-        <SummaryCard title={t('cost')}         value={formatCurrency(totalCost)}            variant="cost"     delay={300} trend={calcTrend(totalCost, prevMonthSummary?.totalCost ?? 0)} />
-        <SummaryCard title={t('balance')}      value={formatCurrency(summary.balance)}      variant="balance"  delay={360} trend={calcTrend(summary.balance, prevMonthSummary?.balance ?? 0)} fullWidth />
+        <SummaryCard title={t('cash')}         value={formatCurrency(summary.totalCash)}    variant="cash"     delay={0} />
+        <SummaryCard title={t('card')}         value={formatCurrency(summary.totalCard)}    variant="card"     delay={60} />
+        <SummaryCard title={t('totalSales')}   value={formatCurrency(summary.totalIncome)}  variant="income"   delay={120} />
+        <SummaryCard title={t('totalExpense')} value={formatCurrency(summary.totalExpense)} variant="expense"  delay={180} />
+        <SummaryCard title={t('purchase')}     value={formatCurrency(totalPurchase)}        variant="purchase" delay={240} />
+        <SummaryCard title={t('cost')}         value={formatCurrency(totalCost)}            variant="cost"     delay={300} />
+        <SummaryCard title={t('balance')}      value={formatCurrency(summary.balance)}      variant="balance"  delay={360} fullWidth />
       </div>
 
       {/* Action Buttons */}
