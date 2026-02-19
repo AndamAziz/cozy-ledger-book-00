@@ -4,7 +4,7 @@ import { SummaryCard } from './SummaryCard';
 import { SellModal } from './SellModal';
 import { Cigarette, Sale } from '@/types/finance';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { ShoppingCart, Trash2 } from 'lucide-react';
+import { ShoppingCart, Trash2, Package, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -63,72 +63,69 @@ export function SalesTab({
 
       {/* Sales List */}
       <div className="glass-card p-4 md:p-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
-        <h3 className="text-lg font-bold text-foreground mb-5 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-            <span className="text-xl">📋</span>
+        <h3 className="text-base md:text-lg font-bold text-foreground mb-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-teal-500 flex items-center justify-center shadow-md shadow-primary/30">
+            <ShoppingCart className="h-4 w-4 text-white" />
           </div>
-          {t('sales')}
+          <div>
+            <span className="block">{t('sales')}</span>
+            <span className="text-xs font-normal text-muted-foreground">{salesData.length} {t('records')}</span>
+          </div>
         </h3>
         {salesData.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <div className="w-20 h-20 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl opacity-50">🛒</span>
+          <div className="text-center py-10 text-muted-foreground">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-3 shadow-inner">
+              <ShoppingCart className="h-8 w-8 opacity-40" />
             </div>
-            <p className="text-sm">{t('noData')}</p>
+            <p className="text-sm font-medium">{t('noData')}</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {salesData.map((sale, index) => {
               const dateStr = formatDate(sale.day, currentMonthKey);
-              
               return (
-                <div 
-                  key={sale.id} 
-                  className="group relative overflow-hidden rounded-xl bg-gradient-to-l from-primary/5 to-transparent border border-primary/10 p-3 md:p-4 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                <div
+                  key={sale.id}
+                  className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 px-3 py-2.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 active:scale-[0.99] transition-all duration-200"
+                  style={{ animationDelay: `${index * 40}ms` }}
                 >
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-sm md:text-base font-mono">
-                          {sale.day}
+                  {/* Top row: day badge + name/date + total + delete */}
+                  <div className="flex items-center gap-2">
+                    {/* Day badge */}
+                    <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/20 flex items-center justify-center">
+                      <span className="text-primary font-bold text-xs font-mono leading-none">{sale.day}</span>
+                    </div>
+
+                    {/* Name + pills */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-foreground text-xs font-semibold truncate leading-tight">{sale.cigaretteName}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <div className="flex items-center gap-1 bg-secondary/60 px-1.5 py-0.5 rounded-md">
+                          <Package className="h-2.5 w-2.5 text-muted-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground text-[11px] font-mono">{sale.packs} {t('packs')}</span>
                         </div>
-                        <div>
-                          <div className="font-bold text-foreground text-sm md:text-base">{sale.cigaretteName}</div>
-                          <div className="text-xs md:text-sm text-muted-foreground font-mono tracking-wide">{dateStr}</div>
+                        <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md">
+                          <TrendingUp className="h-2.5 w-2.5 text-info flex-shrink-0" />
+                          <span className="text-info text-[11px] font-semibold font-mono">{formatCurrency(sale.profit)}</span>
                         </div>
                       </div>
-                      <div className="text-success font-bold text-base md:text-lg">{formatCurrency(sale.totalSale)}</div>
                     </div>
-                    
-                    <div className="flex items-center justify-between border-t border-border/30 pt-3">
-                      <div className="flex gap-4 text-xs md:text-sm">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">📦</span>
-                          <span className="text-foreground font-medium">{sale.packs} {t('packs')}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">💵</span>
-                          <span className="text-foreground font-medium">{formatCurrency(sale.packPrice)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-info">{t('profit')}:</span>
-                          <span className="text-info font-semibold">{formatCurrency(sale.profit)}</span>
-                        </div>
-                      </div>
-                      
-                      <button 
-                        onClick={() => {
-                          if (confirm(t('confirmDelete'))) {
-                            onDeleteSale(sale.id);
-                            toast({ title: t('success'), description: t('delete') });
-                          }
-                        }}
-                        className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all duration-200 hover:scale-105"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+
+                    {/* Total */}
+                    <div className="text-success font-bold text-sm font-mono flex-shrink-0">{formatCurrency(sale.totalSale)}</div>
+
+                    {/* Delete */}
+                    <button
+                      onClick={() => {
+                        if (confirm(t('confirmDelete'))) {
+                          onDeleteSale(sale.id);
+                          toast({ title: t('success'), description: t('delete') });
+                        }
+                      }}
+                      className="p-1.5 rounded-lg bg-destructive/15 hover:bg-destructive/25 text-destructive transition-all duration-200 active:scale-95 flex-shrink-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </div>
                 </div>
               );
