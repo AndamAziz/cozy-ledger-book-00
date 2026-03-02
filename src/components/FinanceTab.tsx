@@ -63,6 +63,15 @@ export function FinanceTab({
 
 
   const handleIncomeSubmit = (income: Omit<Income, 'id'>) => {
+    // Prevent duplicate days (exclude the item being edited)
+    const dayExists = incomeData.some(
+      (inc) => inc.day === income.day && (!editingIncome || inc.id !== editingIncome.id)
+    );
+    if (dayExists) {
+      toast({ title: t('error') || '❌', description: t('dayAlreadyExists') || `Day ${income.day} already has income recorded`, variant: 'destructive' });
+      return;
+    }
+
     if (editingIncome) {
       onUpdateIncome(editingIncome.id, income);
       toast({ title: t('success'), description: t('income') + ' ' + t('update') });
