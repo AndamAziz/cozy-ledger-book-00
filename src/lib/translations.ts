@@ -182,6 +182,7 @@ export const translations = {
     error: 'هەڵە',
     warning: 'ئاگاداری',
     noData: 'هیچ داتایەک نییە',
+    dayAlreadyExists: 'ئەم ڕۆژە پێشتر داخڵ کراوە',
     noDataToShow: 'هیچ داتایەک نییە بۆ پیشاندان',
     loading: 'چاوەڕوان بە...',
     
@@ -573,6 +574,7 @@ export const translations = {
     error: 'Error',
     warning: 'Warning',
     noData: 'No data available',
+    dayAlreadyExists: 'This day already has income recorded',
     noDataToShow: 'No data to display',
     loading: 'Loading...',
     
@@ -964,6 +966,7 @@ export const translations = {
     error: 'خطأ',
     warning: 'تحذير',
     noData: 'لا توجد بيانات',
+    dayAlreadyExists: 'هذا اليوم مسجل مسبقاً',
     noDataToShow: 'لا توجد بيانات للعرض',
     loading: 'جاري التحميل...',
     
@@ -1355,6 +1358,7 @@ export const translations = {
     error: 'خطا',
     warning: 'هشدار',
     noData: 'داده‌ای موجود نیست',
+    dayAlreadyExists: 'این روز قبلاً ثبت شده است',
     noDataToShow: 'داده‌ای برای نمایش نیست',
     loading: 'در حال بارگذاری...',
     
