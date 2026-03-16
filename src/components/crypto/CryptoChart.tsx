@@ -177,7 +177,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       </div>
 
       {/* Chart */}
-      <div ref={chartContainerRef} className="flex-1 min-h-[300px] md:min-h-[500px]" />
+      <div className="flex-1 relative min-h-[300px] md:min-h-[500px]">
+        <div ref={chartContainerRef} className="absolute inset-0" />
+      </div>
     </div>
   );
 }
