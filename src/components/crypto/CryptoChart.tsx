@@ -91,6 +91,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     }
 
     return () => {
+      resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
