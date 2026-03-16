@@ -15,7 +15,8 @@ interface CryptoChartProps {
 export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, onIntervalChange }: CryptoChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<typeof CandlestickSeries | typeof LineSeries> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const seriesRef = useRef<any>(null);
   const [chartType, setChartType] = useState<'candlestick' | 'line'>('candlestick');
 
   const symbol = getDisplaySymbol(getSymbolFromPair(pair));
