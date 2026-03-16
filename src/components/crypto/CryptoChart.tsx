@@ -60,7 +60,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     chartRef.current = chart;
 
     if (chartType === 'candlestick') {
-      const series = chart.addCandlestickSeries({
+      const series = chart.addSeries(CandlestickSeries, {
         upColor: '#0ecb81',
         downColor: '#f6465d',
         borderUpColor: '#0ecb81',
@@ -70,7 +70,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       });
       seriesRef.current = series;
     } else {
-      const series = chart.addLineSeries({
+      const series = chart.addSeries(LineSeries, {
         color: '#2962ff',
         lineWidth: 2,
         crosshairMarkerVisible: true,

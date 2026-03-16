@@ -30,7 +30,7 @@ interface UseKrakenWebSocketOptions {
 export function useKrakenWebSocket({ onTickerUpdate, onOHLCUpdate, ohlcPair, ohlcInterval }: UseKrakenWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const onTickerRef = useRef(onTickerUpdate);
   const onOHLCRef = useRef(onOHLCUpdate);
   const ohlcPairRef = useRef(ohlcPair);
