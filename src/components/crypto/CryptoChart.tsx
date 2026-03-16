@@ -32,6 +32,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       seriesRef.current = null;
     }
 
+    const rect = container.getBoundingClientRect();
     const chart = createChart(container, {
       layout: {
         background: { type: ColorType.Solid, color: '#0a0e17' },
@@ -55,8 +56,17 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         timeVisible: true,
         secondsVisible: false,
       },
-      autoSize: true,
+      width: rect.width || 600,
+      height: rect.height || 400,
     });
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        chart.applyOptions({ width, height });
+      }
+    });
+    resizeObserver.observe(container);
 
     chartRef.current = chart;
 
