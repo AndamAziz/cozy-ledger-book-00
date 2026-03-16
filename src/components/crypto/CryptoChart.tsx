@@ -15,7 +15,7 @@ interface CryptoChartProps {
 export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, onIntervalChange }: CryptoChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<'Candlestick'> | ISeriesApi<'Line'> | null>(null);
+  const seriesRef = useRef<ISeriesApi<typeof CandlestickSeries | typeof LineSeries> | null>(null);
   const [chartType, setChartType] = useState<'candlestick' | 'line'>('candlestick');
 
   const symbol = getDisplaySymbol(getSymbolFromPair(pair));
