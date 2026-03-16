@@ -22,7 +22,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const symbol = getDisplaySymbol(getSymbolFromPair(pair));
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    const container = chartContainerRef.current;
+    if (!container) return;
 
     // Clean up previous chart
     if (chartRef.current) {
@@ -31,7 +32,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       seriesRef.current = null;
     }
 
-    const chart = createChart(chartContainerRef.current, {
+    const chart = createChart(container, {
       layout: {
         background: { type: ColorType.Solid, color: '#0a0e17' },
         textColor: '#848e9c',
@@ -54,8 +55,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         timeVisible: true,
         secondsVisible: false,
       },
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight,
+      autoSize: true,
     });
 
     chartRef.current = chart;
@@ -80,20 +80,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       seriesRef.current = series;
     }
 
-    // Resize handler
-    const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-          height: chartContainerRef.current.clientHeight,
-        });
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-
     return () => {
-      window.removeEventListener('resize', handleResize);
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
