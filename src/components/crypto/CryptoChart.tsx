@@ -116,20 +116,27 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       })));
     }
 
-    // Add price line
-    if (currentPrice > 0) {
-      seriesRef.current.createPriceLine({
-        price: currentPrice,
-        color: '#f0b90b',
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: `${symbol} $${currentPrice.toLocaleString()}`,
-      });
+    chartRef.current?.timeScale().fitContent();
+  }, [candles, chartType]);
+
+  // Update price line separately
+  useEffect(() => {
+    if (!seriesRef.current || currentPrice <= 0) return;
+
+    // Remove old price line
+    if (priceLineRef.current) {
+      try { seriesRef.current.removePriceLine(priceLineRef.current); } catch {}
     }
 
-    chartRef.current?.timeScale().fitContent();
-  }, [candles, chartType, currentPrice, symbol]);
+    priceLineRef.current = seriesRef.current.createPriceLine({
+      price: currentPrice,
+      color: '#f0b90b',
+      lineWidth: 1,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: `${symbol} $${currentPrice.toLocaleString()}`,
+    });
+  }, [currentPrice, symbol]);
 
 
   return (
