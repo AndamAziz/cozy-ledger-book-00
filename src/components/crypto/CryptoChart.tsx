@@ -129,14 +129,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     chartRef.current?.timeScale().fitContent();
   }, [candles, chartType, currentPrice, symbol]);
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-3 p-4">
-        <Skeleton className="h-8 w-48 bg-[#1a1e2e]" />
-        <Skeleton className="h-[400px] w-full bg-[#1a1e2e]" />
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full">
