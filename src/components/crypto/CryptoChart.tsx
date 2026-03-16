@@ -17,12 +17,15 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const chartRef = useRef<IChartApi | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const seriesRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const priceLineRef = useRef<any>(null);
   const [chartType, setChartType] = useState<'candlestick' | 'line'>('candlestick');
 
   const symbol = getDisplaySymbol(getSymbolFromPair(pair));
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    const container = chartContainerRef.current;
+    if (!container) return;
 
     // Clean up previous chart
     if (chartRef.current) {
@@ -31,7 +34,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       seriesRef.current = null;
     }
 
-    const chart = createChart(chartContainerRef.current, {
+    const rect = container.getBoundingClientRect();
+    const chart = createChart(container, {
       layout: {
         background: { type: ColorType.Solid, color: '#0a0e17' },
         textColor: '#848e9c',
@@ -54,9 +58,17 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         timeVisible: true,
         secondsVisible: false,
       },
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight,
+      width: rect.width || 600,
+      height: rect.height || 400,
     });
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        chart.applyOptions({ width, height });
+      }
+    });
+    resizeObserver.observe(container);
 
     chartRef.current = chart;
 
@@ -80,20 +92,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       seriesRef.current = series;
     }
 
-    // Resize handler
-    const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-          height: chartContainerRef.current.clientHeight,
-        });
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-
     return () => {
-      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
@@ -116,29 +116,28 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       })));
     }
 
-    // Add price line
-    if (currentPrice > 0) {
-      seriesRef.current.createPriceLine({
-        price: currentPrice,
-        color: '#f0b90b',
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: `${symbol} $${currentPrice.toLocaleString()}`,
-      });
+    chartRef.current?.timeScale().fitContent();
+  }, [candles, chartType]);
+
+  // Update price line separately
+  useEffect(() => {
+    if (!seriesRef.current || currentPrice <= 0) return;
+
+    // Remove old price line
+    if (priceLineRef.current) {
+      try { seriesRef.current.removePriceLine(priceLineRef.current); } catch {}
     }
 
-    chartRef.current?.timeScale().fitContent();
-  }, [candles, chartType, currentPrice, symbol]);
+    priceLineRef.current = seriesRef.current.createPriceLine({
+      price: currentPrice,
+      color: '#f0b90b',
+      lineWidth: 1,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: `${symbol} $${currentPrice.toLocaleString()}`,
+    });
+  }, [currentPrice, symbol]);
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-3 p-4">
-        <Skeleton className="h-8 w-48 bg-[#1a1e2e]" />
-        <Skeleton className="h-[400px] w-full bg-[#1a1e2e]" />
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full">
@@ -190,7 +189,14 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       </div>
 
       {/* Chart */}
-      <div ref={chartContainerRef} className="flex-1 min-h-[300px] md:min-h-[500px]" />
+      <div className="flex-1 relative min-h-[300px] md:min-h-[500px]">
+        <div ref={chartContainerRef} className="absolute inset-0" />
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/80 z-10">
+            <div className="text-[#848e9c] text-sm">Loading chart data...</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

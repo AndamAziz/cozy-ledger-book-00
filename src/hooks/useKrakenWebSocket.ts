@@ -84,7 +84,7 @@ export function useKrakenWebSocket({ onTickerUpdate, onOHLCUpdate, ohlcPair, ohl
       if (channelName === 'ticker' && onTickerRef.current) {
         const ticker = data[1];
         const lastPrice = parseFloat(ticker.c[0]);
-        const openPrice = parseFloat(ticker.o[0]);
+        const openPrice = parseFloat(ticker.o[1]); // Use 24h rolling open, not today's open
         const change = openPrice > 0 ? ((lastPrice - openPrice) / openPrice) * 100 : 0;
 
         onTickerRef.current({
