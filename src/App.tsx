@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index";
+import CryptoTracker from "./pages/CryptoTracker";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
