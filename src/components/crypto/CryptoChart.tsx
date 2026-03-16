@@ -105,20 +105,15 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     if (!seriesRef.current || candles.length === 0) return;
 
     if (chartType === 'candlestick') {
-      const data = candles.map(c => ({
+      seriesRef.current.setData(candles.map(c => ({
         time: c.time as Time,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-      }));
-      (seriesRef.current as ISeriesApi<typeof CandlestickSeries>).setData(data);
+        open: c.open, high: c.high, low: c.low, close: c.close,
+      })));
     } else {
-      const data = candles.map(c => ({
+      seriesRef.current.setData(candles.map(c => ({
         time: c.time as Time,
         value: c.close,
-      }));
-      (seriesRef.current as ISeriesApi<typeof LineSeries>).setData(data);
+      })));
     }
 
     // Add price line
