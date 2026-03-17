@@ -1180,6 +1180,8 @@ export const translations = {
     actionRemovedAdmin: 'تمت إزالة المشرف',
     admin: 'المشرف',
     target: 'الهدف',
+    cryptoTracker: 'متتبع العملات الرقمية',
+    cryptoTrackerDesc: 'أسعار العملات الرقمية مباشرة',
   },
   fa: {
     // Header
