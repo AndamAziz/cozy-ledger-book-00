@@ -392,6 +392,8 @@ export const translations = {
     actionRemovedAdmin: 'ئەدمین لابرا',
     admin: 'ئەدمین',
     target: 'ئامانج',
+    cryptoTracker: 'شوێنپێگری کریپتۆ',
+    cryptoTrackerDesc: 'نرخی زیندەی دراوە دیجیتاڵەکان',
   },
   en: {
     // Header
