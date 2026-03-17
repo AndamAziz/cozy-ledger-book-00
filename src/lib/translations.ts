@@ -786,6 +786,8 @@ export const translations = {
     actionRemovedAdmin: 'Admin Removed',
     admin: 'Admin',
     target: 'Target',
+    cryptoTracker: 'Crypto Tracker',
+    cryptoTrackerDesc: 'Live cryptocurrency prices',
   },
   ar: {
     // Header
