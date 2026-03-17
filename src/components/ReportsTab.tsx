@@ -4,9 +4,10 @@ import { DailyIncomeChart, SalesByProductChart, ProfitChart, IncomeExpenseCompar
 import { Cigarette, Sale, Income, Expense } from '@/types/finance';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { generatePDFReport } from '@/lib/pdfGenerator';
-import { FileDown, Share2, TrendingUp, Package, ShoppingCart, Wallet } from 'lucide-react';
+import { FileDown, Share2, TrendingUp, Package, ShoppingCart, Wallet, Bitcoin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useNavigate } from 'react-router-dom';
 
 interface ReportsTabProps {
   incomeData: Income[];
