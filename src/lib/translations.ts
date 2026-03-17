@@ -1574,6 +1574,8 @@ export const translations = {
     actionRemovedAdmin: 'ادمین حذف شد',
     admin: 'ادمین',
     target: 'هدف',
+    cryptoTracker: 'ردیاب رمزارز',
+    cryptoTrackerDesc: 'قیمت زنده ارزهای دیجیتال',
   },
 } as const;
 
