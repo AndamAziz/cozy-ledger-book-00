@@ -392,6 +392,8 @@ export const translations = {
     actionRemovedAdmin: 'ئەدمین لابرا',
     admin: 'ئەدمین',
     target: 'ئامانج',
+    cryptoTracker: 'شوێنپێگری کریپتۆ',
+    cryptoTrackerDesc: 'نرخی زیندەی دراوە دیجیتاڵەکان',
   },
   en: {
     // Header
@@ -784,6 +786,8 @@ export const translations = {
     actionRemovedAdmin: 'Admin Removed',
     admin: 'Admin',
     target: 'Target',
+    cryptoTracker: 'Crypto Tracker',
+    cryptoTrackerDesc: 'Live cryptocurrency prices',
   },
   ar: {
     // Header
@@ -1176,6 +1180,8 @@ export const translations = {
     actionRemovedAdmin: 'تمت إزالة المشرف',
     admin: 'المشرف',
     target: 'الهدف',
+    cryptoTracker: 'متتبع العملات الرقمية',
+    cryptoTrackerDesc: 'أسعار العملات الرقمية مباشرة',
   },
   fa: {
     // Header
@@ -1568,6 +1574,8 @@ export const translations = {
     actionRemovedAdmin: 'ادمین حذف شد',
     admin: 'ادمین',
     target: 'هدف',
+    cryptoTracker: 'ردیاب رمزارز',
+    cryptoTrackerDesc: 'قیمت زنده ارزهای دیجیتال',
   },
 } as const;
 
