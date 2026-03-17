@@ -38,6 +38,7 @@ export function ReportsTab({
 }: ReportsTabProps) {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const netProfit = summary.balance + summary.cigaretteProfit;
 
   const handleDownloadPDF = () => {
