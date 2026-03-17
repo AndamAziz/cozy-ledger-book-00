@@ -146,6 +146,23 @@ export function ReportsTab({
         </div>
       </div>
 
+      {/* Crypto Tracker Button */}
+      <button
+        onClick={() => navigate('/crypto')}
+        className="group relative w-full overflow-hidden rounded-2xl border border-[#f0b90b]/20 bg-gradient-to-br from-[#f0b90b]/10 via-transparent to-transparent p-4 transition-all duration-300 hover:scale-[1.02] hover:border-[#f0b90b]/40 hover:shadow-lg hover:shadow-[#f0b90b]/10 animate-fade-in"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#f0b90b] to-[#f0b90b]/80 flex items-center justify-center shadow-lg shadow-[#f0b90b]/30">
+            <Bitcoin className="h-6 w-6 text-black" />
+          </div>
+          <div className="text-start">
+            <p className="font-bold text-foreground text-sm sm:text-base">{t('cryptoTracker')}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{t('cryptoTrackerDesc')}</p>
+          </div>
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#f0b90b]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      </button>
+
       {/* Summary Grid */}
       <div className="grid grid-cols-2 gap-3 md:gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
         <SummaryCard title={t('totalIncome')} value={formatCurrency(summary.totalIncome)} variant="income" icon="📈" />
