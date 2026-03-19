@@ -167,6 +167,9 @@ export default function CryptoTracker() {
           {activeTab === 'forex' && (
             <span className="text-[10px] text-[#848e9c]">Updates every 5min</span>
           )}
+          {activeTab === 'metals' && (
+            <span className="text-[10px] text-[#d4af37]">🔴 Live • 30s</span>
+          )}
         </header>
 
         <div className="flex flex-1 overflow-hidden relative">
