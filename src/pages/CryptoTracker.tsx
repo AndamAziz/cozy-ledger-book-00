@@ -4,13 +4,16 @@ import { KrakenCoin, TRACKED_PAIRS, getSymbolFromPair, getCoinMeta, fetchTicker 
 import { useKrakenWebSocket } from '@/hooks/useKrakenWebSocket';
 import { useKrakenOHLC } from '@/hooks/useKrakenOHLC';
 import { useForexData } from '@/hooks/useForexData';
+import { useMetalsData } from '@/hooks/useMetalsData';
 import { CryptoChart } from '@/components/crypto/CryptoChart';
 import { CoinList } from '@/components/crypto/CoinList';
 import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign } from 'lucide-react';
+import { MetalsList } from '@/components/crypto/MetalsList';
+import { MetalsDetail } from '@/components/crypto/MetalsDetail';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot } from 'lucide-react';
 
-type TrackerTab = 'crypto' | 'forex';
+type TrackerTab = 'crypto' | 'forex' | 'metals';
 
 export default function CryptoTracker() {
   const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
