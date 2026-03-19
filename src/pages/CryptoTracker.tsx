@@ -4,13 +4,16 @@ import { KrakenCoin, TRACKED_PAIRS, getSymbolFromPair, getCoinMeta, fetchTicker 
 import { useKrakenWebSocket } from '@/hooks/useKrakenWebSocket';
 import { useKrakenOHLC } from '@/hooks/useKrakenOHLC';
 import { useForexData } from '@/hooks/useForexData';
+import { useMetalsData } from '@/hooks/useMetalsData';
 import { CryptoChart } from '@/components/crypto/CryptoChart';
 import { CoinList } from '@/components/crypto/CoinList';
 import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign } from 'lucide-react';
+import { MetalsList } from '@/components/crypto/MetalsList';
+import { MetalsDetail } from '@/components/crypto/MetalsDetail';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot } from 'lucide-react';
 
-type TrackerTab = 'crypto' | 'forex';
+type TrackerTab = 'crypto' | 'forex' | 'metals';
 
 export default function CryptoTracker() {
   const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
@@ -20,11 +23,13 @@ export default function CryptoTracker() {
   const [coinsMap, setCoinsMap] = useState<Map<string, KrakenCoin>>(new Map());
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedForexCode, setSelectedForexCode] = useState<string | null>(null);
+  const [selectedMetalCode, setSelectedMetalCode] = useState<string | null>(null);
   const coinsRef = useRef(coinsMap);
   coinsRef.current = coinsMap;
 
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading } = useForexData();
+  const { metals, isLoading: metalsLoading } = useMetalsData();
 
   // Fetch initial ticker data
   useEffect(() => {
@@ -97,7 +102,7 @@ export default function CryptoTracker() {
   return (
     <>
       <Helmet>
-        <title>{activeTab === 'crypto' ? 'Crypto Tracker' : 'Forex Rates'} - Live Prices</title>
+        <title>{activeTab === 'crypto' ? 'Crypto Tracker' : activeTab === 'forex' ? 'Forex Rates' : 'Precious Metals'} - Live Prices</title>
         <meta name="description" content="Real-time cryptocurrency and forex price tracker" />
       </Helmet>
 
@@ -131,6 +136,15 @@ export default function CryptoTracker() {
               <DollarSign className="h-3.5 w-3.5" />
               <span className="hidden xs:inline">Forex</span>
             </button>
+            <button
+              onClick={() => setActiveTab('metals')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors ${
+                activeTab === 'metals' ? 'bg-[#d4af37] text-black' : 'text-[#848e9c] hover:text-white'
+              }`}
+            >
+              <CircleDot className="h-3.5 w-3.5" />
+              <span className="hidden xs:inline">Metals</span>
+            </button>
           </div>
 
           <div className="flex-1" />
@@ -152,6 +166,9 @@ export default function CryptoTracker() {
           )}
           {activeTab === 'forex' && (
             <span className="text-[10px] text-[#848e9c]">Updates every 5min</span>
+          )}
+          {activeTab === 'metals' && (
+            <span className="text-[10px] text-[#d4af37]">🔴 Live • 30s</span>
           )}
         </header>
 
@@ -213,11 +230,17 @@ export default function CryptoTracker() {
                 </div>
               )}
             </div>
-          ) : (
+          ) : activeTab === 'forex' ? (
             <ForexDetail
               currencies={forexCurrencies}
               selectedCode={selectedForexCode}
               isLoading={forexLoading}
+            />
+          ) : (
+            <MetalsDetail
+              metals={metals}
+              selectedCode={selectedMetalCode}
+              isLoading={metalsLoading}
             />
           )}
         </div>
