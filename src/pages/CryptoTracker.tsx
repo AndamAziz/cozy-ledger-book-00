@@ -150,6 +150,14 @@ export default function CryptoTracker() {
           </div>
 
           <div className="flex-1" />
+
+          <button
+            onClick={() => setShowConverter(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold bg-[#1a1e2e] hover:bg-[#252a3a] rounded-lg transition-colors text-[#f0b90b]"
+          >
+            <ArrowRightLeft className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Convert</span>
+          </button>
           
           {activeTab === 'crypto' && (
             <div className="flex items-center gap-1.5 text-xs">
