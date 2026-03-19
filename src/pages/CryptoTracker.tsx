@@ -23,6 +23,7 @@ export default function CryptoTracker() {
   const [coinsMap, setCoinsMap] = useState<Map<string, KrakenCoin>>(new Map());
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedForexCode, setSelectedForexCode] = useState<string | null>(null);
+  const [selectedMetalCode, setSelectedMetalCode] = useState<string | null>(null);
   const coinsRef = useRef(coinsMap);
   coinsRef.current = coinsMap;
 
