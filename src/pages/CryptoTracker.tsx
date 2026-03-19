@@ -11,7 +11,8 @@ import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
 import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot } from 'lucide-react';
+import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
 
@@ -20,6 +21,7 @@ export default function CryptoTracker() {
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(60);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [showConverter, setShowConverter] = useState(false);
   const [coinsMap, setCoinsMap] = useState<Map<string, KrakenCoin>>(new Map());
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedForexCode, setSelectedForexCode] = useState<string | null>(null);
@@ -148,6 +150,14 @@ export default function CryptoTracker() {
           </div>
 
           <div className="flex-1" />
+
+          <button
+            onClick={() => setShowConverter(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold bg-[#1a1e2e] hover:bg-[#252a3a] rounded-lg transition-colors text-[#f0b90b]"
+          >
+            <ArrowRightLeft className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Convert</span>
+          </button>
           
           {activeTab === 'crypto' && (
             <div className="flex items-center gap-1.5 text-xs">
@@ -245,6 +255,14 @@ export default function CryptoTracker() {
           )}
         </div>
       </div>
+
+      {showConverter && (
+        <CurrencyConverter
+          currencies={forexCurrencies}
+          metals={metals}
+          onClose={() => setShowConverter(false)}
+        />
+      )}
     </>
   );
 }
