@@ -230,11 +230,17 @@ export default function CryptoTracker() {
                 </div>
               )}
             </div>
-          ) : (
+          ) : activeTab === 'forex' ? (
             <ForexDetail
               currencies={forexCurrencies}
               selectedCode={selectedForexCode}
               isLoading={forexLoading}
+            />
+          ) : (
+            <MetalsDetail
+              metals={metals}
+              selectedCode={selectedMetalCode}
+              isLoading={metalsLoading}
             />
           )}
         </div>
