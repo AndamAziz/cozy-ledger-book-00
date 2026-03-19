@@ -11,7 +11,8 @@ import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
 import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot } from 'lucide-react';
+import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
 
