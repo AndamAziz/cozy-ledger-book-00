@@ -255,6 +255,14 @@ export default function CryptoTracker() {
           )}
         </div>
       </div>
+
+      {showConverter && (
+        <CurrencyConverter
+          currencies={forexCurrencies}
+          metals={metals}
+          onClose={() => setShowConverter(false)}
+        />
+      )}
     </>
   );
 }
