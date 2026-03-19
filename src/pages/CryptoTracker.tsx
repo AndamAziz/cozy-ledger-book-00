@@ -102,7 +102,7 @@ export default function CryptoTracker() {
   return (
     <>
       <Helmet>
-        <title>{activeTab === 'crypto' ? 'Crypto Tracker' : 'Forex Rates'} - Live Prices</title>
+        <title>{activeTab === 'crypto' ? 'Crypto Tracker' : activeTab === 'forex' ? 'Forex Rates' : 'Precious Metals'} - Live Prices</title>
         <meta name="description" content="Real-time cryptocurrency and forex price tracker" />
       </Helmet>
 
