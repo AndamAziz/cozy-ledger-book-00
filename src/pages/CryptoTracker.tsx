@@ -136,6 +136,15 @@ export default function CryptoTracker() {
               <DollarSign className="h-3.5 w-3.5" />
               <span className="hidden xs:inline">Forex</span>
             </button>
+            <button
+              onClick={() => setActiveTab('metals')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors ${
+                activeTab === 'metals' ? 'bg-[#d4af37] text-black' : 'text-[#848e9c] hover:text-white'
+              }`}
+            >
+              <CircleDot className="h-3.5 w-3.5" />
+              <span className="hidden xs:inline">Metals</span>
+            </button>
           </div>
 
           <div className="flex-1" />
