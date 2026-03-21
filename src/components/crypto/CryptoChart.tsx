@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, Time } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -19,7 +19,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const seriesRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const priceLineRef = useRef<any>(null);
-  const [chartType, setChartType] = useState<'candlestick' | 'line'>('candlestick');
+  const [chartType, setChartType] = useState<'candlestick' | 'line' | 'area'>('candlestick');
 
   const symbol = getDisplaySymbol(getSymbolFromPair(pair));
 
@@ -82,12 +82,26 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         wickDownColor: '#f6465d',
       });
       seriesRef.current = series;
-    } else {
+    } else if (chartType === 'line') {
       const series = chart.addSeries(LineSeries, {
         color: '#2962ff',
         lineWidth: 2,
         crosshairMarkerVisible: true,
         crosshairMarkerRadius: 4,
+      });
+      seriesRef.current = series;
+    } else {
+      // area
+      const isUp = candles.length >= 2 && candles[candles.length - 1].close >= candles[0].close;
+      const lineColor = isUp ? '#0ecb81' : '#f6465d';
+      const series = chart.addSeries(AreaSeries, {
+        lineColor,
+        lineWidth: 2,
+        topColor: isUp ? 'rgba(14,203,129,0.3)' : 'rgba(246,70,93,0.3)',
+        bottomColor: isUp ? 'rgba(14,203,129,0.02)' : 'rgba(246,70,93,0.02)',
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
+        crosshairMarkerBackgroundColor: lineColor,
       });
       seriesRef.current = series;
     }
@@ -169,6 +183,14 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
             }`}
           >
             Line
+          </button>
+          <button
+            onClick={() => setChartType('area')}
+            className={`px-3 py-1 text-xs font-medium transition-colors ${
+              chartType === 'area' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+            }`}
+          >
+            Area
           </button>
         </div>
 
