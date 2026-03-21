@@ -144,7 +144,7 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
       priceLineRef.current = null;
       maSeriesRefs.current = {};
     };
-  }, [chartType, range, isUp, activeMAs]);
+  }, [chartType, range, isUp, activeMAs, maType]);
 
   // Update data
   useEffect(() => {
