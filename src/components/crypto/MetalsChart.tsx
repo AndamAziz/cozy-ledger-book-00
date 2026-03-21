@@ -161,7 +161,7 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
     for (const ma of MA_PERIODS) {
       const maSeries = maSeriesRefs.current[ma.period];
       if (maSeries) {
-        const maData = calculateMA(candles, ma.period);
+        const maData = maType === 'EMA' ? calculateEMA(candles, ma.period) : calculateMA(candles, ma.period);
         maSeries.setData(maData.map(d => ({ time: d.time as Time, value: d.value })));
       }
     }
