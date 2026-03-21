@@ -5,142 +5,122 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function fetchGoldPriceOrg(): Promise<Record<string, number>> {
-  const results: Record<string, number> = {};
-  try {
-    const res = await fetch("https://data-asg.goldprice.org/dbXRates/USD", {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json",
-        "Referer": "https://goldprice.org/",
-      },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const item = data.items?.[0];
-      if (item) {
-        if (item.xauPrice) results.XAU = item.xauPrice;
-        if (item.xagPrice) results.XAG = item.xagPrice;
-        if (item.xptPrice) results.XPT = item.xptPrice;
-        if (item.xpdPrice) results.XPD = item.xpdPrice;
-      }
-    }
-  } catch (e) {
-    console.error("goldprice.org error:", e);
-  }
-  return results;
-}
-
-async function fetchMetalsDevApi(): Promise<Record<string, number>> {
-  const results: Record<string, number> = {};
-  try {
-    // metals-api.com free alternative endpoint
-    const res = await fetch("https://api.metals.dev/v1/latest?api_key=demo&currency=USD&unit=toz", {
-      headers: { "User-Agent": "Mozilla/5.0" },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.metals) {
-        if (data.metals.gold) results.XAU = data.metals.gold;
-        if (data.metals.silver) results.XAG = data.metals.silver;
-        if (data.metals.platinum) results.XPT = data.metals.platinum;
-        if (data.metals.palladium) results.XPD = data.metals.palladium;
-      }
-    }
-  } catch (e) {
-    console.error("metals.dev error:", e);
-  }
-  return results;
-}
-
-async function fetchMetalPriceApi(): Promise<Record<string, number>> {
-  const results: Record<string, number> = {};
-  try {
-    const res = await fetch("https://api.metalpriceapi.com/v1/latest?api_key=demo&base=USD&currencies=XAU,XAG,XPT,XPD", {
-      headers: { "User-Agent": "Mozilla/5.0" },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.rates) {
-        // These APIs return rates as 1/price (USD per unit)
-        if (data.rates.XAU) results.XAU = 1 / data.rates.XAU;
-        if (data.rates.XAG) results.XAG = 1 / data.rates.XAG;
-        if (data.rates.XPT) results.XPT = 1 / data.rates.XPT;
-        if (data.rates.XPD) results.XPD = 1 / data.rates.XPD;
-      }
-    }
-  } catch (e) {
-    console.error("metalpriceapi error:", e);
-  }
-  return results;
-}
-
-async function fetchOilPrices(): Promise<Record<string, number>> {
-  const results: Record<string, number> = {};
-  try {
-    // Try commodity-price-api from omkar.cloud for oil
-    const wtiRes = await fetch("https://commodity-price-api.omkar.cloud/commodity-price?name=crude_oil", {
-      headers: { "User-Agent": "Mozilla/5.0" },
-    });
-    if (wtiRes.ok) {
-      const data = await wtiRes.json();
-      if (data.price_usd) results.USOIL = data.price_usd;
-    }
-  } catch (e) {
-    console.error("Oil WTI fetch error:", e);
-  }
-
-  try {
-    const brentRes = await fetch("https://commodity-price-api.omkar.cloud/commodity-price?name=brent_crude_oil", {
-      headers: { "User-Agent": "Mozilla/5.0" },
-    });
-    if (brentRes.ok) {
-      const data = await brentRes.json();
-      if (data.price_usd) results.UKOIL = data.price_usd;
-    }
-  } catch (e) {
-    console.error("Oil Brent fetch error:", e);
-  }
-
-  return results;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Fetch from multiple sources in parallel
-    const [goldPriceOrg, metalsDev, metalPriceApi, oilPrices] = await Promise.all([
-      fetchGoldPriceOrg(),
-      fetchMetalsDevApi(),
-      fetchMetalPriceApi(),
-      fetchOilPrices(),
-    ]);
-
-    // Merge results with priority: goldPriceOrg > metalsDev > metalPriceApi
     const results: Record<string, number> = {};
-    
-    for (const code of ['XAU', 'XAG', 'XPT', 'XPD']) {
-      results[code] = goldPriceOrg[code] || metalsDev[code] || metalPriceApi[code] || 0;
+    const errors: string[] = [];
+
+    // Source 1: goldprice.org
+    try {
+      const res = await fetch("https://data-asg.goldprice.org/dbXRates/USD", {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Origin": "https://goldprice.org",
+          "Referer": "https://goldprice.org/",
+        },
+      });
+      const text = await res.text();
+      console.log("goldprice.org status:", res.status, "body preview:", text.substring(0, 300));
+      if (res.ok) {
+        const data = JSON.parse(text);
+        const item = data.items?.[0];
+        if (item) {
+          if (item.xauPrice) results.XAU = item.xauPrice;
+          if (item.xagPrice) results.XAG = item.xagPrice;
+          if (item.xptPrice) results.XPT = item.xptPrice;
+          if (item.xpdPrice) results.XPD = item.xpdPrice;
+        }
+      }
+    } catch (e) {
+      errors.push(`goldprice: ${e.message}`);
+      console.error("goldprice.org error:", e.message);
     }
 
-    results.USOIL = oilPrices.USOIL || 0;
-    results.UKOIL = oilPrices.UKOIL || 0;
+    // Source 2: Yahoo Finance API (scrape quote page)
+    if (!results.XAU) {
+      try {
+        const symbols = [
+          { sym: "GC=F", code: "XAU" },
+          { sym: "SI=F", code: "XAG" },
+          { sym: "PL=F", code: "XPT" },
+          { sym: "PA=F", code: "XPD" },
+          { sym: "CL=F", code: "USOIL" },
+          { sym: "BZ=F", code: "UKOIL" },
+        ];
+        
+        const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.map(s => s.sym).join(",")}`;
+        console.log("Trying Yahoo Finance:", url);
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          },
+        });
+        const text = await res.text();
+        console.log("Yahoo status:", res.status, "body preview:", text.substring(0, 500));
+        if (res.ok) {
+          const data = JSON.parse(text);
+          const quotes = data.quoteResponse?.result || [];
+          for (const q of quotes) {
+            const match = symbols.find(s => s.sym === q.symbol);
+            if (match && q.regularMarketPrice) {
+              results[match.code] = q.regularMarketPrice;
+            }
+          }
+        }
+      } catch (e) {
+        errors.push(`yahoo: ${e.message}`);
+        console.error("Yahoo error:", e.message);
+      }
+    }
 
-    // Track which sources worked
-    const sources: string[] = [];
-    if (Object.keys(goldPriceOrg).length > 0) sources.push('goldprice.org');
-    if (Object.keys(metalsDev).length > 0) sources.push('metals.dev');
-    if (Object.keys(metalPriceApi).length > 0) sources.push('metalpriceapi');
-    if (Object.keys(oilPrices).length > 0) sources.push('commodity-api');
+    // Source 3: Try Google Finance scraping via simple fetch
+    if (!results.XAU) {
+      try {
+        // Use forex-data-fixer as backup
+        const res = await fetch("https://cdn.jsdelivr.net/npm/@nicolo-ribaudo/chk-utils@0.0.0/package.json");
+        console.log("CDN test status:", res.status);
+      } catch (e) {
+        console.error("CDN test:", e.message);
+      }
+      
+      // Try direct Kitco-style endpoint
+      try {
+        const res = await fetch("https://proxy.kitco.com/getPM?symbol=AU&currency=USD&unit=oz", {
+          headers: { "User-Agent": "Mozilla/5.0" },
+        });
+        const text = await res.text();
+        console.log("Kitco status:", res.status, "body:", text.substring(0, 300));
+      } catch (e) {
+        errors.push(`kitco: ${e.message}`);
+      }
+    }
 
-    console.log("Sources used:", sources.join(', '), "Prices:", JSON.stringify(results));
+    // If still no oil prices, try marketstack or other
+    if (!results.USOIL) {
+      try {
+        // Try a direct fetch to see what works from edge function
+        const testRes = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
+        console.log("exchangerate-api status:", testRes.status);
+        if (testRes.ok) {
+          console.log("External fetch works! Just need right commodity source");
+        }
+      } catch (e) {
+        console.error("exchangerate test:", e.message);
+      }
+    }
+
+    console.log("Final results:", JSON.stringify(results));
+    console.log("Errors:", errors.join("; "));
 
     return new Response(JSON.stringify({ 
       prices: results, 
-      sources,
+      errors,
       timestamp: Date.now() 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
