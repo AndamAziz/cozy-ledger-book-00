@@ -1,14 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 import { Metal, fetchMetalsPrices } from '@/lib/metalsApi';
 
+// Check if commodities markets are likely open (Sun 6PM ET - Fri 5PM ET)
+function isCommoditiesMarketOpen(): boolean {
+  const now = new Date();
+  // Convert to ET (UTC-4 EDT / UTC-5 EST) - approximate with UTC-4
+  const utcH = now.getUTCHours();
+  const utcD = now.getUTCDay(); // 0=Sun
+  const etH = (utcH - 4 + 24) % 24;
+  const etD = utcH < 4 ? (utcD + 6) % 7 : utcD;
+
+  // Closed: Fri 5PM ET (17:00) -> Sun 6PM ET (18:00)
+  if (etD === 6) return false; // Saturday always closed
+  if (etD === 5 && etH >= 17) return false; // Friday after 5PM
+  if (etD === 0 && etH < 18) return false; // Sunday before 6PM
+  return true;
+}
+
 export function useMetalsData() {
   const [metals, setMetals] = useState<Metal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [marketOpen, setMarketOpen] = useState(true);
+  const [marketOpen, setMarketOpen] = useState(() => isCommoditiesMarketOpen());
   const inFlightRef = useRef(false);
-  const unchangedCountRef = useRef(0);
-  const lastPricesRef = useRef<string>('');
 
   useEffect(() => {
     let cancelled = false;
@@ -23,16 +37,7 @@ export function useMetalsData() {
           setMetals(data);
           setError(null);
           setIsLoading(false);
-
-          // Detect market closed: if prices haven't changed for 5+ consecutive fetches
-          const priceKey = data.map(m => `${m.code}:${m.price}`).join(',');
-          if (priceKey === lastPricesRef.current) {
-            unchangedCountRef.current += 1;
-          } else {
-            unchangedCountRef.current = 0;
-            lastPricesRef.current = priceKey;
-          }
-          setMarketOpen(unchangedCountRef.current < 5);
+          setMarketOpen(isCommoditiesMarketOpen());
         }
       } catch (err) {
         if (!cancelled) {
@@ -45,11 +50,22 @@ export function useMetalsData() {
     };
 
     load();
-    const timer = window.setInterval(load, 5000); // 5s refresh
+    // Poll every 5s when market open, 60s when closed
+    const getInterval = () => isCommoditiesMarketOpen() ? 5000 : 60000;
+    let timer = window.setInterval(load, getInterval());
+
+    // Re-check interval every 60s in case market opens/closes
+    const checkTimer = window.setInterval(() => {
+      const newInterval = getInterval();
+      window.clearInterval(timer);
+      timer = window.setInterval(load, newInterval);
+      setMarketOpen(isCommoditiesMarketOpen());
+    }, 60000);
 
     return () => {
       cancelled = true;
       window.clearInterval(timer);
+      window.clearInterval(checkTimer);
     };
   }, []);
 
