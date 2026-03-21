@@ -7,9 +7,10 @@ interface MetalsListProps {
   selectedCode: string | null;
   onSelectMetal: (code: string) => void;
   isLoading: boolean;
+  marketOpen?: boolean;
 }
 
-export function MetalsList({ metals, selectedCode, onSelectMetal, isLoading }: MetalsListProps) {
+export function MetalsList({ metals, selectedCode, onSelectMetal, isLoading, marketOpen = true }: MetalsListProps) {
   const prevPricesRef = useRef<Map<string, number>>(new Map());
   const [flashMap, setFlashMap] = useState<Map<string, 'up' | 'down'>>(new Map());
 
