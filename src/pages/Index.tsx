@@ -47,26 +47,24 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
         <meta name="description" content={t('splashSubtitle')} />
       </Helmet>
 
-      <div className="min-h-screen p-2 sm:p-3 md:p-6 safe-area-inset">
+      <div className="min-h-screen min-h-[100dvh] p-1.5 sm:p-3 md:p-6 safe-area-inset">
         <div className="max-w-5xl mx-auto">
-          {/* Admin Button - Styled like dashboard buttons */}
+          {/* Admin Button */}
           {isAdmin && (
-            <div className="mb-3 sm:mb-4 no-print">
+            <div className="mb-2 sm:mb-3 no-print">
               <Button
                 onClick={onOpenAdmin}
-                className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-3 sm:p-4 h-auto w-full md:w-auto transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-info/20 touch-manipulation"
+                className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-2.5 sm:p-3.5 h-auto w-full md:w-auto transition-all duration-200 touch-manipulation"
               >
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-lg shadow-info/30">
-                    <Users className="h-5 w-5 sm:h-6 sm:w-6 text-info-foreground" />
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-md shadow-info/30">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-info-foreground" />
                   </div>
                   <div className="text-start">
-                    <p className="font-bold text-foreground text-sm sm:text-base">{t('adminPanel')}</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">{t('users')}</p>
+                    <p className="font-bold text-foreground text-xs sm:text-sm">{t('adminPanel')}</p>
+                    <p className="text-[9px] sm:text-xs text-muted-foreground">{t('users')}</p>
                   </div>
                 </div>
-                {/* Decorative gradient */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-info/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </Button>
             </div>
           )}
