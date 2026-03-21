@@ -18,6 +18,7 @@ import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, Ar
 type TrackerTab = 'crypto' | 'forex' | 'metals';
 
 export default function CryptoTracker() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(60);
