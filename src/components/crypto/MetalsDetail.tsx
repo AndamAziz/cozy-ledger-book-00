@@ -124,6 +124,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
         accentColor={accentColor}
         range={chartRange}
         onRangeChange={setChartRange}
+        currentPrice={selected.price}
       />
 
 
