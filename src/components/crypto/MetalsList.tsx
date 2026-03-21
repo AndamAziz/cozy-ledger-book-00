@@ -81,8 +81,17 @@ export function MetalsList({ metals, selectedCode, onSelectMetal, isLoading, mar
   return (
     <div className="h-full bg-[#0d1117] border-r border-[#1a1e2e] flex flex-col">
       <div className="px-3 py-2 border-b border-[#1a1e2e]">
-        <h3 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider">Commodities</h3>
-        <p className="text-[10px] text-[#848e9c]">Spot prices • Live</p>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider">Commodities</h3>
+          {marketOpen ? (
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0ecb81]/15 text-[#0ecb81] font-semibold">LIVE</span>
+          ) : (
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#f6465d]/15 text-[#f6465d] font-semibold animate-pulse">CLOSED</span>
+          )}
+        </div>
+        <p className="text-[10px] text-[#848e9c]">
+          {marketOpen ? 'Spot prices • Live' : 'Market closed • Last prices'}
+        </p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
