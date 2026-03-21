@@ -26,7 +26,6 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
     );
   }
 
-  const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const meta = selectedCode ? METALS_META.find(m => m.code === selectedCode) : null;
 
   if (!selected || !meta) {
