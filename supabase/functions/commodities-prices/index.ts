@@ -2,73 +2,103 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Cache for 60 seconds
 let cachedPrices: Record<string, number> | null = null;
 let cacheTimestamp = 0;
-const CACHE_TTL = 60 * 1000;
+const CACHE_TTL = 30 * 1000; // 30s cache
 
-// Source 1: metals.dev free API (real-time, 60s delay max)
-async function fetchMetalsDev(): Promise<Record<string, number>> {
-  const results: Record<string, number> = {};
-  try {
-    const res = await fetch("https://api.metals.dev/v1/latest?api_key=demo&currency=USD&unit=toz", {
-      headers: { "Accept": "application/json" },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      console.log("metals.dev response:", JSON.stringify(data).substring(0, 500));
-      if (data.metals) {
-        if (data.metals.gold) results.XAU = data.metals.gold;
-        if (data.metals.silver) results.XAG = data.metals.silver;
-        if (data.metals.platinum) results.XPT = data.metals.platinum;
-        if (data.metals.palladium) results.XPD = data.metals.palladium;
-      }
-    } else {
-      console.error("metals.dev status:", res.status);
-    }
-  } catch (e) {
-    console.error("metals.dev error:", e.message);
+// Primary: goldapi.io (real-time, reliable)
+async function fetchGoldApi(): Promise<Record<string, number>> {
+  const apiKey = Deno.env.get("GOLD_API_KEY");
+  if (!apiKey) {
+    console.error("GOLD_API_KEY not configured");
+    return {};
   }
+
+  const results: Record<string, number> = {};
+  const symbols = [
+    { code: "XAU", symbol: "XAU" },
+    { code: "XAG", symbol: "XAG" },
+    { code: "XPT", symbol: "XPT" },
+    { code: "XPD", symbol: "XPD" },
+  ];
+
+  // Fetch all metals in parallel
+  const fetches = symbols.map(async ({ code, symbol }) => {
+    try {
+      const res = await fetch(`https://www.goldapi.io/api/${symbol}/USD`, {
+        headers: {
+          "x-access-token": apiKey,
+          "Content-Type": "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.price && data.price > 0) {
+          results[code] = data.price;
+          console.log(`goldapi.io ${code}: $${data.price}`);
+        }
+      } else {
+        const text = await res.text();
+        console.error(`goldapi.io ${code} status: ${res.status} - ${text}`);
+      }
+    } catch (e) {
+      console.error(`goldapi.io ${code} error:`, e.message);
+    }
+  });
+
+  await Promise.all(fetches);
   return results;
 }
 
-// Source 2: goldprice.org 
-async function fetchGoldPriceOrg(): Promise<Record<string, number>> {
-  const results: Record<string, number> = {};
+// Oil prices via AI (goldapi.io doesn't have oil)
+async function fetchOilViaAI(): Promise<Record<string, number>> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return {};
+
   try {
-    const res = await fetch("https://data-asg.goldprice.org/dbXRates/USD", {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "application/json",
-        "Origin": "https://goldprice.org",
-        "Referer": "https://goldprice.org/",
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
       },
-      signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [{
+          role: "user",
+          content: `What are the current WTI crude oil and Brent crude oil prices per barrel in USD right now? Reply ONLY with JSON: {"USOIL":number,"UKOIL":number}. No markdown, no explanation.`
+        }],
+        temperature: 0,
+        max_tokens: 50,
+      }),
+      signal: AbortSignal.timeout(10000),
     });
+
     if (res.ok) {
       const data = await res.json();
-      const item = data.items?.[0];
-      if (item) {
-        if (item.xauPrice) results.XAU = item.xauPrice;
-        if (item.xagPrice) results.XAG = item.xagPrice;
-        if (item.xptPrice) results.XPT = item.xptPrice;
-        if (item.xpdPrice) results.XPD = item.xpdPrice;
+      const content = data.choices?.[0]?.message?.content?.trim() || "";
+      const jsonMatch = content.match(/\{[^}]+\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        const result: Record<string, number> = {};
+        if (typeof parsed.USOIL === 'number' && parsed.USOIL > 0) result.USOIL = parsed.USOIL;
+        if (typeof parsed.UKOIL === 'number' && parsed.UKOIL > 0) result.UKOIL = parsed.UKOIL;
+        console.log("Oil prices from AI:", JSON.stringify(result));
+        return result;
       }
-    } else {
-      console.log("goldprice.org status:", res.status);
     }
   } catch (e) {
-    console.error("goldprice.org error:", e.message);
+    console.error("AI oil error:", e.message);
   }
-  return results;
+  return {};
 }
 
-// Source 3: AI gateway as final fallback for any missing prices
-async function fetchViaAI(missing: string[]): Promise<Record<string, number>> {
+// Fallback for metals if goldapi.io fails
+async function fetchMetalsFallbackAI(missing: string[]): Promise<Record<string, number>> {
   if (missing.length === 0) return {};
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return {};
@@ -84,7 +114,7 @@ async function fetchViaAI(missing: string[]): Promise<Record<string, number>> {
         model: "google/gemini-2.5-flash-lite",
         messages: [{
           role: "user",
-          content: `Current market prices in USD for: ${missing.join(', ')}. Where XAU=gold/oz, XAG=silver/oz, XPT=platinum/oz, XPD=palladium/oz, USOIL=WTI crude/barrel, UKOIL=Brent crude/barrel. Reply ONLY with JSON object like {"XAU":3050}. No markdown.`
+          content: `Current spot prices in USD for: ${missing.join(', ')}. XAU=gold/oz, XAG=silver/oz, XPT=platinum/oz, XPD=palladium/oz. Reply ONLY JSON like {"XAU":3050}. No markdown.`
         }],
         temperature: 0,
         max_tokens: 100,
@@ -108,7 +138,7 @@ async function fetchViaAI(missing: string[]): Promise<Record<string, number>> {
       }
     }
   } catch (e) {
-    console.error("AI fallback error:", e.message);
+    console.error("AI metals fallback error:", e.message);
   }
   return {};
 }
@@ -126,38 +156,36 @@ serve(async (req) => {
       });
     }
 
-    const allCodes = ['XAU', 'XAG', 'XPT', 'XPD', 'USOIL', 'UKOIL'];
     const results: Record<string, number> = {};
     const sources: string[] = [];
 
-    // Try metals.dev and goldprice.org in parallel
-    const [metalsDev, goldPrice] = await Promise.all([
-      fetchMetalsDev(),
-      fetchGoldPriceOrg(),
+    // Fetch metals from goldapi.io and oil from AI in parallel
+    const [goldApiPrices, oilPrices] = await Promise.all([
+      fetchGoldApi(),
+      fetchOilViaAI(),
     ]);
 
-    // Merge: prefer metals.dev, fallback to goldprice.org
+    // Merge goldapi.io metals
     for (const code of ['XAU', 'XAG', 'XPT', 'XPD']) {
-      if (metalsDev[code]) {
-        results[code] = metalsDev[code];
-      } else if (goldPrice[code]) {
-        results[code] = goldPrice[code];
+      if (goldApiPrices[code]) {
+        results[code] = goldApiPrices[code];
       }
     }
+    if (Object.keys(goldApiPrices).length > 0) sources.push('goldapi.io');
 
-    if (Object.keys(metalsDev).length > 0) sources.push('metals.dev');
-    if (Object.keys(goldPrice).length > 0) sources.push('goldprice.org');
+    // Merge oil
+    if (oilPrices.USOIL) results.USOIL = oilPrices.USOIL;
+    if (oilPrices.UKOIL) results.UKOIL = oilPrices.UKOIL;
+    if (oilPrices.USOIL || oilPrices.UKOIL) sources.push('ai-oil');
 
-    // Find missing codes and use AI fallback
-    const missing = allCodes.filter(c => !results[c]);
-    if (missing.length > 0) {
-      const aiPrices = await fetchViaAI(missing);
-      for (const code of missing) {
-        if (aiPrices[code]) {
-          results[code] = aiPrices[code];
-        }
+    // Fallback for any missing metals
+    const missingMetals = ['XAU', 'XAG', 'XPT', 'XPD'].filter(c => !results[c]);
+    if (missingMetals.length > 0) {
+      const fallback = await fetchMetalsFallbackAI(missingMetals);
+      for (const code of missingMetals) {
+        if (fallback[code]) results[code] = fallback[code];
       }
-      if (Object.keys(aiPrices).length > 0) sources.push('ai-fallback');
+      if (Object.keys(fallback).length > 0) sources.push('ai-metals-fallback');
     }
 
     console.log("Final prices:", JSON.stringify(results), "Sources:", sources.join(', '));
