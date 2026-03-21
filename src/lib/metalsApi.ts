@@ -21,16 +21,6 @@ export const METALS_META: { code: string; name: string; symbol: string; emoji: s
   { code: 'UKOIL', name: 'UK Oil (Brent)', symbol: 'BRENT/USD', emoji: '🛢️', category: 'oil', unit: 'bbl' },
 ];
 
-interface GoldPriceResponse {
-  items: Array<{
-    xauPrice: number;
-    xagPrice: number;
-    xptPrice: number;
-    xpdPrice: number;
-    curr: string;
-  }>;
-}
-
 const PREV_KEY = 'metals-prev-prices';
 
 function loadPrevPrices(): Record<string, number> {
@@ -53,71 +43,35 @@ function savePrevPrices(prices: Record<string, number>) {
   }));
 }
 
-async function fetchOilPrices(): Promise<{ wti: number; brent: number }> {
-  try {
-    // Try to get cached oil prices first
-    const cacheKey = 'oil-prices-cache';
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      // Use cache if less than 5 minutes old
-      if (Date.now() - parsed.timestamp < 5 * 60 * 1000) {
-        return { wti: parsed.wti, brent: parsed.brent };
-      }
-    }
+export async function fetchMetalsPrices(): Promise<Metal[]> {
+  let currentPrices: Record<string, number> = {};
 
-    // Fetch from a free oil price source
-    const res = await fetch('https://api.commodities-api.com/api/latest?access_key=demo&base=USD&symbols=WTIOIL,BRENTOIL');
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    
+    const res = await fetch(`${supabaseUrl}/functions/v1/commodities-prices`, {
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'apikey': supabaseKey,
+      },
+    });
+    
     if (res.ok) {
       const data = await res.json();
-      if (data.data?.rates) {
-        const wti = data.data.rates.WTIOIL ? 1 / data.data.rates.WTIOIL : 68.5;
-        const brent = data.data.rates.BRENTOIL ? 1 / data.data.rates.BRENTOIL : 72.3;
-        localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), wti, brent }));
-        return { wti, brent };
-      }
+      currentPrices = data.prices || {};
     }
-  } catch {}
-
-  // Fallback: use stored or approximate market prices
-  const cacheKey = 'oil-prices-cache';
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      return { wti: parsed.wti, brent: parsed.brent };
-    } catch {}
-  }
-  
-  return { wti: 68.50, brent: 72.30 };
-}
-
-export async function fetchMetalsPrices(): Promise<Metal[]> {
-  const [metalsRes, oilPrices] = await Promise.all([
-    fetch('https://data-asg.goldprice.org/dbXRates/USD'),
-    fetchOilPrices(),
-  ]);
-
-  let metalPrices: Record<string, number> = {};
-  
-  if (metalsRes.ok) {
-    const data: GoldPriceResponse = await metalsRes.json();
-    const item = data.items?.[0];
-    if (item) {
-      metalPrices = {
-        XAU: item.xauPrice,
-        XAG: item.xagPrice,
-        XPT: item.xptPrice,
-        XPD: item.xpdPrice,
-      };
-    }
+  } catch (e) {
+    console.error('Failed to fetch commodities prices:', e);
   }
 
-  const currentPrices: Record<string, number> = {
-    ...metalPrices,
-    USOIL: oilPrices.wti,
-    UKOIL: oilPrices.brent,
-  };
+  // Fallback prices if API fails
+  if (!currentPrices.XAU) currentPrices.XAU = 3045.00;
+  if (!currentPrices.XAG) currentPrices.XAG = 33.50;
+  if (!currentPrices.XPT) currentPrices.XPT = 985.00;
+  if (!currentPrices.XPD) currentPrices.XPD = 965.00;
+  if (!currentPrices.USOIL) currentPrices.USOIL = 68.50;
+  if (!currentPrices.UKOIL) currentPrices.UKOIL = 72.30;
 
   const prev = loadPrevPrices();
   savePrevPrices(currentPrices);
