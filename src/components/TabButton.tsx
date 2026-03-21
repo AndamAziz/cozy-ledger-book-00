@@ -30,51 +30,44 @@ export function TabButton({ active, onClick, icon, label }: TabButtonProps) {
     <button
       onClick={onClick}
       className={cn(
-        'group relative p-2.5 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl font-semibold transition-all duration-300',
-        'flex flex-col items-center gap-1.5 sm:gap-2 md:gap-3',
-        'border-2 overflow-hidden',
+        'group relative p-2 sm:p-2.5 md:p-3.5 rounded-xl sm:rounded-2xl font-semibold transition-all duration-200',
+        'flex flex-col items-center gap-1 sm:gap-1.5 md:gap-2',
+        'border overflow-hidden',
         'active:scale-95 touch-manipulation',
         active 
-          ? `bg-gradient-to-br ${colors.active} border-white/20 shadow-xl ${colors.glow}` 
-          : 'bg-secondary/40 border-border/30 hover:bg-secondary/60 hover:border-primary/30 hover:shadow-lg'
+          ? `bg-gradient-to-br ${colors.active} border-white/20 shadow-lg ${colors.glow}` 
+          : 'bg-secondary/30 border-border/20 hover:bg-secondary/50 hover:border-primary/30'
       )}
     >
-      {/* Animated background gradient for active */}
       {active && (
-        <>
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
-          <div className="absolute -inset-1 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
-        </>
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
       )}
       
-      {/* Icon container with enhanced styling */}
+      {/* Icon */}
       <div className={cn(
-        'relative z-10 w-9 h-9 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300',
+        'relative z-10 w-8 h-8 sm:w-9 sm:h-9 md:w-12 md:h-12 rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-200',
         active 
-          ? `bg-gradient-to-br ${colors.icon} text-white shadow-lg ${colors.glow}` 
-          : 'bg-secondary/80 text-muted-foreground group-hover:bg-secondary group-hover:text-foreground group-hover:scale-105'
+          ? `bg-gradient-to-br ${colors.icon} text-white shadow-md ${colors.glow}` 
+          : 'bg-secondary/60 text-muted-foreground group-hover:text-foreground'
       )}>
         {IconComponent ? (
-          <IconComponent className={cn(
-            'h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 transition-transform duration-300',
-            active && 'animate-pulse'
-          )} />
+          <IconComponent className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
         ) : (
-          <span className="text-lg sm:text-xl md:text-2xl">{icon}</span>
+          <span className="text-base sm:text-lg">{icon}</span>
         )}
       </div>
       
-      {/* Label with better visibility */}
+      {/* Label */}
       <span className={cn(
-        'relative z-10 text-[10px] sm:text-xs md:text-sm font-bold transition-all duration-300 truncate max-w-full',
+        'relative z-10 text-[9px] sm:text-[10px] md:text-xs font-bold transition-colors truncate max-w-full',
         active ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
       )}>
         {label}
       </span>
       
-      {/* Active indicator line */}
+      {/* Active indicator */}
       {active && (
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 sm:w-12 h-0.5 sm:h-1 rounded-full bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 sm:w-8 h-0.5 rounded-full bg-gradient-to-r from-transparent via-white/50 to-transparent" />
       )}
     </button>
   );

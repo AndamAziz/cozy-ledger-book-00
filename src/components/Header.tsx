@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, Building2 } from 'lucide-react';
+import { LogOut, Building2, Calendar } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -20,64 +20,59 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000); // Update every minute for date only
-
+    }, 60000);
     return () => clearInterval(timer);
   }, []);
 
   const formatDate = (date: Date) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    
-    const dayName = days[date.getDay()];
-    const day = date.getDate();
-    const month = months[date.getMonth()];
-    const year = date.getFullYear();
-    
-    return `${dayName}, ${day} ${month} ${year}`;
+    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
   };
 
-
   return (
-    <header className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-primary/20 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-lg p-3 sm:p-4 md:p-5 mb-4 sm:mb-6 animate-fade-in shadow-xl">
+    <header className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-lg mb-3 sm:mb-5 animate-fade-in shadow-xl">
       {/* Subtle background glow */}
-      <div className="absolute -top-16 -right-16 w-24 sm:w-32 h-24 sm:h-32 rounded-full bg-primary/10 blur-2xl" />
+      <div className="absolute -top-16 -right-16 w-28 h-28 rounded-full bg-primary/10 blur-2xl" />
       
-      <div className="relative flex flex-col gap-2.5 sm:gap-4">
-        {/* Company Name - Full Width on Mobile */}
+      <div className="relative">
+        {/* Company Name Banner */}
         {companyName && (
-          <div className="flex items-center justify-center gap-2 py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-gradient-to-r from-primary/15 via-primary/10 to-primary/15 border border-primary/20">
-            <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-            <span className="text-sm sm:text-base md:text-lg font-bold text-primary truncate">{companyName}</span>
+          <div className="flex items-center justify-center gap-2 py-2 px-3 bg-gradient-to-r from-primary/15 via-primary/10 to-primary/15 border-b border-primary/15">
+            <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
+            <span className="text-xs sm:text-sm md:text-base font-bold text-primary truncate">{companyName}</span>
           </div>
         )}
 
-        {/* Language & Month Picker Row */}
-        <div className="flex items-center justify-between gap-2 sm:gap-3 py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl bg-secondary/40 border border-border/20">
-          <span className="text-[10px] sm:text-xs md:text-sm text-foreground truncate">{formatDate(currentTime)}</span>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <MonthPicker value={currentMonthKey} onChange={onMonthChange} />
-            <LanguageSwitcher />
+        {/* Main header content */}
+        <div className="p-2.5 sm:p-3.5 md:p-5 flex flex-col gap-2 sm:gap-3">
+          {/* Title + Logout row */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-sm sm:text-base md:text-lg font-bold text-foreground truncate">
+              {t('financialManagement')}
+            </h1>
+            <Button
+              variant="ghost"
+              onClick={onLogout}
+              size="sm"
+              className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center gap-1 touch-manipulation"
+            >
+              <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span className="text-[10px] sm:text-xs font-medium hidden xs:inline">{t('logout')}</span>
+            </Button>
           </div>
-        </div>
 
-        {/* Title & Logout Row */}
-        <div className="flex items-center justify-between gap-2 sm:gap-3">
-          {/* Title Only */}
-          <h1 className="text-base sm:text-lg md:text-xl font-bold text-foreground truncate">
-            {t('financialManagement')}
-          </h1>
-          
-          {/* Logout Button */}
-          <Button
-            variant="ghost"
-            onClick={onLogout}
-            size="sm"
-            className="h-8 sm:h-9 px-2 sm:px-2.5 md:px-3 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center gap-1 sm:gap-1.5 touch-manipulation"
-          >
-            <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="text-[10px] sm:text-xs md:text-sm font-medium hidden xs:inline">{t('logout')}</span>
-          </Button>
+          {/* Date + Controls row */}
+          <div className="flex items-center justify-between gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-xl bg-secondary/40 border border-border/20">
+            <div className="flex items-center gap-1 min-w-0">
+              <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              <span className="text-[9px] sm:text-[11px] text-muted-foreground truncate">{formatDate(currentTime)}</span>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+              <MonthPicker value={currentMonthKey} onChange={onMonthChange} />
+              <LanguageSwitcher />
+            </div>
+          </div>
         </div>
       </div>
     </header>
