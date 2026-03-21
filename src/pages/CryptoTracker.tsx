@@ -260,7 +260,7 @@ export default function CryptoTracker() {
                 onIntervalChange={setInterval}
               />
               {currentCoin && currentCoin.price > 0 && (
-                <div className="flex flex-wrap gap-x-6 gap-y-1 px-3 py-2 border-t border-[#1a1e2e] text-xs text-[#848e9c] shrink-0">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 sm:gap-x-6 gap-y-1 px-3 py-2 border-t border-[#1a1e2e] text-[10px] sm:text-xs text-[#848e9c] shrink-0">
                   <span>24h High: <span className="text-white">${currentCoin.high24h.toLocaleString()}</span></span>
                   <span>24h Low: <span className="text-white">${currentCoin.low24h.toLocaleString()}</span></span>
                   <span>24h Vol: <span className="text-white">{currentCoin.volume24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span></span>
