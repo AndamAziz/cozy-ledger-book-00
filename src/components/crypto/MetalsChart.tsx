@@ -34,6 +34,7 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
   const maSeriesRefs = useRef<Record<number, any>>({});
   const [chartType, setChartType] = useState<'area' | 'line'>('area');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
+  const [maType, setMaType] = useState<MAType>('MA');
 
   const isUp = candles.length >= 2 && candles[candles.length - 1].close >= candles[0].close;
   const lineColor = isUp ? '#0ecb81' : '#f6465d';
