@@ -13,7 +13,6 @@ interface SummaryCardProps {
 const variantConfig = {
   income: {
     color: 'text-success',
-    valueBg: 'bg-success/10',
     border: 'border-success/25',
     cardBg: 'bg-gradient-to-br from-success/15 via-success/5 to-card/80',
     glow: 'hover:shadow-success/15',
@@ -24,7 +23,6 @@ const variantConfig = {
   },
   expense: {
     color: 'text-destructive',
-    valueBg: 'bg-destructive/10',
     border: 'border-destructive/25',
     cardBg: 'bg-gradient-to-br from-destructive/15 via-destructive/5 to-card/80',
     glow: 'hover:shadow-destructive/15',
@@ -35,7 +33,6 @@ const variantConfig = {
   },
   balance: {
     color: 'text-info',
-    valueBg: 'bg-info/10',
     border: 'border-info/25',
     cardBg: 'bg-gradient-to-br from-info/15 via-info/5 to-card/80',
     glow: 'hover:shadow-info/15',
@@ -46,7 +43,6 @@ const variantConfig = {
   },
   stock: {
     color: 'text-accent',
-    valueBg: 'bg-accent/10',
     border: 'border-accent/25',
     cardBg: 'bg-gradient-to-br from-accent/15 via-accent/5 to-card/80',
     glow: 'hover:shadow-accent/15',
@@ -57,7 +53,6 @@ const variantConfig = {
   },
   accent: {
     color: 'text-accent',
-    valueBg: 'bg-accent/10',
     border: 'border-accent/25',
     cardBg: 'bg-gradient-to-br from-accent/15 via-accent/5 to-card/80',
     glow: 'hover:shadow-accent/15',
@@ -68,7 +63,6 @@ const variantConfig = {
   },
   purchase: {
     color: 'text-accent',
-    valueBg: 'bg-accent/10',
     border: 'border-accent/25',
     cardBg: 'bg-gradient-to-br from-accent/15 via-accent/5 to-card/80',
     glow: 'hover:shadow-accent/15',
@@ -79,7 +73,6 @@ const variantConfig = {
   },
   cost: {
     color: 'text-destructive',
-    valueBg: 'bg-destructive/10',
     border: 'border-destructive/25',
     cardBg: 'bg-gradient-to-br from-destructive/15 via-destructive/5 to-card/80',
     glow: 'hover:shadow-destructive/15',
@@ -90,7 +83,6 @@ const variantConfig = {
   },
   cash: {
     color: 'text-success',
-    valueBg: 'bg-success/10',
     border: 'border-success/25',
     cardBg: 'bg-gradient-to-br from-success/15 via-success/5 to-card/80',
     glow: 'hover:shadow-success/15',
@@ -101,7 +93,6 @@ const variantConfig = {
   },
   card: {
     color: 'text-info',
-    valueBg: 'bg-info/10',
     border: 'border-info/25',
     cardBg: 'bg-gradient-to-br from-info/15 via-info/5 to-card/80',
     glow: 'hover:shadow-info/15',
@@ -112,7 +103,6 @@ const variantConfig = {
   },
   default: {
     color: 'text-primary',
-    valueBg: 'bg-primary/10',
     border: 'border-primary/25',
     cardBg: 'bg-gradient-to-br from-primary/15 via-primary/5 to-card/80',
     glow: 'hover:shadow-primary/15',
@@ -130,47 +120,43 @@ export function SummaryCard({ title, value, variant = 'default', fullWidth, dela
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-2xl border transition-all duration-300 animate-fade-in',
+        'group relative overflow-hidden rounded-xl sm:rounded-2xl border transition-all duration-300 animate-fade-in',
         config.cardBg,
         config.border,
-        'hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]',
+        'active:scale-[0.98]',
         config.glow,
         fullWidth && 'col-span-2'
       )}
       style={{ animationDelay: `${delay}ms`, animationFillMode: 'both' }}
     >
-      {/* Ambient glow blob */}
+      {/* Ambient glow */}
       <div className={cn(
-        'absolute -top-10 -right-10 w-24 h-24 rounded-full blur-2xl opacity-20 transition-all duration-500 group-hover:opacity-35 group-hover:scale-125',
+        'absolute -top-8 -right-8 w-20 h-20 rounded-full blur-2xl opacity-15',
         config.glowBg
       )} />
 
-      {/* Card content */}
-      <div className="relative p-3.5 sm:p-4 md:p-5">
-        {/* Top row: title + icon */}
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className={cn(
-              'w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3',
-              config.iconBg
-            )}>
-              <IconComponent className="h-4 w-4 sm:h-4.5 sm:w-4.5 md:h-5 md:w-5 text-white" strokeWidth={2.2} />
-            </div>
-            <h3 className="text-xs sm:text-sm font-semibold text-muted-foreground truncate leading-tight">{title}</h3>
+      {/* Content */}
+      <div className="relative p-3 sm:p-3.5 md:p-5">
+        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+          <div className={cn(
+            'w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md flex-shrink-0',
+            config.iconBg
+          )}>
+            <IconComponent className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-white" strokeWidth={2.2} />
           </div>
+          <h3 className="text-[10px] sm:text-xs font-semibold text-muted-foreground truncate leading-tight">{title}</h3>
         </div>
 
-        {/* Value */}
         <div className={cn(
-          'text-xl sm:text-2xl md:text-3xl font-bold tracking-tight leading-none',
+          'text-lg sm:text-xl md:text-2xl font-bold tracking-tight leading-none',
           config.color
         )}>
           {value}
         </div>
       </div>
 
-      {/* Bottom accent bar */}
-      <div className={cn('absolute bottom-0 left-0 right-0 h-[3px] opacity-60 transition-opacity duration-300 group-hover:opacity-100', config.bar)} />
+      {/* Bottom bar */}
+      <div className={cn('absolute bottom-0 left-0 right-0 h-[2px] opacity-50', config.bar)} />
     </div>
   );
 }
