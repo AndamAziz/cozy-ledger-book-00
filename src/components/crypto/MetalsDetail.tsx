@@ -11,8 +11,10 @@ interface MetalsDetailProps {
 }
 
 export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailProps) {
-  const [chartRange, setChartRange] = useState('1mo');
-  const { candles: historyCandles, isLoading: historyLoading } = useMetalsHistory(selectedCode, chartRange);
+  const [chartRange, setChartRange] = useState('1d');
+  const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
+  const livePrice = selected?.price || 0;
+  const { candles: historyCandles, isLoading: historyLoading } = useMetalsHistory(selectedCode, chartRange, livePrice);
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#0a0e17]">
