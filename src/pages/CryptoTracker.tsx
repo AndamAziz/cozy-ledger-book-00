@@ -31,7 +31,7 @@ export default function CryptoTracker() {
 
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading } = useForexData();
-  const { metals, isLoading: metalsLoading } = useMetalsData();
+  const { metals, isLoading: metalsLoading, marketOpen: metalsMarketOpen } = useMetalsData();
 
   // Fetch initial ticker data
   useEffect(() => {
@@ -178,7 +178,13 @@ export default function CryptoTracker() {
             <span className="text-[10px] text-[#0ecb81]">🔴 Live • 2s</span>
           )}
           {activeTab === 'metals' && (
-            <span className="text-[10px] text-[#d4af37]">🔴 Live • 30s</span>
+            metalsMarketOpen ? (
+              <span className="text-[10px] text-[#0ecb81]">🟢 Live • 5s</span>
+            ) : (
+              <span className="text-[10px] text-[#f6465d] flex items-center gap-1">
+                🔴 Market Closed
+              </span>
+            )
           )}
         </header>
 
@@ -218,6 +224,7 @@ export default function CryptoTracker() {
                   setShowSidebar(false);
                 }}
                 isLoading={metalsLoading}
+                marketOpen={metalsMarketOpen}
               />
             )}
           </div>
