@@ -53,7 +53,7 @@ export function useForexData() {
     };
   }, []);
 
-  // Simulate live micro-fluctuations every 2 seconds
+  // Simulate live micro-fluctuations every 1 second
   useEffect(() => {
     if (isLoading || currencies.length === 0) return;
 
@@ -63,13 +63,11 @@ export function useForexData() {
       setCurrencies(prev => {
         return prev.map(c => {
           const vol = VOLATILITY[c.code] || 0.003;
-          // Random walk with mean reversion toward base rate
           const baseRate = baseRatesRef.current.find(b => b.code === c.code)?.rate || c.rate;
-          const drift = (baseRate - c.rate) * 0.01; // gentle pull back to real rate
+          const drift = (baseRate - c.rate) * 0.01;
           const noise = (Math.random() - 0.5) * 2 * vol * c.rate / 100;
           const newRate = c.rate + drift + noise;
           
-          // Recalculate change from prevRate (the original previous-day rate)
           const change = c.prevRate !== 0 ? ((newRate - c.prevRate) / c.prevRate) * 100 : 0;
 
           return {
@@ -79,7 +77,7 @@ export function useForexData() {
           };
         });
       });
-    }, 2000);
+    }, 1000);
 
     return () => clearInterval(tickInterval);
   }, [isLoading, currencies.length]);

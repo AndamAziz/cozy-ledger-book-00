@@ -4,18 +4,26 @@ import { Metal, fetchMetalsPrices } from '@/lib/metalsApi';
 // Check if commodities markets are likely open (Sun 6PM ET - Fri 5PM ET)
 function isCommoditiesMarketOpen(): boolean {
   const now = new Date();
-  // Convert to ET (UTC-4 EDT / UTC-5 EST) - approximate with UTC-4
   const utcH = now.getUTCHours();
   const utcD = now.getUTCDay(); // 0=Sun
   const etH = (utcH - 4 + 24) % 24;
   const etD = utcH < 4 ? (utcD + 6) % 7 : utcD;
 
-  // Closed: Fri 5PM ET (17:00) -> Sun 6PM ET (18:00)
-  if (etD === 6) return false; // Saturday always closed
-  if (etD === 5 && etH >= 17) return false; // Friday after 5PM
-  if (etD === 0 && etH < 18) return false; // Sunday before 6PM
+  if (etD === 6) return false;
+  if (etD === 5 && etH >= 17) return false;
+  if (etD === 0 && etH < 18) return false;
   return true;
 }
+
+// Volatility per commodity (% max fluctuation per tick)
+const VOLATILITY: Record<string, number> = {
+  XAU: 0.003,
+  XAG: 0.005,
+  XPT: 0.004,
+  XPD: 0.006,
+  USOIL: 0.005,
+  UKOIL: 0.005,
+};
 
 export function useMetalsData() {
   const [metals, setMetals] = useState<Metal[]>([]);
@@ -23,7 +31,9 @@ export function useMetalsData() {
   const [error, setError] = useState<string | null>(null);
   const [marketOpen, setMarketOpen] = useState(() => isCommoditiesMarketOpen());
   const inFlightRef = useRef(false);
+  const baseMetalsRef = useRef<Metal[]>([]);
 
+  // Fetch real prices from API
   useEffect(() => {
     let cancelled = false;
 
@@ -34,6 +44,7 @@ export function useMetalsData() {
       try {
         const data = await fetchMetalsPrices();
         if (!cancelled) {
+          baseMetalsRef.current = data;
           setMetals(data);
           setError(null);
           setIsLoading(false);
@@ -50,11 +61,10 @@ export function useMetalsData() {
     };
 
     load();
-    // Poll every 5s when market open, 60s when closed
-    const getInterval = () => isCommoditiesMarketOpen() ? 5000 : 60000;
+    // Poll API every 10s when market open, 60s when closed
+    const getInterval = () => isCommoditiesMarketOpen() ? 10000 : 60000;
     let timer = window.setInterval(load, getInterval());
 
-    // Re-check interval every 60s in case market opens/closes
     const checkTimer = window.setInterval(() => {
       const newInterval = getInterval();
       window.clearInterval(timer);
@@ -68,6 +78,37 @@ export function useMetalsData() {
       window.clearInterval(checkTimer);
     };
   }, []);
+
+  // Simulate live micro-fluctuations every 1 second between API polls
+  useEffect(() => {
+    if (isLoading || metals.length === 0) return;
+
+    const tickInterval = window.setInterval(() => {
+      setMetals(prev => {
+        return prev.map(m => {
+          const vol = VOLATILITY[m.code] || 0.004;
+          const basePrice = baseMetalsRef.current.find(b => b.code === m.code)?.price || m.price;
+          // Mean reversion toward real API price + random noise
+          const drift = (basePrice - m.price) * 0.02;
+          const noise = (Math.random() - 0.5) * 2 * vol * m.price / 100;
+          const newPrice = Math.max(0.01, m.price + drift + noise);
+
+          // Recalculate change from prevPrice
+          const change = m.prevPrice > 0 ? ((newPrice - m.prevPrice) / m.prevPrice) * 100 : 0;
+
+          return {
+            ...m,
+            price: newPrice,
+            change,
+            high24h: Math.max(m.high24h, newPrice),
+            low24h: Math.min(m.low24h, newPrice),
+          };
+        });
+      });
+    }, 1000);
+
+    return () => clearInterval(tickInterval);
+  }, [isLoading, metals.length]);
 
   return { metals, isLoading, error, marketOpen };
 }
