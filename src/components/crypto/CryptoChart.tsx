@@ -167,7 +167,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     }
 
     chartRef.current?.timeScale().fitContent();
-  }, [candles, chartType, activeMAs]);
+  }, [candles, chartType, activeMAs, maType]);
 
   // Update price line
   useEffect(() => {
