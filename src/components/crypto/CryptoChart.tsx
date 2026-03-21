@@ -139,7 +139,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       seriesRef.current = null;
       maSeriesRefs.current = {};
     };
-  }, [chartType, pair, activeMAs]);
+  }, [chartType, pair, activeMAs, maType]);
 
   // Update data
   useEffect(() => {
