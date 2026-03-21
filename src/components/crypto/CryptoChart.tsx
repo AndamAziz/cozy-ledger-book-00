@@ -82,12 +82,26 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         wickDownColor: '#f6465d',
       });
       seriesRef.current = series;
-    } else {
+    } else if (chartType === 'line') {
       const series = chart.addSeries(LineSeries, {
         color: '#2962ff',
         lineWidth: 2,
         crosshairMarkerVisible: true,
         crosshairMarkerRadius: 4,
+      });
+      seriesRef.current = series;
+    } else {
+      // area
+      const isUp = candles.length >= 2 && candles[candles.length - 1].close >= candles[0].close;
+      const lineColor = isUp ? '#0ecb81' : '#f6465d';
+      const series = chart.addSeries(AreaSeries, {
+        lineColor,
+        lineWidth: 2,
+        topColor: isUp ? 'rgba(14,203,129,0.3)' : 'rgba(246,70,93,0.3)',
+        bottomColor: isUp ? 'rgba(14,203,129,0.02)' : 'rgba(246,70,93,0.02)',
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
+        crosshairMarkerBackgroundColor: lineColor,
       });
       seriesRef.current = series;
     }
