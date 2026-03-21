@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
-import { Skeleton } from '@/components/ui/skeleton';
+import { calculateMA, MA_PERIODS } from '@/lib/movingAverage';
 
 interface CryptoChartProps {
   pair: string;
@@ -19,19 +19,31 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const seriesRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const priceLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const maSeriesRefs = useRef<Record<number, any>>({});
   const [chartType, setChartType] = useState<'candlestick' | 'line' | 'area'>('candlestick');
+  const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
 
   const symbol = getDisplaySymbol(getSymbolFromPair(pair));
+
+  const toggleMA = (period: number) => {
+    setActiveMAs(prev => {
+      const next = new Set(prev);
+      if (next.has(period)) next.delete(period);
+      else next.add(period);
+      return next;
+    });
+  };
 
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) return;
 
-    // Clean up previous chart
     if (chartRef.current) {
       chartRef.current.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      maSeriesRefs.current = {};
     }
 
     const rect = container.getBoundingClientRect();
@@ -91,7 +103,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       });
       seriesRef.current = series;
     } else {
-      // area
       const isUp = candles.length >= 2 && candles[candles.length - 1].close >= candles[0].close;
       const lineColor = isUp ? '#0ecb81' : '#f6465d';
       const series = chart.addSeries(AreaSeries, {
@@ -106,13 +117,28 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       seriesRef.current = series;
     }
 
+    // Add MA series
+    for (const ma of MA_PERIODS) {
+      if (activeMAs.has(ma.period)) {
+        const maSeries = chart.addSeries(LineSeries, {
+          color: ma.color,
+          lineWidth: 1,
+          crosshairMarkerVisible: false,
+          priceLineVisible: false,
+          lastValueVisible: false,
+        });
+        maSeriesRefs.current[ma.period] = maSeries;
+      }
+    }
+
     return () => {
       resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      maSeriesRefs.current = {};
     };
-  }, [chartType, pair]);
+  }, [chartType, pair, activeMAs]);
 
   // Update data
   useEffect(() => {
@@ -130,14 +156,22 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       })));
     }
 
-    chartRef.current?.timeScale().fitContent();
-  }, [candles, chartType]);
+    // Update MA data
+    for (const ma of MA_PERIODS) {
+      const maSeries = maSeriesRefs.current[ma.period];
+      if (maSeries) {
+        const maData = calculateMA(candles, ma.period);
+        maSeries.setData(maData.map(d => ({ time: d.time as Time, value: d.value })));
+      }
+    }
 
-  // Update price line separately
+    chartRef.current?.timeScale().fitContent();
+  }, [candles, chartType, activeMAs]);
+
+  // Update price line
   useEffect(() => {
     if (!seriesRef.current || currentPrice <= 0) return;
 
-    // Remove old price line
     if (priceLineRef.current) {
       try { seriesRef.current.removePriceLine(priceLineRef.current); } catch {}
     }
@@ -152,7 +186,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     });
   }, [currentPrice, symbol]);
 
-
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -166,32 +199,35 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
         <div className="flex-1" />
 
+        {/* MA toggles */}
+        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+          {MA_PERIODS.map(ma => (
+            <button
+              key={ma.period}
+              onClick={() => toggleMA(ma.period)}
+              className={`px-2 py-1 text-[10px] font-bold transition-colors ${
+                activeMAs.has(ma.period) ? 'text-white' : 'text-[#848e9c] hover:text-white opacity-50'
+              }`}
+              style={{ color: activeMAs.has(ma.period) ? ma.color : undefined }}
+            >
+              {ma.label}
+            </button>
+          ))}
+        </div>
+
         {/* Chart type toggle */}
         <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
-          <button
-            onClick={() => setChartType('candlestick')}
-            className={`px-3 py-1 text-xs font-medium transition-colors ${
-              chartType === 'candlestick' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-            }`}
-          >
-            Candles
-          </button>
-          <button
-            onClick={() => setChartType('line')}
-            className={`px-3 py-1 text-xs font-medium transition-colors ${
-              chartType === 'line' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-            }`}
-          >
-            Line
-          </button>
-          <button
-            onClick={() => setChartType('area')}
-            className={`px-3 py-1 text-xs font-medium transition-colors ${
-              chartType === 'area' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-            }`}
-          >
-            Area
-          </button>
+          {(['candlestick', 'line', 'area'] as const).map(type => (
+            <button
+              key={type}
+              onClick={() => setChartType(type)}
+              className={`px-3 py-1 text-xs font-medium transition-colors ${
+                chartType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+              }`}
+            >
+              {type === 'candlestick' ? 'Candles' : type.charAt(0).toUpperCase() + type.slice(1)}
+            </button>
+          ))}
         </div>
 
         {/* Timeframe selector */}
