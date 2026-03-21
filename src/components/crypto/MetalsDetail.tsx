@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { Metal, METALS_META } from '@/lib/metalsApi';
+import { useMetalsHistory } from '@/hooks/useMetalsHistory';
+import { MetalsChart } from '@/components/crypto/MetalsChart';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
 
 interface MetalsDetailProps {
