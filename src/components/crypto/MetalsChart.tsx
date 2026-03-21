@@ -167,7 +167,7 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
     }
 
     chartRef.current?.timeScale().fitContent();
-  }, [candles, activeMAs]);
+  }, [candles, activeMAs, maType]);
 
   // Update price line
   useEffect(() => {
