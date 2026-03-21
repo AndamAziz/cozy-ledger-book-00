@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { ForexCurrency } from '@/lib/forexApi';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search } from 'lucide-react';
@@ -12,6 +12,25 @@ interface ForexListProps {
 
 export function ForexList({ currencies, selectedCode, onSelectCurrency, isLoading }: ForexListProps) {
   const [search, setSearch] = useState('');
+  const prevRatesRef = useRef<Map<string, number>>(new Map());
+  const [flashMap, setFlashMap] = useState<Map<string, 'up' | 'down'>>(new Map());
+
+  // Track price changes for flash effect
+  useEffect(() => {
+    const newFlash = new Map<string, 'up' | 'down'>();
+    currencies.forEach(c => {
+      const prev = prevRatesRef.current.get(c.code);
+      if (prev !== undefined && prev !== c.rate) {
+        newFlash.set(c.code, c.rate > prev ? 'up' : 'down');
+      }
+      prevRatesRef.current.set(c.code, c.rate);
+    });
+    if (newFlash.size > 0) {
+      setFlashMap(newFlash);
+      const t = setTimeout(() => setFlashMap(new Map()), 600);
+      return () => clearTimeout(t);
+    }
+  }, [currencies]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return currencies;
@@ -66,10 +85,10 @@ export function ForexList({ currencies, selectedCode, onSelectCurrency, isLoadin
           filtered.map(currency => {
             const isSelected = currency.code === selectedCode;
             const isPositive = currency.change >= 0;
+            const flash = flashMap.get(currency.code);
 
-            // Format rate based on magnitude
             const formatRate = (rate: number) => {
-              if (rate >= 1000) return rate.toLocaleString(undefined, { maximumFractionDigits: 0 });
+              if (rate >= 1000) return rate.toLocaleString(undefined, { maximumFractionDigits: 2 });
               if (rate >= 1) return rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
               return rate.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 6 });
             };
@@ -93,7 +112,9 @@ export function ForexList({ currencies, selectedCode, onSelectCurrency, isLoadin
                     <p className="text-[10px] text-[#848e9c] truncate">{currency.name}</p>
                   </div>
                 </div>
-                <span className="text-xs font-medium text-white text-right w-20 tabular-nums">
+                <span className={`text-xs font-medium text-right w-20 tabular-nums transition-colors duration-500 ${
+                  flash === 'up' ? 'text-[#0ecb81]' : flash === 'down' ? 'text-[#f6465d]' : 'text-white'
+                }`}>
                   {formatRate(currency.rate)}
                 </span>
                 <span className={`text-[11px] font-semibold text-right w-14 tabular-nums ${
