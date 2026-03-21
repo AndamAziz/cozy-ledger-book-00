@@ -13,7 +13,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
       <div className="flex-1 flex items-center justify-center bg-[#0a0e17]">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 text-[#848e9c] mx-auto mb-3 animate-spin" />
-          <p className="text-sm text-[#848e9c]">Loading metals prices...</p>
+          <p className="text-sm text-[#848e9c]">Loading prices...</p>
         </div>
       </div>
     );
@@ -23,40 +23,56 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
   const meta = selectedCode ? METALS_META.find(m => m.code === selectedCode) : null;
 
   if (!selected || !meta) {
-    // Overview grid
+    const metalItems = metals.filter(m => m.category === 'metal');
+    const oilItems = metals.filter(m => m.category === 'oil');
+
+    const renderCard = (m: Metal) => {
+      const isPositive = m.change > 0;
+      const isNeutral = m.change === 0;
+      const accentColor = m.category === 'oil' ? '#e67e22' : '#d4af37';
+      return (
+        <div key={m.code} className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4 hover:border-opacity-30 transition-colors" style={{ borderColor: undefined }}>
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-3xl">{m.emoji}</span>
+            <div>
+              <h3 className="text-base font-bold text-white">{m.name}</h3>
+              <p className="text-xs text-[#848e9c]">{m.symbol}</p>
+            </div>
+          </div>
+          <p className="text-2xl font-bold tabular-nums mb-1" style={{ color: accentColor }}>
+            ${m.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+          <p className="text-[10px] text-[#848e9c] mb-2">per {m.unit === 'bbl' ? 'barrel' : 'troy ounce'}</p>
+          <div className={`flex items-center gap-1 text-xs font-medium ${
+            isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
+          }`}>
+            {isNeutral ? <Minus className="h-3.5 w-3.5" /> : isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+            {isNeutral ? 'No change' : `${isPositive ? '+' : ''}${m.change.toFixed(2)}%`}
+          </div>
+        </div>
+      );
+    };
+
     return (
       <div className="flex-1 flex flex-col bg-[#0a0e17]">
         <div className="p-4 border-b border-[#1a1e2e]">
-          <h2 className="text-lg font-bold text-white mb-1">🏆 Precious Metals — Spot Prices</h2>
-          <p className="text-xs text-[#848e9c]">Select a metal for details • Prices update every 30s</p>
+          <h2 className="text-lg font-bold text-white mb-1">📊 Commodities — Live Spot Prices</h2>
+          <p className="text-xs text-[#848e9c]">Select a commodity for details • Live real-time prices</p>
         </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {metals.map(m => {
-              const isPositive = m.change > 0;
-              const isNeutral = m.change === 0;
-              return (
-                <div key={m.code} className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4 hover:border-[#d4af37]/30 transition-colors">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-3xl">{m.emoji}</span>
-                    <div>
-                      <h3 className="text-base font-bold text-white">{m.name}</h3>
-                      <p className="text-xs text-[#848e9c]">{m.symbol}</p>
-                    </div>
-                  </div>
-                  <p className="text-2xl font-bold text-[#d4af37] tabular-nums mb-1">
-                    ${m.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-[10px] text-[#848e9c] mb-2">per troy ounce</p>
-                  <div className={`flex items-center gap-1 text-xs font-medium ${
-                    isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
-                  }`}>
-                    {isNeutral ? <Minus className="h-3.5 w-3.5" /> : isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                    {isNeutral ? 'No change' : `${isPositive ? '+' : ''}${m.change.toFixed(2)}%`}
-                  </div>
-                </div>
-              );
-            })}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Precious Metals */}
+          <div>
+            <h3 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider mb-3">🏆 Precious Metals</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {metalItems.map(renderCard)}
+            </div>
+          </div>
+          {/* Crude Oil */}
+          <div>
+            <h3 className="text-xs font-bold text-[#e67e22] uppercase tracking-wider mb-3">🛢️ Crude Oil</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {oilItems.map(renderCard)}
+            </div>
           </div>
         </div>
       </div>
@@ -66,7 +82,9 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
   // Detail view
   const isPositive = selected.change > 0;
   const isNeutral = selected.change === 0;
-  const otherMetals = metals.filter(m => m.code !== selectedCode);
+  const isOil = selected.category === 'oil';
+  const accentColor = isOil ? '#e67e22' : '#d4af37';
+  const otherItems = metals.filter(m => m.code !== selectedCode);
 
   return (
     <div className="flex-1 flex flex-col bg-[#0a0e17] overflow-y-auto">
@@ -80,10 +98,10 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           </div>
         </div>
         <div className="flex items-baseline gap-3">
-          <span className="text-3xl font-bold text-[#d4af37] tabular-nums">
+          <span className="text-3xl font-bold tabular-nums" style={{ color: accentColor }}>
             ${selected.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <span className="text-xs text-[#848e9c]">/ troy oz</span>
+          <span className="text-xs text-[#848e9c]">/ {isOil ? 'barrel' : 'troy oz'}</span>
           <span className={`flex items-center gap-1 text-sm font-semibold ${
             isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
           }`}>
@@ -93,11 +111,25 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
         </div>
       </div>
 
-      {/* Weight conversions */}
+      {/* Unit conversions */}
       <div className="p-4 border-b border-[#1a1e2e]">
-        <h3 className="text-sm font-semibold text-white mb-3">Price by Weight</h3>
+        <h3 className="text-sm font-semibold text-white mb-3">
+          {isOil ? 'Volume Pricing' : 'Price by Weight'}
+        </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
+          {isOil ? [
+            { label: '1 Barrel', factor: 1 },
+            { label: '10 Barrels', factor: 10 },
+            { label: '100 Barrels', factor: 100 },
+            { label: '1000 Barrels', factor: 1000 },
+          ].map(w => (
+            <div key={w.label} className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-3">
+              <p className="text-[10px] text-[#848e9c] uppercase mb-1">{w.label}</p>
+              <p className="text-sm font-bold text-white tabular-nums">
+                ${(selected.price * w.factor).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          )) : [
             { label: '1 Troy Oz', factor: 1 },
             { label: '1 Gram', factor: 1 / 31.1035 },
             { label: '10 Grams', factor: 10 / 31.1035 },
@@ -113,7 +145,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
         </div>
       </div>
 
-      {/* Quantity calculator */}
+      {/* Investment calculator */}
       <div className="p-4 border-b border-[#1a1e2e]">
         <h3 className="text-sm font-semibold text-white mb-3">Investment Amounts</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -121,21 +153,26 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
             <div key={amount} className="bg-[#0d1117] border border-[#1a1e2e] rounded-lg p-2 text-center">
               <p className="text-[10px] text-[#848e9c]">${amount.toLocaleString()}</p>
               <p className="text-xs font-semibold text-white tabular-nums">
-                {(amount / selected.price).toFixed(4)} oz
+                {isOil 
+                  ? `${(amount / selected.price).toFixed(1)} bbl`
+                  : `${(amount / selected.price).toFixed(4)} oz`
+                }
               </p>
-              <p className="text-[9px] text-[#848e9c]">
-                {((amount / selected.price) * 31.1035).toFixed(2)} g
-              </p>
+              {!isOil && (
+                <p className="text-[9px] text-[#848e9c]">
+                  {((amount / selected.price) * 31.1035).toFixed(2)} g
+                </p>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Other metals comparison */}
+      {/* Other commodities */}
       <div className="p-4">
-        <h3 className="text-sm font-semibold text-white mb-3">Other Precious Metals</h3>
+        <h3 className="text-sm font-semibold text-white mb-3">Other Commodities</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {otherMetals.map(m => {
+          {otherItems.map(m => {
             const mPositive = m.change > 0;
             const mNeutral = m.change === 0;
             return (
