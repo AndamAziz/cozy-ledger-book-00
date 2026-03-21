@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
-import { calculateMA, MA_PERIODS } from '@/lib/movingAverage';
+import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 
 interface MetalsChartProps {
   candles: MetalCandle[];
@@ -34,6 +34,7 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
   const maSeriesRefs = useRef<Record<number, any>>({});
   const [chartType, setChartType] = useState<'area' | 'line'>('area');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
+  const [maType, setMaType] = useState<MAType>('MA');
 
   const isUp = candles.length >= 2 && candles[candles.length - 1].close >= candles[0].close;
   const lineColor = isUp ? '#0ecb81' : '#f6465d';
@@ -143,7 +144,7 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
       priceLineRef.current = null;
       maSeriesRefs.current = {};
     };
-  }, [chartType, range, isUp, activeMAs]);
+  }, [chartType, range, isUp, activeMAs, maType]);
 
   // Update data
   useEffect(() => {
@@ -160,13 +161,13 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
     for (const ma of MA_PERIODS) {
       const maSeries = maSeriesRefs.current[ma.period];
       if (maSeries) {
-        const maData = calculateMA(candles, ma.period);
+        const maData = maType === 'EMA' ? calculateEMA(candles, ma.period) : calculateMA(candles, ma.period);
         maSeries.setData(maData.map(d => ({ time: d.time as Time, value: d.value })));
       }
     }
 
     chartRef.current?.timeScale().fitContent();
-  }, [candles, activeMAs]);
+  }, [candles, activeMAs, maType]);
 
   // Update price line
   useEffect(() => {
@@ -215,7 +216,22 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
           </span>
         )}
 
-        {/* MA toggles */}
+        {/* MA/EMA type toggle */}
+        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+          {(['MA', 'EMA'] as MAType[]).map(type => (
+            <button
+              key={type}
+              onClick={() => setMaType(type)}
+              className={`px-2 py-1 text-[10px] font-bold transition-colors ${
+                maType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+
+        {/* MA period toggles */}
         <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
           {MA_PERIODS.map(ma => (
             <button
@@ -226,7 +242,7 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
               }`}
               style={{ color: activeMAs.has(ma.period) ? ma.color : undefined }}
             >
-              {ma.label}
+              {maType}{ma.label}
             </button>
           ))}
         </div>
