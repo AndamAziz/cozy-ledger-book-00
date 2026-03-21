@@ -31,7 +31,7 @@ export default function CryptoTracker() {
 
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading } = useForexData();
-  const { metals, isLoading: metalsLoading } = useMetalsData();
+  const { metals, isLoading: metalsLoading, marketOpen: metalsMarketOpen } = useMetalsData();
 
   // Fetch initial ticker data
   useEffect(() => {
