@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useNavigate } from 'react-router-dom';
 import { KrakenCoin, TRACKED_PAIRS, getSymbolFromPair, getCoinMeta, fetchTicker } from '@/lib/krakenApi';
 import { useKrakenWebSocket } from '@/hooks/useKrakenWebSocket';
 import { useKrakenOHLC } from '@/hooks/useKrakenOHLC';
@@ -12,11 +13,12 @@ import { ForexDetail } from '@/components/crypto/ForexDetail';
 import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
 import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
 
 export default function CryptoTracker() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(60);
@@ -108,44 +110,53 @@ export default function CryptoTracker() {
         <meta name="description" content="Real-time cryptocurrency and forex price tracker" />
       </Helmet>
 
-      <div className="h-screen flex flex-col bg-[#0a0e17] text-white overflow-hidden">
+      <div className="h-[100dvh] flex flex-col bg-[#0a0e17] text-white overflow-hidden">
         {/* Top bar */}
-        <header className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] bg-[#0d1117] shrink-0">
+        <header className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 border-b border-[#1a1e2e] bg-[#0d1117] shrink-0">
+          {/* Back button */}
+          <button
+            onClick={() => navigate('/')}
+            className="p-1.5 sm:p-2 rounded-lg hover:bg-[#1a1e2e] active:bg-[#252a3a] transition-colors"
+            aria-label="Back to calculator"
+          >
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+          </button>
+
           <button
             onClick={() => setShowSidebar(!showSidebar)}
-            className="md:hidden p-1.5 rounded-lg hover:bg-[#1a1e2e] transition-colors"
+            className="md:hidden p-1.5 rounded-lg hover:bg-[#1a1e2e] active:bg-[#252a3a] transition-colors"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
 
           {/* Tab switcher */}
           <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
             <button
               onClick={() => setActiveTab('crypto')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold transition-colors active:scale-95 ${
                 activeTab === 'crypto' ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c] hover:text-white'
               }`}
             >
-              <Bitcoin className="h-3.5 w-3.5" />
-              <span className="hidden xs:inline">Crypto</span>
+              <Bitcoin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span>Crypto</span>
             </button>
             <button
               onClick={() => setActiveTab('forex')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold transition-colors active:scale-95 ${
                 activeTab === 'forex' ? 'bg-[#2962ff] text-white' : 'text-[#848e9c] hover:text-white'
               }`}
             >
-              <DollarSign className="h-3.5 w-3.5" />
-              <span className="hidden xs:inline">Forex</span>
+              <DollarSign className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span>Forex</span>
             </button>
             <button
               onClick={() => setActiveTab('metals')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold transition-colors active:scale-95 ${
                 activeTab === 'metals' ? 'bg-[#d4af37] text-black' : 'text-[#848e9c] hover:text-white'
               }`}
             >
-              <CircleDot className="h-3.5 w-3.5" />
-              <span className="hidden xs:inline">Metals</span>
+              <CircleDot className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <span>Metals</span>
             </button>
           </div>
 
@@ -153,36 +164,36 @@ export default function CryptoTracker() {
 
           <button
             onClick={() => setShowConverter(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold bg-[#1a1e2e] hover:bg-[#252a3a] rounded-lg transition-colors text-[#f0b90b]"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold bg-[#1a1e2e] hover:bg-[#252a3a] active:bg-[#303548] rounded-lg transition-colors text-[#f0b90b]"
           >
-            <ArrowRightLeft className="h-3.5 w-3.5" />
+            <ArrowRightLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
             <span className="hidden sm:inline">Convert</span>
           </button>
           
           {activeTab === 'crypto' && (
-            <div className="flex items-center gap-1.5 text-xs">
+            <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs">
               {isConnected ? (
                 <>
-                  <Wifi className="h-3.5 w-3.5 text-[#0ecb81]" />
+                  <Wifi className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#0ecb81]" />
                   <span className="text-[#0ecb81] hidden sm:inline">Live</span>
                 </>
               ) : (
                 <>
-                  <WifiOff className="h-3.5 w-3.5 text-[#f6465d]" />
+                  <WifiOff className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#f6465d]" />
                   <span className="text-[#f6465d] hidden sm:inline">Reconnecting...</span>
                 </>
               )}
             </div>
           )}
           {activeTab === 'forex' && (
-            <span className="text-[10px] text-[#0ecb81]">🔴 Live • 2s</span>
+            <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🔴 Live • 2s</span>
           )}
           {activeTab === 'metals' && (
             metalsMarketOpen ? (
-              <span className="text-[10px] text-[#0ecb81]">🟢 Live • 5s</span>
+              <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🟢 Live • 5s</span>
             ) : (
-              <span className="text-[10px] text-[#f6465d] flex items-center gap-1">
-                🔴 Market Closed
+              <span className="text-[9px] sm:text-[10px] text-[#f6465d] flex items-center gap-1">
+                🔴 Closed
               </span>
             )
           )}
@@ -249,7 +260,7 @@ export default function CryptoTracker() {
                 onIntervalChange={setInterval}
               />
               {currentCoin && currentCoin.price > 0 && (
-                <div className="flex flex-wrap gap-x-6 gap-y-1 px-3 py-2 border-t border-[#1a1e2e] text-xs text-[#848e9c] shrink-0">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 sm:gap-x-6 gap-y-1 px-3 py-2 border-t border-[#1a1e2e] text-[10px] sm:text-xs text-[#848e9c] shrink-0">
                   <span>24h High: <span className="text-white">${currentCoin.high24h.toLocaleString()}</span></span>
                   <span>24h Low: <span className="text-white">${currentCoin.low24h.toLocaleString()}</span></span>
                   <span>24h Vol: <span className="text-white">{currentCoin.volume24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span></span>
