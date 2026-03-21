@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
+import { calculateMA, MA_PERIODS } from '@/lib/movingAverage';
 
 interface MetalsChartProps {
   candles: MetalCandle[];
@@ -29,17 +30,26 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
   const seriesRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const priceLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const maSeriesRefs = useRef<Record<number, any>>({});
   const [chartType, setChartType] = useState<'area' | 'line'>('area');
+  const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
 
-  // Determine color based on price direction
   const isUp = candles.length >= 2 && candles[candles.length - 1].close >= candles[0].close;
   const lineColor = isUp ? '#0ecb81' : '#f6465d';
 
-  // Price change stats
   const priceChange = candles.length >= 2 ? candles[candles.length - 1].close - candles[0].close : 0;
   const pctChange = candles.length >= 2 && candles[0].close > 0 ? (priceChange / candles[0].close) * 100 : 0;
 
-  // Create chart
+  const toggleMA = (period: number) => {
+    setActiveMAs(prev => {
+      const next = new Set(prev);
+      if (next.has(period)) next.delete(period);
+      else next.add(period);
+      return next;
+    });
+  };
+
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) return;
@@ -49,6 +59,7 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
       chartRef.current = null;
       seriesRef.current = null;
       priceLineRef.current = null;
+      maSeriesRefs.current = {};
     }
 
     const rect = container.getBoundingClientRect();
@@ -110,14 +121,29 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
       seriesRef.current = series;
     }
 
+    // Add MA series
+    for (const ma of MA_PERIODS) {
+      if (activeMAs.has(ma.period)) {
+        const maSeries = chart.addSeries(LineSeries, {
+          color: ma.color,
+          lineWidth: 1,
+          crosshairMarkerVisible: false,
+          priceLineVisible: false,
+          lastValueVisible: false,
+        });
+        maSeriesRefs.current[ma.period] = maSeries;
+      }
+    }
+
     return () => {
       resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
       priceLineRef.current = null;
+      maSeriesRefs.current = {};
     };
-  }, [chartType, range, isUp]);
+  }, [chartType, range, isUp, activeMAs]);
 
   // Update data
   useEffect(() => {
@@ -129,8 +155,18 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
     }));
 
     seriesRef.current.setData(data);
+
+    // Update MA data
+    for (const ma of MA_PERIODS) {
+      const maSeries = maSeriesRefs.current[ma.period];
+      if (maSeries) {
+        const maData = calculateMA(candles, ma.period);
+        maSeries.setData(maData.map(d => ({ time: d.time as Time, value: d.value })));
+      }
+    }
+
     chartRef.current?.timeScale().fitContent();
-  }, [candles]);
+  }, [candles, activeMAs]);
 
   // Update price line
   useEffect(() => {
@@ -178,6 +214,22 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
             {isUp ? '▲' : '▼'} {isUp ? '+' : ''}{priceChange.toFixed(2)} ({isUp ? '+' : ''}{pctChange.toFixed(2)}%)
           </span>
         )}
+
+        {/* MA toggles */}
+        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+          {MA_PERIODS.map(ma => (
+            <button
+              key={ma.period}
+              onClick={() => toggleMA(ma.period)}
+              className={`px-2 py-1 text-[10px] font-bold transition-colors ${
+                activeMAs.has(ma.period) ? 'text-white' : 'text-[#848e9c] hover:text-white opacity-50'
+              }`}
+              style={{ color: activeMAs.has(ma.period) ? ma.color : undefined }}
+            >
+              {ma.label}
+            </button>
+          ))}
+        </div>
 
         {/* Chart type toggle */}
         <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
