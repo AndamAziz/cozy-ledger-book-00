@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
-import { calculateMA, MA_PERIODS } from '@/lib/movingAverage';
+import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 
 interface MetalsChartProps {
   candles: MetalCandle[];
