@@ -16,7 +16,39 @@ export function calculateMA(
   return result;
 }
 
-export const MA_PERIODS = [
-  { period: 7, label: 'MA7', color: '#f0b90b' },
-  { period: 25, label: 'MA25', color: '#e040fb' },
-] as const;
+/**
+ * Calculate Exponential Moving Average from close prices
+ */
+export function calculateEMA(
+  data: { time: number; close: number }[],
+  period: number
+): { time: number; value: number }[] {
+  if (data.length < period) return [];
+  const k = 2 / (period + 1);
+  const result: { time: number; value: number }[] = [];
+
+  // Seed with SMA of first `period` values
+  let sum = 0;
+  for (let i = 0; i < period; i++) sum += data[i].close;
+  let ema = sum / period;
+  result.push({ time: data[period - 1].time, value: ema });
+
+  for (let i = period; i < data.length; i++) {
+    ema = data[i].close * k + ema * (1 - k);
+    result.push({ time: data[i].time, value: ema });
+  }
+  return result;
+}
+
+export type MAType = 'MA' | 'EMA';
+
+export interface MAConfig {
+  period: number;
+  label: string;
+  color: string;
+}
+
+export const MA_PERIODS: MAConfig[] = [
+  { period: 7, label: '7', color: '#f0b90b' },
+  { period: 25, label: '25', color: '#e040fb' },
+];
