@@ -184,6 +184,14 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           >
             Line
           </button>
+          <button
+            onClick={() => setChartType('area')}
+            className={`px-3 py-1 text-xs font-medium transition-colors ${
+              chartType === 'area' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+            }`}
+          >
+            Area
+          </button>
         </div>
 
         {/* Timeframe selector */}
