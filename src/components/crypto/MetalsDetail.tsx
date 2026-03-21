@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { Metal, METALS_META } from '@/lib/metalsApi';
+import { useMetalsHistory } from '@/hooks/useMetalsHistory';
+import { MetalsChart } from '@/components/crypto/MetalsChart';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
 
 interface MetalsDetailProps {
@@ -8,6 +11,8 @@ interface MetalsDetailProps {
 }
 
 export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailProps) {
+  const [chartRange, setChartRange] = useState('1mo');
+  const { candles: historyCandles, isLoading: historyLoading } = useMetalsHistory(selectedCode, chartRange);
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#0a0e17]">
@@ -111,7 +116,16 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
         </div>
       </div>
 
-      {/* Unit conversions */}
+      {/* Price History Chart */}
+      <MetalsChart
+        candles={historyCandles}
+        isLoading={historyLoading}
+        accentColor={accentColor}
+        range={chartRange}
+        onRangeChange={setChartRange}
+      />
+
+
       <div className="p-4 border-b border-[#1a1e2e]">
         <h3 className="text-sm font-semibold text-white mb-3">
           {isOil ? 'Volume Pricing' : 'Price by Weight'}
