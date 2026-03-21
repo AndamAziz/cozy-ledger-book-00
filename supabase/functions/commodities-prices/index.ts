@@ -5,99 +5,61 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const CACHE_TTL = 1000; // 1s cache for near real-time polling
 let cachedPrices: Record<string, number> | null = null;
 let cacheTimestamp = 0;
-const CACHE_TTL = 30 * 1000;
 
-// goldapi.io - metals (XAU, XAG, XPT, XPD)
-async function fetchGoldApi(): Promise<Record<string, number>> {
-  const apiKey = Deno.env.get("GOLD_API_KEY");
-  if (!apiKey) return {};
-  const results: Record<string, number> = {};
+const YAHOO_SYMBOLS: Record<string, string> = {
+  XAU: "GC=F",   // Gold futures
+  XAG: "SI=F",   // Silver futures
+  XPT: "PL=F",   // Platinum futures
+  XPD: "PA=F",   // Palladium futures
+  USOIL: "CL=F", // WTI Crude futures
+  UKOIL: "BZ=F", // Brent Crude futures
+};
 
-  const fetches = ["XAU", "XAG", "XPT", "XPD"].map(async (code) => {
-    try {
-      const res = await fetch(`https://www.goldapi.io/api/${code}/USD`, {
-        headers: { "x-access-token": apiKey, "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.price > 0) results[code] = data.price;
-      } else { await res.text(); }
-    } catch (_) {}
-  });
-  await Promise.all(fetches);
-  if (Object.keys(results).length > 0) console.log("goldapi.io metals:", JSON.stringify(results));
-  return results;
+const yahooHeaders = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+  "Accept": "application/json,text/plain,*/*",
+  "Referer": "https://finance.yahoo.com/",
+};
+
+function getLastClose(quotes: unknown): number | null {
+  if (!Array.isArray(quotes)) return null;
+  for (let i = quotes.length - 1; i >= 0; i -= 1) {
+    const v = quotes[i];
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
+  }
+  return null;
 }
 
-// Twelve Data - WTI oil (CL symbol)
-async function fetchTwelveDataOil(): Promise<Record<string, number>> {
-  const apiKey = Deno.env.get("TWELVE_DATA_API_KEY");
-  if (!apiKey) return {};
-  const results: Record<string, number> = {};
-
+async function fetchYahooPrice(symbol: string): Promise<number | null> {
   try {
-    const res = await fetch(`https://api.twelvedata.com/price?symbol=CL&apikey=${apiKey}`, {
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1m&range=1d`;
+    const res = await fetch(url, {
+      headers: yahooHeaders,
       signal: AbortSignal.timeout(8000),
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.price) {
-        results.USOIL = parseFloat(data.price);
-        console.log(`twelvedata WTI: $${data.price}`);
-      }
-    }
-  } catch (_) {}
 
-  // Estimate Brent as WTI + ~$4-5 spread (industry standard)
-  if (results.USOIL) {
-    results.UKOIL = Math.round((results.USOIL + 4.5) * 100) / 100;
-    console.log(`Brent estimated from WTI spread: $${results.UKOIL}`);
+    if (!res.ok) {
+      console.error(`Yahoo ${symbol} status:`, res.status);
+      await res.text();
+      return null;
+    }
+
+    const data = await res.json();
+    const result = data?.chart?.result?.[0];
+    if (!result) return null;
+
+    const metaPrice = result?.meta?.regularMarketPrice;
+    if (typeof metaPrice === "number" && metaPrice > 0) return metaPrice;
+
+    const closes = result?.indicators?.quote?.[0]?.close;
+    return getLastClose(closes);
+  } catch (error) {
+    console.error(`Yahoo ${symbol} fetch error:`, error instanceof Error ? error.message : String(error));
+    return null;
   }
-
-  return results;
-}
-
-// AI fallback for anything missing
-async function fetchFallbackAI(missing: string[]): Promise<Record<string, number>> {
-  if (missing.length === 0) return {};
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) return {};
-
-  try {
-    const labels = missing.map(c => {
-      const m: Record<string, string> = { XAU: "gold/oz", XAG: "silver/oz", XPT: "platinum/oz", XPD: "palladium/oz", USOIL: "WTI crude/barrel", UKOIL: "Brent crude/barrel" };
-      return `${c}=${m[c] || c}`;
-    }).join(", ");
-
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [{ role: "user", content: `Current USD spot prices: ${labels}. ONLY JSON like {"XAU":3050}. No markdown.` }],
-        temperature: 0, max_tokens: 100,
-      }),
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      const content = data.choices?.[0]?.message?.content?.trim() || "";
-      const match = content.match(/\{[^}]+\}/);
-      if (match) {
-        const parsed = JSON.parse(match[0]);
-        const result: Record<string, number> = {};
-        for (const key of missing) {
-          if (typeof parsed[key] === "number" && parsed[key] > 0) result[key] = parsed[key];
-        }
-        return result;
-      }
-    }
-  } catch (_) {}
-  return {};
 }
 
 serve(async (req) => {
@@ -106,44 +68,46 @@ serve(async (req) => {
   }
 
   try {
-    if (cachedPrices && (Date.now() - cacheTimestamp) < CACHE_TTL) {
-      return new Response(JSON.stringify({ prices: cachedPrices, cached: true, timestamp: cacheTimestamp }), {
+    if (cachedPrices && Date.now() - cacheTimestamp < CACHE_TTL) {
+      return new Response(
+        JSON.stringify({ prices: cachedPrices, sources: ["yahoo-finance"], cached: true, timestamp: cacheTimestamp }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const entries = Object.entries(YAHOO_SYMBOLS);
+    const fetched = await Promise.all(
+      entries.map(async ([code, symbol]) => {
+        const price = await fetchYahooPrice(symbol);
+        return [code, price] as const;
+      }),
+    );
+
+    const prices: Record<string, number> = {};
+    for (const [code, price] of fetched) {
+      if (typeof price === "number" && price > 0) {
+        prices[code] = Number(price.toFixed(4));
+      }
+    }
+
+    if (Object.keys(prices).length === 0) {
+      return new Response(JSON.stringify({ error: "No live prices available" }), {
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const allCodes = ["XAU", "XAG", "XPT", "XPD", "USOIL", "UKOIL"];
-    const results: Record<string, number> = {};
-    const sources: string[] = [];
+    cachedPrices = prices;
+    cacheTimestamp = Date.now();
 
-    const [metals, oil] = await Promise.all([fetchGoldApi(), fetchTwelveDataOil()]);
-
-    for (const [k, v] of Object.entries(metals)) results[k] = v;
-    if (Object.keys(metals).length > 0) sources.push("goldapi.io");
-
-    for (const [k, v] of Object.entries(oil)) results[k] = v;
-    if (Object.keys(oil).length > 0) sources.push("twelvedata");
-
-    const missing = allCodes.filter(c => !results[c]);
-    if (missing.length > 0) {
-      const fb = await fetchFallbackAI(missing);
-      for (const [k, v] of Object.entries(fb)) results[k] = v;
-      if (Object.keys(fb).length > 0) sources.push("ai-fallback");
-    }
-
-    console.log("Final:", JSON.stringify(results), "Sources:", sources.join(", "));
-
-    if (Object.keys(results).length > 0) {
-      cachedPrices = results;
-      cacheTimestamp = Date.now();
-    }
-
-    return new Response(JSON.stringify({ prices: results, sources, timestamp: Date.now() }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ prices, sources: ["yahoo-finance"], cached: false, timestamp: cacheTimestamp }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });

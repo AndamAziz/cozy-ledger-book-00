@@ -44,45 +44,51 @@ function savePrevPrices(prices: Record<string, number>) {
 }
 
 export async function fetchMetalsPrices(): Promise<Metal[]> {
-  let currentPrices: Record<string, number> = {};
+  const prev = loadPrevPrices();
+  let livePrices: Record<string, number> = {};
 
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    
+
     const res = await fetch(`${supabaseUrl}/functions/v1/commodities-prices`, {
       headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+        apikey: supabaseKey,
       },
     });
-    
+
     if (res.ok) {
       const data = await res.json();
-      currentPrices = data.prices || {};
+      livePrices = data.prices || {};
     }
   } catch (e) {
-    console.error('Failed to fetch commodities prices:', e);
+    console.error('Failed to fetch live commodities prices:', e);
   }
 
-  // Only use fallback if API returned nothing at all
-  if (Object.keys(currentPrices).length === 0) {
-    console.warn('Commodities API returned no data, using last known fallbacks');
-    currentPrices.XAU = 3045.00;
-    currentPrices.XAG = 33.50;
-    currentPrices.XPT = 985.00;
-    currentPrices.XPD = 965.00;
-    currentPrices.USOIL = 68.50;
-    currentPrices.UKOIL = 72.30;
+  // Never inject fake defaults; fallback only to last known real value if needed
+  const effectivePrices: Record<string, number> = {};
+  for (const meta of METALS_META) {
+    const live = Number(livePrices[meta.code]);
+    const lastKnown = Number(prev[meta.code]);
+    if (Number.isFinite(live) && live > 0) {
+      effectivePrices[meta.code] = live;
+    } else if (Number.isFinite(lastKnown) && lastKnown > 0) {
+      effectivePrices[meta.code] = lastKnown;
+    } else {
+      effectivePrices[meta.code] = 0;
+    }
   }
 
-  const prev = loadPrevPrices();
-  savePrevPrices(currentPrices);
+  if (Object.values(effectivePrices).some((v) => v > 0)) {
+    savePrevPrices(effectivePrices);
+  }
 
-  return METALS_META.map(m => {
-    const price = currentPrices[m.code] || 0;
+  return METALS_META.map((m) => {
+    const price = effectivePrices[m.code] || 0;
     const prevPrice = prev[m.code] || price;
     const change = prevPrice !== 0 ? ((price - prevPrice) / prevPrice) * 100 : 0;
+
     return {
       ...m,
       price,
