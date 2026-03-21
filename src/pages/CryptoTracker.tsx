@@ -224,6 +224,7 @@ export default function CryptoTracker() {
                   setShowSidebar(false);
                 }}
                 isLoading={metalsLoading}
+                marketOpen={metalsMarketOpen}
               />
             )}
           </div>
