@@ -1,7 +1,6 @@
-import { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { useEffect, useRef, useState } from 'react';
+import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface MetalsChartProps {
   candles: MetalCandle[];
@@ -10,6 +9,7 @@ interface MetalsChartProps {
   range: string;
   onRangeChange: (range: string) => void;
   currentPrice?: number;
+  name?: string;
 }
 
 const RANGES = [
@@ -22,78 +22,146 @@ const RANGES = [
   { key: '5y', label: '5Y' },
 ];
 
-function formatTime(ts: number, range: string) {
-  const d = new Date(ts * 1000);
-  if (range === '1d') {
-    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  }
-  if (range === '5d') {
-    return d.toLocaleDateString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
-  }
-  if (range === '1mo' || range === '3mo') {
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
-  return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
-}
+export function MetalsChart({ candles, isLoading, accentColor, range, onRangeChange, currentPrice, name }: MetalsChartProps) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const seriesRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const priceLineRef = useRef<any>(null);
+  const [chartType, setChartType] = useState<'area' | 'line'>('area');
 
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  const d = payload[0]?.payload;
-  return (
-    <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-lg px-3 py-2 shadow-xl">
-      <p className="text-[10px] text-[#848e9c] mb-1">{label}</p>
-      <p className="text-sm font-bold text-white tabular-nums">
-        ${d?.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </p>
-      {d?.high !== d?.low && (
-        <div className="flex gap-3 mt-1 text-[10px]">
-          <span className="text-[#0ecb81]">H: ${d?.high?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          <span className="text-[#f6465d]">L: ${d?.low?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function MetalsChart({ candles, isLoading, accentColor, range, onRangeChange, currentPrice }: MetalsChartProps) {
-  const data = useMemo(() => {
-    return candles.map(c => ({
-      time: c.time,
-      label: formatTime(c.time, range),
-      price: c.close,
-      high: c.high,
-      low: c.low,
-    }));
-  }, [candles, range]);
-
-  const isUp = data.length >= 2 && data[data.length - 1].price >= data[0].price;
+  // Determine color based on price direction
+  const isUp = candles.length >= 2 && candles[candles.length - 1].close >= candles[0].close;
   const lineColor = isUp ? '#0ecb81' : '#f6465d';
 
-  const [minPrice, maxPrice] = useMemo(() => {
-    if (data.length === 0) return [0, 0];
-    const prices = data.map(d => d.price);
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    const pad = (max - min) * 0.08 || 1;
-    return [min - pad, max + pad];
-  }, [data]);
+  // Price change stats
+  const priceChange = candles.length >= 2 ? candles[candles.length - 1].close - candles[0].close : 0;
+  const pctChange = candles.length >= 2 && candles[0].close > 0 ? (priceChange / candles[0].close) * 100 : 0;
 
-  const priceChange = data.length >= 2 ? data[data.length - 1].price - data[0].price : 0;
-  const pctChange = data.length >= 2 && data[0].price > 0 ? (priceChange / data[0].price) * 100 : 0;
+  // Create chart
+  useEffect(() => {
+    const container = chartContainerRef.current;
+    if (!container) return;
+
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      priceLineRef.current = null;
+    }
+
+    const rect = container.getBoundingClientRect();
+    const chart = createChart(container, {
+      layout: {
+        background: { type: ColorType.Solid, color: '#0a0e17' },
+        textColor: '#848e9c',
+        fontSize: 11,
+      },
+      grid: {
+        vertLines: { color: '#1a1e2e' },
+        horzLines: { color: '#1a1e2e' },
+      },
+      crosshair: {
+        vertLine: { color: '#4a5568', width: 1, style: 2 },
+        horzLine: { color: '#4a5568', width: 1, style: 2 },
+      },
+      rightPriceScale: {
+        borderColor: '#1a1e2e',
+        scaleMargins: { top: 0.08, bottom: 0.08 },
+      },
+      timeScale: {
+        borderColor: '#1a1e2e',
+        timeVisible: range === '1d' || range === '5d',
+        secondsVisible: false,
+      },
+      width: rect.width || 600,
+      height: rect.height || 300,
+    });
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        chart.applyOptions({ width, height });
+      }
+    });
+    resizeObserver.observe(container);
+
+    chartRef.current = chart;
+
+    if (chartType === 'area') {
+      const series = chart.addSeries(AreaSeries, {
+        lineColor: lineColor,
+        lineWidth: 2,
+        topColor: isUp ? 'rgba(14,203,129,0.3)' : 'rgba(246,70,93,0.3)',
+        bottomColor: isUp ? 'rgba(14,203,129,0.02)' : 'rgba(246,70,93,0.02)',
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
+        crosshairMarkerBackgroundColor: lineColor,
+      });
+      seriesRef.current = series;
+    } else {
+      const series = chart.addSeries(LineSeries, {
+        color: accentColor,
+        lineWidth: 2,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
+      });
+      seriesRef.current = series;
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      priceLineRef.current = null;
+    };
+  }, [chartType, range, isUp]);
+
+  // Update data
+  useEffect(() => {
+    if (!seriesRef.current || candles.length === 0) return;
+
+    const data = candles.map(c => ({
+      time: c.time as Time,
+      value: c.close,
+    }));
+
+    seriesRef.current.setData(data);
+    chartRef.current?.timeScale().fitContent();
+  }, [candles]);
+
+  // Update price line
+  useEffect(() => {
+    if (!seriesRef.current || !currentPrice || currentPrice <= 0) return;
+
+    if (priceLineRef.current) {
+      try { seriesRef.current.removePriceLine(priceLineRef.current); } catch {}
+    }
+
+    priceLineRef.current = seriesRef.current.createPriceLine({
+      price: currentPrice,
+      color: accentColor,
+      lineWidth: 1,
+      lineStyle: 2,
+      axisLabelVisible: true,
+      title: `${name || ''} $${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    });
+  }, [currentPrice, name, accentColor]);
 
   return (
     <div className="border-b border-[#1a1e2e]">
-      {/* Range selector + stats */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-1">
-        <div className="flex items-center gap-1">
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-[#1a1e2e]">
+        {/* Range selector */}
+        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
           {RANGES.map(r => (
             <button
               key={r.key}
               onClick={() => onRangeChange(r.key)}
-              className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all active:scale-95 ${
-                range === r.key
-                  ? 'text-black shadow-sm'
-                  : 'text-[#848e9c] hover:text-white hover:bg-[#1a1e2e]'
+              className={`px-2 sm:px-2.5 py-1 text-[10px] sm:text-xs font-medium transition-colors active:scale-95 ${
+                range === r.key ? 'text-black' : 'text-[#848e9c] hover:text-white'
               }`}
               style={range === r.key ? { backgroundColor: accentColor } : undefined}
             >
@@ -101,82 +169,47 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
             </button>
           ))}
         </div>
-        {data.length >= 2 && (
-          <div className="flex items-center gap-2 text-[10px]">
-            <span className={`font-bold ${isUp ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-              {isUp ? '▲' : '▼'} {isUp ? '+' : ''}{priceChange.toFixed(2)} ({isUp ? '+' : ''}{pctChange.toFixed(2)}%)
-            </span>
-          </div>
+
+        <div className="flex-1" />
+
+        {/* Change indicator */}
+        {candles.length >= 2 && (
+          <span className={`text-[10px] sm:text-xs font-bold ${isUp ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+            {isUp ? '▲' : '▼'} {isUp ? '+' : ''}{priceChange.toFixed(2)} ({isUp ? '+' : ''}{pctChange.toFixed(2)}%)
+          </span>
         )}
+
+        {/* Chart type toggle */}
+        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+          <button
+            onClick={() => setChartType('area')}
+            className={`px-2 py-1 text-[10px] font-medium transition-colors ${
+              chartType === 'area' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+            }`}
+          >
+            Area
+          </button>
+          <button
+            onClick={() => setChartType('line')}
+            className={`px-2 py-1 text-[10px] font-medium transition-colors ${
+              chartType === 'line' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+            }`}
+          >
+            Line
+          </button>
+        </div>
       </div>
 
       {/* Chart */}
-      <div className="h-[220px] sm:h-[280px] px-1">
-        {isLoading ? (
-          <div className="h-full flex items-center justify-center">
+      <div className="relative h-[250px] sm:h-[320px]">
+        <div ref={chartContainerRef} className="absolute inset-0" />
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/80 z-10">
             <div className="flex flex-col items-center gap-2">
-              <div className="w-6 h-6 border-2 border-[#848e9c] border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[#848e9c] border-t-transparent rounded-full animate-spin" />
               <span className="text-[10px] text-[#848e9c]">Loading chart...</span>
             </div>
           </div>
-        ) : data.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-[#848e9c] text-xs">
-            No history available
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: 5, bottom: 5 }}>
-              <defs>
-                <linearGradient id={`metalGrad-${range}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={lineColor} stopOpacity={0.25} />
-                  <stop offset="100%" stopColor={lineColor} stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 9, fill: '#555' }}
-                axisLine={false}
-                tickLine={false}
-                interval="preserveStartEnd"
-                minTickGap={50}
-              />
-              <YAxis
-                domain={[minPrice, maxPrice]}
-                tick={{ fontSize: 9, fill: '#555' }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v: number) => `$${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(v < 10 ? 2 : 0)}`}
-                width={50}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              {/* Current price reference line */}
-              {currentPrice && currentPrice > 0 && (
-                <ReferenceLine
-                  y={currentPrice}
-                  stroke={accentColor}
-                  strokeDasharray="4 4"
-                  strokeWidth={1}
-                  label={{
-                    value: `$${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                    position: 'right',
-                    fill: accentColor,
-                    fontSize: 10,
-                    fontWeight: 'bold',
-                  }}
-                />
-              )}
-              <Area
-                type="monotone"
-                dataKey="price"
-                stroke={lineColor}
-                strokeWidth={2}
-                fill={`url(#metalGrad-${range})`}
-                dot={false}
-                activeDot={{ r: 4, fill: lineColor, stroke: '#0a0e17', strokeWidth: 2 }}
-                animationDuration={500}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
         )}
       </div>
     </div>

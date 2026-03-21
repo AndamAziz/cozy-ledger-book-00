@@ -125,6 +125,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
         range={chartRange}
         onRangeChange={setChartRange}
         currentPrice={selected.price}
+        name={selected.name}
       />
 
 
