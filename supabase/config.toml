@@ -11,6 +11,3 @@ verify_jwt = false
 
 [functions.admin-remove-admin]
 verify_jwt = false
-
-[functions.commodities-history]
-verify_jwt = false

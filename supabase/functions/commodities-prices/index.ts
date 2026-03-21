@@ -5,23 +5,38 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CACHE_TTL = 1000; // 1s cache for near real-time polling
-let cachedPrices: Record<string, number> | null = null;
-let cacheTimestamp = 0;
-
 const YAHOO_SYMBOLS: Record<string, string> = {
-  XAU: "GC=F",   // Gold futures
-  XAG: "SI=F",   // Silver futures
-  XPT: "PL=F",   // Platinum futures
-  XPD: "PA=F",   // Palladium futures
-  USOIL: "CL=F", // WTI Crude futures
-  UKOIL: "BZ=F", // Brent Crude futures
+  XAU: "GC=F",
+  XAG: "SI=F",
+  XPT: "PL=F",
+  XPD: "PA=F",
+  USOIL: "CL=F",
+  UKOIL: "BZ=F",
 };
 
 const yahooHeaders = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
   "Accept": "application/json,text/plain,*/*",
   "Referer": "https://finance.yahoo.com/",
+};
+
+// ─── Live prices cache ───
+const CACHE_TTL = 1000;
+let cachedPrices: Record<string, number> | null = null;
+let cacheTimestamp = 0;
+
+// ─── History cache ───
+const historyCache = new Map<string, { data: unknown; ts: number }>();
+const HISTORY_CACHE_TTL = 60_000;
+
+const RANGE_MAP: Record<string, { range: string; interval: string }> = {
+  "1d": { range: "1d", interval: "5m" },
+  "5d": { range: "5d", interval: "15m" },
+  "1mo": { range: "1mo", interval: "1h" },
+  "3mo": { range: "3mo", interval: "1d" },
+  "6mo": { range: "6mo", interval: "1d" },
+  "1y": { range: "1y", interval: "1d" },
+  "5y": { range: "5y", interval: "1wk" },
 };
 
 function getLastClose(quotes: unknown): number | null {
@@ -36,29 +51,109 @@ function getLastClose(quotes: unknown): number | null {
 async function fetchYahooPrice(symbol: string): Promise<number | null> {
   try {
     const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1m&range=1d`;
-    const res = await fetch(url, {
-      headers: yahooHeaders,
-      signal: AbortSignal.timeout(8000),
-    });
+    const res = await fetch(url, { headers: yahooHeaders, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) { await res.text(); return null; }
+    const data = await res.json();
+    const result = data?.chart?.result?.[0];
+    if (!result) return null;
+    const metaPrice = result?.meta?.regularMarketPrice;
+    if (typeof metaPrice === "number" && metaPrice > 0) return metaPrice;
+    return getLastClose(result?.indicators?.quote?.[0]?.close);
+  } catch { return null; }
+}
 
+async function handleLivePrices(): Promise<Response> {
+  if (cachedPrices && Date.now() - cacheTimestamp < CACHE_TTL) {
+    return new Response(
+      JSON.stringify({ prices: cachedPrices, sources: ["yahoo-finance"], cached: true, timestamp: cacheTimestamp }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  const entries = Object.entries(YAHOO_SYMBOLS);
+  const fetched = await Promise.all(
+    entries.map(async ([code, symbol]) => [code, await fetchYahooPrice(symbol)] as const),
+  );
+
+  const prices: Record<string, number> = {};
+  for (const [code, price] of fetched) {
+    if (typeof price === "number" && price > 0) prices[code] = Number(price.toFixed(4));
+  }
+
+  if (Object.keys(prices).length === 0) {
+    return new Response(JSON.stringify({ error: "No live prices available" }), {
+      status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  cachedPrices = prices;
+  cacheTimestamp = Date.now();
+  return new Response(
+    JSON.stringify({ prices, sources: ["yahoo-finance"], cached: false, timestamp: cacheTimestamp }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+
+async function handleHistory(code: string, range: string): Promise<Response> {
+  const yahooSymbol = YAHOO_SYMBOLS[code];
+  if (!yahooSymbol) {
+    return new Response(JSON.stringify({ error: `Unknown code: ${code}` }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const cacheKey = `${code}_${range}`;
+  const cached = historyCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < HISTORY_CACHE_TTL) {
+    return new Response(JSON.stringify(cached.data), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const rangeConfig = RANGE_MAP[range] || RANGE_MAP["1mo"];
+  const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${rangeConfig.interval}&range=${rangeConfig.range}`;
+
+  try {
+    const res = await fetch(yahooUrl, { headers: yahooHeaders, signal: AbortSignal.timeout(10000) });
     if (!res.ok) {
-      console.error(`Yahoo ${symbol} status:`, res.status);
       await res.text();
-      return null;
+      return new Response(JSON.stringify({ error: "Failed to fetch history" }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const data = await res.json();
     const result = data?.chart?.result?.[0];
-    if (!result) return null;
+    if (!result) {
+      return new Response(JSON.stringify({ error: "No data" }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const metaPrice = result?.meta?.regularMarketPrice;
-    if (typeof metaPrice === "number" && metaPrice > 0) return metaPrice;
+    const timestamps: number[] = result.timestamp || [];
+    const closes: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
+    const highs: (number | null)[] = result.indicators?.quote?.[0]?.high || [];
+    const lows: (number | null)[] = result.indicators?.quote?.[0]?.low || [];
 
-    const closes = result?.indicators?.quote?.[0]?.close;
-    return getLastClose(closes);
+    const candles: { time: number; close: number; high: number; low: number }[] = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      const c = closes[i], h = highs[i], l = lows[i];
+      if (c != null && h != null && l != null) {
+        candles.push({ time: timestamps[i], close: +c.toFixed(4), high: +h.toFixed(4), low: +l.toFixed(4) });
+      }
+    }
+
+    const responseData = { code, range, candles, count: candles.length };
+    historyCache.set(cacheKey, { data: responseData, ts: Date.now() });
+
+    return new Response(JSON.stringify(responseData), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error(`Yahoo ${symbol} fetch error:`, error instanceof Error ? error.message : String(error));
-    return null;
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 }
 
@@ -68,42 +163,16 @@ serve(async (req) => {
   }
 
   try {
-    if (cachedPrices && Date.now() - cacheTimestamp < CACHE_TTL) {
-      return new Response(
-        JSON.stringify({ prices: cachedPrices, sources: ["yahoo-finance"], cached: true, timestamp: cacheTimestamp }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    const url = new URL(req.url);
+    const mode = url.searchParams.get("mode");
+
+    if (mode === "history") {
+      const code = (url.searchParams.get("code") || "XAU").toUpperCase();
+      const range = url.searchParams.get("range") || "1mo";
+      return await handleHistory(code, range);
     }
 
-    const entries = Object.entries(YAHOO_SYMBOLS);
-    const fetched = await Promise.all(
-      entries.map(async ([code, symbol]) => {
-        const price = await fetchYahooPrice(symbol);
-        return [code, price] as const;
-      }),
-    );
-
-    const prices: Record<string, number> = {};
-    for (const [code, price] of fetched) {
-      if (typeof price === "number" && price > 0) {
-        prices[code] = Number(price.toFixed(4));
-      }
-    }
-
-    if (Object.keys(prices).length === 0) {
-      return new Response(JSON.stringify({ error: "No live prices available" }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    cachedPrices = prices;
-    cacheTimestamp = Date.now();
-
-    return new Response(
-      JSON.stringify({ prices, sources: ["yahoo-finance"], cached: false, timestamp: cacheTimestamp }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return await handleLivePrices();
   } catch (error) {
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
