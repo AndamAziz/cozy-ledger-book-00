@@ -200,7 +200,22 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
         <div className="flex-1" />
 
-        {/* MA toggles */}
+        {/* MA/EMA type toggle */}
+        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+          {(['MA', 'EMA'] as MAType[]).map(type => (
+            <button
+              key={type}
+              onClick={() => setMaType(type)}
+              className={`px-2 py-1 text-[10px] font-bold transition-colors ${
+                maType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+
+        {/* MA period toggles */}
         <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
           {MA_PERIODS.map(ma => (
             <button
@@ -211,7 +226,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
               }`}
               style={{ color: activeMAs.has(ma.period) ? ma.color : undefined }}
             >
-              {ma.label}
+              {maType}{ma.label}
             </button>
           ))}
         </div>
