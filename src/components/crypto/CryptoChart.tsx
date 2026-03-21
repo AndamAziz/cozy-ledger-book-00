@@ -23,6 +23,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const maSeriesRefs = useRef<Record<number, any>>({});
   const [chartType, setChartType] = useState<'candlestick' | 'line' | 'area'>('candlestick');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
+  const [maType, setMaType] = useState<MAType>('MA');
 
   const symbol = getDisplaySymbol(getSymbolFromPair(pair));
 
