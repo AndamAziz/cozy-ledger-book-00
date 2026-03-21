@@ -133,7 +133,7 @@ async function handleHistory(code: string, range: string): Promise<Response> {
     const timestamps: number[] = result.timestamp || [];
     const closes: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
     const highs: (number | null)[] = result.indicators?.quote?.[0]?.high || [];
-    const lows: (number | null)[] = result.indicators?.quote?>[0]?.low || [];
+    const lows: (number | null)[] = result.indicators?.quote?.[0]?.low || [];
 
     const candles: { time: number; close: number; high: number; low: number }[] = [];
     for (let i = 0; i < timestamps.length; i++) {
