@@ -5,51 +5,83 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Cache prices for 2 minutes
+let cachedPrices: Record<string, number> | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 2 * 60 * 1000;
+
+async function fetchPricesViaAI(): Promise<Record<string, number>> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) {
+    console.error("No LOVABLE_API_KEY");
+    return {};
+  }
+
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{
+          role: "user",
+          content: `What are the current live spot prices right now (today, March 2026) for these commodities in USD? Respond with ONLY a JSON object, no markdown, no explanation:
+{"XAU": gold_price_per_oz, "XAG": silver_price_per_oz, "XPT": platinum_price_per_oz, "XPD": palladium_price_per_oz, "USOIL": wti_crude_per_barrel, "UKOIL": brent_crude_per_barrel}
+Use the most recent real market prices. Numbers only.`
+        }],
+        temperature: 0,
+        max_tokens: 200,
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("AI gateway error:", res.status);
+      return {};
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content?.trim() || "";
+    console.log("AI prices:", content);
+
+    const jsonMatch = content.match(/\{[^}]+\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const result: Record<string, number> = {};
+      for (const key of ['XAU', 'XAG', 'XPT', 'XPD', 'USOIL', 'UKOIL']) {
+        if (typeof parsed[key] === 'number' && parsed[key] > 0) {
+          result[key] = parsed[key];
+        }
+      }
+      return result;
+    }
+  } catch (e) {
+    console.error("AI fetch error:", e.message);
+  }
+  return {};
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const results: Record<string, number> = {};
-
-    // Fetch gold/silver/platinum/palladium from goldprice.org
-    try {
-      const metalsRes = await fetch("https://data-asg.goldprice.org/dbXRates/USD", {
-        headers: { "User-Agent": "Mozilla/5.0" },
+    if (cachedPrices && (Date.now() - cacheTimestamp) < CACHE_TTL) {
+      return new Response(JSON.stringify({ prices: cachedPrices, cached: true, timestamp: cacheTimestamp }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      if (metalsRes.ok) {
-        const data = await metalsRes.json();
-        const item = data.items?.[0];
-        if (item) {
-          results.XAU = item.xauPrice;
-          results.XAG = item.xagPrice;
-          results.XPT = item.xptPrice;
-          results.XPD = item.xpdPrice;
-        }
-      }
-    } catch (e) {
-      console.error("Metals fetch error:", e);
     }
 
-    // Fetch oil prices - try multiple sources
-    try {
-      // Try frankfurter or other free API for approximate oil
-      // Use a reliable free endpoint
-      const oilRes = await fetch("https://api.frankfurter.app/latest?from=USD&to=EUR", {
-        headers: { "User-Agent": "Mozilla/5.0" },
-      });
-      // Frankfurter doesn't have oil, so use fallback values
-      // We'll use approximate market prices that get updated via the live simulation
-    } catch (e) {
-      console.error("Oil fetch error:", e);
+    const prices = await fetchPricesViaAI();
+    if (Object.keys(prices).length > 0) {
+      cachedPrices = prices;
+      cacheTimestamp = Date.now();
     }
 
-    // Set oil fallback prices (approximate current market)
-    if (!results.USOIL) results.USOIL = 68.50;
-    if (!results.UKOIL) results.UKOIL = 72.30;
-
-    return new Response(JSON.stringify({ prices: results, timestamp: Date.now() }), {
+    return new Response(JSON.stringify({ prices, cached: false, timestamp: Date.now() }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
