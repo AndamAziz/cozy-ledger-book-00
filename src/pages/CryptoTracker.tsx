@@ -199,7 +199,7 @@ export default function CryptoTracker() {
                 }}
                 isLoading={initialLoading}
               />
-            ) : (
+            ) : activeTab === 'forex' ? (
               <ForexList
                 currencies={forexCurrencies}
                 selectedCode={selectedForexCode}
@@ -208,6 +208,16 @@ export default function CryptoTracker() {
                   setShowSidebar(false);
                 }}
                 isLoading={forexLoading}
+              />
+            ) : (
+              <MetalsList
+                metals={metals}
+                selectedCode={selectedMetalCode}
+                onSelectMetal={(code) => {
+                  setSelectedMetalCode(code);
+                  setShowSidebar(false);
+                }}
+                isLoading={metalsLoading}
               />
             )}
           </div>
