@@ -28,7 +28,7 @@ export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetail
         {/* Overview grid */}
         <div className="p-4 border-b border-[#1a1e2e]">
           <h2 className="text-lg font-bold text-white mb-1">🇺🇸 USD — Foreign Exchange Rates</h2>
-          <p className="text-xs text-[#848e9c]">Select a currency to see details • Rates update every 5 minutes</p>
+          <p className="text-xs text-[#848e9c]">Select a currency to see details • Live real-time rates</p>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
