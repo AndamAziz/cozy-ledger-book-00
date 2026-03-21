@@ -42,41 +42,61 @@ async function fetchGoldApi(): Promise<Record<string, number>> {
   return results;
 }
 
-// Source 2: Twelve Data for oil + any missing assets
+// Source 2: Twelve Data for oil prices (try multiple symbol formats)
 async function fetchTwelveData(): Promise<Record<string, number>> {
   const apiKey = Deno.env.get("TWELVE_DATA_API_KEY");
   if (!apiKey) return {};
 
   const results: Record<string, number> = {};
 
-  // Twelve Data symbols for commodities
-  const pairs: [string, string][] = [
-    ["USOIL", "WTI/USD"],    // WTI Crude Oil
-    ["UKOIL", "BRENT/USD"],  // Brent Crude Oil
-  ];
+  // Try fetching both oil prices with the batch endpoint
+  const symbols = "CL,NYMEX:CL";
+  try {
+    const res = await fetch(
+      `https://api.twelvedata.com/price?symbol=${symbols}&apikey=${apiKey}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      console.log("twelvedata batch:", JSON.stringify(data).substring(0, 500));
+      // Handle single or batch response
+      if (data.price) {
+        results.USOIL = parseFloat(data.price);
+      } else {
+        for (const [sym, val] of Object.entries(data)) {
+          const v = val as any;
+          if (v?.price) {
+            if (sym.includes("CL")) results.USOIL = parseFloat(v.price);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("twelvedata batch error:", e.message);
+  }
 
-  const fetches = pairs.map(async ([code, symbol]) => {
+  // Also try commodities list endpoint for Brent
+  if (!results.UKOIL) {
     try {
       const res = await fetch(
-        `https://api.twelvedata.com/price?symbol=${symbol}&apikey=${apiKey}`,
+        `https://api.twelvedata.com/price?symbol=NYMEX:BZ&apikey=${apiKey}`,
         { signal: AbortSignal.timeout(8000) }
       );
       if (res.ok) {
         const data = await res.json();
-        if (data.price) {
-          results[code] = parseFloat(data.price);
-          console.log(`twelvedata ${code} (${symbol}): $${data.price}`);
+        console.log("twelvedata BZ:", JSON.stringify(data));
+        if (data.price && parseFloat(data.price) > 20) {
+          results.UKOIL = parseFloat(data.price);
         }
-      } else {
-        console.error(`twelvedata ${code}: ${res.status}`);
-        await res.text();
       }
     } catch (e) {
-      console.error(`twelvedata ${code}:`, e.message);
+      console.error("twelvedata BZ error:", e.message);
     }
-  });
+  }
 
-  await Promise.all(fetches);
+  if (Object.keys(results).length > 0) {
+    console.log("twelvedata oil results:", JSON.stringify(results));
+  }
   return results;
 }
 
