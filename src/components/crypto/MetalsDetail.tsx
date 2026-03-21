@@ -116,7 +116,16 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
         </div>
       </div>
 
-      {/* Unit conversions */}
+      {/* Price History Chart */}
+      <MetalsChart
+        candles={historyCandles}
+        isLoading={historyLoading}
+        accentColor={accentColor}
+        range={chartRange}
+        onRangeChange={setChartRange}
+      />
+
+
       <div className="p-4 border-b border-[#1a1e2e]">
         <h3 className="text-sm font-semibold text-white mb-3">
           {isOil ? 'Volume Pricing' : 'Price by Weight'}
