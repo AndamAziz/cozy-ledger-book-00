@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, Time } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { Skeleton } from '@/components/ui/skeleton';
 
