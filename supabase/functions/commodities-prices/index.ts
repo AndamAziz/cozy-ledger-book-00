@@ -51,8 +51,8 @@ async function fetchTwelveData(): Promise<Record<string, number>> {
 
   // Twelve Data symbols for commodities
   const pairs: [string, string][] = [
-    ["USOIL", "CL"],      // WTI Crude (works)
-    ["UKOIL", "BRENT"],   // Brent Crude
+    ["USOIL", "WTI/USD"],    // WTI Crude Oil
+    ["UKOIL", "BRENT/USD"],  // Brent Crude Oil
   ];
 
   const fetches = pairs.map(async ([code, symbol]) => {
