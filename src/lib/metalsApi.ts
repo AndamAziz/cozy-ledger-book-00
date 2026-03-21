@@ -65,13 +65,16 @@ export async function fetchMetalsPrices(): Promise<Metal[]> {
     console.error('Failed to fetch commodities prices:', e);
   }
 
-  // Fallback prices if API fails
-  if (!currentPrices.XAU) currentPrices.XAU = 3045.00;
-  if (!currentPrices.XAG) currentPrices.XAG = 33.50;
-  if (!currentPrices.XPT) currentPrices.XPT = 985.00;
-  if (!currentPrices.XPD) currentPrices.XPD = 965.00;
-  if (!currentPrices.USOIL) currentPrices.USOIL = 68.50;
-  if (!currentPrices.UKOIL) currentPrices.UKOIL = 72.30;
+  // Only use fallback if API returned nothing at all
+  if (Object.keys(currentPrices).length === 0) {
+    console.warn('Commodities API returned no data, using last known fallbacks');
+    currentPrices.XAU = 3045.00;
+    currentPrices.XAG = 33.50;
+    currentPrices.XPT = 985.00;
+    currentPrices.XPD = 965.00;
+    currentPrices.USOIL = 68.50;
+    currentPrices.UKOIL = 72.30;
+  }
 
   const prev = loadPrevPrices();
   savePrevPrices(currentPrices);
