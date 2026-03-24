@@ -40,6 +40,7 @@ export function MetalsList({ metals, selectedCode, onSelectMetal, isLoading, mar
 
   const metalItems = metals.filter(m => m.category === 'metal');
   const oilItems = metals.filter(m => m.category === 'oil');
+  const gasItems = metals.filter(m => m.category === 'gas');
 
   const renderItem = (m: Metal) => {
     const isSelected = m.code === selectedCode;
