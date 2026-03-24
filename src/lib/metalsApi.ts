@@ -12,7 +12,7 @@ export interface Metal {
   category: 'metal' | 'oil';
 }
 
-export const METALS_META: { code: string; name: string; symbol: string; emoji: string; category: 'metal' | 'oil'; unit: string }[] = [
+export const METALS_META: { code: string; name: string; symbol: string; emoji: string; category: 'metal' | 'oil' | 'gas'; unit: string }[] = [
   { code: 'XAU', name: 'Gold', symbol: 'XAU/USD', emoji: '🥇', category: 'metal', unit: 'oz' },
   { code: 'XAG', name: 'Silver', symbol: 'XAG/USD', emoji: '🥈', category: 'metal', unit: 'oz' },
   { code: 'XPT', name: 'Platinum', symbol: 'XPT/USD', emoji: '⚪', category: 'metal', unit: 'oz' },
