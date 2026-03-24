@@ -9,7 +9,7 @@ export interface Metal {
   high24h: number;
   low24h: number;
   unit: string;
-  category: 'metal' | 'oil';
+  category: 'metal' | 'oil' | 'gas';
 }
 
 export const METALS_META: { code: string; name: string; symbol: string; emoji: string; category: 'metal' | 'oil' | 'gas'; unit: string }[] = [
