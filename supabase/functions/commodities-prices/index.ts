@@ -14,6 +14,16 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   UKOIL: "BZ=F",
 };
 
+// Twelve Data symbols for oil (more accurate real-time)
+const TWELVE_DATA_SYMBOLS: Record<string, string> = {
+  USOIL: "WTI/USD",
+  UKOIL: "BRENT/USD",
+  XAU: "XAU/USD",
+  XAG: "XAG/USD",
+  XPT: "XPT/USD",
+  XPD: "XPD/USD",
+};
+
 const yahooHeaders = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
   "Accept": "application/json,text/plain,*/*",
@@ -62,22 +72,88 @@ async function fetchYahooPrice(symbol: string): Promise<number | null> {
   } catch { return null; }
 }
 
+async function fetchTwelveDataPrices(codes: string[]): Promise<Record<string, number>> {
+  const apiKey = Deno.env.get("TWELVE_DATA_API_KEY");
+  if (!apiKey) return {};
+
+  const prices: Record<string, number> = {};
+  const symbols = codes
+    .filter(c => TWELVE_DATA_SYMBOLS[c])
+    .map(c => TWELVE_DATA_SYMBOLS[c]);
+
+  if (symbols.length === 0) return {};
+
+  try {
+    const symbolsParam = symbols.join(",");
+    const url = `https://api.twelvedata.com/price?symbol=${encodeURIComponent(symbolsParam)}&apikey=${apiKey}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) { await res.text(); return prices; }
+    const data = await res.json();
+
+    // Map back from Twelve Data symbols to our codes
+    for (const code of codes) {
+      const tdSymbol = TWELVE_DATA_SYMBOLS[code];
+      if (!tdSymbol) continue;
+
+      // If single symbol, data is { price: "..." }, if multi it's { "SYMBOL": { price: "..." } }
+      let priceStr: string | undefined;
+      if (symbols.length === 1) {
+        priceStr = data?.price;
+      } else {
+        priceStr = data?.[tdSymbol]?.price;
+      }
+
+      if (priceStr) {
+        const p = parseFloat(priceStr);
+        if (Number.isFinite(p) && p > 0) {
+          prices[code] = Number(p.toFixed(4));
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Twelve Data fetch error:", e);
+  }
+
+  return prices;
+}
+
 async function handleLivePrices(): Promise<Response> {
   if (cachedPrices && Date.now() - cacheTimestamp < CACHE_TTL) {
     return new Response(
-      JSON.stringify({ prices: cachedPrices, sources: ["yahoo-finance"], cached: true, timestamp: cacheTimestamp }),
+      JSON.stringify({ prices: cachedPrices, sources: ["multi-source"], cached: true, timestamp: cacheTimestamp }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
-  const entries = Object.entries(YAHOO_SYMBOLS);
-  const fetched = await Promise.all(
-    entries.map(async ([code, symbol]) => [code, await fetchYahooPrice(symbol)] as const),
-  );
+  const allCodes = Object.keys(YAHOO_SYMBOLS);
 
+  // Fetch from both sources in parallel
+  const [yahooResults, twelveDataPrices] = await Promise.all([
+    Promise.all(
+      Object.entries(YAHOO_SYMBOLS).map(async ([code, symbol]) =>
+        [code, await fetchYahooPrice(symbol)] as const
+      ),
+    ),
+    fetchTwelveDataPrices(allCodes),
+  ]);
+
+  const yahooPrices: Record<string, number> = {};
+  for (const [code, price] of yahooResults) {
+    if (typeof price === "number" && price > 0) yahooPrices[code] = Number(price.toFixed(4));
+  }
+
+  // Merge: prefer Twelve Data for all commodities (more accurate real-time), fallback to Yahoo
   const prices: Record<string, number> = {};
-  for (const [code, price] of fetched) {
-    if (typeof price === "number" && price > 0) prices[code] = Number(price.toFixed(4));
+  const sources: string[] = [];
+
+  for (const code of allCodes) {
+    if (twelveDataPrices[code]) {
+      prices[code] = twelveDataPrices[code];
+      if (!sources.includes("twelve-data")) sources.push("twelve-data");
+    } else if (yahooPrices[code]) {
+      prices[code] = yahooPrices[code];
+      if (!sources.includes("yahoo-finance")) sources.push("yahoo-finance");
+    }
   }
 
   if (Object.keys(prices).length === 0) {
@@ -89,7 +165,7 @@ async function handleLivePrices(): Promise<Response> {
   cachedPrices = prices;
   cacheTimestamp = Date.now();
   return new Response(
-    JSON.stringify({ prices, sources: ["yahoo-finance"], cached: false, timestamp: cacheTimestamp }),
+    JSON.stringify({ prices, sources, cached: false, timestamp: cacheTimestamp }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 }
