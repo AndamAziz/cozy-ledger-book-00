@@ -49,6 +49,7 @@ export const CURRENCIES: { code: string; name: string; flag: string }[] = [
   { code: 'PKR', name: 'Pakistani Rupee', flag: '🇵🇰' },
   { code: 'NGN', name: 'Nigerian Naira', flag: '🇳🇬' },
   { code: 'GEL', name: 'Georgian Lari', flag: '🇬🇪' },
+  { code: 'XAG', name: 'Silver (Troy Oz)', flag: '🥈' },
 ];
 
 interface ERApiResponse {
@@ -56,7 +57,7 @@ interface ERApiResponse {
   rates: Record<string, number>;
 }
 
-// Fetch latest rates from open.er-api.com (free, no key)
+// Fetch latest rates from open.er-api.com (free, no key) + XAG from Yahoo
 export async function fetchForexRates(): Promise<ForexCurrency[]> {
   const [latestRes] = await Promise.all([
     fetch('https://open.er-api.com/v6/latest/USD'),
@@ -64,6 +65,24 @@ export async function fetchForexRates(): Promise<ForexCurrency[]> {
 
   if (!latestRes.ok) throw new Error('Failed to fetch forex rates');
   const latest: ERApiResponse = await latestRes.json();
+
+  // Fetch XAG (silver) price from Yahoo Finance
+  try {
+    const yahooRes = await fetch(
+      'https://query1.finance.yahoo.com/v8/finance/chart/SI=F?range=2d&interval=1d'
+    );
+    if (yahooRes.ok) {
+      const yahooData = await yahooRes.json();
+      const closes = yahooData?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+      if (closes && closes.length > 0) {
+        const price = closes[closes.length - 1];
+        if (price && price > 0) {
+          // XAG rate = price per oz in USD (inverted: 1 USD = 1/price oz)
+          latest.rates['XAG'] = 1 / price;
+        }
+      }
+    }
+  } catch {}
 
   // Try to get previous rates from localStorage for change calculation
   const prevKey = 'forex-prev-rates';
@@ -73,7 +92,6 @@ export async function fetchForexRates(): Promise<ForexCurrency[]> {
   try {
     if (prevStored) {
       const parsed = JSON.parse(prevStored);
-      // Only use if stored less than 25 hours ago
       if (Date.now() - parsed.timestamp < 25 * 60 * 60 * 1000) {
         prevRates = parsed.rates;
       }
