@@ -19,6 +19,7 @@ export const METALS_META: { code: string; name: string; symbol: string; emoji: s
   { code: 'XPD', name: 'Palladium', symbol: 'XPD/USD', emoji: '🔘', category: 'metal', unit: 'oz' },
   { code: 'USOIL', name: 'US Oil (WTI)', symbol: 'WTI/USD', emoji: '🛢️', category: 'oil', unit: 'bbl' },
   { code: 'UKOIL', name: 'UK Oil (Brent)', symbol: 'BRENT/USD', emoji: '🛢️', category: 'oil', unit: 'bbl' },
+  { code: 'NATGAS', name: 'Natural Gas', symbol: 'NG/USD', emoji: '🔥', category: 'gas', unit: 'MMBtu' },
 ];
 
 const PREV_KEY = 'metals-prev-prices';
