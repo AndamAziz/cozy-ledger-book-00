@@ -11,6 +11,7 @@ const VOLATILITY: Record<string, number> = {
   DKK: 0.003, PLN: 0.005, CZK: 0.004, HUF: 0.005, RUB: 0.008,
   BRL: 0.006, MXN: 0.005, ZAR: 0.006, THB: 0.003, MYR: 0.003,
   IDR: 0.004, PHP: 0.003, PKR: 0.004, NGN: 0.005, GEL: 0.004,
+  XAG: 0.006,
 };
 
 export function useForexData() {
