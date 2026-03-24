@@ -92,6 +92,9 @@ async function fetchOilPriceApi(): Promise<Record<string, number>> {
         if (item.code === "BRENT_CRUDE_USD" && typeof item.price === "number" && item.price > 0) {
           prices.UKOIL = Number(item.price.toFixed(4));
         }
+        if (item.code === "NATURAL_GAS_USD" && typeof item.price === "number" && item.price > 0) {
+          prices.NATGAS = Number(item.price.toFixed(4));
+        }
       }
     }
 
