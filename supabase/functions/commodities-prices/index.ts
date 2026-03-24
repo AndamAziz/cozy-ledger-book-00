@@ -12,6 +12,7 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   XPD: "PA=F",
   USOIL: "CL=F",
   UKOIL: "BZ=F",
+  NATGAS: "NG=F",
 };
 
 const yahooHeaders = {
@@ -91,6 +92,9 @@ async function fetchOilPriceApi(): Promise<Record<string, number>> {
         if (item.code === "BRENT_CRUDE_USD" && typeof item.price === "number" && item.price > 0) {
           prices.UKOIL = Number(item.price.toFixed(4));
         }
+        if (item.code === "NATURAL_GAS_USD" && typeof item.price === "number" && item.price > 0) {
+          prices.NATGAS = Number(item.price.toFixed(4));
+        }
       }
     }
 
@@ -134,8 +138,8 @@ async function handleLivePrices(): Promise<Response> {
   const sources: string[] = [];
 
   for (const code of Object.keys(YAHOO_SYMBOLS)) {
-    if ((code === "USOIL" || code === "UKOIL") && oilPrices[code]) {
-      // Prefer OilPriceAPI for oil prices
+    if ((code === "USOIL" || code === "UKOIL" || code === "NATGAS") && oilPrices[code]) {
+      // Prefer OilPriceAPI for oil & gas prices
       prices[code] = oilPrices[code];
       if (!sources.includes("oilpriceapi")) sources.push("oilpriceapi");
     } else if (yahooPrices[code]) {

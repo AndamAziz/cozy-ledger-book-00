@@ -23,6 +23,7 @@ const VOLATILITY: Record<string, number> = {
   XPD: 0.006,
   USOIL: 0.005,
   UKOIL: 0.005,
+  NATGAS: 0.008,
 };
 
 export function useMetalsData() {

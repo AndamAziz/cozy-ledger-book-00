@@ -9,16 +9,17 @@ export interface Metal {
   high24h: number;
   low24h: number;
   unit: string;
-  category: 'metal' | 'oil';
+  category: 'metal' | 'oil' | 'gas';
 }
 
-export const METALS_META: { code: string; name: string; symbol: string; emoji: string; category: 'metal' | 'oil'; unit: string }[] = [
+export const METALS_META: { code: string; name: string; symbol: string; emoji: string; category: 'metal' | 'oil' | 'gas'; unit: string }[] = [
   { code: 'XAU', name: 'Gold', symbol: 'XAU/USD', emoji: '🥇', category: 'metal', unit: 'oz' },
   { code: 'XAG', name: 'Silver', symbol: 'XAG/USD', emoji: '🥈', category: 'metal', unit: 'oz' },
   { code: 'XPT', name: 'Platinum', symbol: 'XPT/USD', emoji: '⚪', category: 'metal', unit: 'oz' },
   { code: 'XPD', name: 'Palladium', symbol: 'XPD/USD', emoji: '🔘', category: 'metal', unit: 'oz' },
   { code: 'USOIL', name: 'US Oil (WTI)', symbol: 'WTI/USD', emoji: '🛢️', category: 'oil', unit: 'bbl' },
   { code: 'UKOIL', name: 'UK Oil (Brent)', symbol: 'BRENT/USD', emoji: '🛢️', category: 'oil', unit: 'bbl' },
+  { code: 'NATGAS', name: 'Natural Gas', symbol: 'NG/USD', emoji: '🔥', category: 'gas', unit: 'MMBtu' },
 ];
 
 const PREV_KEY = 'metals-prev-prices';
