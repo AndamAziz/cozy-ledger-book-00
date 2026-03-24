@@ -138,8 +138,8 @@ async function handleLivePrices(): Promise<Response> {
   const sources: string[] = [];
 
   for (const code of Object.keys(YAHOO_SYMBOLS)) {
-    if ((code === "USOIL" || code === "UKOIL") && oilPrices[code]) {
-      // Prefer OilPriceAPI for oil prices
+    if ((code === "USOIL" || code === "UKOIL" || code === "NATGAS") && oilPrices[code]) {
+      // Prefer OilPriceAPI for oil & gas prices
       prices[code] = oilPrices[code];
       if (!sources.includes("oilpriceapi")) sources.push("oilpriceapi");
     } else if (yahooPrices[code]) {
