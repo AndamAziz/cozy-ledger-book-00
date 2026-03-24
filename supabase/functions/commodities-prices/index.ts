@@ -14,16 +14,6 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   UKOIL: "BZ=F",
 };
 
-// Twelve Data symbols for oil (more accurate real-time)
-const TWELVE_DATA_SYMBOLS: Record<string, string> = {
-  USOIL: "WTI/USD",
-  UKOIL: "BRENT/USD",
-  XAU: "XAU/USD",
-  XAG: "XAG/USD",
-  XPT: "XPT/USD",
-  XPD: "XPD/USD",
-};
-
 const yahooHeaders = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
   "Accept": "application/json,text/plain,*/*",
@@ -34,6 +24,11 @@ const yahooHeaders = {
 const CACHE_TTL = 1000;
 let cachedPrices: Record<string, number> | null = null;
 let cacheTimestamp = 0;
+
+// ─── OilPriceAPI cache (longer TTL to stay within rate limits) ───
+let oilApiCache: Record<string, number> | null = null;
+let oilApiCacheTs = 0;
+const OIL_API_CACHE_TTL = 3 * 60 * 1000; // 3 minutes (max 20 req/hour on demo)
 
 // ─── History cache ───
 const historyCache = new Map<string, { data: unknown; ts: number }>();
@@ -72,49 +67,43 @@ async function fetchYahooPrice(symbol: string): Promise<number | null> {
   } catch { return null; }
 }
 
-async function fetchTwelveDataPrices(codes: string[]): Promise<Record<string, number>> {
-  const apiKey = Deno.env.get("TWELVE_DATA_API_KEY");
-  if (!apiKey) return {};
-
-  const prices: Record<string, number> = {};
-  const symbols = codes
-    .filter(c => TWELVE_DATA_SYMBOLS[c])
-    .map(c => TWELVE_DATA_SYMBOLS[c]);
-
-  if (symbols.length === 0) return {};
+// Fetch oil prices from OilPriceAPI (free demo, 20 req/hour)
+async function fetchOilPriceApi(): Promise<Record<string, number>> {
+  // Use cache if fresh
+  if (oilApiCache && Date.now() - oilApiCacheTs < OIL_API_CACHE_TTL) {
+    return oilApiCache;
+  }
 
   try {
-    const symbolsParam = symbols.join(",");
-    const url = `https://api.twelvedata.com/price?symbol=${encodeURIComponent(symbolsParam)}&apikey=${apiKey}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) { await res.text(); return prices; }
+    const res = await fetch("https://api.oilpriceapi.com/v1/demo/prices", {
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) { await res.text(); return oilApiCache || {}; }
     const data = await res.json();
 
-    // Map back from Twelve Data symbols to our codes
-    for (const code of codes) {
-      const tdSymbol = TWELVE_DATA_SYMBOLS[code];
-      if (!tdSymbol) continue;
-
-      // If single symbol, data is { price: "..." }, if multi it's { "SYMBOL": { price: "..." } }
-      let priceStr: string | undefined;
-      if (symbols.length === 1) {
-        priceStr = data?.price;
-      } else {
-        priceStr = data?.[tdSymbol]?.price;
-      }
-
-      if (priceStr) {
-        const p = parseFloat(priceStr);
-        if (Number.isFinite(p) && p > 0) {
-          prices[code] = Number(p.toFixed(4));
+    const prices: Record<string, number> = {};
+    if (data?.status === "success" && Array.isArray(data?.data?.prices)) {
+      for (const item of data.data.prices) {
+        if (item.code === "WTI_USD" && typeof item.price === "number" && item.price > 0) {
+          prices.USOIL = Number(item.price.toFixed(4));
+        }
+        if (item.code === "BRENT_CRUDE_USD" && typeof item.price === "number" && item.price > 0) {
+          prices.UKOIL = Number(item.price.toFixed(4));
         }
       }
     }
-  } catch (e) {
-    console.error("Twelve Data fetch error:", e);
-  }
 
-  return prices;
+    if (Object.keys(prices).length > 0) {
+      oilApiCache = prices;
+      oilApiCacheTs = Date.now();
+    }
+
+    return prices;
+  } catch (e) {
+    console.error("OilPriceAPI fetch error:", e);
+    return oilApiCache || {};
+  }
 }
 
 async function handleLivePrices(): Promise<Response> {
@@ -125,16 +114,14 @@ async function handleLivePrices(): Promise<Response> {
     );
   }
 
-  const allCodes = Object.keys(YAHOO_SYMBOLS);
-
-  // Fetch from both sources in parallel
-  const [yahooResults, twelveDataPrices] = await Promise.all([
+  // Fetch from Yahoo and OilPriceAPI in parallel
+  const [yahooResults, oilPrices] = await Promise.all([
     Promise.all(
       Object.entries(YAHOO_SYMBOLS).map(async ([code, symbol]) =>
         [code, await fetchYahooPrice(symbol)] as const
       ),
     ),
-    fetchTwelveDataPrices(allCodes),
+    fetchOilPriceApi(),
   ]);
 
   const yahooPrices: Record<string, number> = {};
@@ -142,14 +129,15 @@ async function handleLivePrices(): Promise<Response> {
     if (typeof price === "number" && price > 0) yahooPrices[code] = Number(price.toFixed(4));
   }
 
-  // Merge: prefer Twelve Data for all commodities (more accurate real-time), fallback to Yahoo
+  // Merge: Use OilPriceAPI for oil (more accurate), Yahoo for metals
   const prices: Record<string, number> = {};
   const sources: string[] = [];
 
-  for (const code of allCodes) {
-    if (twelveDataPrices[code]) {
-      prices[code] = twelveDataPrices[code];
-      if (!sources.includes("twelve-data")) sources.push("twelve-data");
+  for (const code of Object.keys(YAHOO_SYMBOLS)) {
+    if ((code === "USOIL" || code === "UKOIL") && oilPrices[code]) {
+      // Prefer OilPriceAPI for oil prices
+      prices[code] = oilPrices[code];
+      if (!sources.includes("oilpriceapi")) sources.push("oilpriceapi");
     } else if (yahooPrices[code]) {
       prices[code] = yahooPrices[code];
       if (!sources.includes("yahoo-finance")) sources.push("yahoo-finance");
