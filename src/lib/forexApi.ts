@@ -49,6 +49,7 @@ export const CURRENCIES: { code: string; name: string; flag: string }[] = [
   { code: 'PKR', name: 'Pakistani Rupee', flag: '🇵🇰' },
   { code: 'NGN', name: 'Nigerian Naira', flag: '🇳🇬' },
   { code: 'GEL', name: 'Georgian Lari', flag: '🇬🇪' },
+  { code: 'XAG', name: 'Silver (Troy Oz)', flag: '🥈' },
 ];
 
 interface ERApiResponse {
