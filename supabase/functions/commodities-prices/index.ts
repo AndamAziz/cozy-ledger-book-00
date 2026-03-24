@@ -12,6 +12,7 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   XPD: "PA=F",
   USOIL: "CL=F",
   UKOIL: "BZ=F",
+  NATGAS: "NG=F",
 };
 
 const yahooHeaders = {

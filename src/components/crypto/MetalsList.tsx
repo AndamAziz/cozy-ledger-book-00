@@ -107,6 +107,16 @@ export function MetalsList({ metals, selectedCode, onSelectMetal, isLoading, mar
           🛢️ Crude Oil
         </div>
         {oilItems.map(renderItem)}
+
+        {/* Natural Gas section */}
+        {gasItems.length > 0 && (
+          <>
+            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-[#3498db] border-b border-[#1a1e2e] bg-[#3498db]/5">
+              🔥 Natural Gas
+            </div>
+            {gasItems.map(renderItem)}
+          </>
+        )}
       </div>
     </div>
   );
