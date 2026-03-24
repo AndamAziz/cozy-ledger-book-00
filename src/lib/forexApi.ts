@@ -66,20 +66,20 @@ export async function fetchForexRates(): Promise<ForexCurrency[]> {
   if (!latestRes.ok) throw new Error('Failed to fetch forex rates');
   const latest: ERApiResponse = await latestRes.json();
 
-  // Fetch XAG (silver) price from Yahoo Finance
+  // Fetch XAG (silver) price from commodities edge function
   try {
-    const yahooRes = await fetch(
-      'https://query1.finance.yahoo.com/v8/finance/chart/SI=F?range=2d&interval=1d'
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const commoditiesRes = await fetch(
+      `${supabaseUrl}/functions/v1/commodities-prices`,
+      { headers: { apikey: supabaseKey, authorization: `Bearer ${supabaseKey}` } }
     );
-    if (yahooRes.ok) {
-      const yahooData = await yahooRes.json();
-      const closes = yahooData?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
-      if (closes && closes.length > 0) {
-        const price = closes[closes.length - 1];
-        if (price && price > 0) {
-          // XAG rate = price per oz in USD (inverted: 1 USD = 1/price oz)
-          latest.rates['XAG'] = 1 / price;
-        }
+    if (commoditiesRes.ok) {
+      const data = await commoditiesRes.json();
+      const silverPrice = data?.prices?.XAG;
+      if (silverPrice && silverPrice > 0) {
+        // XAG: 1 USD = 1/price troy oz
+        latest.rates['XAG'] = 1 / silverPrice;
       }
     }
   } catch {}
