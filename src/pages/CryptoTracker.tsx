@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { KrakenCoin, TRACKED_PAIRS, getSymbolFromPair, getCoinMeta, fetchTicker } from '@/lib/krakenApi';
+import { KrakenCoin, TRACKED_PAIRS, getSymbolFromPair, getDisplaySymbol, getCoinMeta, fetchTicker } from '@/lib/krakenApi';
 import { useKrakenWebSocket } from '@/hooks/useKrakenWebSocket';
 import { useKrakenOHLC } from '@/hooks/useKrakenOHLC';
 import { useForexData } from '@/hooks/useForexData';
