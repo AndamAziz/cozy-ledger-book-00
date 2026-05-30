@@ -1,25 +1,28 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { KrakenCoin, TRACKED_PAIRS, getSymbolFromPair, getCoinMeta, fetchTicker } from '@/lib/krakenApi';
+import { KrakenCoin, TRACKED_PAIRS, getSymbolFromPair, getDisplaySymbol, getCoinMeta, fetchTicker } from '@/lib/krakenApi';
 import { useKrakenWebSocket } from '@/hooks/useKrakenWebSocket';
 import { useKrakenOHLC } from '@/hooks/useKrakenOHLC';
 import { useForexData } from '@/hooks/useForexData';
 import { useMetalsData } from '@/hooks/useMetalsData';
 import { CryptoChart } from '@/components/crypto/CryptoChart';
+import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { CoinList } from '@/components/crypto/CoinList';
 import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
 import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
 import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
+type CryptoView = 'chart' | 'analysis';
 
 export default function CryptoTracker() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
+  const [cryptoView, setCryptoView] = useState<CryptoView>('chart');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(60);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -251,21 +254,57 @@ export default function CryptoTracker() {
           {/* Main content */}
           {activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <CryptoChart
-                pair={selectedPair}
-                candles={candles}
-                isLoading={chartLoading}
-                currentPrice={currentPrice}
-                interval={interval}
-                onIntervalChange={setInterval}
-              />
-              {currentCoin && currentCoin.price > 0 && (
-                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 sm:gap-x-6 gap-y-1 px-3 py-2 border-t border-[#1a1e2e] text-[10px] sm:text-xs text-[#848e9c] shrink-0">
-                  <span>24h High: <span className="text-white">${currentCoin.high24h.toLocaleString()}</span></span>
-                  <span>24h Low: <span className="text-white">${currentCoin.low24h.toLocaleString()}</span></span>
-                  <span>24h Vol: <span className="text-white">{currentCoin.volume24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span></span>
-                  <span>24h Change: <span className={currentCoin.change24h >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>{currentCoin.change24h >= 0 ? '+' : ''}{currentCoin.change24h.toFixed(2)}%</span></span>
+              {/* Chart / Analysis sub-toggle */}
+              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
+                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setCryptoView('chart')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
+                      cryptoView === 'chart' ? 'bg-[#2a2e3e] text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <CandlestickChart className="h-3.5 w-3.5" />
+                    <span>Chart</span>
+                  </button>
+                  <button
+                    onClick={() => setCryptoView('analysis')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
+                      cryptoView === 'analysis' ? 'bg-[#2a2e3e] text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <Activity className="h-3.5 w-3.5" />
+                    <span>Analysis</span>
+                  </button>
                 </div>
+              </div>
+
+              {cryptoView === 'chart' ? (
+                <>
+                  <CryptoChart
+                    pair={selectedPair}
+                    candles={candles}
+                    isLoading={chartLoading}
+                    currentPrice={currentPrice}
+                    interval={interval}
+                    onIntervalChange={setInterval}
+                  />
+                  {currentCoin && currentCoin.price > 0 && (
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 sm:gap-x-6 gap-y-1 px-3 py-2 border-t border-[#1a1e2e] text-[10px] sm:text-xs text-[#848e9c] shrink-0">
+                      <span>24h High: <span className="text-white">${currentCoin.high24h.toLocaleString()}</span></span>
+                      <span>24h Low: <span className="text-white">${currentCoin.low24h.toLocaleString()}</span></span>
+                      <span>24h Vol: <span className="text-white">{currentCoin.volume24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span></span>
+                      <span>24h Change: <span className={currentCoin.change24h >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>{currentCoin.change24h >= 0 ? '+' : ''}{currentCoin.change24h.toFixed(2)}%</span></span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <CryptoAnalysis
+                  symbol={getDisplaySymbol(getSymbolFromPair(selectedPair))}
+                  candles={candles}
+                  currentPrice={currentPrice}
+                  change24h={currentCoin?.change24h ?? 0}
+                  interval={interval}
+                />
               )}
             </div>
           ) : activeTab === 'forex' ? (

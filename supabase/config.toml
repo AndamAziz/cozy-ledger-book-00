@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.admin-remove-admin]
 verify_jwt = false
+
+[functions.crypto-analysis]
+verify_jwt = false
