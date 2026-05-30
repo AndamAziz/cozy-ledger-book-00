@@ -7,19 +7,22 @@ import { useKrakenOHLC } from '@/hooks/useKrakenOHLC';
 import { useForexData } from '@/hooks/useForexData';
 import { useMetalsData } from '@/hooks/useMetalsData';
 import { CryptoChart } from '@/components/crypto/CryptoChart';
+import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { CoinList } from '@/components/crypto/CoinList';
 import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
 import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
 import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
+type CryptoView = 'chart' | 'analysis';
 
 export default function CryptoTracker() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
+  const [cryptoView, setCryptoView] = useState<CryptoView>('chart');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(60);
   const [showSidebar, setShowSidebar] = useState(false);
