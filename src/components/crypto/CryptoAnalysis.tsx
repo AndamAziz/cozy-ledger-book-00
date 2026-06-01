@@ -50,26 +50,32 @@ interface TradeSummary {
   keyDrivers: KeyDriver[];
 }
 
+type LangMode = 'ku' | 'en' | 'both';
+
+// Module-level bilingual helper: pick text for the active display language.
+const bi = (ku: string, en: string, lang: LangMode) =>
+  lang === 'en' ? en : lang === 'ku' ? ku : `${ku} · ${en}`;
+
 const signalColor = (s: SignalType) =>
   s === 'buy' ? '#0ecb81' : s === 'sell' ? '#f6465d' : '#848e9c';
 
-const signalLabel = (s: SignalType) =>
-  s === 'buy' ? 'کڕین' : s === 'sell' ? 'فرۆشتن' : 'بێلایەن';
+const signalLabel = (s: SignalType, lang: LangMode) =>
+  s === 'buy' ? bi('کڕین', 'Buy', lang) : s === 'sell' ? bi('فرۆشتن', 'Sell', lang) : bi('بێلایەن', 'Neutral', lang);
 
 const recColor = (r: Recommendation) =>
   r === 'buy' ? '#0ecb81' : r === 'sell' ? '#f6465d' : '#f0b90b';
 
-const recLabel = (r: Recommendation) =>
-  r === 'buy' ? 'کڕین' : r === 'sell' ? 'فرۆشتن' : 'هەڵگرتن';
+const recLabel = (r: Recommendation, lang: LangMode) =>
+  r === 'buy' ? bi('کڕین', 'Buy', lang) : r === 'sell' ? bi('فرۆشتن', 'Sell', lang) : bi('هەڵگرتن', 'Hold', lang);
 
 const riskColor = (r: RiskLevel) =>
   r === 'low' ? '#0ecb81' : r === 'high' ? '#f6465d' : '#f0b90b';
 
-const riskLabel = (r: RiskLevel) =>
-  r === 'low' ? 'نزم' : r === 'high' ? 'بەرز' : 'مامناوەند';
+const riskLabel = (r: RiskLevel, lang: LangMode) =>
+  r === 'low' ? bi('نزم', 'Low', lang) : r === 'high' ? bi('بەرز', 'High', lang) : bi('مامناوەند', 'Medium', lang);
 
-const influenceLabel = (i: Influence) =>
-  i === 'high' ? 'کاریگەری بەرز' : i === 'low' ? 'کاریگەری نزم' : 'کاریگەری مامناوەند';
+const influenceLabel = (i: Influence, lang: LangMode) =>
+  i === 'high' ? bi('کاریگەری بەرز', 'High impact', lang) : i === 'low' ? bi('کاریگەری نزم', 'Low impact', lang) : bi('کاریگەری مامناوەند', 'Medium impact', lang);
 
 const influenceWidth = (i: Influence) =>
   i === 'high' ? '100%' : i === 'medium' ? '60%' : '30%';
@@ -83,8 +89,6 @@ function fmt(n: number | null, digits = 2): string {
   if (n == null) return '—';
   return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
-
-type LangMode = 'ku' | 'en' | 'both';
 
 export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, interval, timeframeLabel }: CryptoAnalysisProps) {
   const [aiText, setAiText] = useState('');
