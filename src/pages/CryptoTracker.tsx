@@ -138,13 +138,6 @@ export default function CryptoTracker() {
             <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
 
-          <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="md:hidden p-1.5 rounded-lg hover:bg-[#1a1e2e] active:bg-[#252a3a] transition-colors"
-          >
-            <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
-
           {/* Tab switcher */}
           <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
             <button
