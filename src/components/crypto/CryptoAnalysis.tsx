@@ -534,7 +534,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                         onClick={() => setLangMode(m)}
                         aria-pressed={langMode === m}
                         aria-label={m === 'ku' ? 'Kurdish only' : m === 'en' ? 'English only' : 'Both languages'}
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all duration-200 min-h-[28px] ${
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all duration-200 min-h-[28px] outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d1117] ${
                           langMode === m
                             ? 'bg-[#0d1117] text-white shadow-sm ring-1 ring-[#2d2d2d]'
                             : 'text-[#848e9c] hover:text-white'
