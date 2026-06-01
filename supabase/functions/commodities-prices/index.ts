@@ -201,7 +201,7 @@ const TWELVE_HISTORY_MAP: Record<string, { interval: string; outputsize: number 
   "5y": { interval: "1week", outputsize: 270 },
 };
 
-async function fetchTwelveDataHistory(code: string, range: string): Promise<{ time: number; close: number; high: number; low: number }[] | null> {
+async function fetchTwelveDataHistory(code: string, range: string): Promise<{ time: number; open: number; close: number; high: number; low: number }[] | null> {
   const key = Deno.env.get("TWELVE_DATA_API_KEY");
   const symbol = TWELVE_DATA_SYMBOLS[code];
   if (!key || !symbol) return null;
@@ -227,10 +227,12 @@ async function fetchTwelveDataHistory(code: string, range: string): Promise<{ ti
         const close = Number(v.close);
         const high = Number(v.high);
         const low = Number(v.low);
+        const openRaw = Number(v.open);
+        const open = Number.isFinite(openRaw) && openRaw > 0 ? openRaw : close;
         if (![time, close, high, low].every(Number.isFinite) || close <= 0 || high <= 0 || low <= 0) return null;
-        return { time, close: +close.toFixed(4), high: +high.toFixed(4), low: +low.toFixed(4) };
+        return { time, open: +open.toFixed(4), close: +close.toFixed(4), high: +high.toFixed(4), low: +low.toFixed(4) };
       })
-      .filter(Boolean) as { time: number; close: number; high: number; low: number }[];
+      .filter(Boolean) as { time: number; open: number; close: number; high: number; low: number }[];
 
     return candles.length > 0 ? candles : null;
   } catch (e) {
@@ -238,6 +240,7 @@ async function fetchTwelveDataHistory(code: string, range: string): Promise<{ ti
     return null;
   }
 }
+
 
 function getLastClose(quotes: unknown): number | null {
   if (!Array.isArray(quotes)) return null;
