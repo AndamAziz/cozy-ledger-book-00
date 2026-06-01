@@ -552,19 +552,21 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 {tradeSummary.recommendation === 'buy' ? <TrendingUp className="h-5 w-5" /> : tradeSummary.recommendation === 'sell' ? <TrendingDown className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
                 <div>
                   <div className="text-base font-extrabold">{recLabel(tradeSummary.recommendation)}</div>
-                  <div className="text-[10px] text-[#848e9c]">پێشنیاری سەرەکی</div>
+                  <div className="text-[10px] text-[#848e9c]">{biLabel('پێشنیاری سەرەکی', 'Main recommendation')}</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="flex items-center gap-1 text-sm font-bold text-white"><Gauge className="h-3.5 w-3.5 text-[#848e9c]" />متمانە {tradeSummary.confidence}%</div>
+                <div className="flex items-center gap-1 text-sm font-bold text-white"><Gauge className="h-3.5 w-3.5 text-[#848e9c]" />{biLabel('متمانە', 'Confidence')} {tradeSummary.confidence}%</div>
                 <div className="h-1.5 w-24 mt-1 rounded-full bg-[#1a1e2e] overflow-hidden">
                   <div className="h-full rounded-full" style={{ width: `${tradeSummary.confidence}%`, backgroundColor: recColor(tradeSummary.recommendation) }} />
                 </div>
               </div>
             </div>
 
-            {tradeSummary.headline && (
-              <div className="px-4 py-2 text-sm text-[#d1d5db] border-b border-[#1a1e2e]">{tradeSummary.headline}</div>
+            {(tradeSummary.headline || tradeSummary.headlineEn) && (
+              <div className="px-4 py-2 text-sm text-[#d1d5db] border-b border-[#1a1e2e]">
+                <BiText ku={tradeSummary.headline} en={tradeSummary.headlineEn} />
+              </div>
             )}
 
             {/* Levels grid */}
