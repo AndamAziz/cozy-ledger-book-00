@@ -174,12 +174,23 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   useEffect(() => {
     if (!seriesRef.current || candles.length === 0) return;
 
-    const data = candles.map(c => ({
-      time: c.time as Time,
-      value: c.close,
-    }));
+    if (chartType === 'candles') {
+      const data = candles.map(c => ({
+        time: c.time as Time,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      }));
+      seriesRef.current.setData(data);
+    } else {
+      const data = candles.map(c => ({
+        time: c.time as Time,
+        value: c.close,
+      }));
+      seriesRef.current.setData(data);
+    }
 
-    seriesRef.current.setData(data);
 
     // Update MA data
     for (const ma of MA_PERIODS) {
