@@ -741,7 +741,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-sm font-bold text-white">
             <ImageIcon className="h-4 w-4 text-[#2962ff]" />
-            شیکاری چارت لە وێنە
+            {biLabel('شیکاری چارت لە وێنە', 'Chart image analysis')}
           </div>
           <div className="flex items-center gap-2">
             {imagePreviews.length > 0 && !imageLoading && (
