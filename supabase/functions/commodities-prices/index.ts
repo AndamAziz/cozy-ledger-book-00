@@ -330,9 +330,12 @@ async function handleLivePrices(): Promise<Response> {
     if (typeof price === "number" && price > 0) yahooPrices[code] = Number(price.toFixed(4));
   }
 
-  // Merge priority: GoldAPI spot for metals, OilPriceAPI for oil/gas, Yahoo as fallback
+  // Merge priority: spot feeds for metals, OilPriceAPI for oil/gas, Yahoo as fallback (non-metals only)
   const prices: Record<string, number> = {};
   const sources: string[] = [];
+  // Track metals where no real spot price could be obtained — surface as explicit errors,
+  // never silently substitute Yahoo futures (GC=F/SI=F) which trade well above broker spot.
+  const unavailable: string[] = [];
 
   for (const code of Object.keys(YAHOO_SYMBOLS)) {
     if ((code === "USOIL" || code === "UKOIL" || code === "NATGAS") && oilPrices[code]) {
@@ -344,24 +347,36 @@ async function handleLivePrices(): Promise<Response> {
       prices[code] = metalsSpot.prices[code];
       for (const source of metalsSpot.sources) if (!sources.includes(source)) sources.push(source);
     } else if (GOLDAPI_METALS.includes(code)) {
-      // Do not fall back to Yahoo futures for metals: GC=F/SI=F can be far above broker spot XAU/USD.
-      continue;
+      // Spot unavailable for this metal — do NOT fall back to Yahoo futures. Report as unavailable.
+      unavailable.push(code);
     } else if (yahooPrices[code]) {
       prices[code] = yahooPrices[code];
       if (!sources.includes("yahoo-finance")) sources.push("yahoo-finance");
     }
   }
 
+  // Flag whether the spot data we served is stale (cache fallback older than its TTL).
+  const spotStale = metalsSpot.sources.includes("spot-cache") &&
+    Date.now() - metalsSpotCacheTs >= METALS_SPOT_CACHE_TTL;
+
   if (Object.keys(prices).length === 0) {
-    return new Response(JSON.stringify({ error: "No live prices available" }), {
-      status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "No live prices available", unavailable }),
+      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   cachedPrices = prices;
   cacheTimestamp = Date.now();
   return new Response(
-    JSON.stringify({ prices, sources, cached: false, timestamp: cacheTimestamp }),
+    JSON.stringify({
+      prices,
+      sources,
+      unavailable,
+      spotStale,
+      cached: false,
+      timestamp: cacheTimestamp,
+    }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 }
