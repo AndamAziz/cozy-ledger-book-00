@@ -80,7 +80,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
           <Search className="h-4 w-4 text-[#848e9c] shrink-0" />
           <input
             type="text"
-            placeholder="Search currency or metal..."
+            placeholder={bi('گەڕان بەدوای دراو یان کانزا...', 'Search currency or metal...')}
             value={pickerSearch}
             onChange={e => setPickerSearch(e.target.value)}
             className="flex-1 bg-transparent text-sm text-white placeholder-[#848e9c] outline-none"
