@@ -23,9 +23,7 @@ const RANGES = [
   { key: '5d', label: '5D' },
   { key: '1mo', label: '1M' },
   { key: '3mo', label: '3M' },
-  { key: '6mo', label: '6M' },
   { key: '1y', label: '1Y' },
-  { key: '5y', label: '5Y' },
 ];
 
 export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, range, onRangeChange, currentPrice, name }: MetalsChartProps) {
