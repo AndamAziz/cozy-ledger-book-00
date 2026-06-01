@@ -572,11 +572,11 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
             {/* Levels grid */}
             <div className="grid grid-cols-2 gap-px bg-[#1a1e2e]">
               <div className="bg-[#0d1117] px-4 py-2.5">
-                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><LogIn className="h-3 w-3" />خاڵی چوونەژوورەوە</div>
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><LogIn className="h-3 w-3" />{biLabel('خاڵی چوونەژوورەوە', 'Entry')}</div>
                 <div className="text-sm font-mono text-white mt-0.5">{tradeSummary.entry}</div>
               </div>
               <div className="bg-[#0d1117] px-4 py-2.5">
-                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><OctagonX className="h-3 w-3 text-[#f6465d]" />وەستانی زیان</div>
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><OctagonX className="h-3 w-3 text-[#f6465d]" />{biLabel('وەستانی زیان', 'Stop-loss')}</div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-sm font-mono text-[#f6465d]">{tradeSummary.stopLoss}</span>
                   {tradeSummary.stopLossIndicator && (
@@ -587,25 +587,47 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 </div>
               </div>
               <div className="bg-[#0d1117] px-4 py-2.5 col-span-2">
-                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><Target className="h-3 w-3 text-[#0ecb81]" />ئامانجەکانی قازانج</div>
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><Target className="h-3 w-3 text-[#0ecb81]" />{biLabel('ئامانجەکانی قازانج', 'Take-profit targets')}</div>
                 <div className="flex flex-wrap gap-1.5 mt-1">
                   {tradeSummary.targets.map((t, i) => (
                     <span key={i} className="text-xs font-mono px-2 py-0.5 rounded bg-[#0ecb81]/10 text-[#0ecb81]">
-                      ئامانج {i + 1}: {t}
+                      {biLabel('ئامانج', 'Target')} {i + 1}: {t}
                     </span>
                   ))}
                 </div>
               </div>
               <div className="bg-[#0d1117] px-4 py-2.5">
-                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><CalendarClock className="h-3 w-3" />ماوەی پێشبینیکراو</div>
-                <div className="text-sm text-white mt-0.5">{tradeSummary.horizonDays} ڕۆژ</div>
-                {targetDate && <div className="text-[10px] text-[#848e9c]">تا {targetDate}</div>}
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><CalendarClock className="h-3 w-3" />{biLabel('ماوەی پێشبینیکراو', 'Time horizon')}</div>
+                <div className="text-sm text-white mt-0.5">{tradeSummary.horizonDays} {biLabel('ڕۆژ', 'days')}</div>
+                {targetDate && <div className="text-[10px] text-[#848e9c]">{biLabel('تا', 'until')} {targetDate}</div>}
               </div>
               <div className="bg-[#0d1117] px-4 py-2.5">
-                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><ShieldAlert className="h-3 w-3" style={{ color: riskColor(tradeSummary.riskLevel) }} />ئاستی مەترسی</div>
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><ShieldAlert className="h-3 w-3" style={{ color: riskColor(tradeSummary.riskLevel) }} />{biLabel('ئاستی مەترسی', 'Risk level')}</div>
                 <div className="text-sm font-bold mt-0.5" style={{ color: riskColor(tradeSummary.riskLevel) }}>{riskLabel(tradeSummary.riskLevel)}</div>
               </div>
             </div>
+
+            {/* When to buy / when to sell timing */}
+            {(tradeSummary.entryTiming || tradeSummary.entryTimingEn || tradeSummary.exitTiming || tradeSummary.exitTimingEn) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#1a1e2e] border-t border-[#1a1e2e]">
+                {(tradeSummary.entryTiming || tradeSummary.entryTimingEn) && (
+                  <div className="bg-[#0d1117] px-4 py-3">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#0ecb81] mb-1">
+                      <LogIn className="h-3.5 w-3.5" />{biLabel('کەی بکڕیت', 'When to buy')}
+                    </div>
+                    <BiText ku={tradeSummary.entryTiming} en={tradeSummary.entryTimingEn} className="text-xs text-[#d1d5db]" />
+                  </div>
+                )}
+                {(tradeSummary.exitTiming || tradeSummary.exitTimingEn) && (
+                  <div className="bg-[#0d1117] px-4 py-3">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#f6465d] mb-1">
+                      <Target className="h-3.5 w-3.5" />{biLabel('کەی بفرۆشیت', 'When to sell')}
+                    </div>
+                    <BiText ku={tradeSummary.exitTiming} en={tradeSummary.exitTimingEn} className="text-xs text-[#d1d5db]" />
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Stop-loss basis — indicator → stop mapping with language toggle */}
             {(tradeSummary.stopLossBasis || tradeSummary.stopLossBasisEn || tradeSummary.stopLossIndicatorValue) && (
