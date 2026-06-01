@@ -140,6 +140,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [sentSignals, setSentSignals] = useState<SentSignal[]>([]);
   const [signalsLoading, setSignalsLoading] = useState(false);
   const [showSignals, setShowSignals] = useState(false);
+  const [selectedSignal, setSelectedSignal] = useState<SentSignal | null>(null);
 
   const fetchSentSignals = async () => {
     setSignalsLoading(true);
