@@ -301,91 +301,95 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   return (
     <div className="border-b border-[#1a1e2e]">
       {/* Controls */}
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-[#1a1e2e]">
-        {/* Range selector */}
-        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
-          {RANGES.map(r => (
-            <button
-              key={r.key}
-              onClick={() => onRangeChange(r.key)}
-              className={`px-2 sm:px-2.5 py-1 text-[10px] sm:text-xs font-medium transition-colors active:scale-95 ${
-                range === r.key ? 'text-black' : 'text-[#848e9c] hover:text-white'
-              }`}
-              style={range === r.key ? { backgroundColor: accentColor } : undefined}
-            >
-              {r.label}
-            </button>
-          ))}
+      <div className="flex flex-col gap-2 px-2 sm:px-3 py-2 border-b border-[#1a1e2e]">
+        {/* Row 1: Range selector (full width, even) + change */}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-1 bg-[#1a1e2e] rounded-lg overflow-hidden">
+            {RANGES.map(r => (
+              <button
+                key={r.key}
+                onClick={() => onRangeChange(r.key)}
+                className={`flex-1 py-1.5 text-[11px] sm:text-xs font-semibold transition-colors active:scale-95 ${
+                  range === r.key ? 'text-black' : 'text-[#848e9c] hover:text-white'
+                }`}
+                style={range === r.key ? { backgroundColor: accentColor } : undefined}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Change indicator */}
+          {candles.length >= 2 && (
+            <span className={`text-[10px] sm:text-xs font-bold whitespace-nowrap shrink-0 ${isUp ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+              {isUp ? '▲' : '▼'} {isUp ? '+' : ''}{pctChange.toFixed(2)}%
+            </span>
+          )}
         </div>
 
-        <div className="flex-1" />
-
-        {/* Change indicator */}
-        {candles.length >= 2 && (
-          <span className={`text-[10px] sm:text-xs font-bold ${isUp ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-            {isUp ? '▲' : '▼'} {isUp ? '+' : ''}{priceChange.toFixed(2)} ({isUp ? '+' : ''}{pctChange.toFixed(2)}%)
-          </span>
-        )}
-
-        {/* MA/EMA type toggle */}
-        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
-          {(['MA', 'EMA'] as MAType[]).map(type => (
+        {/* Row 2: indicators + chart type (horizontally scrollable) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin -mx-0.5 px-0.5 pb-0.5">
+          {/* Chart type toggle */}
+          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
             <button
-              key={type}
-              onClick={() => setMaType(type)}
-              className={`px-2 py-1 text-[10px] font-bold transition-colors ${
-                maType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+              onClick={() => setChartType('candles')}
+              className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-medium transition-colors ${
+                chartType === 'candles' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
               }`}
             >
-              {type}
+              {language === 'en' ? 'Candles' : 'شمع'}
             </button>
-          ))}
-        </div>
-
-        {/* MA period toggles */}
-        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
-          {MA_PERIODS.map(ma => (
             <button
-              key={ma.period}
-              onClick={() => toggleMA(ma.period)}
-              className={`px-2 py-1 text-[10px] font-bold transition-colors ${
-                activeMAs.has(ma.period) ? 'text-white' : 'text-[#848e9c] hover:text-white opacity-50'
+              onClick={() => setChartType('area')}
+              className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-medium transition-colors ${
+                chartType === 'area' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
               }`}
-              style={{ color: activeMAs.has(ma.period) ? ma.color : undefined }}
             >
-              {maType}{ma.label}
+              Area
             </button>
-          ))}
-        </div>
+            <button
+              onClick={() => setChartType('line')}
+              className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-medium transition-colors ${
+                chartType === 'line' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+              }`}
+            >
+              Line
+            </button>
+          </div>
 
-        {/* Chart type toggle */}
-        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
-          <button
-            onClick={() => setChartType('candles')}
-            className={`px-2 py-1 text-[10px] font-medium transition-colors ${
-              chartType === 'candles' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-            }`}
-          >
-            {language === 'en' ? 'Candles' : 'شمع'}
-          </button>
-          <button
-            onClick={() => setChartType('area')}
-            className={`px-2 py-1 text-[10px] font-medium transition-colors ${
-              chartType === 'area' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-            }`}
-          >
-            Area
-          </button>
-          <button
-            onClick={() => setChartType('line')}
-            className={`px-2 py-1 text-[10px] font-medium transition-colors ${
-              chartType === 'line' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-            }`}
-          >
-            Line
-          </button>
+          {/* MA/EMA type toggle */}
+          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
+            {(['MA', 'EMA'] as MAType[]).map(type => (
+              <button
+                key={type}
+                onClick={() => setMaType(type)}
+                className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-bold transition-colors ${
+                  maType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+
+          {/* MA period toggles */}
+          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
+            {MA_PERIODS.map(ma => (
+              <button
+                key={ma.period}
+                onClick={() => toggleMA(ma.period)}
+                className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-bold transition-colors ${
+                  activeMAs.has(ma.period) ? 'text-white' : 'text-[#848e9c] hover:text-white opacity-50'
+                }`}
+                style={{ color: activeMAs.has(ma.period) ? ma.color : undefined }}
+              >
+                {maType}{ma.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
 
 
       {/* Chart */}

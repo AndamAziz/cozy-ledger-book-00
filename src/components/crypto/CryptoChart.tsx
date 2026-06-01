@@ -193,69 +193,75 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-[#1a1e2e]">
-        <span className="text-lg font-bold text-white mr-2">{symbol}/USD</span>
-        {currentPrice > 0 && (
-          <span className="text-lg font-semibold text-[#f0b90b]">
-            ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: currentPrice < 1 ? 6 : 2 })}
-          </span>
-        )}
+      <div className="flex flex-col gap-2 px-2 sm:px-3 py-2 border-b border-[#1a1e2e]">
+        {/* Row 1: symbol + price + chart type */}
+        <div className="flex items-center gap-2">
+          <span className="text-base sm:text-lg font-bold text-white">{symbol}/USD</span>
+          {currentPrice > 0 && (
+            <span className="text-base sm:text-lg font-semibold text-[#f0b90b] truncate">
+              ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: currentPrice < 1 ? 6 : 2 })}
+            </span>
+          )}
 
-        <div className="flex-1" />
+          <div className="flex-1" />
 
-        {/* MA/EMA type toggle */}
-        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
-          {(['MA', 'EMA'] as MAType[]).map(type => (
-            <button
-              key={type}
-              onClick={() => setMaType(type)}
-              className={`px-2 py-1 text-[10px] font-bold transition-colors ${
-                maType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              {type}
-            </button>
-          ))}
+          {/* Chart type toggle */}
+          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
+            {(['candlestick', 'line', 'area'] as const).map(type => (
+              <button
+                key={type}
+                onClick={() => setChartType(type)}
+                className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-medium transition-colors ${
+                  chartType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+                }`}
+              >
+                {type === 'candlestick' ? bi('شمع', 'Candles') : type === 'line' ? bi('هێڵ', 'Line') : bi('ناوچە', 'Area')}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* MA period toggles */}
-        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
-          {MA_PERIODS.map(ma => (
-            <button
-              key={ma.period}
-              onClick={() => toggleMA(ma.period)}
-              className={`px-2 py-1 text-[10px] font-bold transition-colors ${
-                activeMAs.has(ma.period) ? 'text-white' : 'text-[#848e9c] hover:text-white opacity-50'
-              }`}
-              style={{ color: activeMAs.has(ma.period) ? ma.color : undefined }}
-            >
-              {maType}{ma.label}
-            </button>
-          ))}
+        {/* Row 2: MA/EMA indicators (horizontally scrollable) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin -mx-0.5 px-0.5 pb-0.5">
+          {/* MA/EMA type toggle */}
+          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
+            {(['MA', 'EMA'] as MAType[]).map(type => (
+              <button
+                key={type}
+                onClick={() => setMaType(type)}
+                className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-bold transition-colors ${
+                  maType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+
+          {/* MA period toggles */}
+          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
+            {MA_PERIODS.map(ma => (
+              <button
+                key={ma.period}
+                onClick={() => toggleMA(ma.period)}
+                className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-bold transition-colors ${
+                  activeMAs.has(ma.period) ? 'text-white' : 'text-[#848e9c] hover:text-white opacity-50'
+                }`}
+                style={{ color: activeMAs.has(ma.period) ? ma.color : undefined }}
+              >
+                {maType}{ma.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Chart type toggle */}
-        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
-          {(['candlestick', 'line', 'area'] as const).map(type => (
-            <button
-              key={type}
-              onClick={() => setChartType(type)}
-              className={`px-3 py-1 text-xs font-medium transition-colors ${
-                chartType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              {type === 'candlestick' ? bi('شمع', 'Candles') : type === 'line' ? bi('هێڵ', 'Line') : bi('ناوچە', 'Area')}
-            </button>
-          ))}
-        </div>
-
-        {/* Timeframe selector */}
+        {/* Row 3: Timeframe selector (full width, even) */}
         <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
           {TIMEFRAMES.map(tf => (
             <button
               key={tf.label}
               onClick={() => onIntervalChange(tf.interval)}
-              className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`flex-1 py-1.5 text-[11px] sm:text-xs font-medium transition-colors ${
                 interval === tf.interval ? 'bg-[#2a2e3e] text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'
               }`}
             >
@@ -264,6 +270,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           ))}
         </div>
       </div>
+
 
       {/* Chart */}
       <div className="flex-1 relative min-h-[300px] md:min-h-[500px]">
