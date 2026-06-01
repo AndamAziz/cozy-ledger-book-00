@@ -265,7 +265,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       maSeriesRefs.current = {};
       if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     };
-  }, [chartType, range, isUp, activeMAs, maType, language]);
+  }, [chartType, range, isUp, activeMAs, maType, language, rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom]);
 
   // Update data
   useEffect(() => {
