@@ -1098,9 +1098,14 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {selectedSignal.targets.map((t, i) => (
-                      <span key={i} className="text-xs font-mono px-2.5 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81]">
+                      <button
+                        key={i}
+                        onClick={() => copyToClipboard(t, `tp-${i}`)}
+                        className="flex items-center gap-1 text-xs font-mono px-2.5 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81] hover:bg-[#0ecb81]/20 active:scale-95 transition"
+                      >
                         {biLabel('ئامانج', 'Target')} {i + 1}: {t}
-                      </span>
+                        {copiedKey === `tp-${i}` ? <Check className="h-3 w-3 text-[#0ecb81]" /> : <Copy className="h-3 w-3" />}
+                      </button>
                     ))}
                   </div>
                 </div>
