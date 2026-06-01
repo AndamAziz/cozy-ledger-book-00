@@ -2,7 +2,9 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { OHLCCandle, TIMEFRAMES } from '@/lib/krakenApi';
 import { computeIndicators, summarizeSignals, SignalType } from '@/lib/indicators';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send } from 'lucide-react';
 
 interface CryptoAnalysisProps {
   symbol: string;
@@ -110,6 +112,67 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [imageError, setImageError] = useState<string | null>(null);
   const [chartTimeframe, setChartTimeframe] = useState('1H');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Admin-only Telegram signal sending
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sentOk, setSentOk] = useState(false);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { if (active) setIsAdmin(false); return; }
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (active) setIsAdmin(data?.role === 'admin');
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const sendSignal = async () => {
+    if (!tradeSummary) return;
+    setSending(true);
+    setSentOk(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-telegram-signal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({
+          symbol,
+          recommendation: tradeSummary.recommendation,
+          confidence: tradeSummary.confidence,
+          price: currentPrice,
+          entry: tradeSummary.entry,
+          targets: tradeSummary.targets,
+          stopLoss: tradeSummary.stopLoss,
+          horizonDays: tradeSummary.horizonDays,
+          riskLevel: tradeSummary.riskLevel,
+          headline: tradeSummary.headlineEn || tradeSummary.headline,
+          timeframe: timeframeLabel,
+        }),
+      });
+      const j = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(j?.error || 'Failed to send');
+      setSentOk(true);
+      toast({ title: biLabel('نێردرا بۆ تەلەگرام ✅', 'Sent to Telegram ✅') });
+      setTimeout(() => setSentOk(false), 3000);
+    } catch (e) {
+      toast({
+        title: biLabel('ناردن سەرکەوتوو نەبوو', 'Failed to send'),
+        description: e instanceof Error ? e.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const CHART_TIMEFRAMES = ['1H', '4H', '1D'];
 
@@ -720,6 +783,25 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 <div className="flex-1"><BiText ku={tradeSummary.riskNote} en={tradeSummary.riskNoteEn} /></div>
               </div>
             )}
+
+            {isAdmin && (
+              <div className="px-4 py-2.5 border-t border-[#1a1e2e]">
+                <button
+                  onClick={sendSignal}
+                  disabled={sending}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-bold rounded-lg bg-[#229ED9] text-white disabled:opacity-50 active:scale-95 transition"
+                >
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {sending
+                    ? biLabel('دەنێردرێت...', 'Sending...')
+                    : sentOk
+                      ? biLabel('نێردرا ✅', 'Sent ✅')
+                      : biLabel('ناردنی سیگنال بۆ تەلەگرام', 'Send signal to Telegram')}
+                </button>
+              </div>
+            )}
+
+
 
             {generatedAt && (
               <div className="px-4 py-1.5 text-[10px] text-[#848e9c] border-t border-[#1a1e2e]">
