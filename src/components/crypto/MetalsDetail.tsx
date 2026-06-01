@@ -264,6 +264,8 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           })}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
