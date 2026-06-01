@@ -1,6 +1,7 @@
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { OHLCCandle, TIMEFRAMES } from '@/lib/krakenApi';
 import { computeIndicators, summarizeSignals, SignalType } from '@/lib/indicators';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload } from 'lucide-react';
 
 interface CryptoAnalysisProps {
@@ -49,26 +50,32 @@ interface TradeSummary {
   keyDrivers: KeyDriver[];
 }
 
+type LangMode = 'ku' | 'en' | 'both';
+
+// Module-level bilingual helper: pick text for the active display language.
+const bi = (ku: string, en: string, lang: LangMode) =>
+  lang === 'en' ? en : lang === 'ku' ? ku : `${ku} · ${en}`;
+
 const signalColor = (s: SignalType) =>
   s === 'buy' ? '#0ecb81' : s === 'sell' ? '#f6465d' : '#848e9c';
 
-const signalLabel = (s: SignalType) =>
-  s === 'buy' ? 'کڕین' : s === 'sell' ? 'فرۆشتن' : 'بێلایەن';
+const signalLabel = (s: SignalType, lang: LangMode) =>
+  s === 'buy' ? bi('کڕین', 'Buy', lang) : s === 'sell' ? bi('فرۆشتن', 'Sell', lang) : bi('بێلایەن', 'Neutral', lang);
 
 const recColor = (r: Recommendation) =>
   r === 'buy' ? '#0ecb81' : r === 'sell' ? '#f6465d' : '#f0b90b';
 
-const recLabel = (r: Recommendation) =>
-  r === 'buy' ? 'کڕین' : r === 'sell' ? 'فرۆشتن' : 'هەڵگرتن';
+const recLabel = (r: Recommendation, lang: LangMode) =>
+  r === 'buy' ? bi('کڕین', 'Buy', lang) : r === 'sell' ? bi('فرۆشتن', 'Sell', lang) : bi('هەڵگرتن', 'Hold', lang);
 
 const riskColor = (r: RiskLevel) =>
   r === 'low' ? '#0ecb81' : r === 'high' ? '#f6465d' : '#f0b90b';
 
-const riskLabel = (r: RiskLevel) =>
-  r === 'low' ? 'نزم' : r === 'high' ? 'بەرز' : 'مامناوەند';
+const riskLabel = (r: RiskLevel, lang: LangMode) =>
+  r === 'low' ? bi('نزم', 'Low', lang) : r === 'high' ? bi('بەرز', 'High', lang) : bi('مامناوەند', 'Medium', lang);
 
-const influenceLabel = (i: Influence) =>
-  i === 'high' ? 'کاریگەری بەرز' : i === 'low' ? 'کاریگەری نزم' : 'کاریگەری مامناوەند';
+const influenceLabel = (i: Influence, lang: LangMode) =>
+  i === 'high' ? bi('کاریگەری بەرز', 'High impact', lang) : i === 'low' ? bi('کاریگەری نزم', 'Low impact', lang) : bi('کاریگەری مامناوەند', 'Medium impact', lang);
 
 const influenceWidth = (i: Influence) =>
   i === 'high' ? '100%' : i === 'medium' ? '60%' : '30%';
@@ -83,15 +90,18 @@ function fmt(n: number | null, digits = 2): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
-type LangMode = 'ku' | 'en' | 'both';
-
 export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, interval, timeframeLabel }: CryptoAnalysisProps) {
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [tradeSummary, setTradeSummary] = useState<TradeSummary | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
-  const [langMode, setLangMode] = useState<LangMode>('both');
+  // Display/analysis language follows the global app language (English vs RTL languages).
+  const { language } = useLanguage();
+  const [langMode, setLangMode] = useState<LangMode>(language === 'en' ? 'en' : 'ku');
+  useEffect(() => {
+    setLangMode(language === 'en' ? 'en' : 'ku');
+  }, [language]);
 
   // Chart image analysis state
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -156,7 +166,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               : 'text-[#848e9c] hover:text-white'
           }`}
         >
-          {m === 'ku' ? 'کوردی' : m === 'en' ? 'English' : 'هەردووکی'}
+          {m === 'ku' ? 'کوردی' : m === 'en' ? 'English' : biLabel('هەردووکی', 'Both')}
         </button>
       ))}
     </div>
@@ -168,7 +178,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       label: 'RSI (14)',
       value: fmt(indicators.rsi),
       signal: indicators.rsi < 30 ? 'buy' : indicators.rsi > 70 ? 'sell' : 'neutral',
-      hint: indicators.rsi < 30 ? 'زۆر فرۆشراو' : indicators.rsi > 70 ? 'زۆر کڕراو' : 'ناوەند',
+      hint: indicators.rsi < 30 ? bi('زۆر فرۆشراو', 'Oversold', langMode) : indicators.rsi > 70 ? bi('زۆر کڕراو', 'Overbought', langMode) : bi('ناوەند', 'Neutral', langMode),
     });
   }
   if (indicators.macd) {
@@ -176,7 +186,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       label: 'MACD',
       value: fmt(indicators.macd.histogram, 4),
       signal: indicators.macd.histogram > 0 ? 'buy' : indicators.macd.histogram < 0 ? 'sell' : 'neutral',
-      hint: indicators.macd.histogram > 0 ? 'هێزی کڕین' : 'هێزی فرۆشتن',
+      hint: indicators.macd.histogram > 0 ? bi('هێزی کڕین', 'Bullish momentum', langMode) : bi('هێزی فرۆشتن', 'Bearish momentum', langMode),
     });
   }
   if (indicators.bollinger) {
@@ -241,7 +251,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       body: JSON.stringify({ ...buildBody(), mode: 'summary' }),
     });
     if (!resp.ok) {
-      let msg = 'هەڵەیەک ڕوویدا لە دروستکردنی پوختە.';
+      let msg = biLabel('هەڵەیەک ڕوویدا لە دروستکردنی پوختە.', 'Failed to generate the summary.');
       try {
         const j = await resp.json();
         if (j?.error) msg = j.error;
@@ -261,7 +271,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     });
 
     if (!resp.ok || !resp.body) {
-      let msg = 'هەڵەیەک ڕوویدا لە شیکاری AI.';
+      let msg = biLabel('هەڵەیەک ڕوویدا لە شیکاری AI.', 'AI analysis failed.');
       try {
         const j = await resp.json();
         if (j?.error) msg = j.error;
@@ -310,7 +320,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       await fetchSummary();
       await streamNarrative();
     } catch (e) {
-      setAiError(e instanceof Error ? e.message : 'هەڵەیەک ڕوویدا.');
+      setAiError(e instanceof Error ? e.message : biLabel('هەڵەیەک ڕوویدا.', 'Something went wrong.'));
     } finally {
       setAiLoading(false);
     }
@@ -355,15 +365,15 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
     const images = files.filter(f => f.type.startsWith('image/'));
     if (images.length === 0) {
-      setImageError('تکایە تەنها وێنە هەڵبژێرە.');
+      setImageError(biLabel('تکایە تەنها وێنە هەڵبژێرە.', 'Please select images only.'));
       return;
     }
     if (images.some(f => f.size > 8 * 1024 * 1024)) {
-      setImageError('قەبارەی هەندێک وێنە زۆر گەورەیە (زۆرترین ٨MB).');
+      setImageError(biLabel('قەبارەی هەندێک وێنە زۆر گەورەیە (زۆرترین 8MB).', 'Some images are too large (max 8MB).'));
       return;
     }
     if (images.length > 6) {
-      setImageError('زۆرترین ٦ وێنە لە یەک کاتدا.');
+      setImageError(biLabel('زۆرترین 6 وێنە لە یەک کاتدا.', 'Maximum 6 images at a time.'));
       return;
     }
 
@@ -384,7 +394,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         setImageText('');
         analyzeImages(dataUrls);
       })
-      .catch(() => setImageError('نەتوانرا وێنەکان بخوێنرێنەوە.'));
+      .catch(() => setImageError(biLabel('نەتوانرا وێنەکان بخوێنرێنەوە.', 'Could not read the images.')));
   };
 
   const analyzeImages = async (dataUrls: string[]) => {
@@ -398,7 +408,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         body: JSON.stringify({ mode: 'image', symbol, images: dataUrls, chartTimeframe, lang: langMode }),
       });
       if (!resp.ok || !resp.body) {
-        let msg = 'هەڵەیەک ڕوویدا لە شیکاری وێنە.';
+        let msg = biLabel('هەڵەیەک ڕوویدا لە شیکاری وێنە.', 'Image analysis failed.');
         try {
           const j = await resp.json();
           if (j?.error) msg = j.error;
@@ -407,7 +417,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       }
       await consumeStream(resp, setImageText);
     } catch (err) {
-      setImageError(err instanceof Error ? err.message : 'هەڵەیەک ڕوویدا.');
+      setImageError(err instanceof Error ? err.message : biLabel('هەڵەیەک ڕوویدا.', 'Something went wrong.'));
     } finally {
       setImageLoading(false);
     }
@@ -432,12 +442,12 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-sm text-[#848e9c]">پوختەی نیشاندەرە تەکنیکییەکان</div>
+            <div className="text-sm text-[#848e9c]">{biLabel('پوختەی نیشاندەرە تەکنیکییەکان', 'Technical indicators summary')}</div>
             <div className="text-lg font-bold text-white">{symbol}/USD · {tfLabel}</div>
           </div>
           <div className="flex items-center gap-2" style={{ color: signalColor(summary.signal) }}>
             {summary.signal === 'buy' ? <TrendingUp className="h-6 w-6" /> : summary.signal === 'sell' ? <TrendingDown className="h-6 w-6" /> : <Minus className="h-6 w-6" />}
-            <span className="text-xl font-extrabold">{signalLabel(summary.signal)}</span>
+            <span className="text-xl font-extrabold">{signalLabel(summary.signal, langMode)}</span>
           </div>
         </div>
 
@@ -449,13 +459,13 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           />
         </div>
         <div className="flex justify-between text-[10px] text-[#848e9c] mt-1">
-          <span>فرۆشتن</span><span>بێلایەن</span><span>کڕین</span>
+          <span>{biLabel('فرۆشتن', 'Sell')}</span><span>{biLabel('بێلایەن', 'Neutral')}</span><span>{biLabel('کڕین', 'Buy')}</span>
         </div>
 
         <div className="flex gap-2 mt-3 text-xs">
-          <span className="px-2 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81]">کڕین {summary.buyCount}</span>
-          <span className="px-2 py-1 rounded bg-[#848e9c]/10 text-[#848e9c]">بێلایەن {summary.neutralCount}</span>
-          <span className="px-2 py-1 rounded bg-[#f6465d]/10 text-[#f6465d]">فرۆشتن {summary.sellCount}</span>
+          <span className="px-2 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81]">{biLabel('کڕین', 'Buy')} {summary.buyCount}</span>
+          <span className="px-2 py-1 rounded bg-[#848e9c]/10 text-[#848e9c]">{biLabel('بێلایەن', 'Neutral')} {summary.neutralCount}</span>
+          <span className="px-2 py-1 rounded bg-[#f6465d]/10 text-[#f6465d]">{biLabel('فرۆشتن', 'Sell')} {summary.sellCount}</span>
         </div>
       </div>
 
@@ -487,9 +497,9 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
       {/* Indicators table */}
       <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl overflow-hidden">
-        <div className="px-4 py-2.5 border-b border-[#1a1e2e] text-sm font-bold text-white">نیشاندەرە تەکنیکییەکان</div>
+        <div className="px-4 py-2.5 border-b border-[#1a1e2e] text-sm font-bold text-white">{biLabel('نیشاندەرە تەکنیکییەکان', 'Technical indicators')}</div>
         {!hasData ? (
-          <div className="p-6 text-center text-[#848e9c] text-sm">دانەی نرخ بەردەست نییە...</div>
+          <div className="p-6 text-center text-[#848e9c] text-sm">{biLabel('دانەی نرخ بەردەست نییە...', 'No price data available...')}</div>
         ) : (
           <div className="divide-y divide-[#1a1e2e]">
             {rows.map((r) => (
@@ -501,7 +511,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-mono text-[#d1d5db]">{r.value}</span>
                   <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ color: signalColor(r.signal), backgroundColor: signalColor(r.signal) + '1a' }}>
-                    {signalLabel(r.signal)}
+                    {signalLabel(r.signal, langMode)}
                   </span>
                 </div>
               </div>
@@ -515,7 +525,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-sm font-bold text-white">
             <Sparkles className="h-4 w-4 text-[#f0b90b]" />
-            شیکاری زیرەک (AI)
+            {biLabel('شیکاری زیرەک (AI)', 'AI analysis')}
           </div>
           <button
             onClick={runAiAnalysis}
@@ -523,7 +533,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#f0b90b] text-black disabled:opacity-50 active:scale-95 transition"
           >
             {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {aiLoading ? 'شیکاری...' : (aiText || tradeSummary) ? 'دووبارە شیکاری' : 'شیکاری بکە'}
+            {aiLoading ? biLabel('شیکاری...', 'Analyzing...') : (aiText || tradeSummary) ? biLabel('دووبارە شیکاری', 'Re-analyze') : biLabel('شیکاری بکە', 'Analyze')}
           </button>
         </div>
 
@@ -551,7 +561,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               <div className="flex items-center gap-2" style={{ color: recColor(tradeSummary.recommendation) }}>
                 {tradeSummary.recommendation === 'buy' ? <TrendingUp className="h-5 w-5" /> : tradeSummary.recommendation === 'sell' ? <TrendingDown className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
                 <div>
-                  <div className="text-base font-extrabold">{recLabel(tradeSummary.recommendation)}</div>
+                  <div className="text-base font-extrabold">{recLabel(tradeSummary.recommendation, langMode)}</div>
                   <div className="text-[10px] text-[#848e9c]">{biLabel('پێشنیاری سەرەکی', 'Main recommendation')}</div>
                 </div>
               </div>
@@ -603,7 +613,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               </div>
               <div className="bg-[#0d1117] px-4 py-2.5">
                 <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><ShieldAlert className="h-3 w-3" style={{ color: riskColor(tradeSummary.riskLevel) }} />{biLabel('ئاستی مەترسی', 'Risk level')}</div>
-                <div className="text-sm font-bold mt-0.5" style={{ color: riskColor(tradeSummary.riskLevel) }}>{riskLabel(tradeSummary.riskLevel)}</div>
+                <div className="text-sm font-bold mt-0.5" style={{ color: riskColor(tradeSummary.riskLevel) }}>{riskLabel(tradeSummary.riskLevel, langMode)}</div>
               </div>
             </div>
 
@@ -690,9 +700,9 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                         <div className="h-full rounded-full" style={{ width: influenceWidth(d.influence), backgroundColor: signalColor(d.effect) }} />
                       </div>
                       <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ color: signalColor(d.effect), backgroundColor: signalColor(d.effect) + '1a' }}>
-                        {signalLabel(d.effect)}
+                        {signalLabel(d.effect, langMode)}
                       </span>
-                      <span className="text-[9px] text-[#848e9c] w-16 shrink-0 text-left">{influenceLabel(d.influence)}</span>
+                      <span className="text-[9px] text-[#848e9c] w-16 shrink-0 text-left">{influenceLabel(d.influence, langMode)}</span>
                     </div>
                   ))}
                 </div>
@@ -731,7 +741,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-sm font-bold text-white">
             <ImageIcon className="h-4 w-4 text-[#2962ff]" />
-            شیکاری چارت لە وێنە
+            {biLabel('شیکاری چارت لە وێنە', 'Chart image analysis')}
           </div>
           <div className="flex items-center gap-2">
             {imagePreviews.length > 0 && !imageLoading && (
@@ -739,7 +749,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 onClick={clearImage}
                 className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
               >
-                سڕینەوە
+                {biLabel('سڕینەوە', 'Clear')}
               </button>
             )}
             <button
@@ -748,7 +758,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#2962ff] text-white disabled:opacity-50 active:scale-95 transition"
             >
               {imageLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-              {imageLoading ? 'شیکاری...' : imagePreviews.length > 0 ? 'وێنەی نوێ' : 'وێنە بار بکە'}
+              {imageLoading ? biLabel('شیکاری...', 'Analyzing...') : imagePreviews.length > 0 ? biLabel('وێنەی نوێ', 'New image') : biLabel('وێنە بار بکە', 'Upload image')}
             </button>
           </div>
         </div>
@@ -757,7 +767,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         <div className="mb-3">
           <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c] mb-1.5">
             <CalendarClock className="h-3 w-3" />
-            ماوەی کاتی چارتەکان
+            {biLabel('ماوەی کاتی چارتەکان', 'Chart timeframe')}
           </div>
           <div role="radiogroup" aria-label="Chart timeframe / ماوەی کاتی چارت" className="flex gap-1.5">
             {CHART_TIMEFRAMES.map((tf) => (
@@ -801,10 +811,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           <div className={`mb-3 grid gap-2 ${imagePreviews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
             {imagePreviews.map((src, i) => (
               <div key={i} className="relative rounded-lg overflow-hidden border border-[#1a1e2e]">
-                <img src={src} alt={`چارتی بارکراو ${i + 1}`} className="w-full max-h-48 object-contain bg-black" />
+                <img src={src} alt={`${biLabel('چارتی بارکراو', 'Uploaded chart')} ${i + 1}`} className="w-full max-h-48 object-contain bg-black" />
                 {imagePreviews.length > 1 && (
                   <span className="absolute top-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/70 text-white">
-                    چارت {i + 1}
+                    {biLabel('چارت', 'Chart')} {i + 1}
                   </span>
                 )}
               </div>
@@ -817,10 +827,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         ) : imageLoading ? (
           <div className="flex items-center gap-2 text-xs text-[#848e9c]">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            {imagePreviews.length > 1 ? 'کەندڵەکان دەخوێنرێنەوە و بەراورد دەکرێن...' : 'کەندڵەکان دەخوێنرێنەوە...'}
+            {imagePreviews.length > 1 ? biLabel('کەندڵەکان دەخوێنرێنەوە و بەراورد دەکرێن...', 'Reading and comparing candles...') : biLabel('کەندڵەکان دەخوێنرێنەوە...', 'Reading candles...')}
           </div>
         ) : imagePreviews.length === 0 ? (
-          <div className="text-xs text-[#848e9c]">یەک یان چەند وێنەی چارت (سکرینشۆت) بار بکە بۆ خوێندنەوەی کەندڵەکان و بەراوردکردنی نیشانەکان لە یەک پوختەدا بە زمانی کوردی.</div>
+          <div className="text-xs text-[#848e9c]">{biLabel('یەک یان چەند وێنەی چارت (سکرینشۆت) بار بکە بۆ خوێندنەوەی کەندڵەکان و بەراوردکردنی نیشانەکان لە یەک پوختەدا.', 'Upload one or more chart screenshots to read the candles and compare signals in a single summary.')}</div>
         ) : null}
       </div>
     </div>

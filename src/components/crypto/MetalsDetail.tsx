@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Metal, METALS_META } from '@/lib/metalsApi';
 import { useMetalsHistory } from '@/hooks/useMetalsHistory';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalsChart } from '@/components/crypto/MetalsChart';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import type { OHLCCandle } from '@/lib/krakenApi';
@@ -17,6 +18,7 @@ interface MetalsDetailProps {
 }
 
 export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailProps) {
+  const { language } = useLanguage();
   const [chartRange, setChartRange] = useState('1d');
   const [view, setView] = useState<'market' | 'analysis'>('market');
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
@@ -151,7 +153,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           }`}
         >
           <LineChart className="h-3.5 w-3.5" />
-          بازاڕ
+          {language === 'en' ? 'Market' : 'بازاڕ'}
         </button>
         <button
           type="button"
@@ -164,7 +166,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           }`}
         >
           <Sparkles className="h-3.5 w-3.5" />
-          شیکاری
+          {language === 'en' ? 'Analysis' : 'شیکاری'}
         </button>
       </div>
 
