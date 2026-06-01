@@ -19,12 +19,17 @@ interface MetalsChartProps {
 }
 
 const RANGES = [
+  { key: '1min', label: '1m' },
+  { key: '5min', label: '5m' },
+  { key: '15min', label: '15m' },
   { key: '1d', label: '1D' },
   { key: '5d', label: '5D' },
   { key: '1mo', label: '1M' },
   { key: '3mo', label: '3M' },
   { key: '1y', label: '1Y' },
 ];
+
+const INTRADAY_RANGES = new Set(['1min', '5min', '15min', '1d', '5d']);
 
 export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, range, onRangeChange, currentPrice, name }: MetalsChartProps) {
   const { language } = useLanguage();
@@ -97,7 +102,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       },
       timeScale: {
         borderColor: '#1a1e2e',
-        timeVisible: range === '1d' || range === '5d',
+        timeVisible: INTRADAY_RANGES.has(range),
         secondsVisible: false,
       },
       width: rect.width || 600,
@@ -189,7 +194,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       const locale = language === 'en' ? 'en-GB-u-nu-latn' : 'ku-Arab-u-nu-latn';
       // Format the tooltip date/time appropriately for each range
       let dateOpts: Intl.DateTimeFormatOptions;
-      if (range === '1d') {
+      if (range === '1min' || range === '5min' || range === '15min') {
+        // Minute timeframes: emphasise hour:minute
+        dateOpts = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false };
+      } else if (range === '1d') {
         // Intraday: emphasise time of day
         dateOpts = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false };
       } else if (range === '5d') {

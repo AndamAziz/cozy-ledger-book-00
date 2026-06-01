@@ -8,6 +8,7 @@ import type { OHLCCandle } from '@/lib/krakenApi';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw, LineChart, Sparkles } from 'lucide-react';
 
 const RANGE_LABELS: Record<string, string> = {
+  '1min': '1m', '5min': '5m', '15min': '15m',
   '1d': '1D', '5d': '5D', '1mo': '1M', '3mo': '3M', '6mo': '6M', '1y': '1Y', '5y': '5Y',
 };
 
