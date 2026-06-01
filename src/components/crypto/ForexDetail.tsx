@@ -99,7 +99,7 @@ export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetail
 
       {/* Conversion calculator */}
       <div className="p-4 border-b border-[#1a1e2e]">
-        <h3 className="text-sm font-semibold text-white mb-3">Quick Conversion</h3>
+        <h3 className="text-sm font-semibold text-white mb-3">{bi('گۆڕینی خێرا', 'Quick Conversion')}</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-3">
             <p className="text-[10px] text-[#848e9c] uppercase mb-1">🇺🇸 1 USD =</p>
