@@ -155,6 +155,12 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
     chartRef.current = chart;
 
+    // Persist the user's pan/zoom per metal+timeframe as they interact.
+    chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+      if (restoringRef.current || !range || !currentViewKeyRef.current) return;
+      savedViewsRef.current[currentViewKeyRef.current] = range;
+    });
+
     if (chartType === 'candles') {
       const series = chart.addSeries(CandlestickSeries, {
         upColor: UP_COLOR,
