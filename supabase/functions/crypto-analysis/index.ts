@@ -38,17 +38,33 @@ Current price: $${price}
 Technical signal summary: ${JSON.stringify(summary)}
 Indicators: ${JSON.stringify(indicators)}`;
 
-    // ----- Chart image analysis mode (read candles from an uploaded screenshot) -----
+    // ----- Chart image analysis mode (read candles from one or more uploaded screenshots) -----
     if (mode === "image") {
-      if (typeof imageBase64 !== "string" || !imageBase64.startsWith("data:image")) {
+      // Accept either a single imageBase64 or an array of images.
+      const candidateImages: unknown[] = Array.isArray(images) && images.length
+        ? images
+        : typeof imageBase64 === "string"
+        ? [imageBase64]
+        : [];
+      const validImages = candidateImages.filter(
+        (u): u is string => typeof u === "string" && u.startsWith("data:image"),
+      );
+
+      if (validImages.length === 0) {
         return new Response(
-          JSON.stringify({ error: "وێنەیەکی دروستی چارت پێویستە." }),
+          JSON.stringify({ error: "لانیکەم یەک وێنەی دروستی چارت پێویستە." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      const visionSystem = `You are a professional candlestick chart analyst.
+      const multi = validImages.length > 1;
+      const tfLine = chartTimeframe
+        ? `The user states these charts are on the ${chartTimeframe} timeframe — interpret the candles accordingly.`
+        : "";
+
+      const singleSystem = `You are a professional candlestick chart analyst.
 You will be given a screenshot of a trading chart. Carefully READ the candles, trend, and any visible levels.
+${tfLine}
 Respond ONLY in Kurdish Sorani (کوردیی ناوەندی). Be concise with short paragraphs and bullet points.
 Use these exact Kurdish section headers:
 1. **خوێندنەوەی چارت** - what timeframe/asset appears and the overall candle structure you see.
@@ -59,6 +75,37 @@ Use these exact Kurdish section headers:
 6. **ئاگاداری** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە.
 If the image is not a chart, say so politely in Kurdish.`;
 
+      const multiSystem = `You are a professional candlestick chart analyst.
+You will be given ${validImages.length} screenshots of trading charts (they may be different timeframes or assets).
+Carefully READ the candles in EACH chart, then COMPARE the signals across all of them and produce ONE combined analysis.
+${tfLine}
+Respond ONLY in Kurdish Sorani (کوردیی ناوەندی). Be concise with short paragraphs and bullet points.
+Use these exact Kurdish section headers:
+1. **خوێندنەوەی هەر چارتێک** - read each chart in order (number them چارت ١، چارت ٢ ...): timeframe/asset and candle structure.
+2. **بەراوردی نیشانەکان** - compare the signals across the charts: where do they agree (هاوڕایی) and where do they ناکۆکن (divergence).
+3. **ڕەوتی گشتی** - the combined overall trend conclusion from all charts together.
+4. **ئاستە گرنگەکان** - key support/resistance levels gathered across the charts.
+5. **پێشنیار** - ONE combined buy/sell/hold lean (کڕین/فرۆشتن/هەڵگرتن) with reasoning and a suggested stop area.
+6. **ئاگاداری** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە.
+If an image is not a chart, mention it politely in Kurdish and skip it.`;
+
+      const userParts: unknown[] = [
+        {
+          type: "text",
+          text: `${symbol ? `Possible asset: ${symbol}/USD. ` : ""}${
+            chartTimeframe ? `Timeframe: ${chartTimeframe}. ` : ""
+          }${
+            multi
+              ? `Read and COMPARE these ${validImages.length} trading charts and give one combined analysis in Kurdish Sorani.`
+              : "Read this trading chart and analyse the candles in Kurdish Sorani."
+          }`,
+        },
+        ...validImages.map((url, i) => [
+          ...(multi ? [{ type: "text", text: `چارت ${i + 1}:` }] : []),
+          { type: "image_url", image_url: { url } },
+        ]).flat(),
+      ];
+
       const visionResp = await fetch(AI_URL, {
         method: "POST",
         headers: {
@@ -68,17 +115,8 @@ If the image is not a chart, say so politely in Kurdish.`;
         body: JSON.stringify({
           model: "google/gemini-3-flash-preview",
           messages: [
-            { role: "system", content: visionSystem },
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `${symbol ? `Possible asset: ${symbol}/USD. ` : ""}Read this trading chart and analyse the candles in Kurdish Sorani.`,
-                },
-                { type: "image_url", image_url: { url: imageBase64 } },
-              ],
-            },
+            { role: "system", content: multi ? multiSystem : singleSystem },
+            { role: "user", content: userParts },
           ],
           stream: true,
         }),
