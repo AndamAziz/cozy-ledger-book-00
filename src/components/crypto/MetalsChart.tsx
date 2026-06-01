@@ -38,9 +38,13 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const priceLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const [chartType, setChartType] = useState<'candles' | 'area' | 'line'>('candles');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
+
+  // Bilingual helper
+  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
 
   // Professional candlestick palette (Binance-style)
   const UP_COLOR = '#0ecb81';
@@ -160,6 +164,60 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       }
     }
 
+    // Candle tooltip on crosshair
+    const handleCrosshairMove = (param: any) => {
+      if (!tooltipRef.current || !chartContainerRef.current) return;
+      if (!param.point || param.point.x < 0 || param.point.y < 0 || !param.time) {
+        tooltipRef.current.style.display = 'none';
+        return;
+      }
+      const candle = param.seriesData?.get(seriesRef.current);
+      if (!candle || typeof candle !== 'object' || !('open' in candle)) {
+        tooltipRef.current.style.display = 'none';
+        return;
+      }
+      const isUp = candle.close >= candle.open;
+      const color = isUp ? UP_COLOR : DOWN_COLOR;
+      const dirLabel = isUp ? bi('بەرزبوونەوە', 'Bullish') : bi('دابەزین', 'Bearish');
+      const timeNum = typeof param.time === 'number' ? param.time : 0;
+      const dateObj = new Date(timeNum * 1000);
+      const locale = language === 'en' ? 'en-GB' : 'ku-Arab';
+      const showTime = range === '1d' || range === '5d';
+      const dateStr = showTime
+        ? dateObj.toLocaleString(locale, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : dateObj.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+      const fmt = (n: number) => n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      tooltipRef.current.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;direction:rtl;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;"></span>
+          <span style="font-weight:700;font-size:12px;color:${color};">${dirLabel}</span>
+        </div>
+        <div style="font-size:10px;color:#848e9c;margin-bottom:6px;direction:rtl;">${dateStr}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:11px;direction:rtl;">
+          <div><span style="color:#848e9c;">${bi('کردنەوە', 'O')}:</span> <span style="color:#e0e0e0;font-weight:600;">${fmt(candle.open)}</span></div>
+          <div><span style="color:#848e9c;">${bi('بەرزترین', 'H')}:</span> <span style="color:#e0e0e0;font-weight:600;">${fmt(candle.high)}</span></div>
+          <div><span style="color:#848e9c;">${bi('نزمترین', 'L')}:</span> <span style="color:#e0e0e0;font-weight:600;">${fmt(candle.low)}</span></div>
+          <div><span style="color:#848e9c;">${bi('داخستن', 'C')}:</span> <span style="color:#e0e0e0;font-weight:600;">${fmt(candle.close)}</span></div>
+        </div>
+      `;
+
+      const rect = chartContainerRef.current.getBoundingClientRect();
+      const tooltipWidth = 210;
+      const tooltipHeight = 100;
+      let left = param.point.x + 12;
+      let top = param.point.y + 12;
+      if (left + tooltipWidth > rect.width) left = param.point.x - tooltipWidth - 12;
+      if (top + tooltipHeight > rect.height) top = param.point.y - tooltipHeight - 12;
+      if (left < 0) left = 4;
+      if (top < 0) top = 4;
+
+      tooltipRef.current.style.left = `${left}px`;
+      tooltipRef.current.style.top = `${top}px`;
+      tooltipRef.current.style.display = 'block';
+    };
+    chart.subscribeCrosshairMove(handleCrosshairMove);
+
     return () => {
       resizeObserver.disconnect();
       chart.remove();
@@ -167,8 +225,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       seriesRef.current = null;
       priceLineRef.current = null;
       maSeriesRefs.current = {};
+      if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     };
-  }, [chartType, range, isUp, activeMAs, maType]);
+  }, [chartType, range, isUp, activeMAs, maType, language]);
 
   // Update data
   useEffect(() => {
@@ -315,6 +374,15 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       {/* Chart */}
       <div className="relative h-[250px] sm:h-[320px]">
         <div ref={chartContainerRef} className="absolute inset-0" />
+        <div
+          ref={tooltipRef}
+          className="absolute hidden z-20 pointer-events-none rounded-lg border border-[#2a2e3e] p-2.5 shadow-xl"
+          style={{
+            background: 'rgba(16,20,30,0.95)',
+            backdropFilter: 'blur(8px)',
+            minWidth: '180px',
+          }}
+        />
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/80 z-10">
             <div className="flex flex-col items-center gap-2">
