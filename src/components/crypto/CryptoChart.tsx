@@ -193,79 +193,82 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex flex-col gap-2 px-2 sm:px-3 py-2 border-b border-[#1a1e2e]">
-        {/* Row 1: symbol + price + chart type */}
-        <div className="flex items-center gap-2">
-          <span className="text-base sm:text-lg font-bold text-white">{symbol}/USD</span>
+      <div className="border-b border-white/5">
+        {/* Symbol + price */}
+        <div className="flex items-baseline gap-2 px-3 pt-3 pb-2">
+          <span className="text-lg sm:text-xl font-bold tracking-tight text-white">{symbol}/USD</span>
           {currentPrice > 0 && (
-            <span className="text-base sm:text-lg font-semibold text-[#f0b90b] truncate">
+            <span className="text-lg sm:text-xl font-bold text-[#f0b90b] tracking-tight truncate">
               ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: currentPrice < 1 ? 6 : 2 })}
             </span>
           )}
-
-          <div className="flex-1" />
-
-          {/* Chart type toggle */}
-          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
-            {(['candlestick', 'line', 'area'] as const).map(type => (
-              <button
-                key={type}
-                onClick={() => setChartType(type)}
-                className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-medium transition-colors ${
-                  chartType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-                }`}
-              >
-                {type === 'candlestick' ? bi('شمع', 'Candles') : type === 'line' ? bi('هێڵ', 'Line') : bi('ناوچە', 'Area')}
-              </button>
-            ))}
-          </div>
         </div>
 
-        {/* Row 2: MA/EMA indicators (horizontally scrollable) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin -mx-0.5 px-0.5 pb-0.5">
-          {/* MA/EMA type toggle */}
-          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
-            {(['MA', 'EMA'] as MAType[]).map(type => (
+        {/* Timeframes row (underline active) */}
+        <div className="flex items-center gap-4 px-3 py-2.5 overflow-x-auto scrollbar-thin border-y border-white/5">
+          {TIMEFRAMES.map(tf => {
+            const active = interval === tf.interval;
+            return (
               <button
-                key={type}
-                onClick={() => setMaType(type)}
-                className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-bold transition-colors ${
-                  maType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+                key={tf.label}
+                onClick={() => onIntervalChange(tf.interval)}
+                className={`relative shrink-0 text-[11px] sm:text-xs font-bold whitespace-nowrap pb-1 transition-colors active:scale-95 ${
+                  active ? 'text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'
                 }`}
               >
-                {type}
+                {tf.label}
+                {active && (
+                  <span className="absolute -bottom-[11px] left-0 w-full h-[2px] rounded-full bg-[#f0b90b]" />
+                )}
               </button>
-            ))}
-          </div>
+            );
+          })}
+        </div>
 
-          {/* MA period toggles */}
-          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
-            {MA_PERIODS.map(ma => (
+        {/* Indicators + chart type strip (single scrollable row of chips) */}
+        <div className="flex items-center gap-2 px-3 py-2.5 overflow-x-auto scrollbar-thin bg-[#090c11]">
+          {/* MA period chips */}
+          {MA_PERIODS.map(ma => {
+            const active = activeMAs.has(ma.period);
+            return (
               <button
                 key={ma.period}
                 onClick={() => toggleMA(ma.period)}
-                className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-bold transition-colors ${
-                  activeMAs.has(ma.period) ? 'text-white' : 'text-[#848e9c] hover:text-white opacity-50'
+                className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+                  active ? '' : 'text-[#848e9c] border-white/5 hover:text-white'
                 }`}
-                style={{ color: activeMAs.has(ma.period) ? ma.color : undefined }}
+                style={active ? { color: ma.color, borderColor: `${ma.color}55`, backgroundColor: `${ma.color}1a` } : undefined}
               >
                 {maType}{ma.label}
               </button>
-            ))}
-          </div>
-        </div>
+            );
+          })}
 
-        {/* Row 3: Timeframe selector (full width, even) */}
-        <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
-          {TIMEFRAMES.map(tf => (
+          {/* MA/EMA type */}
+          {(['MA', 'EMA'] as MAType[]).map(type => (
             <button
-              key={tf.label}
-              onClick={() => onIntervalChange(tf.interval)}
-              className={`flex-1 py-1.5 text-[11px] sm:text-xs font-medium transition-colors ${
-                interval === tf.interval ? 'bg-[#2a2e3e] text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'
+              key={type}
+              onClick={() => setMaType(type)}
+              className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+                maType === type ? 'bg-[#1a1e2e] text-white border-white/10' : 'text-[#848e9c] border-white/5 hover:text-white'
               }`}
             >
-              {tf.label}
+              {type}
+            </button>
+          ))}
+
+          <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
+
+          {/* Chart type */}
+          {([['candlestick', bi('شمع', 'Candles')], ['area', bi('ناوچە', 'Area')], ['line', bi('هێڵ', 'Line')]] as const).map(([type, label]) => (
+            <button
+              key={type}
+              onClick={() => setChartType(type as 'candlestick' | 'line' | 'area')}
+              className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+                chartType === type ? 'bg-[#2a2e3e] text-white border-white/10' : 'text-[#848e9c] border-white/5 hover:text-white'
+              }`}
+            >
+              {label}
             </button>
           ))}
         </div>
