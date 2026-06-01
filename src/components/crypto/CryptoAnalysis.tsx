@@ -533,7 +533,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#f0b90b] text-black disabled:opacity-50 active:scale-95 transition"
           >
             {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {aiLoading ? 'شیکاری...' : (aiText || tradeSummary) ? 'دووبارە شیکاری' : 'شیکاری بکە'}
+            {aiLoading ? biLabel('شیکاری...', 'Analyzing...') : (aiText || tradeSummary) ? biLabel('دووبارە شیکاری', 'Re-analyze') : biLabel('شیکاری بکە', 'Analyze')}
           </button>
         </div>
 
