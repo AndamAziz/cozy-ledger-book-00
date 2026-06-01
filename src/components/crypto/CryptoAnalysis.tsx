@@ -1050,7 +1050,12 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 {selectedSignal.stop_loss && (
                   <div className="bg-[#0b0e16] px-3 py-2.5">
                     <div className="flex items-center gap-1 text-[10px] text-[#848e9c]"><OctagonX className="h-3 w-3 text-[#f6465d]" />{biLabel('وەستانی زیان', 'Stop Loss')}</div>
-                    <div className="text-sm font-mono text-[#f6465d] mt-0.5">{selectedSignal.stop_loss}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-sm font-mono text-[#f6465d]">{selectedSignal.stop_loss}</span>
+                      <button onClick={() => copyToClipboard(selectedSignal.stop_loss!, 'sl')} className="opacity-60 hover:opacity-100 transition">
+                        {copiedKey === 'sl' ? <Check className="h-3 w-3 text-[#0ecb81]" /> : <Copy className="h-3 w-3 text-[#848e9c]" />}
+                      </button>
+                    </div>
                   </div>
                 )}
                 {selectedSignal.confidence != null && (
