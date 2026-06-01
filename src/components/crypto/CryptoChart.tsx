@@ -84,7 +84,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       },
       rightPriceScale: {
         borderColor: 'rgba(132,142,156,0.15)',
-        scaleMargins: { top: scaleMarginTop, bottom: scaleMarginBottom },
+        scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom },
         entireTextOnly: true,
         ticksVisible: false,
       },
@@ -92,9 +92,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         borderColor: 'rgba(132,142,156,0.15)',
         timeVisible: true,
         secondsVisible: false,
-        rightOffset,
-        barSpacing,
-        minBarSpacing,
+        rightOffset: preset.rightOffset,
+        barSpacing: preset.barSpacing,
+        minBarSpacing: preset.minBarSpacing,
         ticksVisible: false,
       },
       width: rect.width || 600,
@@ -105,6 +105,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         chart.applyOptions({ width, height });
+        setContainerWidth(width);
       }
     });
     resizeObserver.observe(container);
