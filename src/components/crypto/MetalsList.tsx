@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Metal } from '@/lib/metalsApi';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
 
 interface MetalsListProps {
