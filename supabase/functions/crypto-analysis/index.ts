@@ -25,17 +25,32 @@ serve(async (req) => {
   }
 
   try {
-    const { symbol, price, change24h, indicators, summary, timeframe, mode, imageBase64, images, chartTimeframe } =
+    const { symbol, price, change24h, indicators, summary, timeframe, mode, imageBase64, images, chartTimeframe, dayHigh, dayLow, lang } =
       await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
+    // Language selection: 'ku' (Kurdish only), 'en' (English only), 'both' (default)
+    const langMode: "ku" | "en" | "both" = lang === "ku" || lang === "en" ? lang : "both";
+    const narrativeLangRule =
+      langMode === "en"
+        ? "Respond ONLY in clear professional English."
+        : langMode === "ku"
+        ? "Respond ONLY in Kurdish Sorani (کوردیی ناوەندی)."
+        : "Respond in BOTH languages: write each section first in Kurdish Sorani (کوردیی ناوەندی), then immediately below it the SAME content in English (prefix the English line with 'EN: ').";
+
+    const hiLo =
+      dayHigh != null && dayLow != null
+        ? `\n24h high: $${dayHigh}\n24h low: $${dayLow}`
+        : "";
+
     const baseContext = `Asset: ${symbol}/USD
 Timeframe: ${timeframe}
 Current price: $${price}
-24h change: ${change24h}%
+24h change: ${change24h}%${hiLo}
 Technical signal summary: ${JSON.stringify(summary)}
+
 Indicators: ${JSON.stringify(indicators)}`;
 
     // ----- Chart image analysis mode (read candles from one or more uploaded screenshots) -----
@@ -62,32 +77,44 @@ Indicators: ${JSON.stringify(indicators)}`;
         ? `The user states these charts are on the ${chartTimeframe} timeframe — interpret the candles accordingly.`
         : "";
 
+      const imgLangRule =
+        langMode === "en"
+          ? "Respond ONLY in clear professional English."
+          : langMode === "ku"
+          ? "Respond ONLY in Kurdish Sorani (کوردیی ناوەندی)."
+          : "Respond bilingually: for every section write the Kurdish Sorani (کوردیی ناوەندی) line first, then the SAME content in English on the next line prefixed with 'EN: '.";
+
+      const adviceRule =
+        "In the recommendation section ALWAYS state: a clear buy/sell/hold lean, the exact price area to ENTER (when to buy), the price area to take profit / EXIT (when to sell), and a suggested stop-loss area. Also report the highest and lowest visible price on the chart.";
+
       const singleSystem = `You are a professional candlestick chart analyst.
 You will be given a screenshot of a trading chart. Carefully READ the candles, trend, and any visible levels.
 ${tfLine}
-Respond ONLY in Kurdish Sorani (کوردیی ناوەندی). Be concise with short paragraphs and bullet points.
-Use these exact Kurdish section headers:
-1. **خوێندنەوەی چارت** - what timeframe/asset appears and the overall candle structure you see.
-2. **ڕەوت** - current trend (uptrend/downtrend/sideways) based on the candles.
-3. **شێوەکان** - candlestick patterns or formations visible (e.g. doji, engulfing, head & shoulders).
-4. **ئاستە گرنگەکان** - visible support/resistance levels (estimate numbers if axis is readable).
-5. **پێشنیار** - a buy/sell/hold lean (کڕین/فرۆشتن/هەڵگرتن) with reasoning and a suggested stop area.
-6. **ئاگاداری** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە.
-If the image is not a chart, say so politely in Kurdish.`;
+${imgLangRule} Be concise with short paragraphs and bullet points.
+Cover these sections in order (keep the Kurdish header, and when bilingual add its English name):
+1. **خوێندنەوەی چارت / Chart reading** - timeframe/asset and the overall candle structure.
+2. **ڕەوت / Trend** - current trend (uptrend/downtrend/sideways).
+3. **شێوەکان / Patterns** - candlestick patterns visible (doji, engulfing, etc.).
+4. **بەرزترین و نزمترین / High & Low** - the highest and lowest visible price on the chart.
+5. **ئاستە گرنگەکان / Key levels** - visible support/resistance levels.
+6. **پێشنیار / Recommendation** - ${adviceRule}
+7. **ئاگاداری / Warning** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە (this is not financial advice).
+If the image is not a chart, say so politely.`;
 
       const multiSystem = `You are a professional candlestick chart analyst.
 You will be given ${validImages.length} screenshots of trading charts (they may be different timeframes or assets).
 Carefully READ the candles in EACH chart, then COMPARE the signals across all of them and produce ONE combined analysis.
 ${tfLine}
-Respond ONLY in Kurdish Sorani (کوردیی ناوەندی). Be concise with short paragraphs and bullet points.
-Use these exact Kurdish section headers:
-1. **خوێندنەوەی هەر چارتێک** - read each chart in order (number them چارت ١، چارت ٢ ...): timeframe/asset and candle structure.
-2. **بەراوردی نیشانەکان** - compare the signals across the charts: where do they agree (هاوڕایی) and where do they ناکۆکن (divergence).
-3. **ڕەوتی گشتی** - the combined overall trend conclusion from all charts together.
-4. **ئاستە گرنگەکان** - key support/resistance levels gathered across the charts.
-5. **پێشنیار** - ONE combined buy/sell/hold lean (کڕین/فرۆشتن/هەڵگرتن) with reasoning and a suggested stop area.
-6. **ئاگاداری** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە.
-If an image is not a chart, mention it politely in Kurdish and skip it.`;
+${imgLangRule} Be concise with short paragraphs and bullet points.
+Cover these sections in order (keep the Kurdish header, and when bilingual add its English name):
+1. **خوێندنەوەی هەر چارتێک / Per-chart reading** - read each chart in order (number them چارت ١، چارت ٢ ...).
+2. **بەراوردی نیشانەکان / Signal comparison** - where the charts agree (هاوڕایی) and where they diverge (ناکۆک).
+3. **ڕەوتی گشتی / Overall trend** - the combined overall trend conclusion.
+4. **بەرزترین و نزمترین / High & Low** - the highest and lowest visible price across the charts.
+5. **ئاستە گرنگەکان / Key levels** - key support/resistance levels.
+6. **پێشنیار / Recommendation** - ONE combined view. ${adviceRule}
+7. **ئاگاداری / Warning** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە (this is not financial advice).
+If an image is not a chart, mention it politely and skip it.`;
 
       const userParts: unknown[] = [
         {
@@ -141,11 +168,15 @@ If an image is not a chart, mention it politely in Kurdish and skip it.`;
     // ----- Structured summary mode (recommendation, levels, dates, risk) -----
     if (mode === "summary") {
       const sysPrompt = `You are a professional crypto technical analyst.
-All text fields MUST be written in Kurdish Sorani (کوردیی ناوەندی).
-Base your decision strictly on the provided price and indicator data.
-Provide concrete numeric price levels derived from the current price and indicators.
+Every Kurdish field (headline, reasoning, riskNote, stopLossBasis, entryTiming, exitTiming, keyDrivers.note) MUST be written in Kurdish Sorani (کوردیی ناوەندی).
+Every English field (headlineEn, reasoningEn, riskNoteEn, stopLossBasisEn, entryTimingEn, exitTimingEn, keyDrivers.noteEn) MUST be written in clear, fluent, professional English — NOT transliterated Kurdish. The English fields must be a real, natural English translation of their Kurdish counterpart, complete and grammatically correct.
+Base your decision strictly on the provided price and indicator data, including the 24h high and 24h low when given.
+Provide concrete numeric price levels derived from the current price, the 24h high/low, and indicators.
+entry, targets and stopLoss must be realistic relative to the 24h high/low range.
+entryTiming/entryTimingEn must clearly explain WHEN to buy (the exact price area or indicator condition that triggers entry).
+exitTiming/exitTimingEn must clearly explain WHEN to sell (the price area or condition to take profit, and when to abandon the trade).
 The stop-loss MUST be derived from a specific indicator level (e.g. the Bollinger lower/upper band, SMA20/SMA50, a recent swing level, or an RSI-based invalidation), NOT a random round number. Pick the single most relevant indicator for the stop and place the stop just beyond it.
-Always fill stopLossIndicator with the indicator the stop is based on, stopLossIndicatorValue with the EXACT numeric level of that indicator (e.g. "SMA20 = $2,335" or "Bollinger lower band = $2,328"), stopLossBasis with a clear 1-2 sentence Kurdish explanation, and stopLossBasisEn with the SAME explanation in clear English. Both explanations must name the indicator, its exact value, the resulting stop-loss price, and why a break of that level invalidates the trade — so the user understands transparently in both languages.
+Always fill stopLossIndicator with the indicator the stop is based on, stopLossIndicatorValue with the EXACT numeric level of that indicator (e.g. "SMA20 = $2,335" or "Bollinger lower band = $2,328"), stopLossBasis with a clear 1-2 sentence Kurdish explanation, and stopLossBasisEn with the SAME explanation in clear English. Both explanations must name the indicator, its exact value, the resulting stop-loss price, and why a break of that level invalidates the trade.
 Estimate a realistic time horizon for the trade in days based on the timeframe.
 Never guarantee outcomes; this is educational, not financial advice.`;
 
@@ -189,10 +220,34 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                       type: "string",
                       description: "One short sentence in Kurdish Sorani.",
                     },
+                    headlineEn: {
+                      type: "string",
+                      description: "The SAME short sentence as headline, in clear English.",
+                    },
                     entry: {
                       type: "string",
                       description:
                         "Suggested entry price or zone (numbers, e.g. $64,200 - $64,800).",
+                    },
+                    entryTiming: {
+                      type: "string",
+                      description:
+                        "Kurdish Sorani: WHEN to buy — the exact price area or indicator condition that should trigger entry.",
+                    },
+                    entryTimingEn: {
+                      type: "string",
+                      description:
+                        "The SAME as entryTiming in clear English: when to buy (price area / condition).",
+                    },
+                    exitTiming: {
+                      type: "string",
+                      description:
+                        "Kurdish Sorani: WHEN to sell — the price area/condition to take profit, and when to exit if it goes wrong.",
+                    },
+                    exitTimingEn: {
+                      type: "string",
+                      description:
+                        "The SAME as exitTiming in clear English: when to sell / take profit / exit.",
                     },
                     targets: {
                       type: "array",
@@ -237,10 +292,19 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                       description:
                         "One short risk-management note in Kurdish Sorani.",
                     },
+                    riskNoteEn: {
+                      type: "string",
+                      description: "The SAME risk note in clear English.",
+                    },
                     reasoning: {
                       type: "string",
                       description:
                         "2-4 sentences in Kurdish Sorani explaining WHY this buy/sell/hold decision was made, referencing the indicator readings.",
+                    },
+                    reasoningEn: {
+                      type: "string",
+                      description:
+                        "The SAME reasoning as the Kurdish field, in clear fluent English.",
                     },
                     keyDrivers: {
                       type: "array",
@@ -269,8 +333,13 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                             description:
                               "Very short reason in Kurdish Sorani (max ~8 words).",
                           },
+                          noteEn: {
+                            type: "string",
+                            description:
+                              "The SAME short reason in English (max ~8 words).",
+                          },
                         },
-                        required: ["indicator", "effect", "influence", "note"],
+                        required: ["indicator", "effect", "influence", "note", "noteEn"],
                         additionalProperties: false,
                       },
                     },
@@ -279,7 +348,12 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                     "recommendation",
                     "confidence",
                     "headline",
+                    "headlineEn",
                     "entry",
+                    "entryTiming",
+                    "entryTimingEn",
+                    "exitTiming",
+                    "exitTimingEn",
                     "targets",
                     "stopLoss",
                     "stopLossIndicator",
@@ -289,7 +363,9 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                     "horizonDays",
                     "riskLevel",
                     "riskNote",
+                    "riskNoteEn",
                     "reasoning",
+                    "reasoningEn",
                     "keyDrivers",
                   ],
                   additionalProperties: false,
@@ -352,17 +428,19 @@ Never guarantee outcomes; this is educational, not financial advice.`;
 
     // ----- Detailed streaming narrative (default) -----
     const systemPrompt = `You are a professional crypto market technical analyst.
-Respond ONLY in Kurdish Sorani (کوردیی ناوەندی).
+${narrativeLangRule}
 Be concise and practical. Use short paragraphs and bullet points.
-Structure your answer with these sections (use these exact Kurdish headers):
-1. **پوختەی بازاڕ** - overall market read in 1-2 sentences.
-2. **شیکاری تەکنیکی** - interpret RSI, MACD, Bollinger and moving averages.
-3. **ئاستە گرنگەکان** - key support/resistance levels (use the provided numbers).
-4. **ئەگەرەکان** - bullish vs bearish scenarios.
-5. **ئاگاداری** - one risk-management note.
-Never give financial guarantees. Always note this is not financial advice (ئەمە ڕاوێژی دارایی نییە).`;
+Cover these sections in order (keep the Kurdish header, and when bilingual add its English name):
+1. **پوختەی بازاڕ / Market summary** - overall market read in 1-2 sentences.
+2. **شیکاری تەکنیکی / Technical analysis** - interpret RSI, MACD, Bollinger and moving averages.
+3. **بەرزترین و نزمترین / 24h High & Low** - the 24h high and 24h low and what they mean for range.
+4. **ئاستە گرنگەکان / Key levels** - key support/resistance levels (use the provided numbers).
+5. **کەی بکڕیت و کەی بفرۆشیت / When to buy & sell** - the price area/condition to enter (buy) and the area/condition to take profit (sell).
+6. **ئەگەرەکان / Scenarios** - bullish vs bearish scenarios.
+7. **ئاگاداری / Warning** - one risk-management note.
+Never give financial guarantees. Always note this is not financial advice (ئەمە ڕاوێژی دارایی نییە / this is not financial advice).`;
 
-    const userPrompt = `${baseContext}\n\nGive a full technical analysis in Kurdish Sorani.`;
+    const userPrompt = `${baseContext}\n\nGive a full technical analysis following the language rule above.`;
 
     const response = await fetch(AI_URL, {
       method: "POST",
