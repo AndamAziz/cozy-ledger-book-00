@@ -394,7 +394,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         setImageText('');
         analyzeImages(dataUrls);
       })
-      .catch(() => setImageError('نەتوانرا وێنەکان بخوێنرێنەوە.'));
+      .catch(() => setImageError(biLabel('نەتوانرا وێنەکان بخوێنرێنەوە.', 'Could not read the images.')));
   };
 
   const analyzeImages = async (dataUrls: string[]) => {
