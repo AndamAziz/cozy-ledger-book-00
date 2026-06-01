@@ -184,7 +184,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
 
               {/* To */}
               <div className="mb-4">
-                <label className="text-[10px] text-[#848e9c] uppercase tracking-wider mb-1 block">To</label>
+                <label className="text-[10px] text-[#848e9c] uppercase tracking-wider mb-1 block">{bi('بۆ', 'To')}</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowToPicker(true)}
