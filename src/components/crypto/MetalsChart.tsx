@@ -46,6 +46,13 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
 
+  // Chart spacing controls
+  const [rightOffset, setRightOffset] = useState(12);
+  const [barSpacing, setBarSpacing] = useState(8);
+  const [minBarSpacing, setMinBarSpacing] = useState(4);
+  const [scaleMarginTop, setScaleMarginTop] = useState(0.12);
+  const [scaleMarginBottom, setScaleMarginBottom] = useState(0.12);
+
   // Bilingual helper
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
 
@@ -98,7 +105,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       },
       rightPriceScale: {
         borderColor: 'rgba(132,142,156,0.15)',
-        scaleMargins: { top: 0.12, bottom: 0.12 },
+        scaleMargins: { top: scaleMarginTop, bottom: scaleMarginBottom },
         entireTextOnly: true,
         ticksVisible: false,
       },
@@ -106,9 +113,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         borderColor: 'rgba(132,142,156,0.15)',
         timeVisible: INTRADAY_RANGES.has(range),
         secondsVisible: false,
-        rightOffset: 8,
-        barSpacing: 8,
-        minBarSpacing: 4,
+        rightOffset,
+        barSpacing,
+        minBarSpacing,
         ticksVisible: false,
       },
       width: rect.width || 600,
@@ -258,7 +265,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       maSeriesRefs.current = {};
       if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     };
-  }, [chartType, range, isUp, activeMAs, maType, language]);
+  }, [chartType, range, isUp, activeMAs, maType, language, rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom]);
 
   // Update data
   useEffect(() => {
@@ -311,6 +318,29 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       title: `${name || ''} $${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     });
   }, [currentPrice, name, accentColor]);
+
+  const stepper = (
+    label: string,
+    value: number,
+    onChange: (v: number) => void,
+    min: number,
+    max: number,
+    step: number,
+    displayFn?: (v: number) => string
+  ) => (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <span className="text-[10px] text-[#848e9c]">{label}</span>
+      <button
+        onClick={() => onChange(Math.max(min, +(value - step).toFixed(3)))}
+        className="w-5 h-5 flex items-center justify-center rounded bg-white/5 text-[10px] text-[#848e9c] hover:bg-white/10 hover:text-white active:scale-95 transition-colors"
+      >−</button>
+      <span className="text-[10px] font-bold text-white w-7 text-center tabular-nums">{displayFn ? displayFn(value) : value}</span>
+      <button
+        onClick={() => onChange(Math.min(max, +(value + step).toFixed(3)))}
+        className="w-5 h-5 flex items-center justify-center rounded bg-white/5 text-[10px] text-[#848e9c] hover:bg-white/10 hover:text-white active:scale-95 transition-colors"
+      >+</button>
+    </div>
+  );
 
   return (
     <div className="border-b border-[#1a1e2e]">
@@ -394,6 +424,15 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
               {label}
             </button>
           ))}
+
+          <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
+
+          {/* Spacing controls */}
+          {stepper('→', rightOffset, setRightOffset, 0, 40, 1)}
+          {stepper('⇄', barSpacing, setBarSpacing, 2, 24, 1)}
+          {stepper('⇄ₘ', minBarSpacing, setMinBarSpacing, 1, 12, 1)}
+          {stepper('↑', scaleMarginTop, v => setScaleMarginTop(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+          {stepper('↓', scaleMarginBottom, v => setScaleMarginBottom(v), 0, 0.4, 0.02, v => v.toFixed(2))}
         </div>
       </div>
 
