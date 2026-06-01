@@ -382,6 +382,17 @@ async function handleHistory(code: string, range: string): Promise<Response> {
     });
   }
 
+  if (GOLDAPI_METALS.includes(code)) {
+    const spotCandles = await fetchTwelveDataHistory(code, range);
+    if (spotCandles) {
+      const responseData = { code, range, candles: spotCandles, count: spotCandles.length, source: "twelvedata-spot" };
+      historyCache.set(cacheKey, { data: responseData, ts: Date.now() });
+      return new Response(JSON.stringify(responseData), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
   const rangeConfig = RANGE_MAP[range] || RANGE_MAP["1mo"];
   const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${rangeConfig.interval}&range=${rangeConfig.range}`;
 
