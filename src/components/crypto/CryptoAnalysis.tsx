@@ -52,6 +52,25 @@ interface TradeSummary {
   keyDrivers: KeyDriver[];
 }
 
+interface SentSignal {
+  id: string;
+  symbol: string | null;
+  recommendation: 'buy' | 'sell' | 'hold' | null;
+  confidence: number | null;
+  price: number | null;
+  entry: string | null;
+  targets: string[] | null;
+  stop_loss: string | null;
+  horizon_days: number | null;
+  risk_level: 'low' | 'medium' | 'high' | null;
+  headline: string | null;
+  timeframe: string | null;
+  telegram_message_id: number | null;
+  status: string;
+  error: string | null;
+  created_at: string;
+}
+
 type LangMode = 'ku' | 'en' | 'both';
 
 // Module-level bilingual helper: pick text for the active display language.
@@ -117,6 +136,21 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [isAdmin, setIsAdmin] = useState(false);
   const [sending, setSending] = useState(false);
   const [sentOk, setSentOk] = useState(false);
+  const [sentSignals, setSentSignals] = useState<SentSignal[]>([]);
+  const [signalsLoading, setSignalsLoading] = useState(false);
+  const [showSignals, setShowSignals] = useState(false);
+
+  const fetchSentSignals = async () => {
+    setSignalsLoading(true);
+    const { data } = await supabase
+      .from('telegram_signals')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    setSentSignals((data ?? []) as SentSignal[]);
+    setSignalsLoading(false);
+  };
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -127,7 +161,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         .select('role')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (active) setIsAdmin(data?.role === 'admin');
+      if (active && data?.role === 'admin') {
+        setIsAdmin(true);
+        fetchSentSignals();
+      }
     })();
     return () => { active = false; };
   }, []);
@@ -162,6 +199,8 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       if (!resp.ok) throw new Error(j?.error || 'Failed to send');
       setSentOk(true);
       toast({ title: biLabel('نێردرا بۆ تەلەگرام ✅', 'Sent to Telegram ✅') });
+      setShowSignals(true);
+      fetchSentSignals();
       setTimeout(() => setSentOk(false), 3000);
     } catch (e) {
       toast({
@@ -817,6 +856,99 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           <div className="text-xs text-[#848e9c]">{biLabel('کلیک لە "شیکاری بکە" بکە بۆ پوختەی کڕین/فرۆشتن، ئاستەکان، کەی بکڕیت و کەی بفرۆشیت.', 'Tap "Analyze" for a buy/sell summary, levels, and when to buy / when to sell.')}</div>
         ) : null}
       </div>
+
+      {/* Admin: sent Telegram signals log */}
+      {isAdmin && (
+        <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-sm font-bold text-white">
+              <Send className="h-4 w-4 text-[#229ED9]" />
+              {biLabel('سیگنالە ناردراوەکان', 'Sent signals')}
+              {sentSignals.length > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#1a1e2e] text-[#848e9c]">{sentSignals.length}</span>
+              )}
+            </div>
+            <button
+              onClick={() => { setShowSignals(s => !s); if (!showSignals) fetchSentSignals(); }}
+              className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
+            >
+              {showSignals ? biLabel('شاردنەوە', 'Hide') : biLabel('پیشاندان', 'Show')}
+            </button>
+          </div>
+
+          {showSignals && (
+            signalsLoading ? (
+              <div className="flex items-center gap-2 text-xs text-[#848e9c] py-4 justify-center">
+                <Loader2 className="h-4 w-4 animate-spin" /> {biLabel('بارکردن...', 'Loading...')}
+              </div>
+            ) : sentSignals.length === 0 ? (
+              <div className="text-xs text-[#848e9c] py-4 text-center">{biLabel('هیچ سیگنالێک نەنێردراوە.', 'No signals sent yet.')}</div>
+            ) : (
+              <div className="space-y-2">
+                {sentSignals.map((s) => {
+                  const d = new Date(s.created_at);
+                  const time = `${fmtDate(d)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                  const failed = s.status !== 'sent';
+                  return (
+                    <div key={s.id} className="rounded-lg border border-[#1a1e2e] bg-[#0b0e16] p-3">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="text-[10px] font-extrabold px-2 py-0.5 rounded"
+                            style={{ color: recColor(s.recommendation ?? 'hold'), backgroundColor: recColor(s.recommendation ?? 'hold') + '1a' }}
+                          >
+                            {recLabel(s.recommendation ?? 'hold', langMode)}
+                          </span>
+                          <span className="text-sm font-bold text-white">{s.symbol ?? '—'}</span>
+                          {s.timeframe && <span className="text-[10px] text-[#848e9c]">{s.timeframe}</span>}
+                        </div>
+                        <span
+                          className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                          style={{ color: failed ? '#f6465d' : '#0ecb81', backgroundColor: (failed ? '#f6465d' : '#0ecb81') + '1a' }}
+                        >
+                          {failed ? biLabel('نەنێردرا', 'Failed') : biLabel('نێردرا', 'Sent')}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                        {s.entry && (
+                          <div className="flex items-center gap-1"><span className="text-[#848e9c]">{biLabel('داخڵبوون', 'Entry')}:</span><span className="font-mono text-white">{s.entry}</span></div>
+                        )}
+                        {s.stop_loss && (
+                          <div className="flex items-center gap-1"><span className="text-[#848e9c]">SL:</span><span className="font-mono text-[#f6465d]">{s.stop_loss}</span></div>
+                        )}
+                        {s.confidence != null && (
+                          <div className="flex items-center gap-1"><span className="text-[#848e9c]">{biLabel('متمانە', 'Conf')}:</span><span className="font-bold text-white">{s.confidence}%</span></div>
+                        )}
+                        {s.risk_level && (
+                          <div className="flex items-center gap-1"><span className="text-[#848e9c]">{biLabel('مەترسی', 'Risk')}:</span><span className="font-bold" style={{ color: riskColor(s.risk_level) }}>{riskLabel(s.risk_level, langMode)}</span></div>
+                        )}
+                      </div>
+
+                      {s.targets && s.targets.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                          <span className="text-[10px] text-[#848e9c] flex items-center gap-1"><Target className="h-3 w-3 text-[#0ecb81]" />TP:</span>
+                          {s.targets.map((t, i) => (
+                            <span key={i} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0ecb81]/10 text-[#0ecb81]">{i + 1}: {t}</span>
+                          ))}
+                        </div>
+                      )}
+
+                      {failed && s.error && (
+                        <div className="mt-1.5 text-[10px] text-[#f6465d] break-all">{s.error}</div>
+                      )}
+
+                      <div className="mt-1.5 text-[10px] text-[#848e9c]">{time}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+        </div>
+      )}
+
+
 
       {/* Chart image analysis */}
       <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4">

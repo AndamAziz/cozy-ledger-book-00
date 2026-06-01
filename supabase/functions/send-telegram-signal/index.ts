@@ -112,7 +112,30 @@ Deno.serve(async (req) => {
     });
 
     const tgData = await tgResp.json();
-    if (!tgResp.ok || !tgData.ok) {
+    const ok = tgResp.ok && tgData.ok;
+
+    // Log the signal regardless of outcome
+    const logRow = {
+      symbol: body.symbol ?? null,
+      recommendation: body.recommendation ?? null,
+      confidence: body.confidence ?? null,
+      price: body.price ?? null,
+      entry: body.entry ?? null,
+      targets: body.targets ?? [],
+      stop_loss: body.stopLoss ?? null,
+      horizon_days: body.horizonDays ?? null,
+      risk_level: body.riskLevel ?? null,
+      headline: body.headline ?? null,
+      timeframe: body.timeframe ?? null,
+      chat_id: chatId,
+      telegram_message_id: ok ? (tgData.result?.message_id ?? null) : null,
+      status: ok ? 'sent' : 'failed',
+      error: ok ? null : `Telegram error [${tgResp.status}]: ${JSON.stringify(tgData)}`,
+      sent_by: userData.user.id,
+    };
+    await supabase.from('telegram_signals').insert(logRow);
+
+    if (!ok) {
       return new Response(
         JSON.stringify({ error: `Telegram error [${tgResp.status}]: ${JSON.stringify(tgData)}` }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
