@@ -244,7 +244,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
                 chartType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
               }`}
             >
-              {type === 'candlestick' ? 'Candles' : type.charAt(0).toUpperCase() + type.slice(1)}
+              {type === 'candlestick' ? bi('شمع', 'Candles') : type === 'line' ? bi('هێڵ', 'Line') : bi('ناوچە', 'Area')}
             </button>
           ))}
         </div>
