@@ -508,17 +508,20 @@ async function handleHistory(code: string, range: string): Promise<Response> {
     }
 
     const timestamps: number[] = result.timestamp || [];
+    const opens: (number | null)[] = result.indicators?.quote?.[0]?.open || [];
     const closes: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
     const highs: (number | null)[] = result.indicators?.quote?.[0]?.high || [];
     const lows: (number | null)[] = result.indicators?.quote?.[0]?.low || [];
 
-    const candles: { time: number; close: number; high: number; low: number }[] = [];
+    const candles: { time: number; open: number; close: number; high: number; low: number }[] = [];
     for (let i = 0; i < timestamps.length; i++) {
       const c = closes[i], h = highs[i], l = lows[i];
-      if (c != null && h != null && l != null) {
-        candles.push({ time: timestamps[i], close: +c.toFixed(4), high: +h.toFixed(4), low: +l.toFixed(4) });
+      const o = opens[i] != null && (opens[i] as number) > 0 ? opens[i] as number : c;
+      if (c != null && h != null && l != null && o != null) {
+        candles.push({ time: timestamps[i], open: +o.toFixed(4), close: +c.toFixed(4), high: +h.toFixed(4), low: +l.toFixed(4) });
       }
     }
+
 
     const responseData = { code, range, candles, count: candles.length };
     historyCache.set(cacheKey, { data: responseData, ts: Date.now() });
