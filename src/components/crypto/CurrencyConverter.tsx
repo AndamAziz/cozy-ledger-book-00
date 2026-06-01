@@ -93,7 +93,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
         <div className="flex-1 overflow-y-auto">
           {metalItems.length > 0 && (
             <>
-              <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#d4af37] uppercase tracking-wider">Precious Metals</p>
+              <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#d4af37] uppercase tracking-wider">{bi('کانزا بەهادارەکان', 'Precious Metals')}</p>
               {metalItems.map(i => (
                 <button
                   key={i.code}
