@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { ForexCurrency } from '@/lib/forexApi';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Search } from 'lucide-react';
 
 interface ForexListProps {
