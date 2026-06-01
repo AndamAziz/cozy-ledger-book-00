@@ -14,6 +14,7 @@ import { ForexDetail } from '@/components/crypto/ForexDetail';
 import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
 import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
@@ -21,6 +22,8 @@ type CryptoView = 'chart' | 'analysis';
 
 export default function CryptoTracker() {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
   const [cryptoView, setCryptoView] = useState<CryptoView>('chart');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
