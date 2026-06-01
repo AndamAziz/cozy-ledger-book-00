@@ -42,6 +42,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const priceLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
+  // Tracks the current series identity so we only auto-fit when the timeframe /
+  // metal / chart type changes — never on live price ticks (which would reset
+  // the user's manual zoom & pan).
+  const lastFitKeyRef = useRef<string>('');
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [chartType, setChartType] = useState<'candles' | 'area' | 'line'>('candles');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
