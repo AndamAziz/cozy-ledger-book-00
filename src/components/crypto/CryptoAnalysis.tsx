@@ -670,13 +670,17 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
             <CalendarClock className="h-3 w-3" />
             ماوەی کاتی چارتەکان
           </div>
-          <div className="flex gap-1.5">
+          <div role="radiogroup" aria-label="Chart timeframe / ماوەی کاتی چارت" className="flex gap-1.5">
             {CHART_TIMEFRAMES.map((tf) => (
               <button
                 key={tf}
+                type="button"
+                role="radio"
+                aria-checked={chartTimeframe === tf}
+                aria-label={`Timeframe ${tf}`}
                 onClick={() => setChartTimeframe(tf)}
                 disabled={imageLoading}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition active:scale-95 disabled:opacity-50 ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition active:scale-95 disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d1117] ${
                   chartTimeframe === tf
                     ? 'bg-[#2962ff] text-white'
                     : 'bg-[#1a1e2e] text-[#848e9c] hover:text-white'
