@@ -276,7 +276,16 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       maSeriesRefs.current = {};
       if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     };
-  }, [chartType, range, isUp, activeMAs, maType, language, rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom]);
+  }, [chartType, range, isUp, activeMAs, maType, language]);
+
+  // Apply layout preset without recreating the chart.
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.applyOptions({
+      rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
+      timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
+    });
+  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom]);
 
   // Update data
   useEffect(() => {
