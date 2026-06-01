@@ -141,6 +141,18 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [signalsLoading, setSignalsLoading] = useState(false);
   const [showSignals, setShowSignals] = useState(false);
   const [selectedSignal, setSelectedSignal] = useState<SentSignal | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      toast({ title: biLabel('کۆپی کرا!', 'Copied!') });
+      setTimeout(() => setCopiedKey((prev) => (prev === key ? null : prev)), 1500);
+    } catch {
+      toast({ title: biLabel('کۆپی سەرکەوتوو نەبوو', 'Copy failed'), variant: 'destructive' });
+    }
+  };
 
   const fetchSentSignals = async () => {
     setSignalsLoading(true);
