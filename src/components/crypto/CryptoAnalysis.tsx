@@ -459,6 +459,32 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         </div>
       </div>
 
+      {/* 24h High / Low (highest & lowest price in 1 day) */}
+      {hasData && dayHigh != null && dayLow != null && (
+        <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4">
+          <div className="flex items-center gap-1.5 text-sm font-bold text-white mb-3">
+            <BarChart3 className="h-4 w-4 text-[#f0b90b]" />
+            {biLabel('بەرزترین و نزمترین (٢٤ کاتژمێر)', '24h High & Low')}
+          </div>
+          <div className="grid grid-cols-2 gap-px bg-[#1a1e2e] rounded-lg overflow-hidden">
+            <div className="bg-[#0d1117] px-4 py-3">
+              <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]">
+                <TrendingUp className="h-3 w-3 text-[#0ecb81]" />
+                {biLabel('بەرزترین نرخ', 'Highest')}
+              </div>
+              <div className="text-base font-mono font-bold text-[#0ecb81] mt-0.5">${fmt(dayHigh)}</div>
+            </div>
+            <div className="bg-[#0d1117] px-4 py-3">
+              <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]">
+                <TrendingDown className="h-3 w-3 text-[#f6465d]" />
+                {biLabel('نزمترین نرخ', 'Lowest')}
+              </div>
+              <div className="text-base font-mono font-bold text-[#f6465d] mt-0.5">${fmt(dayLow)}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Indicators table */}
       <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl overflow-hidden">
         <div className="px-4 py-2.5 border-b border-[#1a1e2e] text-sm font-bold text-white">نیشاندەرە تەکنیکییەکان</div>
