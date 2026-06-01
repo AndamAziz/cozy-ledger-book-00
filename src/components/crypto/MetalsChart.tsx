@@ -112,7 +112,19 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
     chartRef.current = chart;
 
-    if (chartType === 'area') {
+    if (chartType === 'candles') {
+      const series = chart.addSeries(CandlestickSeries, {
+        upColor: UP_COLOR,
+        downColor: DOWN_COLOR,
+        borderUpColor: UP_COLOR,
+        borderDownColor: DOWN_COLOR,
+        wickUpColor: UP_COLOR,
+        wickDownColor: DOWN_COLOR,
+        borderVisible: true,
+        priceLineVisible: false,
+      });
+      seriesRef.current = series;
+    } else if (chartType === 'area') {
       const series = chart.addSeries(AreaSeries, {
         lineColor: lineColor,
         lineWidth: 2,
@@ -132,6 +144,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       });
       seriesRef.current = series;
     }
+
 
     // Add MA series
     for (const ma of MA_PERIODS) {
