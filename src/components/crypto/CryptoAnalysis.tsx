@@ -827,10 +827,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         ) : imageLoading ? (
           <div className="flex items-center gap-2 text-xs text-[#848e9c]">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            {imagePreviews.length > 1 ? 'کەندڵەکان دەخوێنرێنەوە و بەراورد دەکرێن...' : 'کەندڵەکان دەخوێنرێنەوە...'}
+            {imagePreviews.length > 1 ? biLabel('کەندڵەکان دەخوێنرێنەوە و بەراورد دەکرێن...', 'Reading and comparing candles...') : biLabel('کەندڵەکان دەخوێنرێنەوە...', 'Reading candles...')}
           </div>
         ) : imagePreviews.length === 0 ? (
-          <div className="text-xs text-[#848e9c]">یەک یان چەند وێنەی چارت (سکرینشۆت) بار بکە بۆ خوێندنەوەی کەندڵەکان و بەراوردکردنی نیشانەکان لە یەک پوختەدا بە زمانی کوردی.</div>
+          <div className="text-xs text-[#848e9c]">{biLabel('یەک یان چەند وێنەی چارت (سکرینشۆت) بار بکە بۆ خوێندنەوەی کەندڵەکان و بەراوردکردنی نیشانەکان لە یەک پوختەدا.', 'Upload one or more chart screenshots to read the candles and compare signals in a single summary.')}</div>
         ) : null}
       </div>
     </div>
