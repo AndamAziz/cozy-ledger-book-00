@@ -30,6 +30,8 @@ interface TradeSummary {
   entry: string;
   targets: string[];
   stopLoss: string;
+  stopLossIndicator?: string;
+  stopLossBasis?: string;
   horizonDays: number;
   riskLevel: RiskLevel;
   riskNote: string;
@@ -471,7 +473,14 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               </div>
               <div className="bg-[#0d1117] px-4 py-2.5">
                 <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><OctagonX className="h-3 w-3 text-[#f6465d]" />وەستانی زیان</div>
-                <div className="text-sm font-mono text-[#f6465d] mt-0.5">{tradeSummary.stopLoss}</div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-sm font-mono text-[#f6465d]">{tradeSummary.stopLoss}</span>
+                  {tradeSummary.stopLossIndicator && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#f6465d]/10 text-[#f6465d]">
+                      {tradeSummary.stopLossIndicator}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="bg-[#0d1117] px-4 py-2.5 col-span-2">
                 <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><Target className="h-3 w-3 text-[#0ecb81]" />ئامانجەکانی قازانج</div>
@@ -493,6 +502,23 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 <div className="text-sm font-bold mt-0.5" style={{ color: riskColor(tradeSummary.riskLevel) }}>{riskLabel(tradeSummary.riskLevel)}</div>
               </div>
             </div>
+
+            {/* Stop-loss basis */}
+            {tradeSummary.stopLossBasis && (
+              <div className="px-4 py-3 border-t border-[#1a1e2e]">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-1.5">
+                  <OctagonX className="h-3.5 w-3.5 text-[#f6465d]" />
+                  بنەمای وەستانی زیان
+                  {tradeSummary.stopLossIndicator && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#f6465d]/10 text-[#f6465d]">
+                      {tradeSummary.stopLossIndicator}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[#d1d5db] leading-relaxed">{tradeSummary.stopLossBasis}</p>
+              </div>
+            )}
+
 
             {/* Why this decision */}
             {tradeSummary.reasoning && (
