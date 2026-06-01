@@ -374,6 +374,15 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       {/* Chart */}
       <div className="relative h-[250px] sm:h-[320px]">
         <div ref={chartContainerRef} className="absolute inset-0" />
+        <div
+          ref={tooltipRef}
+          className="absolute hidden z-20 pointer-events-none rounded-lg border border-[#2a2e3e] p-2.5 shadow-xl"
+          style={{
+            background: 'rgba(16,20,30,0.95)',
+            backdropFilter: 'blur(8px)',
+            minWidth: '180px',
+          }}
+        />
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/80 z-10">
             <div className="flex flex-col items-center gap-2">
