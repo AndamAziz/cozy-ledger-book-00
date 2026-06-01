@@ -151,7 +151,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           }`}
         >
           <LineChart className="h-3.5 w-3.5" />
-          بازاڕ
+          {language === 'en' ? 'Market' : 'بازاڕ'}
         </button>
         <button
           type="button"
@@ -164,7 +164,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           }`}
         >
           <Sparkles className="h-3.5 w-3.5" />
-          شیکاری
+          {language === 'en' ? 'Analysis' : 'شیکاری'}
         </button>
       </div>
 
