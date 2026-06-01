@@ -629,81 +629,49 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               </div>
             )}
 
-            {/* Stop-loss basis — indicator → stop mapping with language toggle */}
+            {/* Stop-loss basis — indicator → stop mapping */}
             {(tradeSummary.stopLossBasis || tradeSummary.stopLossBasisEn || tradeSummary.stopLossIndicatorValue) && (
               <div className="px-4 py-3 border-t border-[#1a1e2e]">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                    <OctagonX className="h-3.5 w-3.5 text-[#f6465d]" />
-                    {langMode === 'en' ? 'Stop-Loss Basis' : langMode === 'ku' ? 'بنەمای وەستانی زیان' : 'بنەمای وەستانی زیان · Stop-Loss Basis'}
-                    {tradeSummary.stopLossIndicator && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#f6465d]/10 text-[#f6465d]">
-                        {tradeSummary.stopLossIndicator}
-                      </span>
-                    )}
-                  </div>
-                  {/* Language toggle */}
-                  <div
-                    role="group"
-                    aria-label="Select display language"
-                    className="inline-flex items-center gap-0.5 bg-[#1a1e2e] rounded-lg p-0.5"
-                  >
-                    {(['ku','both','en'] as LangMode[]).map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setLangMode(m)}
-                        aria-pressed={langMode === m}
-                        aria-label={m === 'ku' ? 'Kurdish only' : m === 'en' ? 'English only' : 'Both languages'}
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all duration-200 min-h-[28px] outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d1117] ${
-                          langMode === m
-                            ? 'bg-[#0d1117] text-white shadow-sm ring-1 ring-[#2d2d2d]'
-                            : 'text-[#848e9c] hover:text-white'
-                        }`}
-                      >
-                        {m === 'ku' ? 'کوردی' : m === 'en' ? 'English' : 'هەردووکی'}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
+                  <OctagonX className="h-3.5 w-3.5 text-[#f6465d]" />
+                  {biLabel('بنەمای وەستانی زیان', 'Stop-Loss Basis')}
+                  {tradeSummary.stopLossIndicator && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#f6465d]/10 text-[#f6465d]">
+                      {tradeSummary.stopLossIndicator}
+                    </span>
+                  )}
                 </div>
 
                 {/* Indicator value → Stop-loss mapping */}
                 <div className="flex items-center gap-2 mb-2.5 rounded-lg bg-[#0d1117] border border-[#1a1e2e] px-3 py-2">
                   <div className="flex-1 min-w-0">
                     <div className="text-[9px] text-[#848e9c] uppercase tracking-wide">
-                      {langMode === 'en' ? 'Indicator value' : langMode === 'ku' ? 'نرخی ئامێر' : 'نرخی ئامێر · Indicator value'}
+                      {biLabel('نرخی ئامێر', 'Indicator value')}
                     </div>
                     <div className="text-xs font-mono text-white truncate">{tradeSummary.stopLossIndicatorValue || tradeSummary.stopLossIndicator || '—'}</div>
                   </div>
                   <div className="text-[#f6465d] text-base font-bold px-1">→</div>
                   <div className="flex-1 min-w-0 text-right">
                     <div className="text-[9px] text-[#848e9c] uppercase tracking-wide">
-                      {langMode === 'en' ? 'Stop-loss' : langMode === 'ku' ? 'وەستانی زیان' : 'وەستانی زیان · Stop-loss'}
+                      {biLabel('وەستانی زیان', 'Stop-loss')}
                     </div>
                     <div className="text-xs font-mono text-[#f6465d] truncate">{tradeSummary.stopLoss}</div>
                   </div>
                 </div>
 
-                {/* Kurdish explanation */}
-                {(langMode === 'ku' || langMode === 'both') && tradeSummary.stopLossBasis && (
-                  <p className="text-xs text-[#d1d5db] leading-relaxed mb-2" dir="rtl">{tradeSummary.stopLossBasis}</p>
-                )}
-                {/* English explanation */}
-                {(langMode === 'en' || langMode === 'both') && tradeSummary.stopLossBasisEn && (
-                  <p className="text-xs text-[#9aa4b2] leading-relaxed" dir="ltr">{tradeSummary.stopLossBasisEn}</p>
-                )}
+                <BiText ku={tradeSummary.stopLossBasis} en={tradeSummary.stopLossBasisEn} className="text-xs text-[#d1d5db]" />
               </div>
             )}
 
 
             {/* Why this decision */}
-            {tradeSummary.reasoning && (
+            {(tradeSummary.reasoning || tradeSummary.reasoningEn) && (
               <div className="px-4 py-3 border-t border-[#1a1e2e]">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-1.5">
                   <Lightbulb className="h-3.5 w-3.5 text-[#f0b90b]" />
-                  بۆچی ئەم بڕیارە؟
+                  {biLabel('بۆچی ئەم بڕیارە؟', 'Why this decision?')}
                 </div>
-                <p className="text-xs text-[#d1d5db] leading-relaxed">{tradeSummary.reasoning}</p>
+                <BiText ku={tradeSummary.reasoning} en={tradeSummary.reasoningEn} className="text-xs text-[#d1d5db]" />
               </div>
             )}
 
