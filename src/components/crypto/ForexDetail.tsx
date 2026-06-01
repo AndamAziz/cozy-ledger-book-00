@@ -137,7 +137,7 @@ export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetail
 
       {/* Cross rates */}
       <div className="p-4">
-        <h3 className="text-sm font-semibold text-white mb-3">Cross Rates (1 {selected.code})</h3>
+        <h3 className="text-sm font-semibold text-white mb-3">{bi('نرخی لاپەڕ', 'Cross Rates')} (1 {selected.code})</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {crossCurrencies.map(cross => {
             const crossRate = cross.rate / selected.rate;
