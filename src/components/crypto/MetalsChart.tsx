@@ -180,10 +180,22 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       const timeNum = typeof param.time === 'number' ? param.time : 0;
       const dateObj = new Date(timeNum * 1000);
       const locale = language === 'en' ? 'en-GB' : 'ku-Arab';
-      const showTime = range === '1d' || range === '5d';
-      const dateStr = showTime
-        ? dateObj.toLocaleString(locale, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-        : dateObj.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+      // Format the tooltip date/time appropriately for each range
+      let dateOpts: Intl.DateTimeFormatOptions;
+      if (range === '1d') {
+        // Intraday: emphasise time of day
+        dateOpts = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
+      } else if (range === '5d') {
+        // Few days: weekday + time
+        dateOpts = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
+      } else if (range === '1mo' || range === '3mo') {
+        // Weeks/months: full day date, no time
+        dateOpts = { day: 'numeric', month: 'short', year: 'numeric' };
+      } else {
+        // 1Y+: month + year
+        dateOpts = { month: 'short', year: 'numeric' };
+      }
+      const dateStr = dateObj.toLocaleString(locale, dateOpts);
       const fmt = (n: number) => n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
       tooltipRef.current.innerHTML = `
