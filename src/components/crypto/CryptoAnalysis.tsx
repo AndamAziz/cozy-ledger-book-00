@@ -447,7 +447,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           </div>
           <div className="flex items-center gap-2" style={{ color: signalColor(summary.signal) }}>
             {summary.signal === 'buy' ? <TrendingUp className="h-6 w-6" /> : summary.signal === 'sell' ? <TrendingDown className="h-6 w-6" /> : <Minus className="h-6 w-6" />}
-            <span className="text-xl font-extrabold">{signalLabel(summary.signal)}</span>
+            <span className="text-xl font-extrabold">{signalLabel(summary.signal, langMode)}</span>
           </div>
         </div>
 
