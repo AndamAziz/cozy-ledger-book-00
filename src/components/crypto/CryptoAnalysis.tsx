@@ -511,7 +511,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-mono text-[#d1d5db]">{r.value}</span>
                   <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ color: signalColor(r.signal), backgroundColor: signalColor(r.signal) + '1a' }}>
-                    {signalLabel(r.signal)}
+                    {signalLabel(r.signal, langMode)}
                   </span>
                 </div>
               </div>
