@@ -1,8 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Metal, METALS_META } from '@/lib/metalsApi';
 import { useMetalsHistory } from '@/hooks/useMetalsHistory';
 import { MetalsChart } from '@/components/crypto/MetalsChart';
-import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
+import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
+import type { OHLCCandle } from '@/lib/krakenApi';
+import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw, LineChart, Sparkles } from 'lucide-react';
+
+const RANGE_LABELS: Record<string, string> = {
+  '1d': '1D', '5d': '5D', '1mo': '1M', '3mo': '3M', '6mo': '6M', '1y': '1Y', '5y': '5Y',
+};
 
 interface MetalsDetailProps {
   metals: Metal[];
