@@ -417,7 +417,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       }
       await consumeStream(resp, setImageText);
     } catch (err) {
-      setImageError(err instanceof Error ? err.message : 'هەڵەیەک ڕوویدا.');
+      setImageError(err instanceof Error ? err.message : biLabel('هەڵەیەک ڕوویدا.', 'Something went wrong.'));
     } finally {
       setImageLoading(false);
     }
