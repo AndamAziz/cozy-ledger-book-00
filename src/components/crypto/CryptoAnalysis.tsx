@@ -1006,8 +1006,32 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                   {selectedSignal.status === 'sent' ? biLabel('نێردرا', 'Sent') : biLabel('نەنێردرا', 'Failed')}
                 </span>
                 {selectedSignal.telegram_message_id && (
-                  <span className="text-[10px] text-[#848e9c]">Msg #{selectedSignal.telegram_message_id}</span>
+                  <button
+                    onClick={() => copyToClipboard(String(selectedSignal.telegram_message_id), 'tg-msg-id')}
+                    className="flex items-center gap-1 text-[10px] text-[#848e9c] hover:text-white transition"
+                  >
+                    <span>Msg #{selectedSignal.telegram_message_id}</span>
+                    {copiedKey === 'tg-msg-id' ? <Check className="h-3 w-3 text-[#0ecb81]" /> : <Copy className="h-3 w-3" />}
+                  </button>
                 )}
+                <button
+                  onClick={() => {
+                    const lines = [
+                      `📊 ${selectedSignal.symbol ?? '—'} — ${recLabel(selectedSignal.recommendation ?? 'hold', langMode)}`,
+                      selectedSignal.entry ? `Entry: ${selectedSignal.entry}` : null,
+                      ...(selectedSignal.targets?.map((t, i) => `Target ${i + 1}: ${t}`) ?? []),
+                      selectedSignal.stop_loss ? `Stop Loss: ${selectedSignal.stop_loss}` : null,
+                      selectedSignal.confidence != null ? `Confidence: ${selectedSignal.confidence}%` : null,
+                      selectedSignal.risk_level ? `Risk: ${riskLabel(selectedSignal.risk_level, langMode)}` : null,
+                      selectedSignal.headline ? `Note: ${selectedSignal.headline}` : null,
+                    ].filter(Boolean) as string[];
+                    copyToClipboard(lines.join('\n'), 'signal-all');
+                  }}
+                  className="ml-auto flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
+                >
+                  {copiedKey === 'signal-all' ? <Check className="h-3 w-3 text-[#0ecb81]" /> : <Copy className="h-3 w-3" />}
+                  {biLabel('کۆپی سیگنال', 'Copy signal')}
+                </button>
               </div>
 
               {/* Levels grid */}
