@@ -124,6 +124,12 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
     chartRef.current = chart;
 
+    // Persist the user's pan/zoom per symbol+timeframe as they interact.
+    chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+      if (restoringRef.current || !range || !currentViewKeyRef.current) return;
+      savedViewsRef.current[currentViewKeyRef.current] = range;
+    });
+
     if (chartType === 'candlestick') {
       const series = chart.addSeries(CandlestickSeries, {
         upColor: '#0ecb81',
