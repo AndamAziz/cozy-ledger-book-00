@@ -270,7 +270,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         <div ref={chartContainerRef} className="absolute inset-0" />
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/80 z-10">
-            <div className="text-[#848e9c] text-sm">Loading chart data...</div>
+            <div className="text-[#848e9c] text-sm">{bi('بارکردنی داتای چارت...', 'Loading chart data...')}</div>
           </div>
         )}
       </div>
