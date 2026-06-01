@@ -700,9 +700,9 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                         <div className="h-full rounded-full" style={{ width: influenceWidth(d.influence), backgroundColor: signalColor(d.effect) }} />
                       </div>
                       <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ color: signalColor(d.effect), backgroundColor: signalColor(d.effect) + '1a' }}>
-                        {signalLabel(d.effect)}
+                        {signalLabel(d.effect, langMode)}
                       </span>
-                      <span className="text-[9px] text-[#848e9c] w-16 shrink-0 text-left">{influenceLabel(d.influence)}</span>
+                      <span className="text-[9px] text-[#848e9c] w-16 shrink-0 text-left">{influenceLabel(d.influence, langMode)}</span>
                     </div>
                   ))}
                 </div>
