@@ -18,9 +18,24 @@ interface MetalsDetailProps {
 
 export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailProps) {
   const [chartRange, setChartRange] = useState('1d');
+  const [view, setView] = useState<'market' | 'analysis'>('market');
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const livePrice = selected?.price || 0;
   const { candles: historyCandles, isLoading: historyLoading } = useMetalsHistory(selectedCode, chartRange, livePrice);
+
+  // Adapt metals candles (close/high/low) to the OHLC shape the analysis expects
+  const ohlcCandles = useMemo<OHLCCandle[]>(
+    () => historyCandles.map(c => ({
+      time: c.time,
+      open: c.close,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: 0,
+    })),
+    [historyCandles],
+  );
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#0a0e17]">
