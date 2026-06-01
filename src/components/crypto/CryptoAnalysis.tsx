@@ -271,7 +271,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     });
 
     if (!resp.ok || !resp.body) {
-      let msg = 'هەڵەیەک ڕوویدا لە شیکاری AI.';
+      let msg = biLabel('هەڵەیەک ڕوویدا لە شیکاری AI.', 'AI analysis failed.');
       try {
         const j = await resp.json();
         if (j?.error) msg = j.error;
