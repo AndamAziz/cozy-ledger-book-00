@@ -561,7 +561,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               <div className="flex items-center gap-2" style={{ color: recColor(tradeSummary.recommendation) }}>
                 {tradeSummary.recommendation === 'buy' ? <TrendingUp className="h-5 w-5" /> : tradeSummary.recommendation === 'sell' ? <TrendingDown className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
                 <div>
-                  <div className="text-base font-extrabold">{recLabel(tradeSummary.recommendation)}</div>
+                  <div className="text-base font-extrabold">{recLabel(tradeSummary.recommendation, langMode)}</div>
                   <div className="text-[10px] text-[#848e9c]">{biLabel('پێشنیاری سەرەکی', 'Main recommendation')}</div>
                 </div>
               </div>
