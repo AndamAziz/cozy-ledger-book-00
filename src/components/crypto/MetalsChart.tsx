@@ -46,6 +46,13 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
 
+  // Chart spacing controls
+  const [rightOffset, setRightOffset] = useState(12);
+  const [barSpacing, setBarSpacing] = useState(8);
+  const [minBarSpacing, setMinBarSpacing] = useState(4);
+  const [scaleMarginTop, setScaleMarginTop] = useState(0.12);
+  const [scaleMarginBottom, setScaleMarginBottom] = useState(0.12);
+
   // Bilingual helper
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
 
