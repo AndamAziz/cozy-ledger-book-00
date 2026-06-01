@@ -295,6 +295,9 @@ async function handleLivePrices(): Promise<Response> {
       // Prefer real XAU/USD spot feeds for precious metals; never use futures when spot is available.
       prices[code] = metalsSpot.prices[code];
       for (const source of metalsSpot.sources) if (!sources.includes(source)) sources.push(source);
+    } else if (GOLDAPI_METALS.includes(code)) {
+      // Do not fall back to Yahoo futures for metals: GC=F/SI=F can be far above broker spot XAU/USD.
+      continue;
     } else if (yahooPrices[code]) {
       prices[code] = yahooPrices[code];
       if (!sources.includes("yahoo-finance")) sources.push("yahoo-finance");
