@@ -201,7 +201,7 @@ const TWELVE_HISTORY_MAP: Record<string, { interval: string; outputsize: number 
   "5y": { interval: "1week", outputsize: 270 },
 };
 
-async function fetchTwelveDataHistory(code: string, range: string): Promise<{ time: number; close: number; high: number; low: number }[] | null> {
+async function fetchTwelveDataHistory(code: string, range: string): Promise<{ time: number; open: number; close: number; high: number; low: number }[] | null> {
   const key = Deno.env.get("TWELVE_DATA_API_KEY");
   const symbol = TWELVE_DATA_SYMBOLS[code];
   if (!key || !symbol) return null;
@@ -227,10 +227,12 @@ async function fetchTwelveDataHistory(code: string, range: string): Promise<{ ti
         const close = Number(v.close);
         const high = Number(v.high);
         const low = Number(v.low);
+        const openRaw = Number(v.open);
+        const open = Number.isFinite(openRaw) && openRaw > 0 ? openRaw : close;
         if (![time, close, high, low].every(Number.isFinite) || close <= 0 || high <= 0 || low <= 0) return null;
-        return { time, close: +close.toFixed(4), high: +high.toFixed(4), low: +low.toFixed(4) };
+        return { time, open: +open.toFixed(4), close: +close.toFixed(4), high: +high.toFixed(4), low: +low.toFixed(4) };
       })
-      .filter(Boolean) as { time: number; close: number; high: number; low: number }[];
+      .filter(Boolean) as { time: number; open: number; close: number; high: number; low: number }[];
 
     return candles.length > 0 ? candles : null;
   } catch (e) {
@@ -238,6 +240,7 @@ async function fetchTwelveDataHistory(code: string, range: string): Promise<{ ti
     return null;
   }
 }
+
 
 function getLastClose(quotes: unknown): number | null {
   if (!Array.isArray(quotes)) return null;
@@ -379,7 +382,7 @@ async function handleLivePrices(): Promise<Response> {
   );
 }
 
-type Candle = { time: number; close: number; high: number; low: number };
+type Candle = { time: number; open: number; close: number; high: number; low: number };
 
 async function fetchYahooCandles(symbol: string, range: string): Promise<Candle[] | null> {
   const rangeConfig = RANGE_MAP[range] || RANGE_MAP["1mo"];
@@ -392,6 +395,7 @@ async function fetchYahooCandles(symbol: string, range: string): Promise<Candle[
     if (!result) return null;
 
     const timestamps: number[] = result.timestamp || [];
+    const opens: (number | null)[] = result.indicators?.quote?.[0]?.open || [];
     const closes: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
     const highs: (number | null)[] = result.indicators?.quote?.[0]?.high || [];
     const lows: (number | null)[] = result.indicators?.quote?.[0]?.low || [];
@@ -399,8 +403,9 @@ async function fetchYahooCandles(symbol: string, range: string): Promise<Candle[
     const candles: Candle[] = [];
     for (let i = 0; i < timestamps.length; i++) {
       const c = closes[i], h = highs[i], l = lows[i];
-      if (c != null && h != null && l != null) {
-        candles.push({ time: timestamps[i], close: +c.toFixed(4), high: +h.toFixed(4), low: +l.toFixed(4) });
+      const o = opens[i] != null && (opens[i] as number) > 0 ? opens[i] as number : c;
+      if (c != null && h != null && l != null && o != null) {
+        candles.push({ time: timestamps[i], open: +o.toFixed(4), close: +c.toFixed(4), high: +h.toFixed(4), low: +l.toFixed(4) });
       }
     }
     return candles.length > 0 ? candles : null;
@@ -420,11 +425,13 @@ function shiftCandlesToSpot(candles: Candle[], spotPrice: number): Candle[] {
   if (!Number.isFinite(offset) || Math.abs(offset) < 1e-6) return candles;
   return candles.map((c) => ({
     time: c.time,
+    open: +(c.open + offset).toFixed(4),
     close: +(c.close + offset).toFixed(4),
     high: +(c.high + offset).toFixed(4),
     low: +(c.low + offset).toFixed(4),
   }));
 }
+
 
 async function handleHistory(code: string, range: string): Promise<Response> {
   const yahooSymbol = YAHOO_SYMBOLS[code];
@@ -501,17 +508,20 @@ async function handleHistory(code: string, range: string): Promise<Response> {
     }
 
     const timestamps: number[] = result.timestamp || [];
+    const opens: (number | null)[] = result.indicators?.quote?.[0]?.open || [];
     const closes: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
     const highs: (number | null)[] = result.indicators?.quote?.[0]?.high || [];
     const lows: (number | null)[] = result.indicators?.quote?.[0]?.low || [];
 
-    const candles: { time: number; close: number; high: number; low: number }[] = [];
+    const candles: { time: number; open: number; close: number; high: number; low: number }[] = [];
     for (let i = 0; i < timestamps.length; i++) {
       const c = closes[i], h = highs[i], l = lows[i];
-      if (c != null && h != null && l != null) {
-        candles.push({ time: timestamps[i], close: +c.toFixed(4), high: +h.toFixed(4), low: +l.toFixed(4) });
+      const o = opens[i] != null && (opens[i] as number) > 0 ? opens[i] as number : c;
+      if (c != null && h != null && l != null && o != null) {
+        candles.push({ time: timestamps[i], open: +o.toFixed(4), close: +c.toFixed(4), high: +h.toFixed(4), low: +l.toFixed(4) });
       }
     }
+
 
     const responseData = { code, range, candles, count: candles.length };
     historyCache.set(cacheKey, { data: responseData, ts: Date.now() });

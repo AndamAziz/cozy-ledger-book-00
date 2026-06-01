@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, Time } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, CandlestickSeries, Time } from 'lightweight-charts';
+
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
@@ -37,9 +38,14 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const priceLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
-  const [chartType, setChartType] = useState<'area' | 'line'>('area');
+  const [chartType, setChartType] = useState<'candles' | 'area' | 'line'>('candles');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
+
+  // Professional candlestick palette (Binance-style)
+  const UP_COLOR = '#0ecb81';
+  const DOWN_COLOR = '#f6465d';
+
 
   const isUp = candles.length >= 2 && candles[candles.length - 1].close >= candles[0].close;
   const lineColor = isUp ? '#0ecb81' : '#f6465d';
@@ -106,7 +112,19 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
     chartRef.current = chart;
 
-    if (chartType === 'area') {
+    if (chartType === 'candles') {
+      const series = chart.addSeries(CandlestickSeries, {
+        upColor: UP_COLOR,
+        downColor: DOWN_COLOR,
+        borderUpColor: UP_COLOR,
+        borderDownColor: DOWN_COLOR,
+        wickUpColor: UP_COLOR,
+        wickDownColor: DOWN_COLOR,
+        borderVisible: true,
+        priceLineVisible: false,
+      });
+      seriesRef.current = series;
+    } else if (chartType === 'area') {
       const series = chart.addSeries(AreaSeries, {
         lineColor: lineColor,
         lineWidth: 2,
@@ -126,6 +144,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       });
       seriesRef.current = series;
     }
+
 
     // Add MA series
     for (const ma of MA_PERIODS) {
@@ -155,12 +174,23 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   useEffect(() => {
     if (!seriesRef.current || candles.length === 0) return;
 
-    const data = candles.map(c => ({
-      time: c.time as Time,
-      value: c.close,
-    }));
+    if (chartType === 'candles') {
+      const data = candles.map(c => ({
+        time: c.time as Time,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      }));
+      seriesRef.current.setData(data);
+    } else {
+      const data = candles.map(c => ({
+        time: c.time as Time,
+        value: c.close,
+      }));
+      seriesRef.current.setData(data);
+    }
 
-    seriesRef.current.setData(data);
 
     // Update MA data
     for (const ma of MA_PERIODS) {
@@ -172,7 +202,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     }
 
     chartRef.current?.timeScale().fitContent();
-  }, [candles, activeMAs, maType]);
+  }, [candles, activeMAs, maType, chartType]);
 
   // Update price line
   useEffect(() => {
@@ -255,6 +285,14 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         {/* Chart type toggle */}
         <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
           <button
+            onClick={() => setChartType('candles')}
+            className={`px-2 py-1 text-[10px] font-medium transition-colors ${
+              chartType === 'candles' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+            }`}
+          >
+            {language === 'en' ? 'Candles' : 'شمع'}
+          </button>
+          <button
             onClick={() => setChartType('area')}
             className={`px-2 py-1 text-[10px] font-medium transition-colors ${
               chartType === 'area' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
@@ -272,6 +310,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
           </button>
         </div>
       </div>
+
 
       {/* Chart */}
       <div className="relative h-[250px] sm:h-[320px]">
