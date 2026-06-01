@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ForexCurrency } from '@/lib/forexApi';
 import { Metal } from '@/lib/metalsApi';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowRightLeft, X, Search } from 'lucide-react';
 
 interface ConverterItem {
