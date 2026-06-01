@@ -503,6 +503,23 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               </div>
             </div>
 
+            {/* Stop-loss basis */}
+            {tradeSummary.stopLossBasis && (
+              <div className="px-4 py-3 border-t border-[#1a1e2e]">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-1.5">
+                  <OctagonX className="h-3.5 w-3.5 text-[#f6465d]" />
+                  بنەمای وەستانی زیان
+                  {tradeSummary.stopLossIndicator && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#f6465d]/10 text-[#f6465d]">
+                      {tradeSummary.stopLossIndicator}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[#d1d5db] leading-relaxed">{tradeSummary.stopLossBasis}</p>
+              </div>
+            )}
+
+
             {/* Why this decision */}
             {tradeSummary.reasoning && (
               <div className="px-4 py-3 border-t border-[#1a1e2e]">
