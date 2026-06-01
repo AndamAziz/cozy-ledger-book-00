@@ -365,6 +365,12 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
               {stepper('↓', scaleMarginBottom, v => setScaleMarginBottom(v), 0, 0.4, 0.02, v => v.toFixed(2))}
             </>
           )}
+          <button
+            onClick={() => chartRef.current?.timeScale().fitContent()}
+            className="shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border text-[#848e9c] border-white/5 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
+          >
+            {bi('ڕێستکردنی بینین', 'Reset View')}
+          </button>
         </div>
       </div>
 
