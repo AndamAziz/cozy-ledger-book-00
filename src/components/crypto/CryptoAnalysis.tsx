@@ -199,6 +199,8 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       if (!resp.ok) throw new Error(j?.error || 'Failed to send');
       setSentOk(true);
       toast({ title: biLabel('نێردرا بۆ تەلەگرام ✅', 'Sent to Telegram ✅') });
+      setShowSignals(true);
+      fetchSentSignals();
       setTimeout(() => setSentOk(false), 3000);
     } catch (e) {
       toast({
