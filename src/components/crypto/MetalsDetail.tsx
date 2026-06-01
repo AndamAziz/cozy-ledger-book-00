@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Metal, METALS_META } from '@/lib/metalsApi';
 import { useMetalsHistory } from '@/hooks/useMetalsHistory';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalsChart } from '@/components/crypto/MetalsChart';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import type { OHLCCandle } from '@/lib/krakenApi';
