@@ -38,9 +38,14 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const priceLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
-  const [chartType, setChartType] = useState<'area' | 'line'>('area');
+  const [chartType, setChartType] = useState<'candles' | 'area' | 'line'>('candles');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
+
+  // Professional candlestick palette (Binance-style)
+  const UP_COLOR = '#0ecb81';
+  const DOWN_COLOR = '#f6465d';
+
 
   const isUp = candles.length >= 2 && candles[candles.length - 1].close >= candles[0].close;
   const lineColor = isUp ? '#0ecb81' : '#f6465d';
