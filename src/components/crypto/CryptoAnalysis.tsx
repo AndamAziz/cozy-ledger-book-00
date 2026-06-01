@@ -866,7 +866,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                   {biLabel('کۆپی سیگنال', 'Copy signal')}
                 </button>
                 <button
-                  onClick={sendSignal}
+                  onClick={() => sendSignal()}
                   disabled={sending}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-bold rounded-lg bg-[#229ED9] text-white disabled:opacity-50 active:scale-95 transition"
                 >
