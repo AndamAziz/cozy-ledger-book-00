@@ -527,6 +527,12 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           </button>
         </div>
 
+        {/* Language selector for the whole analysis (set before running) */}
+        <div className="flex items-center justify-between gap-2 mb-3 rounded-lg bg-[#0d1117] border border-[#1a1e2e] px-3 py-2">
+          <span className="text-[10px] text-[#848e9c]">{biLabel('زمانی شیکاری', 'Analysis language')}</span>
+          <LangToggle />
+        </div>
+
         {aiError && (
           <div className="flex items-center gap-2 text-xs text-[#f6465d] bg-[#f6465d]/10 rounded-lg px-3 py-2 mb-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
