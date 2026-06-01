@@ -149,7 +149,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
             <>
               {/* From */}
               <div className="mb-3">
-                <label className="text-[10px] text-[#848e9c] uppercase tracking-wider mb-1 block">From</label>
+                <label className="text-[10px] text-[#848e9c] uppercase tracking-wider mb-1 block">{bi('لە', 'From')}</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowFromPicker(true)}
