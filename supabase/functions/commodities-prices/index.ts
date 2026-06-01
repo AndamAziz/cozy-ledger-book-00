@@ -193,6 +193,54 @@ const RANGE_MAP: Record<string, { range: string; interval: string }> = {
   "5y": { range: "5y", interval: "1wk" },
 };
 
+const TWELVE_HISTORY_MAP: Record<string, { interval: string; outputsize: number }> = {
+  "1d": { interval: "5min", outputsize: 288 },
+  "5d": { interval: "15min", outputsize: 480 },
+  "1mo": { interval: "1h", outputsize: 720 },
+  "3mo": { interval: "1day", outputsize: 95 },
+  "6mo": { interval: "1day", outputsize: 190 },
+  "1y": { interval: "1day", outputsize: 370 },
+  "5y": { interval: "1week", outputsize: 270 },
+};
+
+async function fetchTwelveDataHistory(code: string, range: string): Promise<{ time: number; close: number; high: number; low: number }[] | null> {
+  const key = Deno.env.get("TWELVE_DATA_API_KEY");
+  const symbol = TWELVE_DATA_SYMBOLS[code];
+  if (!key || !symbol) return null;
+
+  const config = TWELVE_HISTORY_MAP[range] || TWELVE_HISTORY_MAP["1mo"];
+  const url = new URL("https://api.twelvedata.com/time_series");
+  url.searchParams.set("symbol", symbol);
+  url.searchParams.set("interval", config.interval);
+  url.searchParams.set("outputsize", String(config.outputsize));
+  url.searchParams.set("apikey", key);
+  url.searchParams.set("timezone", "UTC");
+  url.searchParams.set("order", "ASC");
+
+  try {
+    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) { await res.text(); return null; }
+    const data = await res.json();
+    if (data?.status === "error" || !Array.isArray(data?.values)) return null;
+
+    const candles = data.values
+      .map((v: Record<string, string>) => {
+        const time = Math.floor(new Date(`${v.datetime}Z`).getTime() / 1000);
+        const close = Number(v.close);
+        const high = Number(v.high);
+        const low = Number(v.low);
+        if (![time, close, high, low].every(Number.isFinite) || close <= 0 || high <= 0 || low <= 0) return null;
+        return { time, close: +close.toFixed(4), high: +high.toFixed(4), low: +low.toFixed(4) };
+      })
+      .filter(Boolean) as { time: number; close: number; high: number; low: number }[];
+
+    return candles.length > 0 ? candles : null;
+  } catch (e) {
+    console.error("Twelve Data spot history fetch error:", e);
+    return null;
+  }
+}
+
 function getLastClose(quotes: unknown): number | null {
   if (!Array.isArray(quotes)) return null;
   for (let i = quotes.length - 1; i >= 0; i -= 1) {
