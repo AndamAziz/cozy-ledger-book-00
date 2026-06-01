@@ -197,14 +197,14 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
 
       <div className="p-4 border-b border-[#1a1e2e]">
         <h3 className="text-sm font-semibold text-white mb-3">
-          {isOil ? 'Volume Pricing' : 'Price by Weight'}
+          {isOil ? bi('نرخ بەپێی قەبارە', 'Volume Pricing') : bi('نرخ بەپێی کێش', 'Price by Weight')}
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {isOil ? [
-            { label: '1 Barrel', factor: 1 },
-            { label: '10 Barrels', factor: 10 },
-            { label: '100 Barrels', factor: 100 },
-            { label: '1000 Barrels', factor: 1000 },
+            { label: bi('١ بەرمیل', '1 Barrel'), factor: 1 },
+            { label: bi('١٠ بەرمیل', '10 Barrels'), factor: 10 },
+            { label: bi('١٠٠ بەرمیل', '100 Barrels'), factor: 100 },
+            { label: bi('١٠٠٠ بەرمیل', '1000 Barrels'), factor: 1000 },
           ].map(w => (
             <div key={w.label} className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-3">
               <p className="text-[10px] text-[#848e9c] uppercase mb-1">{w.label}</p>
@@ -213,10 +213,10 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
               </p>
             </div>
           )) : [
-            { label: '1 Troy Oz', factor: 1 },
-            { label: '1 Gram', factor: 1 / 31.1035 },
-            { label: '10 Grams', factor: 10 / 31.1035 },
-            { label: '1 Kilogram', factor: 1000 / 31.1035 },
+            { label: bi('١ ئۆنسی ترۆی', '1 Troy Oz'), factor: 1 },
+            { label: bi('١ گرام', '1 Gram'), factor: 1 / 31.1035 },
+            { label: bi('١٠ گرام', '10 Grams'), factor: 10 / 31.1035 },
+            { label: bi('١ کیلۆگرام', '1 Kilogram'), factor: 1000 / 31.1035 },
           ].map(w => (
             <div key={w.label} className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-3">
               <p className="text-[10px] text-[#848e9c] uppercase mb-1">{w.label}</p>
