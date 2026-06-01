@@ -514,7 +514,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
             </>
           )}
           <button
-            onClick={() => chartRef.current?.timeScale().fitContent()}
+            onClick={() => {
+              delete savedViewsRef.current[`${name || ''}-${range}`];
+              chartRef.current?.timeScale().fitContent();
+            }}
             className="shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border text-[#848e9c] border-white/5 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
           >
             {bi('ڕێستکردنی بینین', 'Reset View')}
