@@ -31,7 +31,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
   // Build unified list with USD rate
   const items = useMemo<ConverterItem[]>(() => {
     const list: ConverterItem[] = [
-      { code: 'USD', name: 'US Dollar', flag: '🇺🇸', rateToUSD: 1, type: 'fiat' },
+      { code: 'USD', name: bi('دۆلاری ئەمریکی', 'US Dollar'), flag: '🇺🇸', rateToUSD: 1, type: 'fiat' },
     ];
     for (const c of currencies) {
       list.push({ code: c.code, name: c.name, flag: c.flag, rateToUSD: c.rate, type: 'fiat' });
