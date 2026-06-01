@@ -168,14 +168,17 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     };
   }, [chartType, pair, activeMAs, maType]);
 
-  // Apply layout preset without recreating the chart.
+  // Apply layout preset without recreating the chart. Recomputes whenever the
+  // preset values, the selected timeframe, or the auto-fit mode change so the
+  // Auto layout always matches the current candles + price scale.
   useEffect(() => {
     if (!chartRef.current) return;
     chartRef.current.applyOptions({
       rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
       timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
     });
-  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom]);
+    if (autoFit) chartRef.current.timeScale().fitContent();
+  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom, interval, autoFit]);
 
   // Update data
   useEffect(() => {
