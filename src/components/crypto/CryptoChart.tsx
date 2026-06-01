@@ -202,7 +202,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       chartRef.current.timeScale().fitContent();
       requestAnimationFrame(() => { restoringRef.current = false; });
     }
-  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom, interval, autoFit]);
+  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom, interval, autoFit, pair]);
 
   // Update data
   useEffect(() => {
