@@ -305,8 +305,14 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
       timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
     });
-    if (autoFit) chartRef.current.timeScale().fitContent();
-  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom, range, autoFit]);
+    // Only auto-fit when there's no remembered view for this metal+timeframe;
+    // otherwise the saved pan/zoom is restored by the data effect.
+    if (autoFit && !savedViewsRef.current[`${name || ''}-${range}`]) {
+      restoringRef.current = true;
+      chartRef.current.timeScale().fitContent();
+      requestAnimationFrame(() => { restoringRef.current = false; });
+    }
+  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom, range, autoFit, name]);
 
   // Update data
   useEffect(() => {
