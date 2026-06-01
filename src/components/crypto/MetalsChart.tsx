@@ -179,15 +179,17 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       const dirLabel = isUp ? bi('بەرزبوونەوە', 'Bullish') : bi('دابەزین', 'Bearish');
       const timeNum = typeof param.time === 'number' ? param.time : 0;
       const dateObj = new Date(timeNum * 1000);
-      const locale = language === 'en' ? 'en-GB' : 'ku-Arab';
+      // Use the browser's local timezone, force Latin (English) numerals globally
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const locale = language === 'en' ? 'en-GB-u-nu-latn' : 'ku-Arab-u-nu-latn';
       // Format the tooltip date/time appropriately for each range
       let dateOpts: Intl.DateTimeFormatOptions;
       if (range === '1d') {
         // Intraday: emphasise time of day
-        dateOpts = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
+        dateOpts = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false };
       } else if (range === '5d') {
         // Few days: weekday + time
-        dateOpts = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
+        dateOpts = { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false };
       } else if (range === '1mo' || range === '3mo') {
         // Weeks/months: full day date, no time
         dateOpts = { day: 'numeric', month: 'short', year: 'numeric' };
@@ -195,7 +197,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         // 1Y+: month + year
         dateOpts = { month: 'short', year: 'numeric' };
       }
-      const dateStr = dateObj.toLocaleString(locale, dateOpts);
+      const dateStr = dateObj.toLocaleString(locale, { ...dateOpts, timeZone: tz });
       const fmt = (n: number) => n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
       tooltipRef.current.innerHTML = `
