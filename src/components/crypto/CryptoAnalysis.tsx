@@ -52,6 +52,25 @@ interface TradeSummary {
   keyDrivers: KeyDriver[];
 }
 
+interface SentSignal {
+  id: string;
+  symbol: string | null;
+  recommendation: 'buy' | 'sell' | 'hold' | null;
+  confidence: number | null;
+  price: number | null;
+  entry: string | null;
+  targets: string[] | null;
+  stop_loss: string | null;
+  horizon_days: number | null;
+  risk_level: 'low' | 'medium' | 'high' | null;
+  headline: string | null;
+  timeframe: string | null;
+  telegram_message_id: number | null;
+  status: string;
+  error: string | null;
+  created_at: string;
+}
+
 type LangMode = 'ku' | 'en' | 'both';
 
 // Module-level bilingual helper: pick text for the active display language.
