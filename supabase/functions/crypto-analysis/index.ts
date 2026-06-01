@@ -25,17 +25,32 @@ serve(async (req) => {
   }
 
   try {
-    const { symbol, price, change24h, indicators, summary, timeframe, mode, imageBase64, images, chartTimeframe } =
+    const { symbol, price, change24h, indicators, summary, timeframe, mode, imageBase64, images, chartTimeframe, dayHigh, dayLow, lang } =
       await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
+    // Language selection: 'ku' (Kurdish only), 'en' (English only), 'both' (default)
+    const langMode: "ku" | "en" | "both" = lang === "ku" || lang === "en" ? lang : "both";
+    const narrativeLangRule =
+      langMode === "en"
+        ? "Respond ONLY in clear professional English."
+        : langMode === "ku"
+        ? "Respond ONLY in Kurdish Sorani (کوردیی ناوەندی)."
+        : "Respond in BOTH languages: write each section first in Kurdish Sorani (کوردیی ناوەندی), then immediately below it the SAME content in English (prefix the English line with 'EN: ').";
+
+    const hiLo =
+      dayHigh != null && dayLow != null
+        ? `\n24h high: $${dayHigh}\n24h low: $${dayLow}`
+        : "";
+
     const baseContext = `Asset: ${symbol}/USD
 Timeframe: ${timeframe}
 Current price: $${price}
-24h change: ${change24h}%
+24h change: ${change24h}%${hiLo}
 Technical signal summary: ${JSON.stringify(summary)}
+
 Indicators: ${JSON.stringify(indicators)}`;
 
     // ----- Chart image analysis mode (read candles from one or more uploaded screenshots) -----
