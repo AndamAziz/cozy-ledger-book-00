@@ -106,7 +106,25 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const indicators = useMemo(() => computeIndicators(candles), [candles]);
   const summary = useMemo(() => summarizeSignals(indicators, currentPrice), [indicators, currentPrice]);
 
+  // Highest / lowest price over the last 24h (1 day)
+  const { dayHigh, dayLow } = useMemo(() => {
+    if (!candles.length) return { dayHigh: null as number | null, dayLow: null as number | null };
+    const latest = candles[candles.length - 1].time;
+    const cutoff = latest - 86400; // 24h in seconds
+    const recent = candles.filter(c => c.time >= cutoff);
+    const use = recent.length ? recent : candles.slice(-24);
+    return {
+      dayHigh: Math.max(...use.map(c => c.high)),
+      dayLow: Math.min(...use.map(c => c.low)),
+    };
+  }, [candles]);
+
   const tfLabel = timeframeLabel ?? TIMEFRAMES.find(t => t.interval === interval)?.label ?? `${interval}m`;
+
+  // Language display helpers
+  const showKu = langMode === 'ku' || langMode === 'both';
+  const showEn = langMode === 'en' || langMode === 'both';
+  const biLabel = (ku: string, en: string) => (langMode === 'en' ? en : langMode === 'ku' ? ku : `${ku} · ${en}`);
 
   const rows: { label: string; value: string; signal: SignalType; hint?: string }[] = [];
   if (indicators.rsi != null) {
