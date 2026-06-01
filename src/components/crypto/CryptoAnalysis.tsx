@@ -177,6 +177,9 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     price: currentPrice,
     change24h: change24h.toFixed(2),
     timeframe: tfLabel,
+    dayHigh: dayHigh != null ? Number(dayHigh.toFixed(2)) : null,
+    dayLow: dayLow != null ? Number(dayLow.toFixed(2)) : null,
+    lang: langMode,
     summary,
     indicators: {
       rsi: indicators.rsi,
