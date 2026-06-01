@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { OHLCCandle, TIMEFRAMES } from '@/lib/krakenApi';
 import { computeIndicators, summarizeSignals, SignalType } from '@/lib/indicators';
-import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge } from 'lucide-react';
 
 interface CryptoAnalysisProps {
   symbol: string;
@@ -11,11 +11,43 @@ interface CryptoAnalysisProps {
   interval: number;
 }
 
+type Recommendation = 'buy' | 'sell' | 'hold';
+type RiskLevel = 'low' | 'medium' | 'high';
+
+interface TradeSummary {
+  recommendation: Recommendation;
+  confidence: number;
+  headline: string;
+  entry: string;
+  targets: string[];
+  stopLoss: string;
+  horizonDays: number;
+  riskLevel: RiskLevel;
+  riskNote: string;
+}
+
 const signalColor = (s: SignalType) =>
   s === 'buy' ? '#0ecb81' : s === 'sell' ? '#f6465d' : '#848e9c';
 
 const signalLabel = (s: SignalType) =>
   s === 'buy' ? 'کڕین' : s === 'sell' ? 'فرۆشتن' : 'بێلایەن';
+
+const recColor = (r: Recommendation) =>
+  r === 'buy' ? '#0ecb81' : r === 'sell' ? '#f6465d' : '#f0b90b';
+
+const recLabel = (r: Recommendation) =>
+  r === 'buy' ? 'کڕین' : r === 'sell' ? 'فرۆشتن' : 'هەڵگرتن';
+
+const riskColor = (r: RiskLevel) =>
+  r === 'low' ? '#0ecb81' : r === 'high' ? '#f6465d' : '#f0b90b';
+
+const riskLabel = (r: RiskLevel) =>
+  r === 'low' ? 'نزم' : r === 'high' ? 'بەرز' : 'مامناوەند';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function fmtDate(d: Date): string {
+  return `${d.getDate()}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`;
+}
 
 function fmt(n: number | null, digits = 2): string {
   if (n == null) return '—';
@@ -26,6 +58,8 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [tradeSummary, setTradeSummary] = useState<TradeSummary | null>(null);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
 
   const indicators = useMemo(() => computeIndicators(candles), [candles]);
   const summary = useMemo(() => summarizeSignals(indicators, currentPrice), [indicators, currentPrice]);
@@ -78,72 +112,104 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     });
   }
 
+  const buildBody = () => ({
+    symbol,
+    price: currentPrice,
+    change24h: change24h.toFixed(2),
+    timeframe: tfLabel,
+    summary,
+    indicators: {
+      rsi: indicators.rsi,
+      macd: indicators.macd,
+      bollinger: indicators.bollinger,
+      sma20: indicators.sma20,
+      sma50: indicators.sma50,
+      ema12: indicators.ema12,
+      ema26: indicators.ema26,
+    },
+  });
+
+  const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crypto-analysis`;
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+  };
+
+  const fetchSummary = async () => {
+    const resp = await fetch(fnUrl, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ ...buildBody(), mode: 'summary' }),
+    });
+    if (!resp.ok) {
+      let msg = 'هەڵەیەک ڕوویدا لە دروستکردنی پوختە.';
+      try {
+        const j = await resp.json();
+        if (j?.error) msg = j.error;
+      } catch { /* ignore */ }
+      throw new Error(msg);
+    }
+    const j = await resp.json();
+    setTradeSummary(j.summary as TradeSummary);
+    setGeneratedAt(j.generatedAt as string);
+  };
+
+  const streamNarrative = async () => {
+    const resp = await fetch(fnUrl, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify(buildBody()),
+    });
+
+    if (!resp.ok || !resp.body) {
+      let msg = 'هەڵەیەک ڕوویدا لە شیکاری AI.';
+      try {
+        const j = await resp.json();
+        if (j?.error) msg = j.error;
+      } catch { /* ignore */ }
+      throw new Error(msg);
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let acc = '';
+    let done = false;
+    while (!done) {
+      const { done: d, value } = await reader.read();
+      if (d) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buffer.indexOf('\n')) !== -1) {
+        let line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (line.endsWith('\r')) line = line.slice(0, -1);
+        if (line.startsWith(':') || line.trim() === '') continue;
+        if (!line.startsWith('data: ')) continue;
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === '[DONE]') { done = true; break; }
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) { acc += content; setAiText(acc); }
+        } catch {
+          buffer = line + '\n' + buffer;
+          break;
+        }
+      }
+    }
+  };
+
   const runAiAnalysis = async () => {
     setAiLoading(true);
     setAiError(null);
     setAiText('');
+    setTradeSummary(null);
+    setGeneratedAt(null);
     try {
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crypto-analysis`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          symbol,
-          price: currentPrice,
-          change24h: change24h.toFixed(2),
-          timeframe: tfLabel,
-          summary,
-          indicators: {
-            rsi: indicators.rsi,
-            macd: indicators.macd,
-            bollinger: indicators.bollinger,
-            sma20: indicators.sma20,
-            sma50: indicators.sma50,
-            ema12: indicators.ema12,
-            ema26: indicators.ema26,
-          },
-        }),
-      });
-
-      if (!resp.ok || !resp.body) {
-        let msg = 'هەڵەیەک ڕوویدا لە شیکاری AI.';
-        try {
-          const j = await resp.json();
-          if (j?.error) msg = j.error;
-        } catch { /* ignore */ }
-        throw new Error(msg);
-      }
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let acc = '';
-      let done = false;
-      while (!done) {
-        const { done: d, value } = await reader.read();
-        if (d) break;
-        buffer += decoder.decode(value, { stream: true });
-        let idx: number;
-        while ((idx = buffer.indexOf('\n')) !== -1) {
-          let line = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 1);
-          if (line.endsWith('\r')) line = line.slice(0, -1);
-          if (line.startsWith(':') || line.trim() === '') continue;
-          if (!line.startsWith('data: ')) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === '[DONE]') { done = true; break; }
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) { acc += content; setAiText(acc); }
-          } catch {
-            buffer = line + '\n' + buffer;
-            break;
-          }
-        }
-      }
+      // First the fast structured summary, then the detailed narrative
+      await fetchSummary();
+      await streamNarrative();
     } catch (e) {
       setAiError(e instanceof Error ? e.message : 'هەڵەیەک ڕوویدا.');
     } finally {
@@ -153,6 +219,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
   const hasData = candles.length > 0;
   const gaugePct = (summary.score + 100) / 2; // 0..100
+
+  const targetDate = generatedAt && tradeSummary
+    ? fmtDate(new Date(new Date(generatedAt).getTime() + tradeSummary.horizonDays * 86400000))
+    : null;
 
   return (
     <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
@@ -225,7 +295,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#f0b90b] text-black disabled:opacity-50 active:scale-95 transition"
           >
             {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {aiLoading ? 'شیکاری...' : aiText ? 'دووبارە شیکاری' : 'شیکاری بکە'}
+            {aiLoading ? 'شیکاری...' : (aiText || tradeSummary) ? 'دووبارە شیکاری' : 'شیکاری بکە'}
           </button>
         </div>
 
@@ -236,10 +306,83 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           </div>
         )}
 
+        {/* Structured trade summary */}
+        {tradeSummary && (
+          <div className="mb-4 rounded-xl border border-[#1a1e2e] overflow-hidden">
+            {/* Recommendation header */}
+            <div
+              className="flex items-center justify-between px-4 py-3"
+              style={{ backgroundColor: recColor(tradeSummary.recommendation) + '1a' }}
+            >
+              <div className="flex items-center gap-2" style={{ color: recColor(tradeSummary.recommendation) }}>
+                {tradeSummary.recommendation === 'buy' ? <TrendingUp className="h-5 w-5" /> : tradeSummary.recommendation === 'sell' ? <TrendingDown className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
+                <div>
+                  <div className="text-base font-extrabold">{recLabel(tradeSummary.recommendation)}</div>
+                  <div className="text-[10px] text-[#848e9c]">پێشنیاری سەرەکی</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="flex items-center gap-1 text-sm font-bold text-white"><Gauge className="h-3.5 w-3.5 text-[#848e9c]" />متمانە {tradeSummary.confidence}%</div>
+                <div className="h-1.5 w-24 mt-1 rounded-full bg-[#1a1e2e] overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${tradeSummary.confidence}%`, backgroundColor: recColor(tradeSummary.recommendation) }} />
+                </div>
+              </div>
+            </div>
+
+            {tradeSummary.headline && (
+              <div className="px-4 py-2 text-sm text-[#d1d5db] border-b border-[#1a1e2e]">{tradeSummary.headline}</div>
+            )}
+
+            {/* Levels grid */}
+            <div className="grid grid-cols-2 gap-px bg-[#1a1e2e]">
+              <div className="bg-[#0d1117] px-4 py-2.5">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><LogIn className="h-3 w-3" />خاڵی چوونەژوورەوە</div>
+                <div className="text-sm font-mono text-white mt-0.5">{tradeSummary.entry}</div>
+              </div>
+              <div className="bg-[#0d1117] px-4 py-2.5">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><OctagonX className="h-3 w-3 text-[#f6465d]" />وەستانی زیان</div>
+                <div className="text-sm font-mono text-[#f6465d] mt-0.5">{tradeSummary.stopLoss}</div>
+              </div>
+              <div className="bg-[#0d1117] px-4 py-2.5 col-span-2">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><Target className="h-3 w-3 text-[#0ecb81]" />ئامانجەکانی قازانج</div>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {tradeSummary.targets.map((t, i) => (
+                    <span key={i} className="text-xs font-mono px-2 py-0.5 rounded bg-[#0ecb81]/10 text-[#0ecb81]">
+                      ئامانج {i + 1}: {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-[#0d1117] px-4 py-2.5">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><CalendarClock className="h-3 w-3" />ماوەی پێشبینیکراو</div>
+                <div className="text-sm text-white mt-0.5">{tradeSummary.horizonDays} ڕۆژ</div>
+                {targetDate && <div className="text-[10px] text-[#848e9c]">تا {targetDate}</div>}
+              </div>
+              <div className="bg-[#0d1117] px-4 py-2.5">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><ShieldAlert className="h-3 w-3" style={{ color: riskColor(tradeSummary.riskLevel) }} />ئاستی مەترسی</div>
+                <div className="text-sm font-bold mt-0.5" style={{ color: riskColor(tradeSummary.riskLevel) }}>{riskLabel(tradeSummary.riskLevel)}</div>
+              </div>
+            </div>
+
+            {tradeSummary.riskNote && (
+              <div className="flex items-start gap-2 px-4 py-2.5 text-xs text-[#d1d5db] border-t border-[#1a1e2e]" style={{ backgroundColor: riskColor(tradeSummary.riskLevel) + '0d' }}>
+                <ShieldAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: riskColor(tradeSummary.riskLevel) }} />
+                <span>{tradeSummary.riskNote}</span>
+              </div>
+            )}
+
+            {generatedAt && (
+              <div className="px-4 py-1.5 text-[10px] text-[#848e9c] border-t border-[#1a1e2e]">
+                بەرواری شیکاری: {fmtDate(new Date(generatedAt))} · ئەمە ڕاوێژی دارایی نییە
+              </div>
+            )}
+          </div>
+        )}
+
         {aiText ? (
           <div className="text-sm text-[#d1d5db] whitespace-pre-wrap leading-relaxed">{aiText}</div>
-        ) : !aiLoading && !aiError ? (
-          <div className="text-xs text-[#848e9c]">کلیک لە "شیکاری بکە" بکە بۆ وەرگرتنی شیکارییەکی تەواوی بازاڕ بە زمانی کوردی.</div>
+        ) : !aiLoading && !aiError && !tradeSummary ? (
+          <div className="text-xs text-[#848e9c]">کلیک لە "شیکاری بکە" بکە بۆ وەرگرتنی پوختەی کڕین/فرۆشتن، ئاستەکان، بەروار و هەڵسەنگاندنی مەترسی بە زمانی کوردی.</div>
         ) : null}
       </div>
     </div>
