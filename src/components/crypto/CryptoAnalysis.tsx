@@ -240,6 +240,94 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     }
   };
 
+  // ---- Chart image analysis ----
+  const consumeStream = async (resp: Response, onChunk: (s: string) => void) => {
+    const reader = resp.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let acc = '';
+    let done = false;
+    while (!done) {
+      const { done: d, value } = await reader.read();
+      if (d) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buffer.indexOf('\n')) !== -1) {
+        let line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (line.endsWith('\r')) line = line.slice(0, -1);
+        if (line.startsWith(':') || line.trim() === '') continue;
+        if (!line.startsWith('data: ')) continue;
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === '[DONE]') { done = true; break; }
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) { acc += content; onChunk(acc); }
+        } catch {
+          buffer = line + '\n' + buffer;
+          break;
+        }
+      }
+    }
+  };
+
+  const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setImageError('تکایە تەنها وێنە هەڵبژێرە.');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setImageError('قەبارەی وێنە زۆر گەورەیە (زۆرترین ٨MB).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setImagePreview(dataUrl);
+      setImageError(null);
+      setImageText('');
+      analyzeImage(dataUrl);
+    };
+    reader.onerror = () => setImageError('نەتوانرا وێنە بخوێنرێتەوە.');
+    reader.readAsDataURL(file);
+  };
+
+  const analyzeImage = async (dataUrl: string) => {
+    setImageLoading(true);
+    setImageError(null);
+    setImageText('');
+    try {
+      const resp = await fetch(fnUrl, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ mode: 'image', symbol, imageBase64: dataUrl }),
+      });
+      if (!resp.ok || !resp.body) {
+        let msg = 'هەڵەیەک ڕوویدا لە شیکاری وێنە.';
+        try {
+          const j = await resp.json();
+          if (j?.error) msg = j.error;
+        } catch { /* ignore */ }
+        throw new Error(msg);
+      }
+      await consumeStream(resp, setImageText);
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'هەڵەیەک ڕوویدا.');
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  const clearImage = () => {
+    setImagePreview(null);
+    setImageText('');
+    setImageError(null);
+  };
+
   const hasData = candles.length > 0;
   const gaugePct = (summary.score + 100) / 2; // 0..100
 
