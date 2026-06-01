@@ -145,7 +145,7 @@ All text fields MUST be written in Kurdish Sorani (کوردیی ناوەندی).
 Base your decision strictly on the provided price and indicator data.
 Provide concrete numeric price levels derived from the current price and indicators.
 The stop-loss MUST be derived from a specific indicator level (e.g. the Bollinger lower/upper band, SMA20/SMA50, a recent swing level, or an RSI-based invalidation), NOT a random round number. Pick the single most relevant indicator for the stop and place the stop just beyond it.
-Always fill stopLossIndicator with the indicator the stop is based on, and stopLossBasis with a clear 1-2 sentence Kurdish explanation that names the indicator, its value, and why a break of that level invalidates the trade — so the user understands transparently.
+Always fill stopLossIndicator with the indicator the stop is based on, stopLossIndicatorValue with the EXACT numeric level of that indicator (e.g. "SMA20 = $2,335" or "Bollinger lower band = $2,328"), stopLossBasis with a clear 1-2 sentence Kurdish explanation, and stopLossBasisEn with the SAME explanation in clear English. Both explanations must name the indicator, its exact value, the resulting stop-loss price, and why a break of that level invalidates the trade — so the user understands transparently in both languages.
 Estimate a realistic time horizon for the trade in days based on the timeframe.
 Never guarantee outcomes; this is educational, not financial advice.`;
 
@@ -208,10 +208,20 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                       enum: ["RSI", "MACD", "Bollinger", "SMA", "EMA", "Swing"],
                       description: "The indicator/level the stop-loss is based on.",
                     },
+                    stopLossIndicatorValue: {
+                      type: "string",
+                      description:
+                        "The EXACT numeric level of the indicator the stop is based on, formatted with the indicator name, e.g. \"SMA20 = $2,335\" or \"Bollinger lower band = $2,328\".",
+                    },
                     stopLossBasis: {
                       type: "string",
                       description:
-                        "1-2 sentences in Kurdish Sorani explaining WHY the stop-loss sits at this level, naming the indicator and its value, and what a break of it means.",
+                        "1-2 sentences in Kurdish Sorani explaining WHY the stop-loss sits at this level, naming the indicator and its exact value, and what a break of it means.",
+                    },
+                    stopLossBasisEn: {
+                      type: "string",
+                      description:
+                        "The SAME explanation as stopLossBasis but in clear English: indicator name, exact value, resulting stop-loss price, and what a break of it means.",
                     },
                     horizonDays: {
                       type: "integer",
@@ -273,7 +283,9 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                     "targets",
                     "stopLoss",
                     "stopLossIndicator",
+                    "stopLossIndicatorValue",
                     "stopLossBasis",
+                    "stopLossBasisEn",
                     "horizonDays",
                     "riskLevel",
                     "riskNote",
