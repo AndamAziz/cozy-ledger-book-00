@@ -525,7 +525,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-sm font-bold text-white">
             <Sparkles className="h-4 w-4 text-[#f0b90b]" />
-            شیکاری زیرەک (AI)
+            {biLabel('شیکاری زیرەک (AI)', 'AI analysis')}
           </div>
           <button
             onClick={runAiAnalysis}
