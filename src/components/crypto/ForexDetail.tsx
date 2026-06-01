@@ -52,7 +52,7 @@ export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetail
                     isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
                   }`}>
                     {isNeutral ? <Minus className="h-3 w-3" /> : isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                    {isNeutral ? 'No change' : `${isPositive ? '+' : ''}${c.change.toFixed(2)}%`}
+                    {isNeutral ? bi('بێ گۆڕان', 'No change') : `${isPositive ? '+' : ''}${c.change.toFixed(2)}%`}
                   </div>
                 </div>
               );
