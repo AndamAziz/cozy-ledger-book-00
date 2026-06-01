@@ -13,6 +13,14 @@ interface CryptoAnalysisProps {
 
 type Recommendation = 'buy' | 'sell' | 'hold';
 type RiskLevel = 'low' | 'medium' | 'high';
+type Influence = 'high' | 'medium' | 'low';
+
+interface KeyDriver {
+  indicator: string;
+  effect: SignalType;
+  influence: Influence;
+  note: string;
+}
 
 interface TradeSummary {
   recommendation: Recommendation;
@@ -24,6 +32,8 @@ interface TradeSummary {
   horizonDays: number;
   riskLevel: RiskLevel;
   riskNote: string;
+  reasoning: string;
+  keyDrivers: KeyDriver[];
 }
 
 const signalColor = (s: SignalType) =>
