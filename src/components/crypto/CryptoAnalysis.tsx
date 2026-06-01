@@ -117,6 +117,21 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [isAdmin, setIsAdmin] = useState(false);
   const [sending, setSending] = useState(false);
   const [sentOk, setSentOk] = useState(false);
+  const [sentSignals, setSentSignals] = useState<SentSignal[]>([]);
+  const [signalsLoading, setSignalsLoading] = useState(false);
+  const [showSignals, setShowSignals] = useState(false);
+
+  const fetchSentSignals = async () => {
+    setSignalsLoading(true);
+    const { data } = await supabase
+      .from('telegram_signals')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    setSentSignals((data ?? []) as SentSignal[]);
+    setSignalsLoading(false);
+  };
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -127,7 +142,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         .select('role')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (active) setIsAdmin(data?.role === 'admin');
+      if (active && data?.role === 'admin') {
+        setIsAdmin(true);
+        fetchSentSignals();
+      }
     })();
     return () => { active = false; };
   }, []);
