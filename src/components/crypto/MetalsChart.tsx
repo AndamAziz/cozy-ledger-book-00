@@ -345,12 +345,24 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       }
     }
 
-    // Only reset the visible range when switching metal / timeframe / chart
+    // Track the active view key (metal+timeframe) so live ticks save to it.
+    const viewKey = `${name || ''}-${range}`;
+    currentViewKeyRef.current = viewKey;
+
+    // Only adjust the visible range when switching metal / timeframe / chart
     // type. Live price ticks keep the user's current zoom & pan untouched.
     const fitKey = `${name || ''}-${range}-${chartType}`;
     if (lastFitKeyRef.current !== fitKey) {
       lastFitKeyRef.current = fitKey;
-      chartRef.current?.timeScale().fitContent();
+      const ts = chartRef.current?.timeScale();
+      const saved = savedViewsRef.current[viewKey];
+      restoringRef.current = true;
+      if (saved) {
+        try { ts?.setVisibleLogicalRange(saved); } catch { ts?.fitContent(); }
+      } else {
+        ts?.fitContent();
+      }
+      requestAnimationFrame(() => { restoringRef.current = false; });
     }
   }, [candles, activeMAs, maType, chartType, name, range]);
 
