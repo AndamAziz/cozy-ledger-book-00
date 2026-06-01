@@ -182,6 +182,8 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
       <MetalsChart
         candles={historyCandles}
         isLoading={historyLoading}
+        error={historyError}
+        onRetry={refetchHistory}
         accentColor={accentColor}
         range={chartRange}
         onRangeChange={setChartRange}
