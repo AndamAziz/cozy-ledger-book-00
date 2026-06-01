@@ -112,9 +112,10 @@ async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sour
     return { prices: metalsSpotCache, sources: ["spot-cache"] };
   }
 
-  const [stooq, twelveData, goldApi] = await Promise.all([
+  // Use Stooq + GoldAPI for live spot prices. TwelveData has only 8 credits/min on the
+  // free tier, so we reserve it exclusively for spot history candles (handleHistory).
+  const [stooq, goldApi] = await Promise.all([
     fetchStooqSpotMetals(),
-    fetchTwelveDataMetals(),
     fetchGoldApiMetals(),
   ]);
 
@@ -124,9 +125,6 @@ async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sour
     if (stooq[code]) {
       prices[code] = stooq[code];
       if (!sources.includes("stooq-spot")) sources.push("stooq-spot");
-    } else if (twelveData[code]) {
-      prices[code] = twelveData[code];
-      if (!sources.includes("twelvedata-spot")) sources.push("twelvedata-spot");
     } else if (goldApi[code]) {
       prices[code] = goldApi[code];
       if (!sources.includes("goldapi-spot")) sources.push("goldapi-spot");
