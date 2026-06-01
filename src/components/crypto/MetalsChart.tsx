@@ -93,6 +93,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) return;
+    // Fresh chart instance -> allow one auto-fit on the next data update.
+    lastFitKeyRef.current = '';
 
     if (chartRef.current) {
       chartRef.current.remove();
