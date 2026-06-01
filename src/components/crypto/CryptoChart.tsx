@@ -195,7 +195,13 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
       timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
     });
-    if (autoFit) chartRef.current.timeScale().fitContent();
+    // Only auto-fit when there's no remembered view for this symbol+timeframe;
+    // otherwise the saved pan/zoom is restored by the data effect.
+    if (autoFit && !savedViewsRef.current[`${pair}-${interval}`]) {
+      restoringRef.current = true;
+      chartRef.current.timeScale().fitContent();
+      requestAnimationFrame(() => { restoringRef.current = false; });
+    }
   }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom, interval, autoFit]);
 
   // Update data
