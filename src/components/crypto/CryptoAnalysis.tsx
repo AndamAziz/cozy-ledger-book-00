@@ -320,7 +320,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       await fetchSummary();
       await streamNarrative();
     } catch (e) {
-      setAiError(e instanceof Error ? e.message : 'هەڵەیەک ڕوویدا.');
+      setAiError(e instanceof Error ? e.message : biLabel('هەڵەیەک ڕوویدا.', 'Something went wrong.'));
     } finally {
       setAiLoading(false);
     }
