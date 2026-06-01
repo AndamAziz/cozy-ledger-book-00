@@ -225,6 +225,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       seriesRef.current = null;
       priceLineRef.current = null;
       maSeriesRefs.current = {};
+      if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     };
   }, [chartType, range, isUp, activeMAs, maType]);
 
