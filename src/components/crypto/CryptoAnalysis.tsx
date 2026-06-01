@@ -131,7 +131,12 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const [chartTimeframe, setChartTimeframe] = useState('1H');
+  // Auto-detected buy/sell trade plan from the uploaded chart image(s)
+  const [imageSummary, setImageSummary] = useState<TradeSummary | null>(null);
+  const [imageGeneratedAt, setImageGeneratedAt] = useState<string | null>(null);
+  const [imageSummaryLoading, setImageSummaryLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   // Admin-only Telegram signal sending
   const [isAdmin, setIsAdmin] = useState(false);
