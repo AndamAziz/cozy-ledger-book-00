@@ -31,7 +31,9 @@ interface TradeSummary {
   targets: string[];
   stopLoss: string;
   stopLossIndicator?: string;
+  stopLossIndicatorValue?: string;
   stopLossBasis?: string;
+  stopLossBasisEn?: string;
   horizonDays: number;
   riskLevel: RiskLevel;
   riskNote: string;
