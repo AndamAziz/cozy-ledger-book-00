@@ -497,9 +497,9 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
       {/* Indicators table */}
       <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl overflow-hidden">
-        <div className="px-4 py-2.5 border-b border-[#1a1e2e] text-sm font-bold text-white">نیشاندەرە تەکنیکییەکان</div>
+        <div className="px-4 py-2.5 border-b border-[#1a1e2e] text-sm font-bold text-white">{biLabel('نیشاندەرە تەکنیکییەکان', 'Technical indicators')}</div>
         {!hasData ? (
-          <div className="p-6 text-center text-[#848e9c] text-sm">دانەی نرخ بەردەست نییە...</div>
+          <div className="p-6 text-center text-[#848e9c] text-sm">{biLabel('دانەی نرخ بەردەست نییە...', 'No price data available...')}</div>
         ) : (
           <div className="divide-y divide-[#1a1e2e]">
             {rows.map((r) => (
