@@ -166,7 +166,16 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       seriesRef.current = null;
       maSeriesRefs.current = {};
     };
-  }, [chartType, pair, activeMAs, maType, rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom]);
+  }, [chartType, pair, activeMAs, maType]);
+
+  // Apply layout preset without recreating the chart.
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.applyOptions({
+      rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
+      timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
+    });
+  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom]);
 
   // Update data
   useEffect(() => {
