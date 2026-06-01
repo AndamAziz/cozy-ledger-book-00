@@ -220,10 +220,34 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                       type: "string",
                       description: "One short sentence in Kurdish Sorani.",
                     },
+                    headlineEn: {
+                      type: "string",
+                      description: "The SAME short sentence as headline, in clear English.",
+                    },
                     entry: {
                       type: "string",
                       description:
                         "Suggested entry price or zone (numbers, e.g. $64,200 - $64,800).",
+                    },
+                    entryTiming: {
+                      type: "string",
+                      description:
+                        "Kurdish Sorani: WHEN to buy — the exact price area or indicator condition that should trigger entry.",
+                    },
+                    entryTimingEn: {
+                      type: "string",
+                      description:
+                        "The SAME as entryTiming in clear English: when to buy (price area / condition).",
+                    },
+                    exitTiming: {
+                      type: "string",
+                      description:
+                        "Kurdish Sorani: WHEN to sell — the price area/condition to take profit, and when to exit if it goes wrong.",
+                    },
+                    exitTimingEn: {
+                      type: "string",
+                      description:
+                        "The SAME as exitTiming in clear English: when to sell / take profit / exit.",
                     },
                     targets: {
                       type: "array",
