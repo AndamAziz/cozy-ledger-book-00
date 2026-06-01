@@ -1039,7 +1039,12 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 {selectedSignal.entry && (
                   <div className="bg-[#0b0e16] px-3 py-2.5">
                     <div className="flex items-center gap-1 text-[10px] text-[#848e9c]"><LogIn className="h-3 w-3" />{biLabel('خاڵی چوونەژوورەوە', 'Entry')}</div>
-                    <div className="text-sm font-mono text-white mt-0.5">{selectedSignal.entry}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-sm font-mono text-white">{selectedSignal.entry}</span>
+                      <button onClick={() => copyToClipboard(selectedSignal.entry!, 'entry')} className="opacity-60 hover:opacity-100 transition">
+                        {copiedKey === 'entry' ? <Check className="h-3 w-3 text-[#0ecb81]" /> : <Copy className="h-3 w-3 text-[#848e9c]" />}
+                      </button>
+                    </div>
                   </div>
                 )}
                 {selectedSignal.stop_loss && (
