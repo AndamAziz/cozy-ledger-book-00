@@ -4,7 +4,7 @@ import { computeIndicators, summarizeSignals, SignalType } from '@/lib/indicator
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft, Copy, Check } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 interface CryptoAnalysisProps {
@@ -141,6 +141,18 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [signalsLoading, setSignalsLoading] = useState(false);
   const [showSignals, setShowSignals] = useState(false);
   const [selectedSignal, setSelectedSignal] = useState<SentSignal | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      toast({ title: biLabel('کۆپی کرا!', 'Copied!') });
+      setTimeout(() => setCopiedKey((prev) => (prev === key ? null : prev)), 1500);
+    } catch {
+      toast({ title: biLabel('کۆپی سەرکەوتوو نەبوو', 'Copy failed'), variant: 'destructive' });
+    }
+  };
 
   const fetchSentSignals = async () => {
     setSignalsLoading(true);
@@ -826,7 +838,26 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
             )}
 
             {isAdmin && (
-              <div className="px-4 py-2.5 border-t border-[#1a1e2e]">
+              <div className="px-4 py-2.5 border-t border-[#1a1e2e] space-y-2">
+                <button
+                  onClick={() => {
+                    if (!tradeSummary) return;
+                    const lines = [
+                      `📊 ${symbol} — ${recLabel(tradeSummary.recommendation, langMode)}`,
+                      `Entry: ${tradeSummary.entry}`,
+                      ...tradeSummary.targets.map((t, i) => `Target ${i + 1}: ${t}`),
+                      `Stop Loss: ${tradeSummary.stopLoss}`,
+                      `Confidence: ${tradeSummary.confidence}%`,
+                      `Risk: ${riskLabel(tradeSummary.riskLevel, langMode)}`,
+                      tradeSummary.headlineEn || tradeSummary.headline ? `Note: ${tradeSummary.headlineEn || tradeSummary.headline}` : null,
+                    ].filter(Boolean) as string[];
+                    copyToClipboard(lines.join('\n'), 'live-signal');
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
+                >
+                  {copiedKey === 'live-signal' ? <Check className="h-3.5 w-3.5 text-[#0ecb81]" /> : <Copy className="h-3.5 w-3.5" />}
+                  {biLabel('کۆپی سیگنال', 'Copy signal')}
+                </button>
                 <button
                   onClick={sendSignal}
                   disabled={sending}
@@ -994,8 +1025,32 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                   {selectedSignal.status === 'sent' ? biLabel('نێردرا', 'Sent') : biLabel('نەنێردرا', 'Failed')}
                 </span>
                 {selectedSignal.telegram_message_id && (
-                  <span className="text-[10px] text-[#848e9c]">Msg #{selectedSignal.telegram_message_id}</span>
+                  <button
+                    onClick={() => copyToClipboard(String(selectedSignal.telegram_message_id), 'tg-msg-id')}
+                    className="flex items-center gap-1 text-[10px] text-[#848e9c] hover:text-white transition"
+                  >
+                    <span>Msg #{selectedSignal.telegram_message_id}</span>
+                    {copiedKey === 'tg-msg-id' ? <Check className="h-3 w-3 text-[#0ecb81]" /> : <Copy className="h-3 w-3" />}
+                  </button>
                 )}
+                <button
+                  onClick={() => {
+                    const lines = [
+                      `📊 ${selectedSignal.symbol ?? '—'} — ${recLabel(selectedSignal.recommendation ?? 'hold', langMode)}`,
+                      selectedSignal.entry ? `Entry: ${selectedSignal.entry}` : null,
+                      ...(selectedSignal.targets?.map((t, i) => `Target ${i + 1}: ${t}`) ?? []),
+                      selectedSignal.stop_loss ? `Stop Loss: ${selectedSignal.stop_loss}` : null,
+                      selectedSignal.confidence != null ? `Confidence: ${selectedSignal.confidence}%` : null,
+                      selectedSignal.risk_level ? `Risk: ${riskLabel(selectedSignal.risk_level, langMode)}` : null,
+                      selectedSignal.headline ? `Note: ${selectedSignal.headline}` : null,
+                    ].filter(Boolean) as string[];
+                    copyToClipboard(lines.join('\n'), 'signal-all');
+                  }}
+                  className="ml-auto flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
+                >
+                  {copiedKey === 'signal-all' ? <Check className="h-3 w-3 text-[#0ecb81]" /> : <Copy className="h-3 w-3" />}
+                  {biLabel('کۆپی سیگنال', 'Copy signal')}
+                </button>
               </div>
 
               {/* Levels grid */}
@@ -1003,13 +1058,23 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 {selectedSignal.entry && (
                   <div className="bg-[#0b0e16] px-3 py-2.5">
                     <div className="flex items-center gap-1 text-[10px] text-[#848e9c]"><LogIn className="h-3 w-3" />{biLabel('خاڵی چوونەژوورەوە', 'Entry')}</div>
-                    <div className="text-sm font-mono text-white mt-0.5">{selectedSignal.entry}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-sm font-mono text-white">{selectedSignal.entry}</span>
+                      <button onClick={() => copyToClipboard(selectedSignal.entry!, 'entry')} className="opacity-60 hover:opacity-100 transition">
+                        {copiedKey === 'entry' ? <Check className="h-3 w-3 text-[#0ecb81]" /> : <Copy className="h-3 w-3 text-[#848e9c]" />}
+                      </button>
+                    </div>
                   </div>
                 )}
                 {selectedSignal.stop_loss && (
                   <div className="bg-[#0b0e16] px-3 py-2.5">
                     <div className="flex items-center gap-1 text-[10px] text-[#848e9c]"><OctagonX className="h-3 w-3 text-[#f6465d]" />{biLabel('وەستانی زیان', 'Stop Loss')}</div>
-                    <div className="text-sm font-mono text-[#f6465d] mt-0.5">{selectedSignal.stop_loss}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-sm font-mono text-[#f6465d]">{selectedSignal.stop_loss}</span>
+                      <button onClick={() => copyToClipboard(selectedSignal.stop_loss!, 'sl')} className="opacity-60 hover:opacity-100 transition">
+                        {copiedKey === 'sl' ? <Check className="h-3 w-3 text-[#0ecb81]" /> : <Copy className="h-3 w-3 text-[#848e9c]" />}
+                      </button>
+                    </div>
                   </div>
                 )}
                 {selectedSignal.confidence != null && (
@@ -1052,9 +1117,14 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {selectedSignal.targets.map((t, i) => (
-                      <span key={i} className="text-xs font-mono px-2.5 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81]">
+                      <button
+                        key={i}
+                        onClick={() => copyToClipboard(t, `tp-${i}`)}
+                        className="flex items-center gap-1 text-xs font-mono px-2.5 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81] hover:bg-[#0ecb81]/20 active:scale-95 transition"
+                      >
                         {biLabel('ئامانج', 'Target')} {i + 1}: {t}
-                      </span>
+                        {copiedKey === `tp-${i}` ? <Check className="h-3 w-3 text-[#0ecb81]" /> : <Copy className="h-3 w-3" />}
+                      </button>
                     ))}
                   </div>
                 </div>
