@@ -21,13 +21,19 @@ interface KeyDriver {
   effect: SignalType;
   influence: Influence;
   note: string;
+  noteEn?: string;
 }
 
 interface TradeSummary {
   recommendation: Recommendation;
   confidence: number;
   headline: string;
+  headlineEn?: string;
   entry: string;
+  entryTiming?: string;
+  entryTimingEn?: string;
+  exitTiming?: string;
+  exitTimingEn?: string;
   targets: string[];
   stopLoss: string;
   stopLossIndicator?: string;
@@ -37,7 +43,9 @@ interface TradeSummary {
   horizonDays: number;
   riskLevel: RiskLevel;
   riskNote: string;
+  riskNoteEn?: string;
   reasoning: string;
+  reasoningEn?: string;
   keyDrivers: KeyDriver[];
 }
 
