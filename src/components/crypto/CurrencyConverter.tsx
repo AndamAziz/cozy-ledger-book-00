@@ -134,7 +134,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
       <div className="relative w-full max-w-md bg-[#0d1117] border border-[#1a1e2e] rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a1e2e]">
-          <h2 className="text-sm font-bold text-white">💱 Currency Converter</h2>
+          <h2 className="text-sm font-bold text-white">💱 {bi('گۆڕەری دراو', 'Currency Converter')}</h2>
           <button onClick={onClose} className="p-1 hover:bg-[#1a1e2e] rounded-lg transition-colors">
             <X className="h-4 w-4 text-[#848e9c]" />
           </button>
