@@ -287,10 +287,12 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
             <div className="flex flex-col items-center gap-3 text-center max-w-[260px]">
               <AlertTriangle className="w-7 h-7 text-[#f0b90b]" />
               <span className="text-xs font-medium text-white">
-                {error || 'No chart data available for this timeframe.'}
+                {error || (language === 'en' ? 'No chart data available for this timeframe.' : 'هیچ داتایەکی چارت بۆ ئەم ماوەیە بەردەست نییە.')}
               </span>
               <span className="text-[10px] text-[#848e9c] leading-relaxed">
-                Spot data may be briefly rate-limited. We never show futures prices instead — try again in a moment or pick another timeframe.
+                {language === 'en'
+                  ? 'Spot data may be briefly rate-limited. We never show futures prices instead — try again in a moment or pick another timeframe.'
+                  : 'لەوانەیە داتای spot بۆ ماوەیەکی کورت سنووردار بێت. هەرگیز نرخی futures جێگرەوە ناکەین — تکایە دوای چەند چرکەیەک هەوڵبدەرەوە یان ماوەیەکی تر هەڵبژێرە.'}
               </span>
               {onRetry && (
                 <button
@@ -299,7 +301,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
                   style={{ backgroundColor: accentColor }}
                 >
                   <RefreshCw className="w-3 h-3" />
-                  Retry
+                  {language === 'en' ? 'Retry' : 'دووبارە'}
                 </button>
               )}
             </div>
