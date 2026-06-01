@@ -29,7 +29,16 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
 
-  // Chart spacing controls
+  // Auto layout: spacing computed from chart width + candle count + timeframe.
+  const [autoFit, setAutoFit] = useState(true);
+  const [containerWidth, setContainerWidth] = useState(600);
+
+  const INTRADAY = interval <= 60;
+  const preset = autoFit
+    ? computeChartPreset(containerWidth, candles.length, INTRADAY)
+    : { rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom };
+
+  // Manual override values (used only when autoFit is off).
   const [rightOffset, setRightOffset] = useState(12);
   const [barSpacing, setBarSpacing] = useState(8);
   const [minBarSpacing, setMinBarSpacing] = useState(4);
