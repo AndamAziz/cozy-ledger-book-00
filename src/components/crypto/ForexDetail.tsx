@@ -1,4 +1,5 @@
 import { ForexCurrency, CURRENCIES } from '@/lib/forexApi';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
 
 interface ForexDetailProps {
@@ -8,6 +9,8 @@ interface ForexDetailProps {
 }
 
 export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetailProps) {
+  const { language } = useLanguage();
+  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const selected = selectedCode ? currencies.find(c => c.code === selectedCode) : null;
   const meta = selectedCode ? CURRENCIES.find(c => c.code === selectedCode) : null;
 
