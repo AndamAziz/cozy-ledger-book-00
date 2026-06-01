@@ -8,7 +8,8 @@ interface CryptoAnalysisProps {
   candles: OHLCCandle[];
   currentPrice: number;
   change24h: number;
-  interval: number;
+  interval?: number;
+  timeframeLabel?: string;
 }
 
 type Recommendation = 'buy' | 'sell' | 'hold';
@@ -70,7 +71,7 @@ function fmt(n: number | null, digits = 2): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
-export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, interval }: CryptoAnalysisProps) {
+export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, interval, timeframeLabel }: CryptoAnalysisProps) {
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -90,7 +91,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const indicators = useMemo(() => computeIndicators(candles), [candles]);
   const summary = useMemo(() => summarizeSignals(indicators, currentPrice), [indicators, currentPrice]);
 
-  const tfLabel = TIMEFRAMES.find(t => t.interval === interval)?.label ?? `${interval}m`;
+  const tfLabel = timeframeLabel ?? TIMEFRAMES.find(t => t.interval === interval)?.label ?? `${interval}m`;
 
   const rows: { label: string; value: string; signal: SignalType; hint?: string }[] = [];
   if (indicators.rsi != null) {

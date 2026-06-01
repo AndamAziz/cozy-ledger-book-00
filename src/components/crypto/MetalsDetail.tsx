@@ -1,8 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Metal, METALS_META } from '@/lib/metalsApi';
 import { useMetalsHistory } from '@/hooks/useMetalsHistory';
 import { MetalsChart } from '@/components/crypto/MetalsChart';
-import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
+import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
+import type { OHLCCandle } from '@/lib/krakenApi';
+import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw, LineChart, Sparkles } from 'lucide-react';
+
+const RANGE_LABELS: Record<string, string> = {
+  '1d': '1D', '5d': '5D', '1mo': '1M', '3mo': '3M', '6mo': '6M', '1y': '1Y', '5y': '5Y',
+};
 
 interface MetalsDetailProps {
   metals: Metal[];
@@ -12,9 +18,24 @@ interface MetalsDetailProps {
 
 export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailProps) {
   const [chartRange, setChartRange] = useState('1d');
+  const [view, setView] = useState<'market' | 'analysis'>('market');
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const livePrice = selected?.price || 0;
   const { candles: historyCandles, isLoading: historyLoading } = useMetalsHistory(selectedCode, chartRange, livePrice);
+
+  // Adapt metals candles (close/high/low) to the OHLC shape the analysis expects
+  const ohlcCandles = useMemo<OHLCCandle[]>(
+    () => historyCandles.map(c => ({
+      time: c.time,
+      open: c.close,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: 0,
+    })),
+    [historyCandles],
+  );
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#0a0e17]">
@@ -117,6 +138,38 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
         </div>
       </div>
 
+      {/* View toggle: Market vs Analysis */}
+      <div className="flex gap-2 p-3 border-b border-[#1a1e2e]">
+        <button
+          onClick={() => setView('market')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition active:scale-95 ${
+            view === 'market' ? 'bg-[#1a1e2e] text-white' : 'text-[#848e9c] hover:text-white'
+          }`}
+        >
+          <LineChart className="h-3.5 w-3.5" />
+          بازاڕ
+        </button>
+        <button
+          onClick={() => setView('analysis')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition active:scale-95 ${
+            view === 'analysis' ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c] hover:text-white'
+          }`}
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          شیکاری
+        </button>
+      </div>
+
+      {view === 'analysis' ? (
+        <CryptoAnalysis
+          symbol={meta.symbol}
+          candles={ohlcCandles}
+          currentPrice={selected.price}
+          change24h={selected.change}
+          timeframeLabel={RANGE_LABELS[chartRange] ?? chartRange}
+        />
+      ) : (
+      <>
       {/* Price History Chart */}
       <MetalsChart
         candles={historyCandles}
@@ -211,6 +264,8 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           })}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
