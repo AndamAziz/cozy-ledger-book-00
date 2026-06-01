@@ -54,6 +54,12 @@ const riskColor = (r: RiskLevel) =>
 const riskLabel = (r: RiskLevel) =>
   r === 'low' ? 'نزم' : r === 'high' ? 'بەرز' : 'مامناوەند';
 
+const influenceLabel = (i: Influence) =>
+  i === 'high' ? 'کاریگەری بەرز' : i === 'low' ? 'کاریگەری نزم' : 'کاریگەری مامناوەند';
+
+const influenceWidth = (i: Influence) =>
+  i === 'high' ? '100%' : i === 'medium' ? '60%' : '30%';
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function fmtDate(d: Date): string {
   return `${d.getDate()}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`;
