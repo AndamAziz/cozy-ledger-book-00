@@ -178,7 +178,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       label: 'RSI (14)',
       value: fmt(indicators.rsi),
       signal: indicators.rsi < 30 ? 'buy' : indicators.rsi > 70 ? 'sell' : 'neutral',
-      hint: indicators.rsi < 30 ? 'زۆر فرۆشراو' : indicators.rsi > 70 ? 'زۆر کڕراو' : 'ناوەند',
+      hint: indicators.rsi < 30 ? bi('زۆر فرۆشراو', 'Oversold', langMode) : indicators.rsi > 70 ? bi('زۆر کڕراو', 'Overbought', langMode) : bi('ناوەند', 'Neutral', langMode),
     });
   }
   if (indicators.macd) {
