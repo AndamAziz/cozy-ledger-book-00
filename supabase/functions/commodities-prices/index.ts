@@ -182,6 +182,9 @@ const historyCache = new Map<string, { data: unknown; ts: number }>();
 const HISTORY_CACHE_TTL = 60_000;
 
 const RANGE_MAP: Record<string, { range: string; interval: string }> = {
+  "1min": { range: "1d", interval: "1m" },
+  "5min": { range: "1d", interval: "5m" },
+  "15min": { range: "5d", interval: "15m" },
   "1d": { range: "1d", interval: "5m" },
   "5d": { range: "5d", interval: "15m" },
   "1mo": { range: "1mo", interval: "1h" },
@@ -192,6 +195,9 @@ const RANGE_MAP: Record<string, { range: string; interval: string }> = {
 };
 
 const TWELVE_HISTORY_MAP: Record<string, { interval: string; outputsize: number }> = {
+  "1min": { interval: "1min", outputsize: 390 },
+  "5min": { interval: "5min", outputsize: 288 },
+  "15min": { interval: "15min", outputsize: 192 },
   "1d": { interval: "5min", outputsize: 288 },
   "5d": { interval: "15min", outputsize: 480 },
   "1mo": { interval: "1h", outputsize: 720 },
