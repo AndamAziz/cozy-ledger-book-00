@@ -78,11 +78,14 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
 
   // Chart image analysis state
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [imageText, setImageText] = useState('');
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [chartTimeframe, setChartTimeframe] = useState('1H');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const CHART_TIMEFRAMES = ['1H', '4H', '1D'];
 
   const indicators = useMemo(() => computeIndicators(candles), [candles]);
   const summary = useMemo(() => summarizeSignals(indicators, currentPrice), [indicators, currentPrice]);
@@ -273,30 +276,45 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   };
 
   const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    if (files.length === 0) return;
+
+    const images = files.filter(f => f.type.startsWith('image/'));
+    if (images.length === 0) {
       setImageError('تکایە تەنها وێنە هەڵبژێرە.');
       return;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      setImageError('قەبارەی وێنە زۆر گەورەیە (زۆرترین ٨MB).');
+    if (images.some(f => f.size > 8 * 1024 * 1024)) {
+      setImageError('قەبارەی هەندێک وێنە زۆر گەورەیە (زۆرترین ٨MB).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      setImagePreview(dataUrl);
-      setImageError(null);
-      setImageText('');
-      analyzeImage(dataUrl);
-    };
-    reader.onerror = () => setImageError('نەتوانرا وێنە بخوێنرێتەوە.');
-    reader.readAsDataURL(file);
+    if (images.length > 6) {
+      setImageError('زۆرترین ٦ وێنە لە یەک کاتدا.');
+      return;
+    }
+
+    Promise.all(
+      images.map(
+        file =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error('read'));
+            reader.readAsDataURL(file);
+          }),
+      ),
+    )
+      .then(dataUrls => {
+        setImagePreviews(dataUrls);
+        setImageError(null);
+        setImageText('');
+        analyzeImages(dataUrls);
+      })
+      .catch(() => setImageError('نەتوانرا وێنەکان بخوێنرێنەوە.'));
   };
 
-  const analyzeImage = async (dataUrl: string) => {
+  const analyzeImages = async (dataUrls: string[]) => {
     setImageLoading(true);
     setImageError(null);
     setImageText('');
@@ -304,7 +322,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       const resp = await fetch(fnUrl, {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ mode: 'image', symbol, imageBase64: dataUrl }),
+        body: JSON.stringify({ mode: 'image', symbol, images: dataUrls, chartTimeframe }),
       });
       if (!resp.ok || !resp.body) {
         let msg = 'هەڵەیەک ڕوویدا لە شیکاری وێنە.';
@@ -323,7 +341,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   };
 
   const clearImage = () => {
-    setImagePreview(null);
+    setImagePreviews([]);
     setImageText('');
     setImageError(null);
   };
@@ -545,7 +563,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
             شیکاری چارت لە وێنە
           </div>
           <div className="flex items-center gap-2">
-            {imagePreview && !imageLoading && (
+            {imagePreviews.length > 0 && !imageLoading && (
               <button
                 onClick={clearImage}
                 className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
@@ -559,8 +577,32 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#2962ff] text-white disabled:opacity-50 active:scale-95 transition"
             >
               {imageLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-              {imageLoading ? 'شیکاری...' : imagePreview ? 'وێنەی نوێ' : 'وێنە بار بکە'}
+              {imageLoading ? 'شیکاری...' : imagePreviews.length > 0 ? 'وێنەی نوێ' : 'وێنە بار بکە'}
             </button>
+          </div>
+        </div>
+
+        {/* Timeframe / interval selector */}
+        <div className="mb-3">
+          <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c] mb-1.5">
+            <CalendarClock className="h-3 w-3" />
+            ماوەی کاتی چارتەکان
+          </div>
+          <div className="flex gap-1.5">
+            {CHART_TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setChartTimeframe(tf)}
+                disabled={imageLoading}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition active:scale-95 disabled:opacity-50 ${
+                  chartTimeframe === tf
+                    ? 'bg-[#2962ff] text-white'
+                    : 'bg-[#1a1e2e] text-[#848e9c] hover:text-white'
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -568,6 +610,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={handleImagePick}
         />
@@ -579,9 +622,18 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           </div>
         )}
 
-        {imagePreview && (
-          <div className="mb-3 rounded-lg overflow-hidden border border-[#1a1e2e]">
-            <img src={imagePreview} alt="چارتی بارکراو" className="w-full max-h-64 object-contain bg-black" />
+        {imagePreviews.length > 0 && (
+          <div className={`mb-3 grid gap-2 ${imagePreviews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {imagePreviews.map((src, i) => (
+              <div key={i} className="relative rounded-lg overflow-hidden border border-[#1a1e2e]">
+                <img src={src} alt={`چارتی بارکراو ${i + 1}`} className="w-full max-h-48 object-contain bg-black" />
+                {imagePreviews.length > 1 && (
+                  <span className="absolute top-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/70 text-white">
+                    چارت {i + 1}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -590,10 +642,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         ) : imageLoading ? (
           <div className="flex items-center gap-2 text-xs text-[#848e9c]">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            کەندڵەکان دەخوێنرێنەوە...
+            {imagePreviews.length > 1 ? 'کەندڵەکان دەخوێنرێنەوە و بەراورد دەکرێن...' : 'کەندڵەکان دەخوێنرێنەوە...'}
           </div>
-        ) : !imagePreview ? (
-          <div className="text-xs text-[#848e9c]">وێنەیەکی چارت (سکرینشۆت) بار بکە بۆ خوێندنەوەی کەندڵەکان و شیکارییەکی تەواو بە زمانی کوردی.</div>
+        ) : imagePreviews.length === 0 ? (
+          <div className="text-xs text-[#848e9c]">یەک یان چەند وێنەی چارت (سکرینشۆت) بار بکە بۆ خوێندنەوەی کەندڵەکان و بەراوردکردنی نیشانەکان لە یەک پوختەدا بە زمانی کوردی.</div>
         ) : null}
       </div>
     </div>
