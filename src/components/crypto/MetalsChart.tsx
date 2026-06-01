@@ -46,6 +46,12 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   // metal / chart type changes — never on live price ticks (which would reset
   // the user's manual zoom & pan).
   const lastFitKeyRef = useRef<string>('');
+  // Remembers the user's pan/zoom (visible logical range) per metal+timeframe
+  // so it is restored when they switch back instead of being re-fit.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const savedViewsRef = useRef<Record<string, any>>({});
+  const currentViewKeyRef = useRef<string>('');
+  const restoringRef = useRef(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [chartType, setChartType] = useState<'candles' | 'area' | 'line'>('candles');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
