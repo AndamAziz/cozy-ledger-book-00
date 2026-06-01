@@ -2,7 +2,9 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { OHLCCandle, TIMEFRAMES } from '@/lib/krakenApi';
 import { computeIndicators, summarizeSignals, SignalType } from '@/lib/indicators';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send } from 'lucide-react';
 
 interface CryptoAnalysisProps {
   symbol: string;
