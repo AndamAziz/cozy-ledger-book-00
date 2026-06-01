@@ -112,7 +112,7 @@ export default function CryptoTracker() {
   return (
     <>
       <Helmet>
-        <title>{activeTab === 'crypto' ? 'Crypto Tracker' : activeTab === 'forex' ? 'Forex Rates' : 'Precious Metals'} - Live Prices</title>
+        <title>{activeTab === 'crypto' ? bi('شوێنکەوتنی کریپتۆ', 'Crypto Tracker') : activeTab === 'forex' ? bi('نرخی دراو', 'Forex Rates') : bi('کانزا بەهادارەکان', 'Precious Metals')} - {bi('نرخی ڕاستەوخۆ', 'Live Prices')}</title>
         <meta name="description" content="Real-time cryptocurrency and forex price tracker" />
       </Helmet>
 
