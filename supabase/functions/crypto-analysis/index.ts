@@ -8,6 +8,46 @@ const corsHeaders = {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+// Lean structured trade plan tool used to auto-detect buy/sell targets from chart images.
+const IMAGE_TRADE_TOOL = {
+  type: "function",
+  function: {
+    name: "trade_summary",
+    description:
+      "Structured buy/sell trade plan read directly from candlestick chart screenshot(s).",
+    parameters: {
+      type: "object",
+      properties: {
+        recommendation: { type: "string", enum: ["buy", "sell", "hold"], description: "Auto-decided action from the chart." },
+        confidence: { type: "integer", minimum: 0, maximum: 100, description: "Confidence percentage 0-100." },
+        headline: { type: "string", description: "One short sentence in Kurdish Sorani." },
+        headlineEn: { type: "string", description: "The SAME short sentence in clear English." },
+        entry: { type: "string", description: "Entry price or zone read from the chart's price axis." },
+        entryTiming: { type: "string", description: "Kurdish Sorani: when/where to enter (price area/condition)." },
+        entryTimingEn: { type: "string", description: "The SAME in clear English." },
+        exitTiming: { type: "string", description: "Kurdish Sorani: when/where to take profit / exit." },
+        exitTimingEn: { type: "string", description: "The SAME in clear English." },
+        targets: { type: "array", items: { type: "string" }, description: "1-3 take-profit price targets read from the chart." },
+        stopLoss: { type: "string", description: "Stop-loss price placed just beyond a visible swing level." },
+        stopLossBasis: { type: "string", description: "Kurdish Sorani: which visible level the stop is based on and why." },
+        stopLossBasisEn: { type: "string", description: "The SAME explanation in clear English." },
+        horizonDays: { type: "integer", description: "Estimated trade duration in days based on the timeframe." },
+        riskLevel: { type: "string", enum: ["low", "medium", "high"], description: "Overall risk level." },
+        riskNote: { type: "string", description: "One short risk note in Kurdish Sorani." },
+        riskNoteEn: { type: "string", description: "The SAME risk note in clear English." },
+        reasoning: { type: "string", description: "2-4 sentences in Kurdish Sorani citing the chart's trend/levels." },
+        reasoningEn: { type: "string", description: "The SAME reasoning in clear fluent English." },
+      },
+      required: [
+        "recommendation", "confidence", "headline", "headlineEn", "entry",
+        "targets", "stopLoss", "horizonDays", "riskLevel", "reasoning", "reasoningEn",
+      ],
+      additionalProperties: false,
+    },
+  },
+};
+
+
 function rateLimitResponse(status: number) {
   const msg =
     status === 429
