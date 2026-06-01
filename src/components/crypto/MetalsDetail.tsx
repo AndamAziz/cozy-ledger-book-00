@@ -139,10 +139,14 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
       </div>
 
       {/* View toggle: Market vs Analysis */}
-      <div className="flex gap-2 p-3 border-b border-[#1a1e2e]">
+      <div role="radiogroup" aria-label="View / نمایش" className="flex gap-2 p-3 border-b border-[#1a1e2e]">
         <button
+          type="button"
+          role="radio"
+          aria-checked={view === 'market'}
+          aria-label="Market view / بازاڕ"
           onClick={() => setView('market')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition active:scale-95 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d1117] ${
             view === 'market' ? 'bg-[#1a1e2e] text-white' : 'text-[#848e9c] hover:text-white'
           }`}
         >
@@ -150,8 +154,12 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           بازاڕ
         </button>
         <button
+          type="button"
+          role="radio"
+          aria-checked={view === 'analysis'}
+          aria-label="Analysis view / شیکاری"
           onClick={() => setView('analysis')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition active:scale-95 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d1117] ${
             view === 'analysis' ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c] hover:text-white'
           }`}
         >
