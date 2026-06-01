@@ -230,7 +230,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
 
       {/* Investment calculator */}
       <div className="p-4 border-b border-[#1a1e2e]">
-        <h3 className="text-sm font-semibold text-white mb-3">Investment Amounts</h3>
+        <h3 className="text-sm font-semibold text-white mb-3">{bi('بڕی وەبەرهێنان', 'Investment Amounts')}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[100, 500, 1000, 5000].map(amount => (
             <div key={amount} className="bg-[#0d1117] border border-[#1a1e2e] rounded-lg p-2 text-center">
