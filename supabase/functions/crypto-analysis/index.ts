@@ -115,6 +115,43 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                       description:
                         "One short risk-management note in Kurdish Sorani.",
                     },
+                    reasoning: {
+                      type: "string",
+                      description:
+                        "2-4 sentences in Kurdish Sorani explaining WHY this buy/sell/hold decision was made, referencing the indicator readings.",
+                    },
+                    keyDrivers: {
+                      type: "array",
+                      description:
+                        "The indicators that most influenced the decision, ordered from most to least influential.",
+                      items: {
+                        type: "object",
+                        properties: {
+                          indicator: {
+                            type: "string",
+                            enum: ["RSI", "MACD", "Bollinger", "SMA", "EMA"],
+                            description: "Indicator name.",
+                          },
+                          effect: {
+                            type: "string",
+                            enum: ["buy", "sell", "neutral"],
+                            description: "Direction this indicator pushed.",
+                          },
+                          influence: {
+                            type: "string",
+                            enum: ["high", "medium", "low"],
+                            description: "How influential it was in the decision.",
+                          },
+                          note: {
+                            type: "string",
+                            description:
+                              "Very short reason in Kurdish Sorani (max ~8 words).",
+                          },
+                        },
+                        required: ["indicator", "effect", "influence", "note"],
+                        additionalProperties: false,
+                      },
+                    },
                   },
                   required: [
                     "recommendation",
@@ -126,6 +163,8 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                     "horizonDays",
                     "riskLevel",
                     "riskNote",
+                    "reasoning",
+                    "keyDrivers",
                   ],
                   additionalProperties: false,
                 },
