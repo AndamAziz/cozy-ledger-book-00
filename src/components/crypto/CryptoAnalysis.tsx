@@ -459,13 +459,13 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           />
         </div>
         <div className="flex justify-between text-[10px] text-[#848e9c] mt-1">
-          <span>فرۆشتن</span><span>بێلایەن</span><span>کڕین</span>
+          <span>{biLabel('فرۆشتن', 'Sell')}</span><span>{biLabel('بێلایەن', 'Neutral')}</span><span>{biLabel('کڕین', 'Buy')}</span>
         </div>
 
         <div className="flex gap-2 mt-3 text-xs">
-          <span className="px-2 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81]">کڕین {summary.buyCount}</span>
-          <span className="px-2 py-1 rounded bg-[#848e9c]/10 text-[#848e9c]">بێلایەن {summary.neutralCount}</span>
-          <span className="px-2 py-1 rounded bg-[#f6465d]/10 text-[#f6465d]">فرۆشتن {summary.sellCount}</span>
+          <span className="px-2 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81]">{biLabel('کڕین', 'Buy')} {summary.buyCount}</span>
+          <span className="px-2 py-1 rounded bg-[#848e9c]/10 text-[#848e9c]">{biLabel('بێلایەن', 'Neutral')} {summary.neutralCount}</span>
+          <span className="px-2 py-1 rounded bg-[#f6465d]/10 text-[#f6465d]">{biLabel('فرۆشتن', 'Sell')} {summary.sellCount}</span>
         </div>
       </div>
 
