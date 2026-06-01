@@ -18,6 +18,7 @@ interface MetalsDetailProps {
 }
 
 export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailProps) {
+  const { language } = useLanguage();
   const [chartRange, setChartRange] = useState('1d');
   const [view, setView] = useState<'market' | 'analysis'>('market');
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
