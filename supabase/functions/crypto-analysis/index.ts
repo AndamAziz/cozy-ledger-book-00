@@ -201,7 +201,17 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                     },
                     stopLoss: {
                       type: "string",
-                      description: "Suggested stop-loss price (number).",
+                      description: "Suggested stop-loss price (number), placed just beyond the chosen indicator level.",
+                    },
+                    stopLossIndicator: {
+                      type: "string",
+                      enum: ["RSI", "MACD", "Bollinger", "SMA", "EMA", "Swing"],
+                      description: "The indicator/level the stop-loss is based on.",
+                    },
+                    stopLossBasis: {
+                      type: "string",
+                      description:
+                        "1-2 sentences in Kurdish Sorani explaining WHY the stop-loss sits at this level, naming the indicator and its value, and what a break of it means.",
                     },
                     horizonDays: {
                       type: "integer",
