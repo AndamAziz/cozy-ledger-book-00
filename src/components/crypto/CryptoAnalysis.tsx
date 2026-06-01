@@ -77,6 +77,13 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [tradeSummary, setTradeSummary] = useState<TradeSummary | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
 
+  // Chart image analysis state
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageText, setImageText] = useState('');
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const indicators = useMemo(() => computeIndicators(candles), [candles]);
   const summary = useMemo(() => summarizeSignals(indicators, currentPrice), [indicators, currentPrice]);
 
