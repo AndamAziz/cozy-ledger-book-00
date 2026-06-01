@@ -267,7 +267,7 @@ export default function CryptoTracker() {
                     }`}
                   >
                     <CandlestickChart className="h-3.5 w-3.5" />
-                    <span>Chart</span>
+                    <span>{bi('چارت', 'Chart')}</span>
                   </button>
                   <button
                     onClick={() => setCryptoView('analysis')}
@@ -276,7 +276,7 @@ export default function CryptoTracker() {
                     }`}
                   >
                     <Activity className="h-3.5 w-3.5" />
-                    <span>Analysis</span>
+                    <span>{bi('شیکاری', 'Analysis')}</span>
                   </button>
                 </div>
               </div>
