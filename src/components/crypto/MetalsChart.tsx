@@ -202,7 +202,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     }
 
     chartRef.current?.timeScale().fitContent();
-  }, [candles, activeMAs, maType]);
+  }, [candles, activeMAs, maType, chartType]);
 
   // Update price line
   useEffect(() => {
