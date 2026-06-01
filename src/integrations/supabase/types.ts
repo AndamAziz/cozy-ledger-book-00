@@ -208,6 +208,69 @@ export type Database = {
           },
         ]
       }
+      telegram_signals: {
+        Row: {
+          chat_id: string | null
+          confidence: number | null
+          created_at: string
+          entry: string | null
+          error: string | null
+          headline: string | null
+          horizon_days: number | null
+          id: string
+          price: number | null
+          recommendation: string | null
+          risk_level: string | null
+          sent_by: string | null
+          status: string
+          stop_loss: string | null
+          symbol: string | null
+          targets: string[] | null
+          telegram_message_id: number | null
+          timeframe: string | null
+        }
+        Insert: {
+          chat_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          entry?: string | null
+          error?: string | null
+          headline?: string | null
+          horizon_days?: number | null
+          id?: string
+          price?: number | null
+          recommendation?: string | null
+          risk_level?: string | null
+          sent_by?: string | null
+          status?: string
+          stop_loss?: string | null
+          symbol?: string | null
+          targets?: string[] | null
+          telegram_message_id?: number | null
+          timeframe?: string | null
+        }
+        Update: {
+          chat_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          entry?: string | null
+          error?: string | null
+          headline?: string | null
+          horizon_days?: number | null
+          id?: string
+          price?: number | null
+          recommendation?: string | null
+          risk_level?: string | null
+          sent_by?: string | null
+          status?: string
+          stop_loss?: string | null
+          symbol?: string | null
+          targets?: string[] | null
+          telegram_message_id?: number | null
+          timeframe?: string | null
+        }
+        Relationships: []
+      }
       user_approvals: {
         Row: {
           approved_at: string | null
