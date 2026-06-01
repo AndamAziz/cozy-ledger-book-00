@@ -680,7 +680,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               <div className="px-4 py-3 border-t border-[#1a1e2e]">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
                   <BarChart3 className="h-3.5 w-3.5 text-[#f0b90b]" />
-                  کاریگەرترین ئامێرەکان
+                  {biLabel('کاریگەرترین ئامێرەکان', 'Most influential indicators')}
                 </div>
                 <div className="space-y-2">
                   {tradeSummary.keyDrivers.map((d, i) => (
@@ -697,23 +697,23 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                   ))}
                 </div>
                 <div className="mt-2 space-y-0.5">
-                  {tradeSummary.keyDrivers.filter(d => d.note).map((d, i) => (
-                    <div key={i} className="text-[10px] text-[#848e9c]">• {d.indicator}: {d.note}</div>
+                  {tradeSummary.keyDrivers.filter(d => d.note || d.noteEn).map((d, i) => (
+                    <div key={i} className="text-[10px] text-[#848e9c]">• {d.indicator}: {showKu && d.note ? d.note : ''}{showKu && showEn && d.note && d.noteEn ? ' · ' : ''}{showEn && d.noteEn ? d.noteEn : (!showKu && d.note ? d.note : '')}</div>
                   ))}
                 </div>
               </div>
             )}
 
-            {tradeSummary.riskNote && (
+            {(tradeSummary.riskNote || tradeSummary.riskNoteEn) && (
               <div className="flex items-start gap-2 px-4 py-2.5 text-xs text-[#d1d5db] border-t border-[#1a1e2e]" style={{ backgroundColor: riskColor(tradeSummary.riskLevel) + '0d' }}>
                 <ShieldAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: riskColor(tradeSummary.riskLevel) }} />
-                <span>{tradeSummary.riskNote}</span>
+                <div className="flex-1"><BiText ku={tradeSummary.riskNote} en={tradeSummary.riskNoteEn} /></div>
               </div>
             )}
 
             {generatedAt && (
               <div className="px-4 py-1.5 text-[10px] text-[#848e9c] border-t border-[#1a1e2e]">
-                بەرواری شیکاری: {fmtDate(new Date(generatedAt))} · ئەمە ڕاوێژی دارایی نییە
+                {biLabel('بەرواری شیکاری', 'Analysis date')}: {fmtDate(new Date(generatedAt))} · {biLabel('ئەمە ڕاوێژی دارایی نییە', 'not financial advice')}
               </div>
             )}
           </div>
