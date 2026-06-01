@@ -109,6 +109,16 @@ export default function CryptoTracker() {
   const currentCoin = coinsMap.get(selectedPair);
   const currentPrice = currentCoin?.price || 0;
 
+  const listTitle =
+    activeTab === 'crypto' ? bi('دراوەکان', 'Coins')
+    : activeTab === 'forex' ? bi('دراوی نێودەوڵەتی', 'Currencies')
+    : bi('کاڵاکان', 'Commodities');
+
+  const selectionLabel =
+    activeTab === 'crypto' ? getDisplaySymbol(getSymbolFromPair(selectedPair))
+    : activeTab === 'forex' ? (selectedForexCode || bi('هەڵبژێرە', 'Select'))
+    : (selectedMetalCode || bi('هەڵبژێرە', 'Select'));
+
   return (
     <>
       <Helmet>
