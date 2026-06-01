@@ -251,7 +251,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       body: JSON.stringify({ ...buildBody(), mode: 'summary' }),
     });
     if (!resp.ok) {
-      let msg = 'هەڵەیەک ڕوویدا لە دروستکردنی پوختە.';
+      let msg = biLabel('هەڵەیەک ڕوویدا لە دروستکردنی پوختە.', 'Failed to generate the summary.');
       try {
         const j = await resp.json();
         if (j?.error) msg = j.error;
