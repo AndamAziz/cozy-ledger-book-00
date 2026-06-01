@@ -19,12 +19,17 @@ interface MetalsChartProps {
 }
 
 const RANGES = [
+  { key: '1min', label: '1m' },
+  { key: '5min', label: '5m' },
+  { key: '15min', label: '15m' },
   { key: '1d', label: '1D' },
   { key: '5d', label: '5D' },
   { key: '1mo', label: '1M' },
   { key: '3mo', label: '3M' },
   { key: '1y', label: '1Y' },
 ];
+
+const INTRADAY_RANGES = new Set(['1min', '5min', '15min', '1d', '5d']);
 
 export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, range, onRangeChange, currentPrice, name }: MetalsChartProps) {
   const { language } = useLanguage();
