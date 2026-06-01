@@ -25,7 +25,7 @@ serve(async (req) => {
   }
 
   try {
-    const { symbol, price, change24h, indicators, summary, timeframe, mode } =
+    const { symbol, price, change24h, indicators, summary, timeframe, mode, imageBase64 } =
       await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -37,6 +37,68 @@ Current price: $${price}
 24h change: ${change24h}%
 Technical signal summary: ${JSON.stringify(summary)}
 Indicators: ${JSON.stringify(indicators)}`;
+
+    // ----- Chart image analysis mode (read candles from an uploaded screenshot) -----
+    if (mode === "image") {
+      if (typeof imageBase64 !== "string" || !imageBase64.startsWith("data:image")) {
+        return new Response(
+          JSON.stringify({ error: "وێنەیەکی دروستی چارت پێویستە." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const visionSystem = `You are a professional candlestick chart analyst.
+You will be given a screenshot of a trading chart. Carefully READ the candles, trend, and any visible levels.
+Respond ONLY in Kurdish Sorani (کوردیی ناوەندی). Be concise with short paragraphs and bullet points.
+Use these exact Kurdish section headers:
+1. **خوێندنەوەی چارت** - what timeframe/asset appears and the overall candle structure you see.
+2. **ڕەوت** - current trend (uptrend/downtrend/sideways) based on the candles.
+3. **شێوەکان** - candlestick patterns or formations visible (e.g. doji, engulfing, head & shoulders).
+4. **ئاستە گرنگەکان** - visible support/resistance levels (estimate numbers if axis is readable).
+5. **پێشنیار** - a buy/sell/hold lean (کڕین/فرۆشتن/هەڵگرتن) with reasoning and a suggested stop area.
+6. **ئاگاداری** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە.
+If the image is not a chart, say so politely in Kurdish.`;
+
+      const visionResp = await fetch(AI_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: visionSystem },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `${symbol ? `Possible asset: ${symbol}/USD. ` : ""}Read this trading chart and analyse the candles in Kurdish Sorani.`,
+                },
+                { type: "image_url", image_url: { url: imageBase64 } },
+              ],
+            },
+          ],
+          stream: true,
+        }),
+      });
+
+      if (!visionResp.ok || !visionResp.body) {
+        if (visionResp.status === 429 || visionResp.status === 402)
+          return rateLimitResponse(visionResp.status);
+        const t = await visionResp.text();
+        console.error("AI gateway error (image):", visionResp.status, t);
+        return new Response(JSON.stringify({ error: "هەڵە لە شیکاری وێنە." }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(visionResp.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
 
     // ----- Structured summary mode (recommendation, levels, dates, risk) -----
     if (mode === "summary") {

@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { OHLCCandle, TIMEFRAMES } from '@/lib/krakenApi';
 import { computeIndicators, summarizeSignals, SignalType } from '@/lib/indicators';
-import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3 } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload } from 'lucide-react';
 
 interface CryptoAnalysisProps {
   symbol: string;
@@ -76,6 +76,13 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [aiError, setAiError] = useState<string | null>(null);
   const [tradeSummary, setTradeSummary] = useState<TradeSummary | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
+
+  // Chart image analysis state
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageText, setImageText] = useState('');
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const indicators = useMemo(() => computeIndicators(candles), [candles]);
   const summary = useMemo(() => summarizeSignals(indicators, currentPrice), [indicators, currentPrice]);
@@ -231,6 +238,94 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     } finally {
       setAiLoading(false);
     }
+  };
+
+  // ---- Chart image analysis ----
+  const consumeStream = async (resp: Response, onChunk: (s: string) => void) => {
+    const reader = resp.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let acc = '';
+    let done = false;
+    while (!done) {
+      const { done: d, value } = await reader.read();
+      if (d) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buffer.indexOf('\n')) !== -1) {
+        let line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (line.endsWith('\r')) line = line.slice(0, -1);
+        if (line.startsWith(':') || line.trim() === '') continue;
+        if (!line.startsWith('data: ')) continue;
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === '[DONE]') { done = true; break; }
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) { acc += content; onChunk(acc); }
+        } catch {
+          buffer = line + '\n' + buffer;
+          break;
+        }
+      }
+    }
+  };
+
+  const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setImageError('تکایە تەنها وێنە هەڵبژێرە.');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setImageError('قەبارەی وێنە زۆر گەورەیە (زۆرترین ٨MB).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setImagePreview(dataUrl);
+      setImageError(null);
+      setImageText('');
+      analyzeImage(dataUrl);
+    };
+    reader.onerror = () => setImageError('نەتوانرا وێنە بخوێنرێتەوە.');
+    reader.readAsDataURL(file);
+  };
+
+  const analyzeImage = async (dataUrl: string) => {
+    setImageLoading(true);
+    setImageError(null);
+    setImageText('');
+    try {
+      const resp = await fetch(fnUrl, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ mode: 'image', symbol, imageBase64: dataUrl }),
+      });
+      if (!resp.ok || !resp.body) {
+        let msg = 'هەڵەیەک ڕوویدا لە شیکاری وێنە.';
+        try {
+          const j = await resp.json();
+          if (j?.error) msg = j.error;
+        } catch { /* ignore */ }
+        throw new Error(msg);
+      }
+      await consumeStream(resp, setImageText);
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'هەڵەیەک ڕوویدا.');
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  const clearImage = () => {
+    setImagePreview(null);
+    setImageText('');
+    setImageError(null);
   };
 
   const hasData = candles.length > 0;
@@ -439,6 +534,66 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           <div className="text-sm text-[#d1d5db] whitespace-pre-wrap leading-relaxed">{aiText}</div>
         ) : !aiLoading && !aiError && !tradeSummary ? (
           <div className="text-xs text-[#848e9c]">کلیک لە "شیکاری بکە" بکە بۆ وەرگرتنی پوختەی کڕین/فرۆشتن، ئاستەکان، بەروار و هەڵسەنگاندنی مەترسی بە زمانی کوردی.</div>
+        ) : null}
+      </div>
+
+      {/* Chart image analysis */}
+      <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 text-sm font-bold text-white">
+            <ImageIcon className="h-4 w-4 text-[#2962ff]" />
+            شیکاری چارت لە وێنە
+          </div>
+          <div className="flex items-center gap-2">
+            {imagePreview && !imageLoading && (
+              <button
+                onClick={clearImage}
+                className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
+              >
+                سڕینەوە
+              </button>
+            )}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={imageLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#2962ff] text-white disabled:opacity-50 active:scale-95 transition"
+            >
+              {imageLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              {imageLoading ? 'شیکاری...' : imagePreview ? 'وێنەی نوێ' : 'وێنە بار بکە'}
+            </button>
+          </div>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleImagePick}
+        />
+
+        {imageError && (
+          <div className="flex items-center gap-2 text-xs text-[#f6465d] bg-[#f6465d]/10 rounded-lg px-3 py-2 mb-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {imageError}
+          </div>
+        )}
+
+        {imagePreview && (
+          <div className="mb-3 rounded-lg overflow-hidden border border-[#1a1e2e]">
+            <img src={imagePreview} alt="چارتی بارکراو" className="w-full max-h-64 object-contain bg-black" />
+          </div>
+        )}
+
+        {imageText ? (
+          <div className="text-sm text-[#d1d5db] whitespace-pre-wrap leading-relaxed">{imageText}</div>
+        ) : imageLoading ? (
+          <div className="flex items-center gap-2 text-xs text-[#848e9c]">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            کەندڵەکان دەخوێنرێنەوە...
+          </div>
+        ) : !imagePreview ? (
+          <div className="text-xs text-[#848e9c]">وێنەیەکی چارت (سکرینشۆت) بار بکە بۆ خوێندنەوەی کەندڵەکان و شیکارییەکی تەواو بە زمانی کوردی.</div>
         ) : null}
       </div>
     </div>
