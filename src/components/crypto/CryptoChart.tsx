@@ -29,6 +29,12 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   // timeframe / symbol / chart type changes — never on live price ticks (which
   // would otherwise reset the user's manual zoom & pan).
   const lastFitKeyRef = useRef<string>('');
+  // Remembers the user's pan/zoom (visible logical range) per symbol+timeframe
+  // so it is restored when they switch back instead of being re-fit.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const savedViewsRef = useRef<Record<string, any>>({});
+  const currentViewKeyRef = useRef<string>('');
+  const restoringRef = useRef(false);
   const [chartType, setChartType] = useState<'candlestick' | 'line' | 'area'>('candlestick');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
