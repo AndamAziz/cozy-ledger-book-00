@@ -124,6 +124,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         wickDownColor: DOWN_COLOR,
         borderVisible: true,
         priceLineVisible: false,
+        lastValueVisible: false,
       });
       seriesRef.current = series;
     } else if (chartType === 'area') {
@@ -135,6 +136,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         crosshairMarkerVisible: true,
         crosshairMarkerRadius: 4,
         crosshairMarkerBackgroundColor: lineColor,
+        priceLineVisible: false,
+        lastValueVisible: false,
       });
       seriesRef.current = series;
     } else {
@@ -143,6 +146,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         lineWidth: 2,
         crosshairMarkerVisible: true,
         crosshairMarkerRadius: 4,
+        priceLineVisible: false,
+        lastValueVisible: false,
       });
       seriesRef.current = series;
     }
