@@ -379,6 +379,53 @@ async function handleLivePrices(): Promise<Response> {
   );
 }
 
+type Candle = { time: number; close: number; high: number; low: number };
+
+async function fetchYahooCandles(symbol: string, range: string): Promise<Candle[] | null> {
+  const rangeConfig = RANGE_MAP[range] || RANGE_MAP["1mo"];
+  const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${rangeConfig.interval}&range=${rangeConfig.range}`;
+  try {
+    const res = await fetch(yahooUrl, { headers: yahooHeaders, signal: AbortSignal.timeout(10000) });
+    if (!res.ok) { await res.text(); return null; }
+    const data = await res.json();
+    const result = data?.chart?.result?.[0];
+    if (!result) return null;
+
+    const timestamps: number[] = result.timestamp || [];
+    const closes: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
+    const highs: (number | null)[] = result.indicators?.quote?.[0]?.high || [];
+    const lows: (number | null)[] = result.indicators?.quote?.[0]?.low || [];
+
+    const candles: Candle[] = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      const c = closes[i], h = highs[i], l = lows[i];
+      if (c != null && h != null && l != null) {
+        candles.push({ time: timestamps[i], close: +c.toFixed(4), high: +h.toFixed(4), low: +l.toFixed(4) });
+      }
+    }
+    return candles.length > 0 ? candles : null;
+  } catch (e) {
+    console.error("Yahoo candles fetch error:", e);
+    return null;
+  }
+}
+
+// Shift futures candles so their level matches the current spot price.
+// Futures (GC=F/SI=F) trade above broker spot by a fairly stable offset; subtracting
+// (futuresLastClose - spotPrice) realigns the whole series to spot while keeping its shape.
+function shiftCandlesToSpot(candles: Candle[], spotPrice: number): Candle[] {
+  const lastClose = candles[candles.length - 1]?.close;
+  if (!lastClose || lastClose <= 0) return candles;
+  const offset = spotPrice - lastClose;
+  if (!Number.isFinite(offset) || Math.abs(offset) < 1e-6) return candles;
+  return candles.map((c) => ({
+    time: c.time,
+    close: +(c.close + offset).toFixed(4),
+    high: +(c.high + offset).toFixed(4),
+    low: +(c.low + offset).toFixed(4),
+  }));
+}
+
 async function handleHistory(code: string, range: string): Promise<Response> {
   const yahooSymbol = YAHOO_SYMBOLS[code];
   if (!yahooSymbol) {
@@ -396,6 +443,7 @@ async function handleHistory(code: string, range: string): Promise<Response> {
   }
 
   if (GOLDAPI_METALS.includes(code)) {
+    // 1) Prefer true spot history from Twelve Data.
     const spotCandles = await fetchTwelveDataHistory(code, range);
     if (spotCandles) {
       const responseData = { code, range, candles: spotCandles, count: spotCandles.length, source: "twelvedata-spot" };
@@ -404,12 +452,32 @@ async function handleHistory(code: string, range: string): Promise<Response> {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    // Spot history unavailable for this metal — never fall back to Yahoo futures (GC=F/SI=F).
+
+    // 2) Twelve Data unavailable (e.g. rate-limited). Fall back to Yahoo futures candles
+    //    but realign them to the current spot price so the chart never shows the inflated
+    //    futures level. Requires a known spot price; otherwise report unavailable.
+    const [futuresCandles, spot] = await Promise.all([
+      fetchYahooCandles(yahooSymbol, range),
+      fetchSpotMetals(),
+    ]);
+    const spotPrice = spot.prices[code];
+    if (futuresCandles && spotPrice && spotPrice > 0) {
+      const candles = shiftCandlesToSpot(futuresCandles, spotPrice);
+      const responseData = { code, range, candles, count: candles.length, source: "yahoo-futures-spot-adjusted" };
+      historyCache.set(cacheKey, { data: responseData, ts: Date.now() });
+      return new Response(JSON.stringify(responseData), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 3) Nothing usable — surface an explicit error rather than raw futures.
     return new Response(
       JSON.stringify({ error: "Spot history unavailable", code, range, unavailable: [code] }),
       { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
+
+
 
 
   const rangeConfig = RANGE_MAP[range] || RANGE_MAP["1mo"];
