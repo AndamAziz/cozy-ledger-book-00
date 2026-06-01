@@ -29,6 +29,12 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   // timeframe / symbol / chart type changes — never on live price ticks (which
   // would otherwise reset the user's manual zoom & pan).
   const lastFitKeyRef = useRef<string>('');
+  // Remembers the user's pan/zoom (visible logical range) per symbol+timeframe
+  // so it is restored when they switch back instead of being re-fit.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const savedViewsRef = useRef<Record<string, any>>({});
+  const currentViewKeyRef = useRef<string>('');
+  const restoringRef = useRef(false);
   const [chartType, setChartType] = useState<'candlestick' | 'line' | 'area'>('candlestick');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
@@ -118,6 +124,12 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
     chartRef.current = chart;
 
+    // Persist the user's pan/zoom per symbol+timeframe as they interact.
+    chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+      if (restoringRef.current || !range || !currentViewKeyRef.current) return;
+      savedViewsRef.current[currentViewKeyRef.current] = range;
+    });
+
     if (chartType === 'candlestick') {
       const series = chart.addSeries(CandlestickSeries, {
         upColor: '#0ecb81',
@@ -183,8 +195,14 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
       timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
     });
-    if (autoFit) chartRef.current.timeScale().fitContent();
-  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom, interval, autoFit]);
+    // Only auto-fit when there's no remembered view for this symbol+timeframe;
+    // otherwise the saved pan/zoom is restored by the data effect.
+    if (autoFit && !savedViewsRef.current[`${pair}-${interval}`]) {
+      restoringRef.current = true;
+      chartRef.current.timeScale().fitContent();
+      requestAnimationFrame(() => { restoringRef.current = false; });
+    }
+  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom, interval, autoFit, pair]);
 
   // Update data
   useEffect(() => {
@@ -211,12 +229,25 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       }
     }
 
-    // Only reset the visible range when switching symbol / timeframe / chart
+    // Track the active view key (symbol+timeframe) so live ticks save to it.
+    const viewKey = `${pair}-${interval}`;
+    currentViewKeyRef.current = viewKey;
+
+    // Only adjust the visible range when switching symbol / timeframe / chart
     // type. Live price ticks keep the user's current zoom & pan untouched.
     const fitKey = `${pair}-${interval}-${chartType}`;
     if (lastFitKeyRef.current !== fitKey) {
       lastFitKeyRef.current = fitKey;
-      chartRef.current?.timeScale().fitContent();
+      const ts = chartRef.current?.timeScale();
+      const saved = savedViewsRef.current[viewKey];
+      restoringRef.current = true;
+      if (saved) {
+        try { ts?.setVisibleLogicalRange(saved); } catch { ts?.fitContent(); }
+      } else {
+        ts?.fitContent();
+      }
+      // Release the save-suppression after the range change settles.
+      requestAnimationFrame(() => { restoringRef.current = false; });
     }
   }, [candles, chartType, activeMAs, maType, pair, interval]);
 
@@ -366,7 +397,10 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
             </>
           )}
           <button
-            onClick={() => chartRef.current?.timeScale().fitContent()}
+            onClick={() => {
+              delete savedViewsRef.current[`${pair}-${interval}`];
+              chartRef.current?.timeScale().fitContent();
+            }}
             className="shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border text-[#848e9c] border-white/5 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
           >
             {bi('ڕێستکردنی بینین', 'Reset View')}

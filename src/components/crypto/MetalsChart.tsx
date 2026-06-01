@@ -46,6 +46,12 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   // metal / chart type changes — never on live price ticks (which would reset
   // the user's manual zoom & pan).
   const lastFitKeyRef = useRef<string>('');
+  // Remembers the user's pan/zoom (visible logical range) per metal+timeframe
+  // so it is restored when they switch back instead of being re-fit.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const savedViewsRef = useRef<Record<string, any>>({});
+  const currentViewKeyRef = useRef<string>('');
+  const restoringRef = useRef(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [chartType, setChartType] = useState<'candles' | 'area' | 'line'>('candles');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
@@ -148,6 +154,12 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     resizeObserver.observe(container);
 
     chartRef.current = chart;
+
+    // Persist the user's pan/zoom per metal+timeframe as they interact.
+    chart.timeScale().subscribeVisibleLogicalRangeChange(range => {
+      if (restoringRef.current || !range || !currentViewKeyRef.current) return;
+      savedViewsRef.current[currentViewKeyRef.current] = range;
+    });
 
     if (chartType === 'candles') {
       const series = chart.addSeries(CandlestickSeries, {
@@ -293,8 +305,14 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
       timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
     });
-    if (autoFit) chartRef.current.timeScale().fitContent();
-  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom, range, autoFit]);
+    // Only auto-fit when there's no remembered view for this metal+timeframe;
+    // otherwise the saved pan/zoom is restored by the data effect.
+    if (autoFit && !savedViewsRef.current[`${name || ''}-${range}`]) {
+      restoringRef.current = true;
+      chartRef.current.timeScale().fitContent();
+      requestAnimationFrame(() => { restoringRef.current = false; });
+    }
+  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom, range, autoFit, name]);
 
   // Update data
   useEffect(() => {
@@ -327,12 +345,24 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       }
     }
 
-    // Only reset the visible range when switching metal / timeframe / chart
+    // Track the active view key (metal+timeframe) so live ticks save to it.
+    const viewKey = `${name || ''}-${range}`;
+    currentViewKeyRef.current = viewKey;
+
+    // Only adjust the visible range when switching metal / timeframe / chart
     // type. Live price ticks keep the user's current zoom & pan untouched.
     const fitKey = `${name || ''}-${range}-${chartType}`;
     if (lastFitKeyRef.current !== fitKey) {
       lastFitKeyRef.current = fitKey;
-      chartRef.current?.timeScale().fitContent();
+      const ts = chartRef.current?.timeScale();
+      const saved = savedViewsRef.current[viewKey];
+      restoringRef.current = true;
+      if (saved) {
+        try { ts?.setVisibleLogicalRange(saved); } catch { ts?.fitContent(); }
+      } else {
+        ts?.fitContent();
+      }
+      requestAnimationFrame(() => { restoringRef.current = false; });
     }
   }, [candles, activeMAs, maType, chartType, name, range]);
 
@@ -484,7 +514,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
             </>
           )}
           <button
-            onClick={() => chartRef.current?.timeScale().fitContent()}
+            onClick={() => {
+              delete savedViewsRef.current[`${name || ''}-${range}`];
+              chartRef.current?.timeScale().fitContent();
+            }}
             className="shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border text-[#848e9c] border-white/5 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
           >
             {bi('ڕێستکردنی بینین', 'Reset View')}
