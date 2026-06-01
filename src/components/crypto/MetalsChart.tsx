@@ -5,6 +5,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
+import { computeChartPreset } from '@/lib/chartPreset';
 
 interface MetalsChartProps {
   candles: MetalCandle[];
@@ -46,12 +47,21 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
 
-  // Chart spacing controls
+  // Auto layout: spacing computed from chart width + candle count + timeframe.
+  const [autoFit, setAutoFit] = useState(true);
+  const [containerWidth, setContainerWidth] = useState(600);
+
+  // Manual override values (used only when autoFit is off).
   const [rightOffset, setRightOffset] = useState(12);
   const [barSpacing, setBarSpacing] = useState(8);
   const [minBarSpacing, setMinBarSpacing] = useState(4);
   const [scaleMarginTop, setScaleMarginTop] = useState(0.12);
   const [scaleMarginBottom, setScaleMarginBottom] = useState(0.12);
+
+  const preset = autoFit
+    ? computeChartPreset(containerWidth, candles.length, INTRADAY_RANGES.has(range))
+    : { rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom };
+
 
   // Bilingual helper
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
@@ -105,7 +115,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       },
       rightPriceScale: {
         borderColor: 'rgba(132,142,156,0.15)',
-        scaleMargins: { top: scaleMarginTop, bottom: scaleMarginBottom },
+        scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom },
         entireTextOnly: true,
         ticksVisible: false,
       },
@@ -113,9 +123,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         borderColor: 'rgba(132,142,156,0.15)',
         timeVisible: INTRADAY_RANGES.has(range),
         secondsVisible: false,
-        rightOffset,
-        barSpacing,
-        minBarSpacing,
+        rightOffset: preset.rightOffset,
+        barSpacing: preset.barSpacing,
+        minBarSpacing: preset.minBarSpacing,
         ticksVisible: false,
       },
       width: rect.width || 600,
@@ -126,6 +136,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         chart.applyOptions({ width, height });
+        setContainerWidth(width);
       }
     });
     resizeObserver.observe(container);
@@ -265,7 +276,16 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       maSeriesRefs.current = {};
       if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     };
-  }, [chartType, range, isUp, activeMAs, maType, language, rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom]);
+  }, [chartType, range, isUp, activeMAs, maType, language]);
+
+  // Apply layout preset without recreating the chart.
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.applyOptions({
+      rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
+      timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
+    });
+  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom]);
 
   // Update data
   useEffect(() => {
@@ -427,12 +447,27 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
 
-          {/* Spacing controls */}
-          {stepper('→', rightOffset, setRightOffset, 0, 40, 1)}
-          {stepper('⇄', barSpacing, setBarSpacing, 2, 24, 1)}
-          {stepper('⇄ₘ', minBarSpacing, setMinBarSpacing, 1, 12, 1)}
-          {stepper('↑', scaleMarginTop, v => setScaleMarginTop(v), 0, 0.4, 0.02, v => v.toFixed(2))}
-          {stepper('↓', scaleMarginBottom, v => setScaleMarginBottom(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+          {/* Auto-fit toggle */}
+          <button
+            onClick={() => setAutoFit(v => !v)}
+            className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+              autoFit ? 'text-white' : 'text-[#848e9c] border-white/5 hover:text-white'
+            }`}
+            style={autoFit ? { color: accentColor, borderColor: `${accentColor}55`, backgroundColor: `${accentColor}1a` } : undefined}
+          >
+            {bi('خۆکار', 'Auto')}
+          </button>
+
+          {/* Manual spacing controls (only when auto is off) */}
+          {!autoFit && (
+            <>
+              {stepper('→', rightOffset, setRightOffset, 0, 40, 1)}
+              {stepper('⇄', barSpacing, setBarSpacing, 2, 24, 1)}
+              {stepper('⇄ₘ', minBarSpacing, setMinBarSpacing, 1, 12, 1)}
+              {stepper('↑', scaleMarginTop, v => setScaleMarginTop(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+              {stepper('↓', scaleMarginBottom, v => setScaleMarginBottom(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+            </>
+          )}
         </div>
       </div>
 

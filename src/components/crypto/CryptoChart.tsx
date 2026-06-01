@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
+import { computeChartPreset } from '@/lib/chartPreset';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CryptoChartProps {
@@ -28,12 +29,21 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
 
-  // Chart spacing controls
+  // Auto layout: spacing computed from chart width + candle count + timeframe.
+  const [autoFit, setAutoFit] = useState(true);
+  const [containerWidth, setContainerWidth] = useState(600);
+
+  // Manual override values (used only when autoFit is off).
   const [rightOffset, setRightOffset] = useState(12);
   const [barSpacing, setBarSpacing] = useState(8);
   const [minBarSpacing, setMinBarSpacing] = useState(4);
   const [scaleMarginTop, setScaleMarginTop] = useState(0.12);
   const [scaleMarginBottom, setScaleMarginBottom] = useState(0.12);
+
+  const INTRADAY = interval <= 60;
+  const preset = autoFit
+    ? computeChartPreset(containerWidth, candles.length, INTRADAY)
+    : { rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom };
 
   const symbol = getDisplaySymbol(getSymbolFromPair(pair));
 
@@ -74,7 +84,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       },
       rightPriceScale: {
         borderColor: 'rgba(132,142,156,0.15)',
-        scaleMargins: { top: scaleMarginTop, bottom: scaleMarginBottom },
+        scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom },
         entireTextOnly: true,
         ticksVisible: false,
       },
@@ -82,9 +92,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         borderColor: 'rgba(132,142,156,0.15)',
         timeVisible: true,
         secondsVisible: false,
-        rightOffset,
-        barSpacing,
-        minBarSpacing,
+        rightOffset: preset.rightOffset,
+        barSpacing: preset.barSpacing,
+        minBarSpacing: preset.minBarSpacing,
         ticksVisible: false,
       },
       width: rect.width || 600,
@@ -95,6 +105,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         chart.applyOptions({ width, height });
+        setContainerWidth(width);
       }
     });
     resizeObserver.observe(container);
@@ -155,7 +166,16 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       seriesRef.current = null;
       maSeriesRefs.current = {};
     };
-  }, [chartType, pair, activeMAs, maType, rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom]);
+  }, [chartType, pair, activeMAs, maType]);
+
+  // Apply layout preset without recreating the chart.
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.applyOptions({
+      rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
+      timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
+    });
+  }, [preset.rightOffset, preset.barSpacing, preset.minBarSpacing, preset.scaleMarginTop, preset.scaleMarginBottom]);
 
   // Update data
   useEffect(() => {
@@ -310,12 +330,26 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
 
-          {/* Spacing controls */}
-          {stepper('→', rightOffset, setRightOffset, 0, 40, 1)}
-          {stepper('⇄', barSpacing, setBarSpacing, 2, 24, 1)}
-          {stepper('⇄ₘ', minBarSpacing, setMinBarSpacing, 1, 12, 1)}
-          {stepper('↑', scaleMarginTop, v => setScaleMarginTop(v), 0, 0.4, 0.02, v => v.toFixed(2))}
-          {stepper('↓', scaleMarginBottom, v => setScaleMarginBottom(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+          {/* Auto-fit toggle */}
+          <button
+            onClick={() => setAutoFit(v => !v)}
+            className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+              autoFit ? 'bg-[#f0b90b1a] text-[#f0b90b] border-[#f0b90b55]' : 'text-[#848e9c] border-white/5 hover:text-white'
+            }`}
+          >
+            {bi('خۆکار', 'Auto')}
+          </button>
+
+          {/* Manual spacing controls (only when auto is off) */}
+          {!autoFit && (
+            <>
+              {stepper('→', rightOffset, setRightOffset, 0, 40, 1)}
+              {stepper('⇄', barSpacing, setBarSpacing, 2, 24, 1)}
+              {stepper('⇄ₘ', minBarSpacing, setMinBarSpacing, 1, 12, 1)}
+              {stepper('↑', scaleMarginTop, v => setScaleMarginTop(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+              {stepper('↓', scaleMarginBottom, v => setScaleMarginBottom(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+            </>
+          )}
         </div>
       </div>
 
