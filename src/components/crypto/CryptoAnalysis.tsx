@@ -75,12 +75,15 @@ function fmt(n: number | null, digits = 2): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
+type LangMode = 'ku' | 'en' | 'both';
+
 export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, interval, timeframeLabel }: CryptoAnalysisProps) {
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [tradeSummary, setTradeSummary] = useState<TradeSummary | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
+  const [langMode, setLangMode] = useState<LangMode>('both');
 
   // Chart image analysis state
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
