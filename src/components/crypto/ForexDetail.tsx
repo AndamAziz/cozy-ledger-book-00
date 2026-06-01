@@ -19,7 +19,7 @@ export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetail
       <div className="flex-1 flex items-center justify-center bg-[#0a0e17]">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 text-[#848e9c] mx-auto mb-3 animate-spin" />
-          <p className="text-sm text-[#848e9c]">Loading forex rates...</p>
+          <p className="text-sm text-[#848e9c]">{bi('بارکردنی نرخی دراو...', 'Loading forex rates...')}</p>
         </div>
       </div>
     );
