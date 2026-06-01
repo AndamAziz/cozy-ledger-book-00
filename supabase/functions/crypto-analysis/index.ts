@@ -272,6 +272,8 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                     "entry",
                     "targets",
                     "stopLoss",
+                    "stopLossIndicator",
+                    "stopLossBasis",
                     "horizonDays",
                     "riskLevel",
                     "riskNote",
