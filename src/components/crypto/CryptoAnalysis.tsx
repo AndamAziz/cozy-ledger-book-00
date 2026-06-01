@@ -276,30 +276,45 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   };
 
   const handleImagePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    if (files.length === 0) return;
+
+    const images = files.filter(f => f.type.startsWith('image/'));
+    if (images.length === 0) {
       setImageError('تکایە تەنها وێنە هەڵبژێرە.');
       return;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      setImageError('قەبارەی وێنە زۆر گەورەیە (زۆرترین ٨MB).');
+    if (images.some(f => f.size > 8 * 1024 * 1024)) {
+      setImageError('قەبارەی هەندێک وێنە زۆر گەورەیە (زۆرترین ٨MB).');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      setImagePreview(dataUrl);
-      setImageError(null);
-      setImageText('');
-      analyzeImage(dataUrl);
-    };
-    reader.onerror = () => setImageError('نەتوانرا وێنە بخوێنرێتەوە.');
-    reader.readAsDataURL(file);
+    if (images.length > 6) {
+      setImageError('زۆرترین ٦ وێنە لە یەک کاتدا.');
+      return;
+    }
+
+    Promise.all(
+      images.map(
+        file =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error('read'));
+            reader.readAsDataURL(file);
+          }),
+      ),
+    )
+      .then(dataUrls => {
+        setImagePreviews(dataUrls);
+        setImageError(null);
+        setImageText('');
+        analyzeImages(dataUrls);
+      })
+      .catch(() => setImageError('نەتوانرا وێنەکان بخوێنرێنەوە.'));
   };
 
-  const analyzeImage = async (dataUrl: string) => {
+  const analyzeImages = async (dataUrls: string[]) => {
     setImageLoading(true);
     setImageError(null);
     setImageText('');
@@ -307,7 +322,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       const resp = await fetch(fnUrl, {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ mode: 'image', symbol, imageBase64: dataUrl }),
+        body: JSON.stringify({ mode: 'image', symbol, images: dataUrls, chartTimeframe }),
       });
       if (!resp.ok || !resp.body) {
         let msg = 'هەڵەیەک ڕوویدا لە شیکاری وێنە.';
@@ -326,7 +341,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   };
 
   const clearImage = () => {
-    setImagePreview(null);
+    setImagePreviews([]);
     setImageText('');
     setImageError(null);
   };
