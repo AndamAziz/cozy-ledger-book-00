@@ -369,7 +369,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       return;
     }
     if (images.some(f => f.size > 8 * 1024 * 1024)) {
-      setImageError('قەبارەی هەندێک وێنە زۆر گەورەیە (زۆرترین ٨MB).');
+      setImageError(biLabel('قەبارەی هەندێک وێنە زۆر گەورەیە (زۆرترین 8MB).', 'Some images are too large (max 8MB).'));
       return;
     }
     if (images.length > 6) {
