@@ -325,8 +325,14 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       }
     }
 
-    chartRef.current?.timeScale().fitContent();
-  }, [candles, activeMAs, maType, chartType]);
+    // Only reset the visible range when switching metal / timeframe / chart
+    // type. Live price ticks keep the user's current zoom & pan untouched.
+    const fitKey = `${name || ''}-${range}-${chartType}`;
+    if (lastFitKeyRef.current !== fitKey) {
+      lastFitKeyRef.current = fitKey;
+      chartRef.current?.timeScale().fitContent();
+    }
+  }, [candles, activeMAs, maType, chartType, name, range]);
 
   // Update price line
   useEffect(() => {
