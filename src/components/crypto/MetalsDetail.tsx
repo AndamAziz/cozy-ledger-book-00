@@ -72,7 +72,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           <p className="text-2xl font-bold tabular-nums mb-1" style={{ color: accentColor }}>
             ${m.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="text-[10px] text-[#848e9c] mb-2">per {m.unit === 'bbl' ? 'barrel' : 'troy ounce'}</p>
+          <p className="text-[10px] text-[#848e9c] mb-2">{bi('بۆ', 'per')} {m.unit === 'bbl' ? bi('بەرمیل', 'barrel') : bi('ئۆنسی ترۆی', 'troy ounce')}</p>
           <div className={`flex items-center gap-1 text-xs font-medium ${
             isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
           }`}>
