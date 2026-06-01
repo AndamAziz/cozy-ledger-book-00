@@ -77,32 +77,44 @@ Indicators: ${JSON.stringify(indicators)}`;
         ? `The user states these charts are on the ${chartTimeframe} timeframe — interpret the candles accordingly.`
         : "";
 
+      const imgLangRule =
+        langMode === "en"
+          ? "Respond ONLY in clear professional English."
+          : langMode === "ku"
+          ? "Respond ONLY in Kurdish Sorani (کوردیی ناوەندی)."
+          : "Respond bilingually: for every section write the Kurdish Sorani (کوردیی ناوەندی) line first, then the SAME content in English on the next line prefixed with 'EN: '.";
+
+      const adviceRule =
+        "In the recommendation section ALWAYS state: a clear buy/sell/hold lean, the exact price area to ENTER (when to buy), the price area to take profit / EXIT (when to sell), and a suggested stop-loss area. Also report the highest and lowest visible price on the chart.";
+
       const singleSystem = `You are a professional candlestick chart analyst.
 You will be given a screenshot of a trading chart. Carefully READ the candles, trend, and any visible levels.
 ${tfLine}
-Respond ONLY in Kurdish Sorani (کوردیی ناوەندی). Be concise with short paragraphs and bullet points.
-Use these exact Kurdish section headers:
-1. **خوێندنەوەی چارت** - what timeframe/asset appears and the overall candle structure you see.
-2. **ڕەوت** - current trend (uptrend/downtrend/sideways) based on the candles.
-3. **شێوەکان** - candlestick patterns or formations visible (e.g. doji, engulfing, head & shoulders).
-4. **ئاستە گرنگەکان** - visible support/resistance levels (estimate numbers if axis is readable).
-5. **پێشنیار** - a buy/sell/hold lean (کڕین/فرۆشتن/هەڵگرتن) with reasoning and a suggested stop area.
-6. **ئاگاداری** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە.
-If the image is not a chart, say so politely in Kurdish.`;
+${imgLangRule} Be concise with short paragraphs and bullet points.
+Cover these sections in order (keep the Kurdish header, and when bilingual add its English name):
+1. **خوێندنەوەی چارت / Chart reading** - timeframe/asset and the overall candle structure.
+2. **ڕەوت / Trend** - current trend (uptrend/downtrend/sideways).
+3. **شێوەکان / Patterns** - candlestick patterns visible (doji, engulfing, etc.).
+4. **بەرزترین و نزمترین / High & Low** - the highest and lowest visible price on the chart.
+5. **ئاستە گرنگەکان / Key levels** - visible support/resistance levels.
+6. **پێشنیار / Recommendation** - ${adviceRule}
+7. **ئاگاداری / Warning** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە (this is not financial advice).
+If the image is not a chart, say so politely.`;
 
       const multiSystem = `You are a professional candlestick chart analyst.
 You will be given ${validImages.length} screenshots of trading charts (they may be different timeframes or assets).
 Carefully READ the candles in EACH chart, then COMPARE the signals across all of them and produce ONE combined analysis.
 ${tfLine}
-Respond ONLY in Kurdish Sorani (کوردیی ناوەندی). Be concise with short paragraphs and bullet points.
-Use these exact Kurdish section headers:
-1. **خوێندنەوەی هەر چارتێک** - read each chart in order (number them چارت ١، چارت ٢ ...): timeframe/asset and candle structure.
-2. **بەراوردی نیشانەکان** - compare the signals across the charts: where do they agree (هاوڕایی) and where do they ناکۆکن (divergence).
-3. **ڕەوتی گشتی** - the combined overall trend conclusion from all charts together.
-4. **ئاستە گرنگەکان** - key support/resistance levels gathered across the charts.
-5. **پێشنیار** - ONE combined buy/sell/hold lean (کڕین/فرۆشتن/هەڵگرتن) with reasoning and a suggested stop area.
-6. **ئاگاداری** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە.
-If an image is not a chart, mention it politely in Kurdish and skip it.`;
+${imgLangRule} Be concise with short paragraphs and bullet points.
+Cover these sections in order (keep the Kurdish header, and when bilingual add its English name):
+1. **خوێندنەوەی هەر چارتێک / Per-chart reading** - read each chart in order (number them چارت ١، چارت ٢ ...).
+2. **بەراوردی نیشانەکان / Signal comparison** - where the charts agree (هاوڕایی) and where they diverge (ناکۆک).
+3. **ڕەوتی گشتی / Overall trend** - the combined overall trend conclusion.
+4. **بەرزترین و نزمترین / High & Low** - the highest and lowest visible price across the charts.
+5. **ئاستە گرنگەکان / Key levels** - key support/resistance levels.
+6. **پێشنیار / Recommendation** - ONE combined view. ${adviceRule}
+7. **ئاگاداری / Warning** - one risk note. Always add: ئەمە ڕاوێژی دارایی نییە (this is not financial advice).
+If an image is not a chart, mention it politely and skip it.`;
 
       const userParts: unknown[] = [
         {
