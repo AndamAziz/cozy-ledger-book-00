@@ -102,7 +102,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       },
       timeScale: {
         borderColor: '#1a1e2e',
-        timeVisible: range === '1d' || range === '5d',
+        timeVisible: INTRADAY_RANGES.has(range),
         secondsVisible: false,
       },
       width: rect.width || 600,
