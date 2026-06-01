@@ -21,7 +21,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
   const [view, setView] = useState<'market' | 'analysis'>('market');
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const livePrice = selected?.price || 0;
-  const { candles: historyCandles, isLoading: historyLoading } = useMetalsHistory(selectedCode, chartRange, livePrice);
+  const { candles: historyCandles, isLoading: historyLoading, error: historyError, refetch: refetchHistory } = useMetalsHistory(selectedCode, chartRange, livePrice);
 
   // Adapt metals candles (close/high/low) to the OHLC shape the analysis expects
   const ohlcCandles = useMemo<OHLCCandle[]>(
@@ -182,6 +182,8 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
       <MetalsChart
         candles={historyCandles}
         isLoading={historyLoading}
+        error={historyError}
+        onRetry={refetchHistory}
         accentColor={accentColor}
         range={chartRange}
         onRangeChange={setChartRange}

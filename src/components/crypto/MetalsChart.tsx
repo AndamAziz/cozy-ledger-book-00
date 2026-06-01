@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, Time } from 'lightweight-charts';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 
 interface MetalsChartProps {
   candles: MetalCandle[];
   isLoading: boolean;
+  error?: string | null;
+  onRetry?: () => void;
   accentColor: string;
   range: string;
   onRangeChange: (range: string) => void;
@@ -23,7 +26,7 @@ const RANGES = [
   { key: '5y', label: '5Y' },
 ];
 
-export function MetalsChart({ candles, isLoading, accentColor, range, onRangeChange, currentPrice, name }: MetalsChartProps) {
+export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, range, onRangeChange, currentPrice, name }: MetalsChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -276,6 +279,29 @@ export function MetalsChart({ candles, isLoading, accentColor, range, onRangeCha
             <div className="flex flex-col items-center gap-2">
               <div className="w-5 h-5 border-2 border-[#848e9c] border-t-transparent rounded-full animate-spin" />
               <span className="text-[10px] text-[#848e9c]">Loading chart...</span>
+            </div>
+          </div>
+        )}
+        {!isLoading && (error || candles.length === 0) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/90 z-10 px-6">
+            <div className="flex flex-col items-center gap-3 text-center max-w-[260px]">
+              <AlertTriangle className="w-7 h-7 text-[#f0b90b]" />
+              <span className="text-xs font-medium text-white">
+                {error || 'No chart data available for this timeframe.'}
+              </span>
+              <span className="text-[10px] text-[#848e9c] leading-relaxed">
+                Spot data may be briefly rate-limited. We never show futures prices instead — try again in a moment or pick another timeframe.
+              </span>
+              {onRetry && (
+                <button
+                  onClick={onRetry}
+                  className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-black active:scale-95 transition-transform"
+                  style={{ backgroundColor: accentColor }}
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Retry
+                </button>
+              )}
             </div>
           </div>
         )}

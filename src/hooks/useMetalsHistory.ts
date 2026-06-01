@@ -7,9 +7,20 @@ export interface MetalCandle {
   low: number;
 }
 
-export function useMetalsHistory(code: string | null, range: string = '1mo', livePrice?: number) {
+export interface MetalsHistoryState {
+  candles: MetalCandle[];
+  isLoading: boolean;
+  error: string | null;
+  source: string | null;
+  refetch: () => void;
+}
+
+export function useMetalsHistory(code: string | null, range: string = '1mo', livePrice?: number): MetalsHistoryState {
   const [candles, setCandles] = useState<MetalCandle[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const baseCandlesRef = useRef<MetalCandle[]>([]);
 
   // Fetch history when code or range changes
@@ -17,11 +28,14 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
     if (!code) {
       setCandles([]);
       baseCandlesRef.current = [];
+      setError(null);
+      setSource(null);
       return;
     }
 
     let cancelled = false;
     setIsLoading(true);
+    setError(null);
 
     const fetchHistory = async () => {
       try {
@@ -38,15 +52,32 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
           }
         );
 
-        if (res.ok) {
-          const data = await res.json();
-          if (!cancelled && Array.isArray(data.candles)) {
-            baseCandlesRef.current = data.candles;
-            setCandles(data.candles);
-          }
+        const data = await res.json().catch(() => null);
+
+        if (cancelled) return;
+
+        if (res.ok && data && Array.isArray(data.candles) && data.candles.length > 0) {
+          baseCandlesRef.current = data.candles;
+          setCandles(data.candles);
+          setSource(typeof data.source === 'string' ? data.source : null);
+          setError(null);
+        } else {
+          // No usable history (e.g. spot source rate-limited / unavailable).
+          baseCandlesRef.current = [];
+          setCandles([]);
+          setSource(null);
+          setError(
+            (data && typeof data.error === 'string' && data.error) ||
+            'Chart data is temporarily unavailable.'
+          );
         }
       } catch (e) {
+        if (cancelled) return;
         console.error('Failed to fetch metals history:', e);
+        baseCandlesRef.current = [];
+        setCandles([]);
+        setSource(null);
+        setError('Could not load chart data. Check your connection and try again.');
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -54,7 +85,7 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
 
     fetchHistory();
     return () => { cancelled = true; };
-  }, [code, range]);
+  }, [code, range, reloadKey]);
 
   // Append live price as the latest point for real-time feel
   useEffect(() => {
@@ -79,5 +110,7 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
     }
   }, [livePrice]);
 
-  return { candles, isLoading };
+  const refetch = () => setReloadKey((k) => k + 1);
+
+  return { candles, isLoading, error, source, refetch };
 }
