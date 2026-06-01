@@ -126,6 +126,42 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const showEn = langMode === 'en' || langMode === 'both';
   const biLabel = (ku: string, en: string) => (langMode === 'en' ? en : langMode === 'ku' ? ku : `${ku} · ${en}`);
 
+  // Bilingual text block: Kurdish (rtl) and/or English (ltr) depending on langMode
+  const BiText = ({ ku, en, className = '' }: { ku?: string; en?: string; className?: string }) => (
+    <>
+      {showKu && ku && <p className={`leading-relaxed ${className}`} dir="rtl">{ku}</p>}
+      {showEn && en && (
+        <p className={`leading-relaxed ${className} ${showKu && ku ? 'mt-1 text-[#9aa4b2]' : ''}`} dir="ltr">{en}</p>
+      )}
+    </>
+  );
+
+  // Reusable language toggle (ku / both / en)
+  const LangToggle = () => (
+    <div
+      role="group"
+      aria-label="Select display language"
+      className="inline-flex items-center gap-0.5 bg-[#1a1e2e] rounded-lg p-0.5"
+    >
+      {(['ku', 'both', 'en'] as LangMode[]).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => setLangMode(m)}
+          aria-pressed={langMode === m}
+          aria-label={m === 'ku' ? 'Kurdish only' : m === 'en' ? 'English only' : 'Both languages'}
+          className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all duration-200 min-h-[28px] outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] focus-visible:ring-offset-1 focus-visible:ring-offset-[#0d1117] ${
+            langMode === m
+              ? 'bg-[#0d1117] text-white shadow-sm ring-1 ring-[#2d2d2d]'
+              : 'text-[#848e9c] hover:text-white'
+          }`}
+        >
+          {m === 'ku' ? 'کوردی' : m === 'en' ? 'English' : 'هەردووکی'}
+        </button>
+      ))}
+    </div>
+  );
+
   const rows: { label: string; value: string; signal: SignalType; hint?: string }[] = [];
   if (indicators.rsi != null) {
     rows.push({
