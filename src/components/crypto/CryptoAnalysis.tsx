@@ -188,8 +188,9 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     return () => { active = false; };
   }, []);
 
-  const sendSignal = async () => {
-    if (!tradeSummary) return;
+  const sendSignal = async (ts?: TradeSummary, tf?: string) => {
+    const s = ts ?? tradeSummary;
+    if (!s) return;
     setSending(true);
     setSentOk(false);
     try {
@@ -202,18 +203,19 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         },
         body: JSON.stringify({
           symbol,
-          recommendation: tradeSummary.recommendation,
-          confidence: tradeSummary.confidence,
+          recommendation: s.recommendation,
+          confidence: s.confidence,
           price: currentPrice,
-          entry: tradeSummary.entry,
-          targets: tradeSummary.targets,
-          stopLoss: tradeSummary.stopLoss,
-          horizonDays: tradeSummary.horizonDays,
-          riskLevel: tradeSummary.riskLevel,
-          headline: tradeSummary.headlineEn || tradeSummary.headline,
-          timeframe: timeframeLabel,
+          entry: s.entry,
+          targets: s.targets,
+          stopLoss: s.stopLoss,
+          horizonDays: s.horizonDays,
+          riskLevel: s.riskLevel,
+          headline: s.headlineEn || s.headline,
+          timeframe: tf ?? timeframeLabel,
         }),
       });
+
       const j = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(j?.error || 'Failed to send');
       setSentOk(true);
