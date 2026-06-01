@@ -104,6 +104,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         borderColor: '#1a1e2e',
         timeVisible: INTRADAY_RANGES.has(range),
         secondsVisible: false,
+        rightOffset: 6,
       },
       width: rect.width || 600,
       height: rect.height || 300,
