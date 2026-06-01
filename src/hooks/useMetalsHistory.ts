@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 
 export interface MetalCandle {
   time: number;
+  open: number;
   close: number;
   high: number;
   low: number;
 }
+
 
 export interface MetalsHistoryState {
   candles: MetalCandle[];
