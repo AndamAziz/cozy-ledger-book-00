@@ -96,7 +96,12 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [aiError, setAiError] = useState<string | null>(null);
   const [tradeSummary, setTradeSummary] = useState<TradeSummary | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
-  const [langMode, setLangMode] = useState<LangMode>('both');
+  // Display/analysis language follows the global app language (English vs RTL languages).
+  const { language } = useLanguage();
+  const [langMode, setLangMode] = useState<LangMode>(language === 'en' ? 'en' : 'ku');
+  useEffect(() => {
+    setLangMode(language === 'en' ? 'en' : 'ku');
+  }, [language]);
 
   // Chart image analysis state
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
