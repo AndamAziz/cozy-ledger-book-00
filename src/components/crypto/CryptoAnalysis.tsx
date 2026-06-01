@@ -520,10 +520,35 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       .catch(() => setImageError(biLabel('نەتوانرا وێنەکان بخوێنرێنەوە.', 'Could not read the images.')));
   };
 
+  // Auto-detect a structured buy/sell trade plan (entry / targets / stop-loss) from the chart image(s).
+  const analyzeImageSummary = async (dataUrls: string[]) => {
+    setImageSummaryLoading(true);
+    setImageSummary(null);
+    setImageGeneratedAt(null);
+    try {
+      const resp = await fetch(fnUrl, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ mode: 'image-summary', symbol, images: dataUrls, chartTimeframe, lang: langMode, price: currentPrice }),
+      });
+      if (resp.ok) {
+        const j = await resp.json();
+        if (j?.summary) {
+          setImageSummary(j.summary as TradeSummary);
+          setImageGeneratedAt(j.generatedAt as string);
+        }
+      }
+    } catch { /* non-blocking */ } finally {
+      setImageSummaryLoading(false);
+    }
+  };
+
   const analyzeImages = async (dataUrls: string[]) => {
     setImageLoading(true);
     setImageError(null);
     setImageText('');
+    // Kick off the structured buy/sell target detection in parallel with the text analysis.
+    void analyzeImageSummary(dataUrls);
     try {
       const resp = await fetch(fnUrl, {
         method: 'POST',
@@ -550,7 +575,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     setImagePreviews([]);
     setImageText('');
     setImageError(null);
+    setImageSummary(null);
+    setImageGeneratedAt(null);
   };
+
 
   const hasData = candles.length > 0;
   const gaugePct = (summary.score + 100) / 2; // 0..100
