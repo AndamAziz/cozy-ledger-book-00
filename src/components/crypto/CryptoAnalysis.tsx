@@ -811,10 +811,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           <div className={`mb-3 grid gap-2 ${imagePreviews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
             {imagePreviews.map((src, i) => (
               <div key={i} className="relative rounded-lg overflow-hidden border border-[#1a1e2e]">
-                <img src={src} alt={`چارتی بارکراو ${i + 1}`} className="w-full max-h-48 object-contain bg-black" />
+                <img src={src} alt={`${biLabel('چارتی بارکراو', 'Uploaded chart')} ${i + 1}`} className="w-full max-h-48 object-contain bg-black" />
                 {imagePreviews.length > 1 && (
                   <span className="absolute top-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/70 text-white">
-                    چارت {i + 1}
+                    {biLabel('چارت', 'Chart')} {i + 1}
                   </span>
                 )}
               </div>
