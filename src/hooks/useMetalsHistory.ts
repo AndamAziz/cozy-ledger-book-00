@@ -95,21 +95,23 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
 
     const base = baseCandlesRef.current;
     const now = Math.floor(Date.now() / 1000);
+    const lastBase = base[base.length - 1];
     const liveCandle: MetalCandle = {
       time: now,
+      open: lastBase?.close ?? livePrice,
       close: livePrice,
       high: livePrice,
       low: livePrice,
     };
 
     // Replace or append live point
-    const lastBase = base[base.length - 1];
     if (lastBase && now - lastBase.time < 60) {
-      // Update the last candle
+      // Update the last candle (keep its original open)
       setCandles([...base.slice(0, -1), { ...lastBase, close: livePrice, high: Math.max(lastBase.high, livePrice), low: Math.min(lastBase.low, livePrice) }]);
     } else {
       setCandles([...base, liveCandle]);
     }
+
   }, [livePrice]);
 
   const refetch = () => setReloadKey((k) => k + 1);
