@@ -186,7 +186,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       label: 'MACD',
       value: fmt(indicators.macd.histogram, 4),
       signal: indicators.macd.histogram > 0 ? 'buy' : indicators.macd.histogram < 0 ? 'sell' : 'neutral',
-      hint: indicators.macd.histogram > 0 ? 'هێزی کڕین' : 'هێزی فرۆشتن',
+      hint: indicators.macd.histogram > 0 ? bi('هێزی کڕین', 'Bullish momentum', langMode) : bi('هێزی فرۆشتن', 'Bearish momentum', langMode),
     });
   }
   if (indicators.bollinger) {
