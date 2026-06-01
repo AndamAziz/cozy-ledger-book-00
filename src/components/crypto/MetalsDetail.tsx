@@ -92,7 +92,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Precious Metals */}
           <div>
-            <h3 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider mb-3">🏆 Precious Metals</h3>
+            <h3 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider mb-3">🏆 {bi('کانزا بەهادارەکان', 'Precious Metals')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {metalItems.map(renderCard)}
             </div>
