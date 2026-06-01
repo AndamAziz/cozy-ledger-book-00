@@ -266,7 +266,7 @@ async function handleLivePrices(): Promise<Response> {
     );
   }
 
-  // Fetch from Yahoo, OilPriceAPI and GoldAPI (spot metals) in parallel
+  // Fetch from Yahoo, OilPriceAPI and dedicated spot metals sources in parallel
   const [yahooResults, oilPrices, metalsSpot] = await Promise.all([
     Promise.all(
       Object.entries(YAHOO_SYMBOLS).map(async ([code, symbol]) =>
@@ -274,7 +274,7 @@ async function handleLivePrices(): Promise<Response> {
       ),
     ),
     fetchOilPriceApi(),
-    fetchGoldApiMetals(),
+    fetchSpotMetals(),
   ]);
 
   const yahooPrices: Record<string, number> = {};
@@ -291,10 +291,10 @@ async function handleLivePrices(): Promise<Response> {
       // Prefer OilPriceAPI for oil & gas prices
       prices[code] = oilPrices[code];
       if (!sources.includes("oilpriceapi")) sources.push("oilpriceapi");
-    } else if (GOLDAPI_METALS.includes(code) && metalsSpot[code]) {
-      // Prefer GoldAPI spot price for precious metals (accurate XAU/USD spot)
-      prices[code] = metalsSpot[code];
-      if (!sources.includes("goldapi-spot")) sources.push("goldapi-spot");
+    } else if (GOLDAPI_METALS.includes(code) && metalsSpot.prices[code]) {
+      // Prefer real XAU/USD spot feeds for precious metals; never use futures when spot is available.
+      prices[code] = metalsSpot.prices[code];
+      for (const source of metalsSpot.sources) if (!sources.includes(source)) sources.push(source);
     } else if (yahooPrices[code]) {
       prices[code] = yahooPrices[code];
       if (!sources.includes("yahoo-finance")) sources.push("yahoo-finance");
