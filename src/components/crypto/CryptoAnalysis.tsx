@@ -91,7 +91,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const indicators = useMemo(() => computeIndicators(candles), [candles]);
   const summary = useMemo(() => summarizeSignals(indicators, currentPrice), [indicators, currentPrice]);
 
-  const tfLabel = TIMEFRAMES.find(t => t.interval === interval)?.label ?? `${interval}m`;
+  const tfLabel = timeframeLabel ?? TIMEFRAMES.find(t => t.interval === interval)?.label ?? `${interval}m`;
 
   const rows: { label: string; value: string; signal: SignalType; hint?: string }[] = [];
   if (indicators.rsi != null) {
