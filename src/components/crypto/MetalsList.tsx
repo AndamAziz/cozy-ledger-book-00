@@ -86,28 +86,28 @@ export function MetalsList({ metals, selectedCode, onSelectMetal, isLoading, mar
     <div className="h-full bg-[#0d1117] border-r border-[#1a1e2e] flex flex-col">
       <div className="px-3 py-2 border-b border-[#1a1e2e]">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider">Commodities</h3>
+          <h3 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider">{bi('کاڵاکان', 'Commodities')}</h3>
           {marketOpen ? (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0ecb81]/15 text-[#0ecb81] font-semibold">LIVE</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0ecb81]/15 text-[#0ecb81] font-semibold">{bi('ڕاستەوخۆ', 'LIVE')}</span>
           ) : (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#f6465d]/15 text-[#f6465d] font-semibold animate-pulse">CLOSED</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#f6465d]/15 text-[#f6465d] font-semibold animate-pulse">{bi('داخراو', 'CLOSED')}</span>
           )}
         </div>
         <p className="text-[10px] text-[#848e9c]">
-          {marketOpen ? 'Spot prices • Live' : 'Market closed • Last prices'}
+          {marketOpen ? bi('نرخی سپۆت • ڕاستەوخۆ', 'Spot prices • Live') : bi('بازاڕ داخراوە • دوا نرخەکان', 'Market closed • Last prices')}
         </p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {/* Precious Metals section */}
         <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-[#d4af37] border-b border-[#1a1e2e] bg-[#d4af37]/5">
-          🏆 Precious Metals
+          🏆 {bi('کانزا بەهادارەکان', 'Precious Metals')}
         </div>
         {metalItems.map(renderItem)}
 
         {/* Oil section */}
         <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-[#e67e22] border-b border-[#1a1e2e] bg-[#e67e22]/5">
-          🛢️ Crude Oil
+          🛢️ {bi('نەوتی خاو', 'Crude Oil')}
         </div>
         {oilItems.map(renderItem)}
 
@@ -115,7 +115,7 @@ export function MetalsList({ metals, selectedCode, onSelectMetal, isLoading, mar
         {gasItems.length > 0 && (
           <>
             <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-[#3498db] border-b border-[#1a1e2e] bg-[#3498db]/5">
-              🔥 Natural Gas
+              🔥 {bi('گازی سروشتی', 'Natural Gas')}
             </div>
             {gasItems.map(renderItem)}
           </>
