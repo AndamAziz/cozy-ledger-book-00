@@ -113,6 +113,67 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [chartTimeframe, setChartTimeframe] = useState('1H');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Admin-only Telegram signal sending
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sentOk, setSentOk] = useState(false);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { if (active) setIsAdmin(false); return; }
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (active) setIsAdmin(data?.role === 'admin');
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const sendSignal = async () => {
+    if (!tradeSummary) return;
+    setSending(true);
+    setSentOk(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-telegram-signal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({
+          symbol,
+          recommendation: tradeSummary.recommendation,
+          confidence: tradeSummary.confidence,
+          price: currentPrice,
+          entry: tradeSummary.entry,
+          targets: tradeSummary.targets,
+          stopLoss: tradeSummary.stopLoss,
+          horizonDays: tradeSummary.horizonDays,
+          riskLevel: tradeSummary.riskLevel,
+          headline: tradeSummary.headlineEn || tradeSummary.headline,
+          timeframe: timeframeLabel,
+        }),
+      });
+      const j = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(j?.error || 'Failed to send');
+      setSentOk(true);
+      toast({ title: biLabel('نێردرا بۆ تەلەگرام ✅', 'Sent to Telegram ✅') });
+      setTimeout(() => setSentOk(false), 3000);
+    } catch (e) {
+      toast({
+        title: biLabel('ناردن سەرکەوتوو نەبوو', 'Failed to send'),
+        description: e instanceof Error ? e.message : undefined,
+        variant: 'destructive',
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
   const CHART_TIMEFRAMES = ['1H', '4H', '1D'];
 
   const indicators = useMemo(() => computeIndicators(candles), [candles]);
