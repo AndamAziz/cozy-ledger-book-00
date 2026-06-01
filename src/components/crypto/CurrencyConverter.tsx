@@ -109,7 +109,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
           )}
           {fiatItems.length > 0 && (
             <>
-              <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#2962ff] uppercase tracking-wider">Currencies</p>
+              <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#2962ff] uppercase tracking-wider">{bi('دراوەکان', 'Currencies')}</p>
               {fiatItems.map(i => (
                 <button
                   key={i.code}
