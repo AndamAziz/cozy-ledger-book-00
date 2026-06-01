@@ -359,7 +359,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       const resp = await fetch(fnUrl, {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ mode: 'image', symbol, images: dataUrls, chartTimeframe }),
+        body: JSON.stringify({ mode: 'image', symbol, images: dataUrls, chartTimeframe, lang: langMode }),
       });
       if (!resp.ok || !resp.body) {
         let msg = 'هەڵەیەک ڕوویدا لە شیکاری وێنە.';
