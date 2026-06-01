@@ -309,92 +309,85 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   return (
     <div className="border-b border-[#1a1e2e]">
       {/* Controls */}
-      <div className="flex flex-col gap-2 px-2 sm:px-3 py-2 border-b border-[#1a1e2e]">
-        {/* Row 1: Range selector (full width, even) + change */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-1 bg-[#1a1e2e] rounded-lg overflow-hidden">
-            {RANGES.map(r => (
+      <div className="border-b border-white/5">
+        {/* Timeframes row (underline active) */}
+        <div className="flex items-center gap-4 px-3 py-2.5 overflow-x-auto scrollbar-thin border-b border-white/5">
+          {RANGES.map(r => {
+            const active = range === r.key;
+            return (
               <button
                 key={r.key}
                 onClick={() => onRangeChange(r.key)}
-                className={`flex-1 py-1.5 text-[11px] sm:text-xs font-semibold transition-colors active:scale-95 ${
-                  range === r.key ? 'text-black' : 'text-[#848e9c] hover:text-white'
+                className={`relative shrink-0 text-[11px] sm:text-xs font-bold whitespace-nowrap pb-1 transition-colors active:scale-95 ${
+                  active ? '' : 'text-[#848e9c] hover:text-white'
                 }`}
-                style={range === r.key ? { backgroundColor: accentColor } : undefined}
+                style={active ? { color: accentColor } : undefined}
               >
                 {r.label}
+                {active && (
+                  <span
+                    className="absolute -bottom-[11px] left-0 w-full h-[2px] rounded-full"
+                    style={{ backgroundColor: accentColor }}
+                  />
+                )}
               </button>
-            ))}
-          </div>
+            );
+          })}
 
           {/* Change indicator */}
           {candles.length >= 2 && (
-            <span className={`text-[10px] sm:text-xs font-bold whitespace-nowrap shrink-0 ${isUp ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+            <span className={`ml-auto pl-3 text-[10px] sm:text-xs font-bold whitespace-nowrap shrink-0 ${isUp ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
               {isUp ? '▲' : '▼'} {isUp ? '+' : ''}{pctChange.toFixed(2)}%
             </span>
           )}
         </div>
 
-        {/* Row 2: indicators + chart type (horizontally scrollable) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin -mx-0.5 px-0.5 pb-0.5">
-          {/* Chart type toggle */}
-          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
-            <button
-              onClick={() => setChartType('candles')}
-              className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-medium transition-colors ${
-                chartType === 'candles' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              {language === 'en' ? 'Candles' : 'شمع'}
-            </button>
-            <button
-              onClick={() => setChartType('area')}
-              className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-medium transition-colors ${
-                chartType === 'area' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              Area
-            </button>
-            <button
-              onClick={() => setChartType('line')}
-              className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-medium transition-colors ${
-                chartType === 'line' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              Line
-            </button>
-          </div>
-
-          {/* MA/EMA type toggle */}
-          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
-            {(['MA', 'EMA'] as MAType[]).map(type => (
-              <button
-                key={type}
-                onClick={() => setMaType(type)}
-                className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-bold transition-colors ${
-                  maType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
-                }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-
-          {/* MA period toggles */}
-          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
-            {MA_PERIODS.map(ma => (
+        {/* Indicators + chart type strip (single scrollable row of chips) */}
+        <div className="flex items-center gap-2 px-3 py-2.5 overflow-x-auto scrollbar-thin bg-[#090c11]">
+          {/* MA period chips */}
+          {MA_PERIODS.map(ma => {
+            const active = activeMAs.has(ma.period);
+            return (
               <button
                 key={ma.period}
                 onClick={() => toggleMA(ma.period)}
-                className={`px-2.5 py-1.5 text-[10px] sm:text-xs font-bold transition-colors ${
-                  activeMAs.has(ma.period) ? 'text-white' : 'text-[#848e9c] hover:text-white opacity-50'
+                className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+                  active ? '' : 'text-[#848e9c] border-white/5 hover:text-white'
                 }`}
-                style={{ color: activeMAs.has(ma.period) ? ma.color : undefined }}
+                style={active ? { color: ma.color, borderColor: `${ma.color}55`, backgroundColor: `${ma.color}1a` } : undefined}
               >
                 {maType}{ma.label}
               </button>
-            ))}
-          </div>
+            );
+          })}
+
+          {/* MA/EMA type */}
+          {(['MA', 'EMA'] as MAType[]).map(type => (
+            <button
+              key={type}
+              onClick={() => setMaType(type)}
+              className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+                maType === type ? 'bg-[#1a1e2e] text-white border-white/10' : 'text-[#848e9c] border-white/5 hover:text-white'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+
+          <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
+
+          {/* Chart type */}
+          {([['candles', language === 'en' ? 'Candles' : 'شمع'], ['area', 'Area'], ['line', 'Line']] as const).map(([type, label]) => (
+            <button
+              key={type}
+              onClick={() => setChartType(type as 'candles' | 'area' | 'line')}
+              className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+                chartType === type ? 'bg-[#2a2e3e] text-white border-white/10' : 'text-[#848e9c] border-white/5 hover:text-white'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
