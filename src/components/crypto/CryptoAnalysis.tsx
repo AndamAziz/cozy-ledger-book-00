@@ -767,7 +767,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         <div className="mb-3">
           <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c] mb-1.5">
             <CalendarClock className="h-3 w-3" />
-            ماوەی کاتی چارتەکان
+            {biLabel('ماوەی کاتی چارتەکان', 'Chart timeframe')}
           </div>
           <div role="radiogroup" aria-label="Chart timeframe / ماوەی کاتی چارت" className="flex gap-1.5">
             {CHART_TIMEFRAMES.map((tf) => (
