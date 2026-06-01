@@ -42,6 +42,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const priceLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
+  // Tracks the current series identity so we only auto-fit when the timeframe /
+  // metal / chart type changes — never on live price ticks (which would reset
+  // the user's manual zoom & pan).
+  const lastFitKeyRef = useRef<string>('');
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [chartType, setChartType] = useState<'candles' | 'area' | 'line'>('candles');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
@@ -89,6 +93,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) return;
+    // Fresh chart instance -> allow one auto-fit on the next data update.
+    lastFitKeyRef.current = '';
 
     if (chartRef.current) {
       chartRef.current.remove();
@@ -321,8 +327,14 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       }
     }
 
-    chartRef.current?.timeScale().fitContent();
-  }, [candles, activeMAs, maType, chartType]);
+    // Only reset the visible range when switching metal / timeframe / chart
+    // type. Live price ticks keep the user's current zoom & pan untouched.
+    const fitKey = `${name || ''}-${range}-${chartType}`;
+    if (lastFitKeyRef.current !== fitKey) {
+      lastFitKeyRef.current = fitKey;
+      chartRef.current?.timeScale().fitContent();
+    }
+  }, [candles, activeMAs, maType, chartType, name, range]);
 
   // Update price line
   useEffect(() => {
