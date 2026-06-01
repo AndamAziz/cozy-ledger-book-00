@@ -406,7 +406,13 @@ async function handleHistory(code: string, range: string): Promise<Response> {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // Spot history unavailable for this metal — never fall back to Yahoo futures (GC=F/SI=F).
+    return new Response(
+      JSON.stringify({ error: "Spot history unavailable", code, range, unavailable: [code] }),
+      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
+
 
   const rangeConfig = RANGE_MAP[range] || RANGE_MAP["1mo"];
   const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${rangeConfig.interval}&range=${rangeConfig.range}`;
