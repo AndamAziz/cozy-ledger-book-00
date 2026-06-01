@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ForexCurrency } from '@/lib/forexApi';
 import { Metal } from '@/lib/metalsApi';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowRightLeft, X, Search } from 'lucide-react';
 
 interface ConverterItem {
@@ -18,6 +19,8 @@ interface CurrencyConverterProps {
 }
 
 export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConverterProps) {
+  const { language } = useLanguage();
+  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const [amount, setAmount] = useState('1');
   const [fromCode, setFromCode] = useState('USD');
   const [toCode, setToCode] = useState('EUR');
@@ -28,7 +31,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
   // Build unified list with USD rate
   const items = useMemo<ConverterItem[]>(() => {
     const list: ConverterItem[] = [
-      { code: 'USD', name: 'US Dollar', flag: '🇺🇸', rateToUSD: 1, type: 'fiat' },
+      { code: 'USD', name: bi('دۆلاری ئەمریکی', 'US Dollar'), flag: '🇺🇸', rateToUSD: 1, type: 'fiat' },
     ];
     for (const c of currencies) {
       list.push({ code: c.code, name: c.name, flag: c.flag, rateToUSD: c.rate, type: 'fiat' });
@@ -77,7 +80,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
           <Search className="h-4 w-4 text-[#848e9c] shrink-0" />
           <input
             type="text"
-            placeholder="Search currency or metal..."
+            placeholder={bi('گەڕان بەدوای دراو یان کانزا...', 'Search currency or metal...')}
             value={pickerSearch}
             onChange={e => setPickerSearch(e.target.value)}
             className="flex-1 bg-transparent text-sm text-white placeholder-[#848e9c] outline-none"
@@ -90,7 +93,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
         <div className="flex-1 overflow-y-auto">
           {metalItems.length > 0 && (
             <>
-              <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#d4af37] uppercase tracking-wider">Precious Metals</p>
+              <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#d4af37] uppercase tracking-wider">{bi('کانزا بەهادارەکان', 'Precious Metals')}</p>
               {metalItems.map(i => (
                 <button
                   key={i.code}
@@ -106,7 +109,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
           )}
           {fiatItems.length > 0 && (
             <>
-              <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#2962ff] uppercase tracking-wider">Currencies</p>
+              <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-[#2962ff] uppercase tracking-wider">{bi('دراوەکان', 'Currencies')}</p>
               {fiatItems.map(i => (
                 <button
                   key={i.code}
@@ -131,7 +134,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
       <div className="relative w-full max-w-md bg-[#0d1117] border border-[#1a1e2e] rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#1a1e2e]">
-          <h2 className="text-sm font-bold text-white">💱 Currency Converter</h2>
+          <h2 className="text-sm font-bold text-white">💱 {bi('گۆڕەری دراو', 'Currency Converter')}</h2>
           <button onClick={onClose} className="p-1 hover:bg-[#1a1e2e] rounded-lg transition-colors">
             <X className="h-4 w-4 text-[#848e9c]" />
           </button>
@@ -146,7 +149,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
             <>
               {/* From */}
               <div className="mb-3">
-                <label className="text-[10px] text-[#848e9c] uppercase tracking-wider mb-1 block">From</label>
+                <label className="text-[10px] text-[#848e9c] uppercase tracking-wider mb-1 block">{bi('لە', 'From')}</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowFromPicker(true)}
@@ -181,7 +184,7 @@ export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConve
 
               {/* To */}
               <div className="mb-4">
-                <label className="text-[10px] text-[#848e9c] uppercase tracking-wider mb-1 block">To</label>
+                <label className="text-[10px] text-[#848e9c] uppercase tracking-wider mb-1 block">{bi('بۆ', 'To')}</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowToPicker(true)}

@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { ForexCurrency } from '@/lib/forexApi';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Search } from 'lucide-react';
 
 interface ForexListProps {
@@ -11,6 +12,8 @@ interface ForexListProps {
 }
 
 export function ForexList({ currencies, selectedCode, onSelectCurrency, isLoading }: ForexListProps) {
+  const { language } = useLanguage();
+  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const [search, setSearch] = useState('');
   const prevRatesRef = useRef<Map<string, number>>(new Map());
   const [flashMap, setFlashMap] = useState<Map<string, 'up' | 'down'>>(new Map());
@@ -48,7 +51,7 @@ export function ForexList({ currencies, selectedCode, onSelectCurrency, isLoadin
           <Search className="h-4 w-4 text-[#848e9c] shrink-0" />
           <input
             type="text"
-            placeholder="Search currencies..."
+            placeholder={bi('گەڕان بەدوای دراوەکان...', 'Search currencies...')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="bg-transparent text-sm text-white placeholder:text-[#848e9c] outline-none w-full"
@@ -58,14 +61,14 @@ export function ForexList({ currencies, selectedCode, onSelectCurrency, isLoadin
 
       {/* USD base header */}
       <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-[#f0b90b] border-b border-[#1a1e2e] bg-[#f0b90b]/5">
-        Base: 🇺🇸 1 USD
+        {bi('بنچینە', 'Base')}: 🇺🇸 1 USD
       </div>
 
       {/* Header */}
       <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wider text-[#848e9c] border-b border-[#1a1e2e]">
-        <span>Currency</span>
-        <span className="text-right w-20">Rate</span>
-        <span className="text-right w-14">Chg</span>
+        <span>{bi('دراو', 'Currency')}</span>
+        <span className="text-right w-20">{bi('نرخ', 'Rate')}</span>
+        <span className="text-right w-14">{bi('گۆڕان', 'Chg')}</span>
       </div>
 
       {/* List */}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, Time } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CryptoChartProps {
   pair: string;
@@ -13,6 +14,8 @@ interface CryptoChartProps {
 }
 
 export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, onIntervalChange }: CryptoChartProps) {
+  const { language } = useLanguage();
+  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -241,7 +244,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
                 chartType === type ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
               }`}
             >
-              {type === 'candlestick' ? 'Candles' : type.charAt(0).toUpperCase() + type.slice(1)}
+              {type === 'candlestick' ? bi('شمع', 'Candles') : type === 'line' ? bi('هێڵ', 'Line') : bi('ناوچە', 'Area')}
             </button>
           ))}
         </div>
@@ -267,7 +270,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         <div ref={chartContainerRef} className="absolute inset-0" />
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/80 z-10">
-            <div className="text-[#848e9c] text-sm">Loading chart data...</div>
+            <div className="text-[#848e9c] text-sm">{bi('بارکردنی داتای چارت...', 'Loading chart data...')}</div>
           </div>
         )}
       </div>

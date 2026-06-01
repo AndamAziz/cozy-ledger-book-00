@@ -14,6 +14,7 @@ import { ForexDetail } from '@/components/crypto/ForexDetail';
 import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
 import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
@@ -21,6 +22,8 @@ type CryptoView = 'chart' | 'analysis';
 
 export default function CryptoTracker() {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
   const [cryptoView, setCryptoView] = useState<CryptoView>('chart');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
@@ -109,7 +112,7 @@ export default function CryptoTracker() {
   return (
     <>
       <Helmet>
-        <title>{activeTab === 'crypto' ? 'Crypto Tracker' : activeTab === 'forex' ? 'Forex Rates' : 'Precious Metals'} - Live Prices</title>
+        <title>{activeTab === 'crypto' ? bi('شوێنکەوتنی کریپتۆ', 'Crypto Tracker') : activeTab === 'forex' ? bi('نرخی دراو', 'Forex Rates') : bi('کانزا بەهادارەکان', 'Precious Metals')} - {bi('نرخی ڕاستەوخۆ', 'Live Prices')}</title>
         <meta name="description" content="Real-time cryptocurrency and forex price tracker" />
       </Helmet>
 
@@ -120,7 +123,7 @@ export default function CryptoTracker() {
           <button
             onClick={() => navigate('/')}
             className="p-1.5 sm:p-2 rounded-lg hover:bg-[#1a1e2e] active:bg-[#252a3a] transition-colors"
-            aria-label="Back to calculator"
+            aria-label={bi('گەڕانەوە بۆ ژمێرکار', 'Back to calculator')}
           >
             <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
@@ -141,7 +144,7 @@ export default function CryptoTracker() {
               }`}
             >
               <Bitcoin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span>Crypto</span>
+              <span>{bi('کریپتۆ', 'Crypto')}</span>
             </button>
             <button
               onClick={() => setActiveTab('forex')}
@@ -150,7 +153,7 @@ export default function CryptoTracker() {
               }`}
             >
               <DollarSign className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span>Forex</span>
+              <span>{bi('دراو', 'Forex')}</span>
             </button>
             <button
               onClick={() => setActiveTab('metals')}
@@ -159,7 +162,7 @@ export default function CryptoTracker() {
               }`}
             >
               <CircleDot className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span>Metals</span>
+              <span>{bi('کانزا', 'Metals')}</span>
             </button>
           </div>
 
@@ -170,7 +173,7 @@ export default function CryptoTracker() {
             className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold bg-[#1a1e2e] hover:bg-[#252a3a] active:bg-[#303548] rounded-lg transition-colors text-[#f0b90b]"
           >
             <ArrowRightLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-            <span className="hidden sm:inline">Convert</span>
+            <span className="hidden sm:inline">{bi('گۆڕین', 'Convert')}</span>
           </button>
           
           {activeTab === 'crypto' && (
@@ -178,25 +181,25 @@ export default function CryptoTracker() {
               {isConnected ? (
                 <>
                   <Wifi className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#0ecb81]" />
-                  <span className="text-[#0ecb81] hidden sm:inline">Live</span>
+                  <span className="text-[#0ecb81] hidden sm:inline">{bi('ڕاستەوخۆ', 'Live')}</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#f6465d]" />
-                  <span className="text-[#f6465d] hidden sm:inline">Reconnecting...</span>
+                  <span className="text-[#f6465d] hidden sm:inline">{bi('پەیوەندیکردنەوە...', 'Reconnecting...')}</span>
                 </>
               )}
             </div>
           )}
           {activeTab === 'forex' && (
-            <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🔴 Live • 2s</span>
+            <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🔴 {bi('ڕاستەوخۆ', 'Live')} • 2s</span>
           )}
           {activeTab === 'metals' && (
             metalsMarketOpen ? (
-              <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🟢 Live • 5s</span>
+              <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🟢 {bi('ڕاستەوخۆ', 'Live')} • 5s</span>
             ) : (
               <span className="text-[9px] sm:text-[10px] text-[#f6465d] flex items-center gap-1">
-                🔴 Closed
+                🔴 {bi('داخراو', 'Closed')}
               </span>
             )
           )}
@@ -264,7 +267,7 @@ export default function CryptoTracker() {
                     }`}
                   >
                     <CandlestickChart className="h-3.5 w-3.5" />
-                    <span>Chart</span>
+                    <span>{bi('چارت', 'Chart')}</span>
                   </button>
                   <button
                     onClick={() => setCryptoView('analysis')}
@@ -273,7 +276,7 @@ export default function CryptoTracker() {
                     }`}
                   >
                     <Activity className="h-3.5 w-3.5" />
-                    <span>Analysis</span>
+                    <span>{bi('شیکاری', 'Analysis')}</span>
                   </button>
                 </div>
               </div>
@@ -290,10 +293,10 @@ export default function CryptoTracker() {
                   />
                   {currentCoin && currentCoin.price > 0 && (
                     <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 sm:gap-x-6 gap-y-1 px-3 py-2 border-t border-[#1a1e2e] text-[10px] sm:text-xs text-[#848e9c] shrink-0">
-                      <span>24h High: <span className="text-white">${currentCoin.high24h.toLocaleString()}</span></span>
-                      <span>24h Low: <span className="text-white">${currentCoin.low24h.toLocaleString()}</span></span>
-                      <span>24h Vol: <span className="text-white">{currentCoin.volume24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span></span>
-                      <span>24h Change: <span className={currentCoin.change24h >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>{currentCoin.change24h >= 0 ? '+' : ''}{currentCoin.change24h.toFixed(2)}%</span></span>
+                      <span>{bi('بەرزی ٢٤ک', '24h High')}: <span className="text-white">${currentCoin.high24h.toLocaleString()}</span></span>
+                      <span>{bi('نزمی ٢٤ک', '24h Low')}: <span className="text-white">${currentCoin.low24h.toLocaleString()}</span></span>
+                      <span>{bi('قەبارەی ٢٤ک', '24h Vol')}: <span className="text-white">{currentCoin.volume24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span></span>
+                      <span>{bi('گۆڕانی ٢٤ک', '24h Change')}: <span className={currentCoin.change24h >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>{currentCoin.change24h >= 0 ? '+' : ''}{currentCoin.change24h.toFixed(2)}%</span></span>
                     </div>
                   )}
                 </>

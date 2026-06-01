@@ -19,6 +19,7 @@ interface MetalsDetailProps {
 
 export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailProps) {
   const { language } = useLanguage();
+  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const [chartRange, setChartRange] = useState('1d');
   const [view, setView] = useState<'market' | 'analysis'>('market');
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
@@ -43,7 +44,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
       <div className="flex-1 flex items-center justify-center bg-[#0a0e17]">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 text-[#848e9c] mx-auto mb-3 animate-spin" />
-          <p className="text-sm text-[#848e9c]">Loading prices...</p>
+          <p className="text-sm text-[#848e9c]">{bi('بارکردنی نرخەکان...', 'Loading prices...')}</p>
         </div>
       </div>
     );
@@ -71,12 +72,12 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           <p className="text-2xl font-bold tabular-nums mb-1" style={{ color: accentColor }}>
             ${m.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="text-[10px] text-[#848e9c] mb-2">per {m.unit === 'bbl' ? 'barrel' : 'troy ounce'}</p>
+          <p className="text-[10px] text-[#848e9c] mb-2">{bi('بۆ', 'per')} {m.unit === 'bbl' ? bi('بەرمیل', 'barrel') : bi('ئۆنسی ترۆی', 'troy ounce')}</p>
           <div className={`flex items-center gap-1 text-xs font-medium ${
             isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
           }`}>
             {isNeutral ? <Minus className="h-3.5 w-3.5" /> : isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-            {isNeutral ? 'No change' : `${isPositive ? '+' : ''}${m.change.toFixed(2)}%`}
+            {isNeutral ? bi('بێ گۆڕان', 'No change') : `${isPositive ? '+' : ''}${m.change.toFixed(2)}%`}
           </div>
         </div>
       );
@@ -85,20 +86,20 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
     return (
       <div className="flex-1 flex flex-col bg-[#0a0e17]">
         <div className="p-4 border-b border-[#1a1e2e]">
-          <h2 className="text-lg font-bold text-white mb-1">📊 Commodities — Live Spot Prices</h2>
-          <p className="text-xs text-[#848e9c]">Select a commodity for details • Live real-time prices</p>
+          <h2 className="text-lg font-bold text-white mb-1">📊 {bi('کاڵاکان — نرخی سپۆتی ڕاستەوخۆ', 'Commodities — Live Spot Prices')}</h2>
+          <p className="text-xs text-[#848e9c]">{bi('کاڵایەک هەڵبژێرە بۆ وردەکاری • نرخی ڕاستەوخۆ', 'Select a commodity for details • Live real-time prices')}</p>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Precious Metals */}
           <div>
-            <h3 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider mb-3">🏆 Precious Metals</h3>
+            <h3 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider mb-3">🏆 {bi('کانزا بەهادارەکان', 'Precious Metals')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {metalItems.map(renderCard)}
             </div>
           </div>
           {/* Crude Oil */}
           <div>
-            <h3 className="text-xs font-bold text-[#e67e22] uppercase tracking-wider mb-3">🛢️ Crude Oil</h3>
+            <h3 className="text-xs font-bold text-[#e67e22] uppercase tracking-wider mb-3">🛢️ {bi('نەوتی خاو', 'Crude Oil')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {oilItems.map(renderCard)}
             </div>
@@ -130,7 +131,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           <span className="text-3xl font-bold tabular-nums" style={{ color: accentColor }}>
             ${selected.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <span className="text-xs text-[#848e9c]">/ {isOil ? 'barrel' : 'troy oz'}</span>
+          <span className="text-xs text-[#848e9c]">/ {isOil ? bi('بەرمیل', 'barrel') : bi('ئۆنسی ترۆی', 'troy oz')}</span>
           <span className={`flex items-center gap-1 text-sm font-semibold ${
             isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
           }`}>
@@ -196,14 +197,14 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
 
       <div className="p-4 border-b border-[#1a1e2e]">
         <h3 className="text-sm font-semibold text-white mb-3">
-          {isOil ? 'Volume Pricing' : 'Price by Weight'}
+          {isOil ? bi('نرخ بەپێی قەبارە', 'Volume Pricing') : bi('نرخ بەپێی کێش', 'Price by Weight')}
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {isOil ? [
-            { label: '1 Barrel', factor: 1 },
-            { label: '10 Barrels', factor: 10 },
-            { label: '100 Barrels', factor: 100 },
-            { label: '1000 Barrels', factor: 1000 },
+            { label: bi('١ بەرمیل', '1 Barrel'), factor: 1 },
+            { label: bi('١٠ بەرمیل', '10 Barrels'), factor: 10 },
+            { label: bi('١٠٠ بەرمیل', '100 Barrels'), factor: 100 },
+            { label: bi('١٠٠٠ بەرمیل', '1000 Barrels'), factor: 1000 },
           ].map(w => (
             <div key={w.label} className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-3">
               <p className="text-[10px] text-[#848e9c] uppercase mb-1">{w.label}</p>
@@ -212,10 +213,10 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
               </p>
             </div>
           )) : [
-            { label: '1 Troy Oz', factor: 1 },
-            { label: '1 Gram', factor: 1 / 31.1035 },
-            { label: '10 Grams', factor: 10 / 31.1035 },
-            { label: '1 Kilogram', factor: 1000 / 31.1035 },
+            { label: bi('١ ئۆنسی ترۆی', '1 Troy Oz'), factor: 1 },
+            { label: bi('١ گرام', '1 Gram'), factor: 1 / 31.1035 },
+            { label: bi('١٠ گرام', '10 Grams'), factor: 10 / 31.1035 },
+            { label: bi('١ کیلۆگرام', '1 Kilogram'), factor: 1000 / 31.1035 },
           ].map(w => (
             <div key={w.label} className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-3">
               <p className="text-[10px] text-[#848e9c] uppercase mb-1">{w.label}</p>
@@ -229,7 +230,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
 
       {/* Investment calculator */}
       <div className="p-4 border-b border-[#1a1e2e]">
-        <h3 className="text-sm font-semibold text-white mb-3">Investment Amounts</h3>
+        <h3 className="text-sm font-semibold text-white mb-3">{bi('بڕی وەبەرهێنان', 'Investment Amounts')}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[100, 500, 1000, 5000].map(amount => (
             <div key={amount} className="bg-[#0d1117] border border-[#1a1e2e] rounded-lg p-2 text-center">
@@ -252,7 +253,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
 
       {/* Other commodities */}
       <div className="p-4">
-        <h3 className="text-sm font-semibold text-white mb-3">Other Commodities</h3>
+        <h3 className="text-sm font-semibold text-white mb-3">{bi('کاڵای تر', 'Other Commodities')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {otherItems.map(m => {
             const mPositive = m.change > 0;
