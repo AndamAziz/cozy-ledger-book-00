@@ -758,7 +758,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#2962ff] text-white disabled:opacity-50 active:scale-95 transition"
             >
               {imageLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-              {imageLoading ? 'شیکاری...' : imagePreviews.length > 0 ? 'وێنەی نوێ' : 'وێنە بار بکە'}
+              {imageLoading ? biLabel('شیکاری...', 'Analyzing...') : imagePreviews.length > 0 ? biLabel('وێنەی نوێ', 'New image') : biLabel('وێنە بار بکە', 'Upload image')}
             </button>
           </div>
         </div>
