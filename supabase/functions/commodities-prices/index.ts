@@ -15,6 +15,20 @@ const YAHOO_SYMBOLS: Record<string, string> = {
   NATGAS: "NG=F",
 };
 
+const SPOT_METAL_SYMBOLS: Record<string, string> = {
+  XAU: "xauusd",
+  XAG: "xagusd",
+  XPT: "xptusd",
+  XPD: "xpdusd",
+};
+
+const TWELVE_DATA_SYMBOLS: Record<string, string> = {
+  XAU: "XAU/USD",
+  XAG: "XAG/USD",
+  XPT: "XPT/USD",
+  XPD: "XPD/USD",
+};
+
 const yahooHeaders = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
   "Accept": "application/json,text/plain,*/*",
@@ -31,11 +45,100 @@ let oilApiCache: Record<string, number> | null = null;
 let oilApiCacheTs = 0;
 const OIL_API_CACHE_TTL = 3 * 60 * 1000; // 3 minutes (max 20 req/hour on demo)
 
-// ─── GoldAPI spot metals cache (XAU/XAG/XPT/XPD spot, not futures) ───
+// ─── Spot metals cache (XAU/XAG/XPT/XPD spot, not futures) ───
 const GOLDAPI_METALS = ["XAU", "XAG", "XPT", "XPD"];
 let metalsSpotCache: Record<string, number> | null = null;
 let metalsSpotCacheTs = 0;
 const METALS_SPOT_CACHE_TTL = 30 * 1000; // 30s — spot prices, keeps API calls low
+
+function parseStooqPrice(csv: string): number | null {
+  const lines = csv.trim().split(/\r?\n/);
+  const row = lines[1]?.split(",");
+  const close = Number(row?.[6]);
+  return Number.isFinite(close) && close > 0 ? Number(close.toFixed(4)) : null;
+}
+
+async function fetchStooqSpotMetals(): Promise<Record<string, number>> {
+  try {
+    const results = await Promise.all(
+      Object.entries(SPOT_METAL_SYMBOLS).map(async ([code, symbol]) => {
+        try {
+          const url = `https://stooq.com/q/l/?s=${symbol}&f=sd2t2ohlcv&h&e=csv`;
+          const res = await fetch(url, { headers: yahooHeaders, signal: AbortSignal.timeout(8000) });
+          if (!res.ok) { await res.text(); return [code, null] as const; }
+          return [code, parseStooqPrice(await res.text())] as const;
+        } catch { return [code, null] as const; }
+      }),
+    );
+
+    const prices: Record<string, number> = {};
+    for (const [code, p] of results) if (p != null) prices[code] = p;
+    return prices;
+  } catch (e) {
+    console.error("Stooq spot metals fetch error:", e);
+    return {};
+  }
+}
+
+async function fetchTwelveDataMetals(): Promise<Record<string, number>> {
+  const key = Deno.env.get("TWELVE_DATA_API_KEY");
+  if (!key) return {};
+
+  try {
+    const results = await Promise.all(
+      Object.entries(TWELVE_DATA_SYMBOLS).map(async ([code, symbol]) => {
+        try {
+          const url = `https://api.twelvedata.com/price?symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(key)}`;
+          const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+          if (!res.ok) { await res.text(); return [code, null] as const; }
+          const data = await res.json();
+          const p = Number(data?.price);
+          return [code, Number.isFinite(p) && p > 0 ? Number(p.toFixed(4)) : null] as const;
+        } catch { return [code, null] as const; }
+      }),
+    );
+
+    const prices: Record<string, number> = {};
+    for (const [code, p] of results) if (p != null) prices[code] = p;
+    return prices;
+  } catch (e) {
+    console.error("Twelve Data metals fetch error:", e);
+    return {};
+  }
+}
+
+async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sources: string[] }> {
+  if (metalsSpotCache && Date.now() - metalsSpotCacheTs < METALS_SPOT_CACHE_TTL) {
+    return { prices: metalsSpotCache, sources: ["spot-cache"] };
+  }
+
+  const [stooq, twelveData, goldApi] = await Promise.all([
+    fetchStooqSpotMetals(),
+    fetchTwelveDataMetals(),
+    fetchGoldApiMetals(),
+  ]);
+
+  const prices: Record<string, number> = {};
+  const sources: string[] = [];
+  for (const code of GOLDAPI_METALS) {
+    if (stooq[code]) {
+      prices[code] = stooq[code];
+      if (!sources.includes("stooq-spot")) sources.push("stooq-spot");
+    } else if (twelveData[code]) {
+      prices[code] = twelveData[code];
+      if (!sources.includes("twelvedata-spot")) sources.push("twelvedata-spot");
+    } else if (goldApi[code]) {
+      prices[code] = goldApi[code];
+      if (!sources.includes("goldapi-spot")) sources.push("goldapi-spot");
+    }
+  }
+
+  if (Object.keys(prices).length > 0) {
+    metalsSpotCache = prices;
+    metalsSpotCacheTs = Date.now();
+  }
+  return { prices: metalsSpotCache || prices, sources };
+}
 
 // Fetch accurate SPOT metal prices from GoldAPI (Yahoo GC=F is futures and drifts ~$20+)
 async function fetchGoldApiMetals(): Promise<Record<string, number>> {
