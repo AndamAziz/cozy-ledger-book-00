@@ -954,7 +954,132 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         </div>
       )}
 
+      {/* Signal detail drawer */}
+      <Sheet open={!!selectedSignal} onOpenChange={(open) => { if (!open) setSelectedSignal(null); }}>
+        <SheetContent side="bottom" className="bg-[#0d1117] border-[#1a1e2e] rounded-t-2xl max-h-[85vh] overflow-y-auto p-0">
+          {selectedSignal && (
+            <div className="p-4 space-y-4">
+              <SheetHeader className="text-left sm:text-left">
+                <div className="flex items-center justify-between">
+                  <SheetTitle className="text-white flex items-center gap-2">
+                    {selectedSignal.symbol ?? '—'}
+                    <span
+                      className="text-[10px] font-extrabold px-2 py-0.5 rounded"
+                      style={{ color: recColor(selectedSignal.recommendation ?? 'hold'), backgroundColor: recColor(selectedSignal.recommendation ?? 'hold') + '1a' }}
+                    >
+                      {recLabel(selectedSignal.recommendation ?? 'hold', langMode)}
+                    </span>
+                  </SheetTitle>
+                  <button
+                    onClick={() => setSelectedSignal(null)}
+                    className="rounded-sm p-1 opacity-70 hover:opacity-100 transition"
+                  >
+                    <X className="h-5 w-5 text-[#848e9c]" />
+                  </button>
+                </div>
+                {selectedSignal.headline && (
+                  <p className="text-sm text-[#d1d5db] leading-relaxed">{selectedSignal.headline}</p>
+                )}
+              </SheetHeader>
 
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-[10px] font-bold px-2 py-1 rounded"
+                  style={{
+                    color: selectedSignal.status === 'sent' ? '#0ecb81' : '#f6465d',
+                    backgroundColor: (selectedSignal.status === 'sent' ? '#0ecb81' : '#f6465d') + '1a',
+                  }}
+                >
+                  {selectedSignal.status === 'sent' ? biLabel('نێردرا', 'Sent') : biLabel('نەنێردرا', 'Failed')}
+                </span>
+                {selectedSignal.telegram_message_id && (
+                  <span className="text-[10px] text-[#848e9c]">Msg #{selectedSignal.telegram_message_id}</span>
+                )}
+              </div>
+
+              {/* Levels grid */}
+              <div className="grid grid-cols-2 gap-px bg-[#1a1e2e] rounded-lg overflow-hidden">
+                {selectedSignal.entry && (
+                  <div className="bg-[#0b0e16] px-3 py-2.5">
+                    <div className="flex items-center gap-1 text-[10px] text-[#848e9c]"><LogIn className="h-3 w-3" />{biLabel('خاڵی چوونەژوورەوە', 'Entry')}</div>
+                    <div className="text-sm font-mono text-white mt-0.5">{selectedSignal.entry}</div>
+                  </div>
+                )}
+                {selectedSignal.stop_loss && (
+                  <div className="bg-[#0b0e16] px-3 py-2.5">
+                    <div className="flex items-center gap-1 text-[10px] text-[#848e9c]"><OctagonX className="h-3 w-3 text-[#f6465d]" />{biLabel('وەستانی زیان', 'Stop Loss')}</div>
+                    <div className="text-sm font-mono text-[#f6465d] mt-0.5">{selectedSignal.stop_loss}</div>
+                  </div>
+                )}
+                {selectedSignal.confidence != null && (
+                  <div className="bg-[#0b0e16] px-3 py-2.5">
+                    <div className="flex items-center gap-1 text-[10px] text-[#848e9c]"><Gauge className="h-3 w-3" />{biLabel('متمانە', 'Confidence')}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-sm font-bold text-white">{selectedSignal.confidence}%</span>
+                      <div className="flex-1 h-1.5 rounded-full bg-[#1a1e2e] overflow-hidden">
+                        <div className="h-full rounded-full bg-[#f0b90b]" style={{ width: `${selectedSignal.confidence}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {selectedSignal.risk_level && (
+                  <div className="bg-[#0b0e16] px-3 py-2.5">
+                    <div className="flex items-center gap-1 text-[10px] text-[#848e9c]"><ShieldAlert className="h-3 w-3" style={{ color: riskColor(selectedSignal.risk_level) }} />{biLabel('ئاستی مەترسی', 'Risk Level')}</div>
+                    <div className="text-sm font-bold mt-0.5" style={{ color: riskColor(selectedSignal.risk_level) }}>{riskLabel(selectedSignal.risk_level, langMode)}</div>
+                  </div>
+                )}
+                {selectedSignal.horizon_days != null && (
+                  <div className="bg-[#0b0e16] px-3 py-2.5">
+                    <div className="flex items-center gap-1 text-[10px] text-[#848e9c]"><CalendarClock className="h-3 w-3" />{biLabel('ماوەی پێشبینیکراو', 'Time Horizon')}</div>
+                    <div className="text-sm text-white mt-0.5">{selectedSignal.horizon_days} {biLabel('ڕۆژ', 'days')}</div>
+                  </div>
+                )}
+                {selectedSignal.price != null && (
+                  <div className="bg-[#0b0e16] px-3 py-2.5">
+                    <div className="flex items-center gap-1 text-[10px] text-[#848e9c]"><BarChart3 className="h-3 w-3" />{biLabel('نرخی کاتی ناردن', 'Price at send')}</div>
+                    <div className="text-sm font-mono text-white mt-0.5">${fmt(selectedSignal.price)}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Targets */}
+              {selectedSignal.targets && selectedSignal.targets.length > 0 && (
+                <div className="bg-[#0b0e16] border border-[#1a1e2e] rounded-lg p-3">
+                  <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c] mb-2">
+                    <Target className="h-3.5 w-3.5 text-[#0ecb81]" />
+                    {biLabel('ئامانجەکانی قازانج', 'Take-Profit Targets')}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSignal.targets.map((t, i) => (
+                      <span key={i} className="text-xs font-mono px-2.5 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81]">
+                        {biLabel('ئامانج', 'Target')} {i + 1}: {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Error reason */}
+              {selectedSignal.status !== 'sent' && selectedSignal.error && (
+                <div className="bg-[#f6465d]/10 border border-[#f6465d]/20 rounded-lg p-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#f6465d] mb-1">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {biLabel('هۆکاری هەڵە', 'Failure Reason')}
+                  </div>
+                  <div className="text-xs text-[#f6465d] break-all leading-relaxed">{selectedSignal.error}</div>
+                </div>
+              )}
+
+              {/* Meta */}
+              <div className="text-[10px] text-[#848e9c] pt-2 border-t border-[#1a1e2e]">
+                {selectedSignal.timeframe && <span className="mr-3">{biLabel('تایم فریم', 'Timeframe')}: {selectedSignal.timeframe}</span>}
+                <span>{biLabel('بەروار', 'Date')}: {fmtDate(new Date(selectedSignal.created_at))} · {String(new Date(selectedSignal.created_at).getHours()).padStart(2,'0')}:{String(new Date(selectedSignal.created_at).getMinutes()).padStart(2,'0')}</span>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Chart image analysis */}
       <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4">
