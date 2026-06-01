@@ -122,7 +122,7 @@ export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetail
 
       {/* Common amounts */}
       <div className="p-4 border-b border-[#1a1e2e]">
-        <h3 className="text-sm font-semibold text-white mb-3">Common Amounts (USD → {selected.code})</h3>
+        <h3 className="text-sm font-semibold text-white mb-3">{bi('بڕە باوەکان', 'Common Amounts')} (USD → {selected.code})</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[1, 10, 100, 1000].map(amount => (
             <div key={amount} className="bg-[#0d1117] border border-[#1a1e2e] rounded-lg p-2 text-center">
