@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { KrakenCoin, getDisplaySymbol, getCoinMeta } from '@/lib/krakenApi';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Search, Star } from 'lucide-react';
 
 const FAVORITES_KEY = 'crypto-favorites';
