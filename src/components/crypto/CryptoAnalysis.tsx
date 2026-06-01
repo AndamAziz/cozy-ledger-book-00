@@ -365,7 +365,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
     const images = files.filter(f => f.type.startsWith('image/'));
     if (images.length === 0) {
-      setImageError('تکایە تەنها وێنە هەڵبژێرە.');
+      setImageError(biLabel('تکایە تەنها وێنە هەڵبژێرە.', 'Please select images only.'));
       return;
     }
     if (images.some(f => f.size > 8 * 1024 * 1024)) {
