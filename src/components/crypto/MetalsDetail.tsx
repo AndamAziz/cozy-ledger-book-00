@@ -131,7 +131,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           <span className="text-3xl font-bold tabular-nums" style={{ color: accentColor }}>
             ${selected.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <span className="text-xs text-[#848e9c]">/ {isOil ? 'barrel' : 'troy oz'}</span>
+          <span className="text-xs text-[#848e9c]">/ {isOil ? bi('بەرمیل', 'barrel') : bi('ئۆنسی ترۆی', 'troy oz')}</span>
           <span className={`flex items-center gap-1 text-sm font-semibold ${
             isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
           }`}>
