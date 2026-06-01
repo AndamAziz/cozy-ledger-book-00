@@ -749,7 +749,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 onClick={clearImage}
                 className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
               >
-                سڕینەوە
+                {biLabel('سڕینەوە', 'Clear')}
               </button>
             )}
             <button
