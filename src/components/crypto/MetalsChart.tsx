@@ -194,7 +194,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       const locale = language === 'en' ? 'en-GB-u-nu-latn' : 'ku-Arab-u-nu-latn';
       // Format the tooltip date/time appropriately for each range
       let dateOpts: Intl.DateTimeFormatOptions;
-      if (range === '1d') {
+      if (range === '1min' || range === '5min' || range === '15min') {
+        // Minute timeframes: emphasise hour:minute
+        dateOpts = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false };
+      } else if (range === '1d') {
         // Intraday: emphasise time of day
         dateOpts = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false };
       } else if (range === '5d') {
