@@ -15,7 +15,7 @@ import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
 import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, X } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
 type CryptoView = 'chart' | 'analysis';
@@ -208,39 +208,22 @@ export default function CryptoTracker() {
           )}
         </header>
 
-        {/* Mobile list selector bar */}
-        <button
-          onClick={() => setShowSidebar(true)}
-          className="md:hidden flex items-center gap-2 px-3 py-2.5 border-b border-[#1a1e2e] bg-[#0d1117] active:bg-[#131722] transition-colors shrink-0"
-        >
-          <Menu className="h-4 w-4 text-[#f0b90b] shrink-0" />
-          <span className="text-[11px] text-[#848e9c]">{listTitle}:</span>
-          <span className="text-sm font-bold text-white truncate">{selectionLabel}</span>
-          <ChevronDown className="h-4 w-4 text-[#848e9c] ms-auto shrink-0" />
-        </button>
+        {/* Asset selector dropdown (mobile + desktop) */}
+        <div className="relative shrink-0 z-40 border-b border-[#1a1e2e] bg-[#0d1117]">
+          <button
+            onClick={() => setShowSidebar(v => !v)}
+            className="w-full md:w-auto md:min-w-[280px] flex items-center gap-2 px-3 py-2.5 active:bg-[#131722] md:hover:bg-[#131722] transition-colors"
+            aria-expanded={showSidebar}
+          >
+            <Menu className="h-4 w-4 text-[#f0b90b] shrink-0" />
+            <span className="text-[11px] text-[#848e9c]">{listTitle}:</span>
+            <span className="text-sm font-bold text-white truncate">{selectionLabel}</span>
+            <ChevronDown className={`h-4 w-4 text-[#848e9c] ms-auto shrink-0 transition-transform ${showSidebar ? 'rotate-180' : ''}`} />
+          </button>
 
-        <div className="flex flex-1 overflow-hidden relative">
-          {/* Sidebar */}
-          <div className={`
-            fixed md:relative inset-y-0 start-0 z-30 h-full shrink-0
-            w-[82%] max-w-xs md:w-64
-            flex flex-col bg-[#0d1117]
-            transition-transform duration-300 ease-out md:transition-none
-            ${showSidebar ? 'translate-x-0 shadow-2xl' : 'rtl:translate-x-full ltr:-translate-x-full md:translate-x-0'}
-          `}>
-            {/* Mobile sidebar header */}
-            <div className="md:hidden flex items-center justify-between px-3 py-2.5 border-b border-[#1a1e2e] shrink-0">
-              <span className="text-sm font-bold text-white">{listTitle}</span>
-              <button
-                onClick={() => setShowSidebar(false)}
-                className="p-1 rounded-lg hover:bg-[#1a1e2e] active:bg-[#252a3a] transition-colors"
-                aria-label={bi('داخستن', 'Close')}
-              >
-                <X className="h-5 w-5 text-[#848e9c]" />
-              </button>
-            </div>
-
-            <div className="flex-1 min-h-0">
+          {/* Dropdown panel */}
+          {showSidebar && (
+            <div className="absolute start-2 end-2 md:end-auto top-full mt-1 md:w-[360px] h-[min(70vh,520px)] flex flex-col rounded-xl border border-[#1a1e2e] bg-[#0d1117] shadow-2xl overflow-hidden">
               {activeTab === 'crypto' ? (
                 <CoinList
                   coins={coinsMap}
@@ -274,16 +257,18 @@ export default function CryptoTracker() {
                 />
               )}
             </div>
-          </div>
-
-          {/* Overlay backdrop on mobile */}
-          {showSidebar && (
-            <div
-              className="fixed inset-0 bg-black/60 z-20 md:hidden"
-              onClick={() => setShowSidebar(false)}
-            />
           )}
+        </div>
 
+        {/* Backdrop to close dropdown */}
+        {showSidebar && (
+          <div
+            className="fixed inset-0 bg-black/40 z-30"
+            onClick={() => setShowSidebar(false)}
+          />
+        )}
+
+        <div className="flex flex-1 overflow-hidden relative">
           {/* Main content */}
           {activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
