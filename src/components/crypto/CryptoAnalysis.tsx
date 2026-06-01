@@ -838,7 +838,26 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
             )}
 
             {isAdmin && (
-              <div className="px-4 py-2.5 border-t border-[#1a1e2e]">
+              <div className="px-4 py-2.5 border-t border-[#1a1e2e] space-y-2">
+                <button
+                  onClick={() => {
+                    if (!tradeSummary) return;
+                    const lines = [
+                      `📊 ${symbol} — ${recLabel(tradeSummary.recommendation, langMode)}`,
+                      `Entry: ${tradeSummary.entry}`,
+                      ...tradeSummary.targets.map((t, i) => `Target ${i + 1}: ${t}`),
+                      `Stop Loss: ${tradeSummary.stopLoss}`,
+                      `Confidence: ${tradeSummary.confidence}%`,
+                      `Risk: ${riskLabel(tradeSummary.riskLevel, langMode)}`,
+                      tradeSummary.headlineEn || tradeSummary.headline ? `Note: ${tradeSummary.headlineEn || tradeSummary.headline}` : null,
+                    ].filter(Boolean) as string[];
+                    copyToClipboard(lines.join('\n'), 'live-signal');
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
+                >
+                  {copiedKey === 'live-signal' ? <Check className="h-3.5 w-3.5 text-[#0ecb81]" /> : <Copy className="h-3.5 w-3.5" />}
+                  {biLabel('کۆپی سیگنال', 'Copy signal')}
+                </button>
                 <button
                   onClick={sendSignal}
                   disabled={sending}
