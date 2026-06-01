@@ -428,17 +428,19 @@ Never guarantee outcomes; this is educational, not financial advice.`;
 
     // ----- Detailed streaming narrative (default) -----
     const systemPrompt = `You are a professional crypto market technical analyst.
-Respond ONLY in Kurdish Sorani (کوردیی ناوەندی).
+${narrativeLangRule}
 Be concise and practical. Use short paragraphs and bullet points.
-Structure your answer with these sections (use these exact Kurdish headers):
-1. **پوختەی بازاڕ** - overall market read in 1-2 sentences.
-2. **شیکاری تەکنیکی** - interpret RSI, MACD, Bollinger and moving averages.
-3. **ئاستە گرنگەکان** - key support/resistance levels (use the provided numbers).
-4. **ئەگەرەکان** - bullish vs bearish scenarios.
-5. **ئاگاداری** - one risk-management note.
-Never give financial guarantees. Always note this is not financial advice (ئەمە ڕاوێژی دارایی نییە).`;
+Cover these sections in order (keep the Kurdish header, and when bilingual add its English name):
+1. **پوختەی بازاڕ / Market summary** - overall market read in 1-2 sentences.
+2. **شیکاری تەکنیکی / Technical analysis** - interpret RSI, MACD, Bollinger and moving averages.
+3. **بەرزترین و نزمترین / 24h High & Low** - the 24h high and 24h low and what they mean for range.
+4. **ئاستە گرنگەکان / Key levels** - key support/resistance levels (use the provided numbers).
+5. **کەی بکڕیت و کەی بفرۆشیت / When to buy & sell** - the price area/condition to enter (buy) and the area/condition to take profit (sell).
+6. **ئەگەرەکان / Scenarios** - bullish vs bearish scenarios.
+7. **ئاگاداری / Warning** - one risk-management note.
+Never give financial guarantees. Always note this is not financial advice (ئەمە ڕاوێژی دارایی نییە / this is not financial advice).`;
 
-    const userPrompt = `${baseContext}\n\nGive a full technical analysis in Kurdish Sorani.`;
+    const userPrompt = `${baseContext}\n\nGive a full technical analysis following the language rule above.`;
 
     const response = await fetch(AI_URL, {
       method: "POST",
