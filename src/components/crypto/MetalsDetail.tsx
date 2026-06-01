@@ -86,8 +86,8 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
     return (
       <div className="flex-1 flex flex-col bg-[#0a0e17]">
         <div className="p-4 border-b border-[#1a1e2e]">
-          <h2 className="text-lg font-bold text-white mb-1">📊 Commodities — Live Spot Prices</h2>
-          <p className="text-xs text-[#848e9c]">Select a commodity for details • Live real-time prices</p>
+          <h2 className="text-lg font-bold text-white mb-1">📊 {bi('کاڵاکان — نرخی سپۆتی ڕاستەوخۆ', 'Commodities — Live Spot Prices')}</h2>
+          <p className="text-xs text-[#848e9c]">{bi('کاڵایەک هەڵبژێرە بۆ وردەکاری • نرخی ڕاستەوخۆ', 'Select a commodity for details • Live real-time prices')}</p>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Precious Metals */}
