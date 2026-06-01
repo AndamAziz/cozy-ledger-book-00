@@ -15,7 +15,7 @@ import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
 import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, X } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
 type CryptoView = 'chart' | 'analysis';
