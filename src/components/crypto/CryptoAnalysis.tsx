@@ -536,6 +536,66 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           <div className="text-xs text-[#848e9c]">کلیک لە "شیکاری بکە" بکە بۆ وەرگرتنی پوختەی کڕین/فرۆشتن، ئاستەکان، بەروار و هەڵسەنگاندنی مەترسی بە زمانی کوردی.</div>
         ) : null}
       </div>
+
+      {/* Chart image analysis */}
+      <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 text-sm font-bold text-white">
+            <ImageIcon className="h-4 w-4 text-[#2962ff]" />
+            شیکاری چارت لە وێنە
+          </div>
+          <div className="flex items-center gap-2">
+            {imagePreview && !imageLoading && (
+              <button
+                onClick={clearImage}
+                className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
+              >
+                سڕینەوە
+              </button>
+            )}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={imageLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#2962ff] text-white disabled:opacity-50 active:scale-95 transition"
+            >
+              {imageLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              {imageLoading ? 'شیکاری...' : imagePreview ? 'وێنەی نوێ' : 'وێنە بار بکە'}
+            </button>
+          </div>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleImagePick}
+        />
+
+        {imageError && (
+          <div className="flex items-center gap-2 text-xs text-[#f6465d] bg-[#f6465d]/10 rounded-lg px-3 py-2 mb-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {imageError}
+          </div>
+        )}
+
+        {imagePreview && (
+          <div className="mb-3 rounded-lg overflow-hidden border border-[#1a1e2e]">
+            <img src={imagePreview} alt="چارتی بارکراو" className="w-full max-h-64 object-contain bg-black" />
+          </div>
+        )}
+
+        {imageText ? (
+          <div className="text-sm text-[#d1d5db] whitespace-pre-wrap leading-relaxed">{imageText}</div>
+        ) : imageLoading ? (
+          <div className="flex items-center gap-2 text-xs text-[#848e9c]">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            کەندڵەکان دەخوێنرێنەوە...
+          </div>
+        ) : !imagePreview ? (
+          <div className="text-xs text-[#848e9c]">وێنەیەکی چارت (سکرینشۆت) بار بکە بۆ خوێندنەوەی کەندڵەکان و شیکارییەکی تەواو بە زمانی کوردی.</div>
+        ) : null}
+      </div>
     </div>
   );
 }
