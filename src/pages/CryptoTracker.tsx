@@ -144,7 +144,7 @@ export default function CryptoTracker() {
               }`}
             >
               <Bitcoin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span>Crypto</span>
+              <span>{bi('کریپتۆ', 'Crypto')}</span>
             </button>
             <button
               onClick={() => setActiveTab('forex')}
@@ -153,7 +153,7 @@ export default function CryptoTracker() {
               }`}
             >
               <DollarSign className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span>Forex</span>
+              <span>{bi('دراو', 'Forex')}</span>
             </button>
             <button
               onClick={() => setActiveTab('metals')}
@@ -162,7 +162,7 @@ export default function CryptoTracker() {
               }`}
             >
               <CircleDot className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span>Metals</span>
+              <span>{bi('کانزا', 'Metals')}</span>
             </button>
           </div>
 
