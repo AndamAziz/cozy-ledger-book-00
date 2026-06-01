@@ -563,7 +563,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
             شیکاری چارت لە وێنە
           </div>
           <div className="flex items-center gap-2">
-            {imagePreview && !imageLoading && (
+            {imagePreviews.length > 0 && !imageLoading && (
               <button
                 onClick={clearImage}
                 className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
@@ -577,8 +577,32 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#2962ff] text-white disabled:opacity-50 active:scale-95 transition"
             >
               {imageLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-              {imageLoading ? 'شیکاری...' : imagePreview ? 'وێنەی نوێ' : 'وێنە بار بکە'}
+              {imageLoading ? 'شیکاری...' : imagePreviews.length > 0 ? 'وێنەی نوێ' : 'وێنە بار بکە'}
             </button>
+          </div>
+        </div>
+
+        {/* Timeframe / interval selector */}
+        <div className="mb-3">
+          <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c] mb-1.5">
+            <CalendarClock className="h-3 w-3" />
+            ماوەی کاتی چارتەکان
+          </div>
+          <div className="flex gap-1.5">
+            {CHART_TIMEFRAMES.map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setChartTimeframe(tf)}
+                disabled={imageLoading}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition active:scale-95 disabled:opacity-50 ${
+                  chartTimeframe === tf
+                    ? 'bg-[#2962ff] text-white'
+                    : 'bg-[#1a1e2e] text-[#848e9c] hover:text-white'
+                }`}
+              >
+                {tf}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -586,6 +610,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={handleImagePick}
         />
@@ -597,9 +622,18 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           </div>
         )}
 
-        {imagePreview && (
-          <div className="mb-3 rounded-lg overflow-hidden border border-[#1a1e2e]">
-            <img src={imagePreview} alt="چارتی بارکراو" className="w-full max-h-64 object-contain bg-black" />
+        {imagePreviews.length > 0 && (
+          <div className={`mb-3 grid gap-2 ${imagePreviews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {imagePreviews.map((src, i) => (
+              <div key={i} className="relative rounded-lg overflow-hidden border border-[#1a1e2e]">
+                <img src={src} alt={`چارتی بارکراو ${i + 1}`} className="w-full max-h-48 object-contain bg-black" />
+                {imagePreviews.length > 1 && (
+                  <span className="absolute top-1 right-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/70 text-white">
+                    چارت {i + 1}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -608,10 +642,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         ) : imageLoading ? (
           <div className="flex items-center gap-2 text-xs text-[#848e9c]">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            کەندڵەکان دەخوێنرێنەوە...
+            {imagePreviews.length > 1 ? 'کەندڵەکان دەخوێنرێنەوە و بەراورد دەکرێن...' : 'کەندڵەکان دەخوێنرێنەوە...'}
           </div>
-        ) : !imagePreview ? (
-          <div className="text-xs text-[#848e9c]">وێنەیەکی چارت (سکرینشۆت) بار بکە بۆ خوێندنەوەی کەندڵەکان و شیکارییەکی تەواو بە زمانی کوردی.</div>
+        ) : imagePreviews.length === 0 ? (
+          <div className="text-xs text-[#848e9c]">یەک یان چەند وێنەی چارت (سکرینشۆت) بار بکە بۆ خوێندنەوەی کەندڵەکان و بەراوردکردنی نیشانەکان لە یەک پوختەدا بە زمانی کوردی.</div>
         ) : null}
       </div>
     </div>
