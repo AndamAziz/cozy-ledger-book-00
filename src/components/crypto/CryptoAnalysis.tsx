@@ -408,7 +408,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         body: JSON.stringify({ mode: 'image', symbol, images: dataUrls, chartTimeframe, lang: langMode }),
       });
       if (!resp.ok || !resp.body) {
-        let msg = 'هەڵەیەک ڕوویدا لە شیکاری وێنە.';
+        let msg = biLabel('هەڵەیەک ڕوویدا لە شیکاری وێنە.', 'Image analysis failed.');
         try {
           const j = await resp.json();
           if (j?.error) msg = j.error;
