@@ -424,6 +424,15 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
               {label}
             </button>
           ))}
+
+          <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
+
+          {/* Spacing controls */}
+          {stepper('→', rightOffset, setRightOffset, 0, 40, 1)}
+          {stepper('⇄', barSpacing, setBarSpacing, 2, 24, 1)}
+          {stepper('⇄ₘ', minBarSpacing, setMinBarSpacing, 1, 12, 1)}
+          {stepper('↑', scaleMarginTop, v => setScaleMarginTop(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+          {stepper('↓', scaleMarginBottom, v => setScaleMarginBottom(v), 0, 0.4, 0.02, v => v.toFixed(2))}
         </div>
       </div>
 
