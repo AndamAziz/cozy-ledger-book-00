@@ -173,7 +173,7 @@ export default function CryptoTracker() {
             className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold bg-[#1a1e2e] hover:bg-[#252a3a] active:bg-[#303548] rounded-lg transition-colors text-[#f0b90b]"
           >
             <ArrowRightLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-            <span className="hidden sm:inline">Convert</span>
+            <span className="hidden sm:inline">{bi('گۆڕین', 'Convert')}</span>
           </button>
           
           {activeTab === 'crypto' && (
@@ -181,25 +181,25 @@ export default function CryptoTracker() {
               {isConnected ? (
                 <>
                   <Wifi className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#0ecb81]" />
-                  <span className="text-[#0ecb81] hidden sm:inline">Live</span>
+                  <span className="text-[#0ecb81] hidden sm:inline">{bi('ڕاستەوخۆ', 'Live')}</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#f6465d]" />
-                  <span className="text-[#f6465d] hidden sm:inline">Reconnecting...</span>
+                  <span className="text-[#f6465d] hidden sm:inline">{bi('پەیوەندیکردنەوە...', 'Reconnecting...')}</span>
                 </>
               )}
             </div>
           )}
           {activeTab === 'forex' && (
-            <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🔴 Live • 2s</span>
+            <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🔴 {bi('ڕاستەوخۆ', 'Live')} • 2s</span>
           )}
           {activeTab === 'metals' && (
             metalsMarketOpen ? (
-              <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🟢 Live • 5s</span>
+              <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🟢 {bi('ڕاستەوخۆ', 'Live')} • 5s</span>
             ) : (
               <span className="text-[9px] sm:text-[10px] text-[#f6465d] flex items-center gap-1">
-                🔴 Closed
+                🔴 {bi('داخراو', 'Closed')}
               </span>
             )
           )}
