@@ -131,7 +131,12 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const [chartTimeframe, setChartTimeframe] = useState('1H');
+  // Auto-detected buy/sell trade plan from the uploaded chart image(s)
+  const [imageSummary, setImageSummary] = useState<TradeSummary | null>(null);
+  const [imageGeneratedAt, setImageGeneratedAt] = useState<string | null>(null);
+  const [imageSummaryLoading, setImageSummaryLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   // Admin-only Telegram signal sending
   const [isAdmin, setIsAdmin] = useState(false);
@@ -183,8 +188,9 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     return () => { active = false; };
   }, []);
 
-  const sendSignal = async () => {
-    if (!tradeSummary) return;
+  const sendSignal = async (ts?: TradeSummary, tf?: string) => {
+    const s = ts ?? tradeSummary;
+    if (!s) return;
     setSending(true);
     setSentOk(false);
     try {
@@ -197,18 +203,19 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         },
         body: JSON.stringify({
           symbol,
-          recommendation: tradeSummary.recommendation,
-          confidence: tradeSummary.confidence,
+          recommendation: s.recommendation,
+          confidence: s.confidence,
           price: currentPrice,
-          entry: tradeSummary.entry,
-          targets: tradeSummary.targets,
-          stopLoss: tradeSummary.stopLoss,
-          horizonDays: tradeSummary.horizonDays,
-          riskLevel: tradeSummary.riskLevel,
-          headline: tradeSummary.headlineEn || tradeSummary.headline,
-          timeframe: timeframeLabel,
+          entry: s.entry,
+          targets: s.targets,
+          stopLoss: s.stopLoss,
+          horizonDays: s.horizonDays,
+          riskLevel: s.riskLevel,
+          headline: s.headlineEn || s.headline,
+          timeframe: tf ?? timeframeLabel,
         }),
       });
+
       const j = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(j?.error || 'Failed to send');
       setSentOk(true);
@@ -513,10 +520,35 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       .catch(() => setImageError(biLabel('نەتوانرا وێنەکان بخوێنرێنەوە.', 'Could not read the images.')));
   };
 
+  // Auto-detect a structured buy/sell trade plan (entry / targets / stop-loss) from the chart image(s).
+  const analyzeImageSummary = async (dataUrls: string[]) => {
+    setImageSummaryLoading(true);
+    setImageSummary(null);
+    setImageGeneratedAt(null);
+    try {
+      const resp = await fetch(fnUrl, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ mode: 'image-summary', symbol, images: dataUrls, chartTimeframe, lang: langMode, price: currentPrice }),
+      });
+      if (resp.ok) {
+        const j = await resp.json();
+        if (j?.summary) {
+          setImageSummary(j.summary as TradeSummary);
+          setImageGeneratedAt(j.generatedAt as string);
+        }
+      }
+    } catch { /* non-blocking */ } finally {
+      setImageSummaryLoading(false);
+    }
+  };
+
   const analyzeImages = async (dataUrls: string[]) => {
     setImageLoading(true);
     setImageError(null);
     setImageText('');
+    // Kick off the structured buy/sell target detection in parallel with the text analysis.
+    void analyzeImageSummary(dataUrls);
     try {
       const resp = await fetch(fnUrl, {
         method: 'POST',
@@ -543,7 +575,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     setImagePreviews([]);
     setImageText('');
     setImageError(null);
+    setImageSummary(null);
+    setImageGeneratedAt(null);
   };
+
 
   const hasData = candles.length > 0;
   const gaugePct = (summary.score + 100) / 2; // 0..100
@@ -859,7 +894,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                   {biLabel('کۆپی سیگنال', 'Copy signal')}
                 </button>
                 <button
-                  onClick={sendSignal}
+                  onClick={() => sendSignal()}
                   disabled={sending}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-bold rounded-lg bg-[#229ED9] text-white disabled:opacity-50 active:scale-95 transition"
                 >
@@ -1236,6 +1271,131 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
             ))}
           </div>
         )}
+
+        {/* Auto-detected buy/sell trade plan from the chart */}
+        {imageSummaryLoading && !imageSummary && (
+          <div className="flex items-center gap-2 text-xs text-[#848e9c] mb-3">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            {biLabel('ئامانجەکانی کڕین/فرۆشتن بە ئۆتۆماتیکی دیاری دەکرێن...', 'Auto-detecting buy/sell targets...')}
+          </div>
+        )}
+
+        {imageSummary && (
+          <div className="mb-3 rounded-xl border border-[#1a1e2e] overflow-hidden">
+            <div
+              className="flex items-center justify-between px-4 py-3"
+              style={{ backgroundColor: recColor(imageSummary.recommendation) + '1a' }}
+            >
+              <div className="flex items-center gap-2" style={{ color: recColor(imageSummary.recommendation) }}>
+                {imageSummary.recommendation === 'buy' ? <TrendingUp className="h-5 w-5" /> : imageSummary.recommendation === 'sell' ? <TrendingDown className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
+                <div>
+                  <div className="text-base font-extrabold">{recLabel(imageSummary.recommendation, langMode)}</div>
+                  <div className="text-[10px] text-[#848e9c]">{biLabel('دیاریکراو لە چارت', 'Detected from chart')}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-sm font-bold text-white">
+                <Gauge className="h-3.5 w-3.5 text-[#848e9c]" />{biLabel('متمانە', 'Confidence')} {imageSummary.confidence}%
+              </div>
+            </div>
+
+            {(imageSummary.headline || imageSummary.headlineEn) && (
+              <div className="px-4 py-2 text-sm text-[#d1d5db] border-b border-[#1a1e2e]">
+                <BiText ku={imageSummary.headline} en={imageSummary.headlineEn} />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-px bg-[#1a1e2e]">
+              <div className="bg-[#0d1117] px-4 py-2.5">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><LogIn className="h-3 w-3" />{biLabel('خاڵی چوونەژوورەوە', 'Entry')}</div>
+                <div className="text-sm font-mono text-white mt-0.5">{imageSummary.entry}</div>
+              </div>
+              <div className="bg-[#0d1117] px-4 py-2.5">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><OctagonX className="h-3 w-3 text-[#f6465d]" />{biLabel('وەستانی زیان', 'Stop-loss')}</div>
+                <div className="text-sm font-mono text-[#f6465d] mt-0.5">{imageSummary.stopLoss}</div>
+              </div>
+              <div className="bg-[#0d1117] px-4 py-2.5 col-span-2">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><Target className="h-3 w-3 text-[#0ecb81]" />{biLabel('ئامانجەکانی قازانج', 'Take-profit targets')}</div>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {imageSummary.targets.map((t, i) => (
+                    <span key={i} className="text-xs font-mono px-2 py-0.5 rounded bg-[#0ecb81]/10 text-[#0ecb81]">
+                      {biLabel('ئامانج', 'Target')} {i + 1}: {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {(imageSummary.entryTiming || imageSummary.entryTimingEn || imageSummary.exitTiming || imageSummary.exitTimingEn) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#1a1e2e] border-t border-[#1a1e2e]">
+                {(imageSummary.entryTiming || imageSummary.entryTimingEn) && (
+                  <div className="bg-[#0d1117] px-4 py-3">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#0ecb81] mb-1"><LogIn className="h-3.5 w-3.5" />{biLabel('کەی بکڕیت', 'When to buy')}</div>
+                    <BiText ku={imageSummary.entryTiming} en={imageSummary.entryTimingEn} className="text-xs text-[#d1d5db]" />
+                  </div>
+                )}
+                {(imageSummary.exitTiming || imageSummary.exitTimingEn) && (
+                  <div className="bg-[#0d1117] px-4 py-3">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#f6465d] mb-1"><Target className="h-3.5 w-3.5" />{biLabel('کەی بفرۆشیت', 'When to sell')}</div>
+                    <BiText ku={imageSummary.exitTiming} en={imageSummary.exitTimingEn} className="text-xs text-[#d1d5db]" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(imageSummary.reasoning || imageSummary.reasoningEn) && (
+              <div className="px-4 py-3 border-t border-[#1a1e2e]">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-1.5"><Lightbulb className="h-3.5 w-3.5 text-[#f0b90b]" />{biLabel('بۆچی ئەم بڕیارە؟', 'Why this decision?')}</div>
+                <BiText ku={imageSummary.reasoning} en={imageSummary.reasoningEn} className="text-xs text-[#d1d5db]" />
+              </div>
+            )}
+
+            {(imageSummary.riskNote || imageSummary.riskNoteEn) && (
+              <div className="flex items-start gap-2 px-4 py-2.5 text-xs text-[#d1d5db] border-t border-[#1a1e2e]" style={{ backgroundColor: riskColor(imageSummary.riskLevel) + '0d' }}>
+                <ShieldAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: riskColor(imageSummary.riskLevel) }} />
+                <div className="flex-1"><BiText ku={imageSummary.riskNote} en={imageSummary.riskNoteEn} /></div>
+              </div>
+            )}
+
+            {isAdmin && (
+              <div className="px-4 py-2.5 border-t border-[#1a1e2e] space-y-2">
+                <button
+                  onClick={() => {
+                    const lines = [
+                      `📊 ${symbol} — ${recLabel(imageSummary.recommendation, langMode)}`,
+                      `Entry: ${imageSummary.entry}`,
+                      ...imageSummary.targets.map((t, i) => `Target ${i + 1}: ${t}`),
+                      `Stop Loss: ${imageSummary.stopLoss}`,
+                      `Confidence: ${imageSummary.confidence}%`,
+                      `Risk: ${riskLabel(imageSummary.riskLevel, langMode)}`,
+                      imageSummary.headlineEn || imageSummary.headline ? `Note: ${imageSummary.headlineEn || imageSummary.headline}` : null,
+                    ].filter(Boolean) as string[];
+                    copyToClipboard(lines.join('\n'), 'img-signal');
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition"
+                >
+                  {copiedKey === 'img-signal' ? <Check className="h-3.5 w-3.5 text-[#0ecb81]" /> : <Copy className="h-3.5 w-3.5" />}
+                  {biLabel('کۆپی سیگنال', 'Copy signal')}
+                </button>
+                <button
+                  onClick={() => sendSignal(imageSummary, chartTimeframe)}
+                  disabled={sending}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-bold rounded-lg bg-[#229ED9] text-white disabled:opacity-50 active:scale-95 transition"
+                >
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {sending ? biLabel('دەنێردرێت...', 'Sending...') : sentOk ? biLabel('نێردرا ✅', 'Sent ✅') : biLabel('ناردنی سیگنال بۆ تەلەگرام', 'Send signal to Telegram')}
+                </button>
+              </div>
+            )}
+
+            {imageGeneratedAt && (
+              <div className="px-4 py-1.5 text-[10px] text-[#848e9c] border-t border-[#1a1e2e]">
+                {biLabel('بەرواری شیکاری', 'Analysis date')}: {fmtDate(new Date(imageGeneratedAt))} · {biLabel('ئەمە ڕاوێژی دارایی نییە', 'not financial advice')}
+              </div>
+            )}
+          </div>
+        )}
+
+
 
         {imageText ? (
           <div className="text-sm text-[#d1d5db] whitespace-pre-wrap leading-relaxed">{imageText}</div>
