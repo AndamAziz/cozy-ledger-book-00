@@ -78,7 +78,7 @@ export function CoinList({ coins, selectedPair, onSelectPair, isLoading }: CoinL
           <Search className="h-4 w-4 text-[#848e9c] shrink-0" />
           <input
             type="text"
-            placeholder="Search coins..."
+            placeholder={bi('گەڕان بەدوای دراوەکان...', 'Search coins...')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="bg-transparent text-sm text-white placeholder:text-[#848e9c] outline-none w-full"
@@ -89,9 +89,9 @@ export function CoinList({ coins, selectedPair, onSelectPair, isLoading }: CoinL
       {/* Header */}
       <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wider text-[#848e9c] border-b border-[#1a1e2e]">
         <span className="w-5" />
-        <span>Coin</span>
-        <span className="text-right w-20">Price</span>
-        <span className="text-right w-14">24h</span>
+        <span>{bi('دراو', 'Coin')}</span>
+        <span className="text-right w-20">{bi('نرخ', 'Price')}</span>
+        <span className="text-right w-14">{bi('٢٤ک', '24h')}</span>
       </div>
 
       {/* List */}
