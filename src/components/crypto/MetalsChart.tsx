@@ -285,6 +285,14 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         {/* Chart type toggle */}
         <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
           <button
+            onClick={() => setChartType('candles')}
+            className={`px-2 py-1 text-[10px] font-medium transition-colors ${
+              chartType === 'candles' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
+            }`}
+          >
+            {language === 'en' ? 'Candles' : 'شمع'}
+          </button>
+          <button
             onClick={() => setChartType('area')}
             className={`px-2 py-1 text-[10px] font-medium transition-colors ${
               chartType === 'area' ? 'bg-[#2a2e3e] text-white' : 'text-[#848e9c] hover:text-white'
@@ -302,6 +310,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
           </button>
         </div>
       </div>
+
 
       {/* Chart */}
       <div className="relative h-[250px] sm:h-[320px]">
