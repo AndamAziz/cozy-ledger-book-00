@@ -522,14 +522,21 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                     )}
                   </div>
                   {/* Language toggle */}
-                  <div className="flex gap-0.5 bg-[#1a1e2e] rounded-lg p-0.5">
+                  <div
+                    role="group"
+                    aria-label="Select display language"
+                    className="inline-flex items-center gap-0.5 bg-[#1a1e2e] rounded-lg p-0.5"
+                  >
                     {(['ku','both','en'] as LangMode[]).map((m) => (
                       <button
                         key={m}
+                        type="button"
                         onClick={() => setLangMode(m)}
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition ${
+                        aria-pressed={langMode === m}
+                        aria-label={m === 'ku' ? 'Kurdish only' : m === 'en' ? 'English only' : 'Both languages'}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all duration-200 min-h-[28px] ${
                           langMode === m
-                            ? 'bg-[#2d2d2d] text-white'
+                            ? 'bg-[#0d1117] text-white shadow-sm ring-1 ring-[#2d2d2d]'
                             : 'text-[#848e9c] hover:text-white'
                         }`}
                       >
