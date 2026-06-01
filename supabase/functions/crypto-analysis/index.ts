@@ -292,10 +292,19 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                       description:
                         "One short risk-management note in Kurdish Sorani.",
                     },
+                    riskNoteEn: {
+                      type: "string",
+                      description: "The SAME risk note in clear English.",
+                    },
                     reasoning: {
                       type: "string",
                       description:
                         "2-4 sentences in Kurdish Sorani explaining WHY this buy/sell/hold decision was made, referencing the indicator readings.",
+                    },
+                    reasoningEn: {
+                      type: "string",
+                      description:
+                        "The SAME reasoning as the Kurdish field, in clear fluent English.",
                     },
                     keyDrivers: {
                       type: "array",
@@ -324,8 +333,13 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                             description:
                               "Very short reason in Kurdish Sorani (max ~8 words).",
                           },
+                          noteEn: {
+                            type: "string",
+                            description:
+                              "The SAME short reason in English (max ~8 words).",
+                          },
                         },
-                        required: ["indicator", "effect", "influence", "note"],
+                        required: ["indicator", "effect", "influence", "note", "noteEn"],
                         additionalProperties: false,
                       },
                     },
@@ -334,7 +348,12 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                     "recommendation",
                     "confidence",
                     "headline",
+                    "headlineEn",
                     "entry",
+                    "entryTiming",
+                    "entryTimingEn",
+                    "exitTiming",
+                    "exitTimingEn",
                     "targets",
                     "stopLoss",
                     "stopLossIndicator",
@@ -344,7 +363,9 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                     "horizonDays",
                     "riskLevel",
                     "riskNote",
+                    "riskNoteEn",
                     "reasoning",
+                    "reasoningEn",
                     "keyDrivers",
                   ],
                   additionalProperties: false,
