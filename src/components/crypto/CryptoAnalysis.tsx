@@ -442,7 +442,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-sm text-[#848e9c]">پوختەی نیشاندەرە تەکنیکییەکان</div>
+            <div className="text-sm text-[#848e9c]">{biLabel('پوختەی نیشاندەرە تەکنیکییەکان', 'Technical indicators summary')}</div>
             <div className="text-lg font-bold text-white">{symbol}/USD · {tfLabel}</div>
           </div>
           <div className="flex items-center gap-2" style={{ color: signalColor(summary.signal) }}>
