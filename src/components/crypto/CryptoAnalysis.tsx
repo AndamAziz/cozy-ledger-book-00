@@ -508,38 +508,60 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               </div>
             </div>
 
-            {/* Stop-loss basis — bilingual indicator → stop mapping */}
+            {/* Stop-loss basis — indicator → stop mapping with language toggle */}
             {(tradeSummary.stopLossBasis || tradeSummary.stopLossBasisEn || tradeSummary.stopLossIndicatorValue) && (
               <div className="px-4 py-3 border-t border-[#1a1e2e]">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
-                  <OctagonX className="h-3.5 w-3.5 text-[#f6465d]" />
-                  بنەمای وەستانی زیان · Stop-Loss Basis
-                  {tradeSummary.stopLossIndicator && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#f6465d]/10 text-[#f6465d]">
-                      {tradeSummary.stopLossIndicator}
-                    </span>
-                  )}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                    <OctagonX className="h-3.5 w-3.5 text-[#f6465d]" />
+                    {langMode === 'en' ? 'Stop-Loss Basis' : langMode === 'ku' ? 'بنەمای وەستانی زیان' : 'بنەمای وەستانی زیان · Stop-Loss Basis'}
+                    {tradeSummary.stopLossIndicator && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#f6465d]/10 text-[#f6465d]">
+                        {tradeSummary.stopLossIndicator}
+                      </span>
+                    )}
+                  </div>
+                  {/* Language toggle */}
+                  <div className="flex gap-0.5 bg-[#1a1e2e] rounded-lg p-0.5">
+                    {(['ku','both','en'] as LangMode[]).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setLangMode(m)}
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition ${
+                          langMode === m
+                            ? 'bg-[#2d2d2d] text-white'
+                            : 'text-[#848e9c] hover:text-white'
+                        }`}
+                      >
+                        {m === 'ku' ? 'کوردی' : m === 'en' ? 'English' : 'هەردووکی'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Indicator value → Stop-loss mapping */}
                 <div className="flex items-center gap-2 mb-2.5 rounded-lg bg-[#0d1117] border border-[#1a1e2e] px-3 py-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-[9px] text-[#848e9c] uppercase tracking-wide">نرخی ئامێر · Indicator value</div>
+                    <div className="text-[9px] text-[#848e9c] uppercase tracking-wide">
+                      {langMode === 'en' ? 'Indicator value' : langMode === 'ku' ? 'نرخی ئامێر' : 'نرخی ئامێر · Indicator value'}
+                    </div>
                     <div className="text-xs font-mono text-white truncate">{tradeSummary.stopLossIndicatorValue || tradeSummary.stopLossIndicator || '—'}</div>
                   </div>
                   <div className="text-[#f6465d] text-base font-bold px-1">→</div>
                   <div className="flex-1 min-w-0 text-right">
-                    <div className="text-[9px] text-[#848e9c] uppercase tracking-wide">وەستانی زیان · Stop-loss</div>
+                    <div className="text-[9px] text-[#848e9c] uppercase tracking-wide">
+                      {langMode === 'en' ? 'Stop-loss' : langMode === 'ku' ? 'وەستانی زیان' : 'وەستانی زیان · Stop-loss'}
+                    </div>
                     <div className="text-xs font-mono text-[#f6465d] truncate">{tradeSummary.stopLoss}</div>
                   </div>
                 </div>
 
                 {/* Kurdish explanation */}
-                {tradeSummary.stopLossBasis && (
+                {(langMode === 'ku' || langMode === 'both') && tradeSummary.stopLossBasis && (
                   <p className="text-xs text-[#d1d5db] leading-relaxed mb-2" dir="rtl">{tradeSummary.stopLossBasis}</p>
                 )}
                 {/* English explanation */}
-                {tradeSummary.stopLossBasisEn && (
+                {(langMode === 'en' || langMode === 'both') && tradeSummary.stopLossBasisEn && (
                   <p className="text-xs text-[#9aa4b2] leading-relaxed" dir="ltr">{tradeSummary.stopLossBasisEn}</p>
                 )}
               </div>
