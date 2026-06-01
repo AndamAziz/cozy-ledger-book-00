@@ -8,7 +8,8 @@ interface CryptoAnalysisProps {
   candles: OHLCCandle[];
   currentPrice: number;
   change24h: number;
-  interval: number;
+  interval?: number;
+  timeframeLabel?: string;
 }
 
 type Recommendation = 'buy' | 'sell' | 'hold';
