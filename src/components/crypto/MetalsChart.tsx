@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, Time } from 'lightweight-charts';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 
