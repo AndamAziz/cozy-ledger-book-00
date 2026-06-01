@@ -447,12 +447,27 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
 
-          {/* Spacing controls */}
-          {stepper('→', rightOffset, setRightOffset, 0, 40, 1)}
-          {stepper('⇄', barSpacing, setBarSpacing, 2, 24, 1)}
-          {stepper('⇄ₘ', minBarSpacing, setMinBarSpacing, 1, 12, 1)}
-          {stepper('↑', scaleMarginTop, v => setScaleMarginTop(v), 0, 0.4, 0.02, v => v.toFixed(2))}
-          {stepper('↓', scaleMarginBottom, v => setScaleMarginBottom(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+          {/* Auto-fit toggle */}
+          <button
+            onClick={() => setAutoFit(v => !v)}
+            className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+              autoFit ? 'text-white' : 'text-[#848e9c] border-white/5 hover:text-white'
+            }`}
+            style={autoFit ? { color: accentColor, borderColor: `${accentColor}55`, backgroundColor: `${accentColor}1a` } : undefined}
+          >
+            {bi('خۆکار', 'Auto')}
+          </button>
+
+          {/* Manual spacing controls (only when auto is off) */}
+          {!autoFit && (
+            <>
+              {stepper('→', rightOffset, setRightOffset, 0, 40, 1)}
+              {stepper('⇄', barSpacing, setBarSpacing, 2, 24, 1)}
+              {stepper('⇄ₘ', minBarSpacing, setMinBarSpacing, 1, 12, 1)}
+              {stepper('↑', scaleMarginTop, v => setScaleMarginTop(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+              {stepper('↓', scaleMarginBottom, v => setScaleMarginBottom(v), 0, 0.4, 0.02, v => v.toFixed(2))}
+            </>
+          )}
         </div>
       </div>
 
