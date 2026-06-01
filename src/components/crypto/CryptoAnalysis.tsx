@@ -373,7 +373,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       return;
     }
     if (images.length > 6) {
-      setImageError('زۆرترین ٦ وێنە لە یەک کاتدا.');
+      setImageError(biLabel('زۆرترین 6 وێنە لە یەک کاتدا.', 'Maximum 6 images at a time.'));
       return;
     }
 
