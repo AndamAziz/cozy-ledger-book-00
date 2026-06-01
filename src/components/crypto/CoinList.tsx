@@ -132,7 +132,7 @@ export function CoinList({ coins, selectedPair, onSelectPair, isLoading }: CoinL
                   <button
                     onClick={(e) => toggleFavorite(coin.pair, e)}
                     className="p-0.5 rounded hover:bg-[#2a2e3e] transition-colors"
-                    aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                    aria-label={isFav ? bi('لابردن لە دڵخوازەکان', 'Remove from favorites') : bi('زیادکردن بۆ دڵخوازەکان', 'Add to favorites')}
                   >
                     <Star
                       className={`h-3.5 w-3.5 transition-colors ${
