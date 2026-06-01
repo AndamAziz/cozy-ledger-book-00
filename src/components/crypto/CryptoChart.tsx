@@ -209,8 +209,14 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       }
     }
 
-    chartRef.current?.timeScale().fitContent();
-  }, [candles, chartType, activeMAs, maType]);
+    // Only reset the visible range when switching symbol / timeframe / chart
+    // type. Live price ticks keep the user's current zoom & pan untouched.
+    const fitKey = `${pair}-${interval}-${chartType}`;
+    if (lastFitKeyRef.current !== fitKey) {
+      lastFitKeyRef.current = fitKey;
+      chartRef.current?.timeScale().fitContent();
+    }
+  }, [candles, chartType, activeMAs, maType, pair, interval]);
 
   // Update price line
   useEffect(() => {
