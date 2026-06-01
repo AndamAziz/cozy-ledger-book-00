@@ -99,7 +99,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
           </div>
           {/* Crude Oil */}
           <div>
-            <h3 className="text-xs font-bold text-[#e67e22] uppercase tracking-wider mb-3">🛢️ Crude Oil</h3>
+            <h3 className="text-xs font-bold text-[#e67e22] uppercase tracking-wider mb-3">🛢️ {bi('نەوتی خاو', 'Crude Oil')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {oilItems.map(renderCard)}
             </div>
