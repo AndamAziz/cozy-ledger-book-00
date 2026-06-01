@@ -319,6 +319,29 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     });
   }, [currentPrice, name, accentColor]);
 
+  const stepper = (
+    label: string,
+    value: number,
+    onChange: (v: number) => void,
+    min: number,
+    max: number,
+    step: number,
+    displayFn?: (v: number) => string
+  ) => (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <span className="text-[10px] text-[#848e9c]">{label}</span>
+      <button
+        onClick={() => onChange(Math.max(min, +(value - step).toFixed(3)))}
+        className="w-5 h-5 flex items-center justify-center rounded bg-white/5 text-[10px] text-[#848e9c] hover:bg-white/10 hover:text-white active:scale-95 transition-colors"
+      >−</button>
+      <span className="text-[10px] font-bold text-white w-7 text-center tabular-nums">{displayFn ? displayFn(value) : value}</span>
+      <button
+        onClick={() => onChange(Math.min(max, +(value + step).toFixed(3)))}
+        className="w-5 h-5 flex items-center justify-center rounded bg-white/5 text-[10px] text-[#848e9c] hover:bg-white/10 hover:text-white active:scale-95 transition-colors"
+      >+</button>
+    </div>
+  );
+
   return (
     <div className="border-b border-[#1a1e2e]">
       {/* Controls */}
