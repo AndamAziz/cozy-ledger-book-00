@@ -31,6 +31,51 @@ let oilApiCache: Record<string, number> | null = null;
 let oilApiCacheTs = 0;
 const OIL_API_CACHE_TTL = 3 * 60 * 1000; // 3 minutes (max 20 req/hour on demo)
 
+// ─── GoldAPI spot metals cache (XAU/XAG/XPT/XPD spot, not futures) ───
+const GOLDAPI_METALS = ["XAU", "XAG", "XPT", "XPD"];
+let metalsSpotCache: Record<string, number> | null = null;
+let metalsSpotCacheTs = 0;
+const METALS_SPOT_CACHE_TTL = 30 * 1000; // 30s — spot prices, keeps API calls low
+
+// Fetch accurate SPOT metal prices from GoldAPI (Yahoo GC=F is futures and drifts ~$20+)
+async function fetchGoldApiMetals(): Promise<Record<string, number>> {
+  if (metalsSpotCache && Date.now() - metalsSpotCacheTs < METALS_SPOT_CACHE_TTL) {
+    return metalsSpotCache;
+  }
+  const key = Deno.env.get("GOLD_API_KEY");
+  if (!key) return metalsSpotCache || {};
+
+  try {
+    const results = await Promise.all(
+      GOLDAPI_METALS.map(async (code) => {
+        try {
+          const res = await fetch(`https://www.goldapi.io/api/${code}/USD`, {
+            headers: { "x-access-token": key },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (!res.ok) { await res.text(); return [code, null] as const; }
+          const d = await res.json();
+          const p = Number(d?.price);
+          return [code, Number.isFinite(p) && p > 0 ? Number(p.toFixed(4)) : null] as const;
+        } catch { return [code, null] as const; }
+      }),
+    );
+
+    const prices: Record<string, number> = {};
+    for (const [code, p] of results) if (p != null) prices[code] = p;
+
+    if (Object.keys(prices).length > 0) {
+      metalsSpotCache = prices;
+      metalsSpotCacheTs = Date.now();
+      return prices;
+    }
+    return metalsSpotCache || {};
+  } catch (e) {
+    console.error("GoldAPI fetch error:", e);
+    return metalsSpotCache || {};
+  }
+}
+
 // ─── History cache ───
 const historyCache = new Map<string, { data: unknown; ts: number }>();
 const HISTORY_CACHE_TTL = 60_000;
