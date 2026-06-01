@@ -205,6 +205,99 @@ If an image is not a chart, mention it politely and skip it.`;
       });
     }
 
+    // ----- Auto-detect buy/sell targets from chart image(s) (structured) -----
+    if (mode === "image-summary") {
+      const candidateImages: unknown[] = Array.isArray(images) && images.length
+        ? images
+        : typeof imageBase64 === "string"
+        ? [imageBase64]
+        : [];
+      const validImages = candidateImages.filter(
+        (u): u is string => typeof u === "string" && u.startsWith("data:image"),
+      );
+      if (validImages.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "لانیکەم یەک وێنەی دروستی چارت پێویستە." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const sys = `You are a professional candlestick chart analyst.
+Carefully READ the candles, trend, and visible support/resistance levels in the uploaded chart screenshot(s)${
+        chartTimeframe ? ` (timeframe ${chartTimeframe})` : ""
+      }.
+Decide AUTOMATICALLY whether this is a BUY, SELL, or HOLD setup.
+All price levels (entry, targets, stopLoss) MUST be realistic numbers READ DIRECTLY from the chart's visible price axis, using the same number format/scale shown on the chart.
+For a BUY: place the stop-loss just BELOW a visible support / recent swing low, and put targets ABOVE toward visible resistance.
+For a SELL: place the stop-loss just ABOVE a visible resistance / recent swing high, and put targets BELOW toward visible support.
+Every Kurdish field MUST be in Kurdish Sorani (کوردیی ناوەندی). Every English field MUST be clear, fluent, professional English (a real translation, never transliterated Kurdish).
+This is educational, not financial advice.`;
+
+      const userParts: unknown[] = [
+        {
+          type: "text",
+          text: `${symbol ? `Asset: ${symbol}/USD. ` : ""}${
+            chartTimeframe ? `Timeframe: ${chartTimeframe}. ` : ""
+          }Analyse the chart${validImages.length > 1 ? "s" : ""} and output ONE structured buy/sell trade plan with entry, take-profit targets and stop-loss read from the chart.`,
+        },
+        ...validImages.map((url) => ({ type: "image_url", image_url: { url } })),
+      ];
+
+      const resp = await fetch(AI_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: sys },
+            { role: "user", content: userParts },
+          ],
+          tools: [IMAGE_TRADE_TOOL],
+          tool_choice: { type: "function", function: { name: "trade_summary" } },
+        }),
+      });
+
+      if (!resp.ok) {
+        if (resp.status === 429 || resp.status === 402)
+          return rateLimitResponse(resp.status);
+        const t = await resp.text();
+        console.error("AI gateway error (image-summary):", resp.status, t);
+        return new Response(JSON.stringify({ error: "هەڵە لە دیاریکردنی ئامانجەکان." }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const data = await resp.json();
+      const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+      if (!args) {
+        return new Response(JSON.stringify({ error: "نەتوانرا ئامانجەکان دیاری بکرێن." }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(args);
+      } catch {
+        return new Response(JSON.stringify({ error: "هەڵە لە پرۆسێسکردنی ئامانجەکان." }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!Array.isArray(parsed.targets)) parsed.targets = [];
+      if (!Array.isArray(parsed.keyDrivers)) parsed.keyDrivers = [];
+      return new Response(
+        JSON.stringify({ summary: parsed, generatedAt: new Date().toISOString() }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+
+
     // ----- Structured summary mode (recommendation, levels, dates, risk) -----
     if (mode === "summary") {
       const sysPrompt = `You are a professional crypto technical analyst.
