@@ -33,17 +33,17 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [autoFit, setAutoFit] = useState(true);
   const [containerWidth, setContainerWidth] = useState(600);
 
-  const INTRADAY = interval <= 60;
-  const preset = autoFit
-    ? computeChartPreset(containerWidth, candles.length, INTRADAY)
-    : { rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom };
-
   // Manual override values (used only when autoFit is off).
   const [rightOffset, setRightOffset] = useState(12);
   const [barSpacing, setBarSpacing] = useState(8);
   const [minBarSpacing, setMinBarSpacing] = useState(4);
   const [scaleMarginTop, setScaleMarginTop] = useState(0.12);
   const [scaleMarginBottom, setScaleMarginBottom] = useState(0.12);
+
+  const INTRADAY = interval <= 60;
+  const preset = autoFit
+    ? computeChartPreset(containerWidth, candles.length, INTRADAY)
+    : { rightOffset, barSpacing, minBarSpacing, scaleMarginTop, scaleMarginBottom };
 
   const symbol = getDisplaySymbol(getSymbolFromPair(pair));
 
