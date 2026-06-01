@@ -223,12 +223,25 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       }
     }
 
-    // Only reset the visible range when switching symbol / timeframe / chart
+    // Track the active view key (symbol+timeframe) so live ticks save to it.
+    const viewKey = `${pair}-${interval}`;
+    currentViewKeyRef.current = viewKey;
+
+    // Only adjust the visible range when switching symbol / timeframe / chart
     // type. Live price ticks keep the user's current zoom & pan untouched.
     const fitKey = `${pair}-${interval}-${chartType}`;
     if (lastFitKeyRef.current !== fitKey) {
       lastFitKeyRef.current = fitKey;
-      chartRef.current?.timeScale().fitContent();
+      const ts = chartRef.current?.timeScale();
+      const saved = savedViewsRef.current[viewKey];
+      restoringRef.current = true;
+      if (saved) {
+        try { ts?.setVisibleLogicalRange(saved); } catch { ts?.fitContent(); }
+      } else {
+        ts?.fitContent();
+      }
+      // Release the save-suppression after the range change settles.
+      requestAnimationFrame(() => { restoringRef.current = false; });
     }
   }, [candles, chartType, activeMAs, maType, pair, interval]);
 
