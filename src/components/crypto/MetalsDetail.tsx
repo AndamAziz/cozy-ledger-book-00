@@ -77,7 +77,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailPr
             isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
           }`}>
             {isNeutral ? <Minus className="h-3.5 w-3.5" /> : isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-            {isNeutral ? 'No change' : `${isPositive ? '+' : ''}${m.change.toFixed(2)}%`}
+            {isNeutral ? bi('بێ گۆڕان', 'No change') : `${isPositive ? '+' : ''}${m.change.toFixed(2)}%`}
           </div>
         </div>
       );
