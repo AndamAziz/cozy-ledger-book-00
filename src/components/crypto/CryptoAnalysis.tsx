@@ -892,7 +892,11 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                   const time = `${fmtDate(d)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                   const failed = s.status !== 'sent';
                   return (
-                    <div key={s.id} className="rounded-lg border border-[#1a1e2e] bg-[#0b0e16] p-3">
+                    <div
+                      key={s.id}
+                      onClick={() => setSelectedSignal(s)}
+                      className="rounded-lg border border-[#1a1e2e] bg-[#0b0e16] p-3 cursor-pointer hover:border-[#2d2d2d] active:scale-[0.99] transition"
+                    >
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <div className="flex items-center gap-2">
                           <span
