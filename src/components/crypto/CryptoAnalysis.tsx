@@ -380,6 +380,46 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               </div>
             </div>
 
+            {/* Why this decision */}
+            {tradeSummary.reasoning && (
+              <div className="px-4 py-3 border-t border-[#1a1e2e]">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-1.5">
+                  <Lightbulb className="h-3.5 w-3.5 text-[#f0b90b]" />
+                  بۆچی ئەم بڕیارە؟
+                </div>
+                <p className="text-xs text-[#d1d5db] leading-relaxed">{tradeSummary.reasoning}</p>
+              </div>
+            )}
+
+            {/* Most influential indicators */}
+            {tradeSummary.keyDrivers?.length > 0 && (
+              <div className="px-4 py-3 border-t border-[#1a1e2e]">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-2">
+                  <BarChart3 className="h-3.5 w-3.5 text-[#f0b90b]" />
+                  کاریگەرترین ئامێرەکان
+                </div>
+                <div className="space-y-2">
+                  {tradeSummary.keyDrivers.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-white w-20 shrink-0">{d.indicator}</span>
+                      <div className="flex-1 h-1.5 rounded-full bg-[#1a1e2e] overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: influenceWidth(d.influence), backgroundColor: signalColor(d.effect) }} />
+                      </div>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ color: signalColor(d.effect), backgroundColor: signalColor(d.effect) + '1a' }}>
+                        {signalLabel(d.effect)}
+                      </span>
+                      <span className="text-[9px] text-[#848e9c] w-16 shrink-0 text-left">{influenceLabel(d.influence)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 space-y-0.5">
+                  {tradeSummary.keyDrivers.filter(d => d.note).map((d, i) => (
+                    <div key={i} className="text-[10px] text-[#848e9c]">• {d.indicator}: {d.note}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {tradeSummary.riskNote && (
               <div className="flex items-start gap-2 px-4 py-2.5 text-xs text-[#d1d5db] border-t border-[#1a1e2e]" style={{ backgroundColor: riskColor(tradeSummary.riskLevel) + '0d' }}>
                 <ShieldAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: riskColor(tradeSummary.riskLevel) }} />
