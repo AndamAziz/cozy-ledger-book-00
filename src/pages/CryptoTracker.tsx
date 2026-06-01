@@ -123,7 +123,7 @@ export default function CryptoTracker() {
           <button
             onClick={() => navigate('/')}
             className="p-1.5 sm:p-2 rounded-lg hover:bg-[#1a1e2e] active:bg-[#252a3a] transition-colors"
-            aria-label="Back to calculator"
+            aria-label={bi('گەڕانەوە بۆ ژمێرکار', 'Back to calculator')}
           >
             <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
