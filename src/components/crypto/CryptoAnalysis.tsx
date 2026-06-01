@@ -166,7 +166,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               : 'text-[#848e9c] hover:text-white'
           }`}
         >
-          {m === 'ku' ? 'کوردی' : m === 'en' ? 'English' : 'هەردووکی'}
+          {m === 'ku' ? 'کوردی' : m === 'en' ? 'English' : biLabel('هەردووکی', 'Both')}
         </button>
       ))}
     </div>
