@@ -19,6 +19,8 @@ interface CurrencyConverterProps {
 }
 
 export function CurrencyConverter({ currencies, metals, onClose }: CurrencyConverterProps) {
+  const { language } = useLanguage();
+  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const [amount, setAmount] = useState('1');
   const [fromCode, setFromCode] = useState('USD');
   const [toCode, setToCode] = useState('EUR');
