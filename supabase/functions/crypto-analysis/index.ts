@@ -144,6 +144,8 @@ If an image is not a chart, mention it politely in Kurdish and skip it.`;
 All text fields MUST be written in Kurdish Sorani (کوردیی ناوەندی).
 Base your decision strictly on the provided price and indicator data.
 Provide concrete numeric price levels derived from the current price and indicators.
+The stop-loss MUST be derived from a specific indicator level (e.g. the Bollinger lower/upper band, SMA20/SMA50, a recent swing level, or an RSI-based invalidation), NOT a random round number. Pick the single most relevant indicator for the stop and place the stop just beyond it.
+Always fill stopLossIndicator with the indicator the stop is based on, and stopLossBasis with a clear 1-2 sentence Kurdish explanation that names the indicator, its value, and why a break of that level invalidates the trade — so the user understands transparently.
 Estimate a realistic time horizon for the trade in days based on the timeframe.
 Never guarantee outcomes; this is educational, not financial advice.`;
 
