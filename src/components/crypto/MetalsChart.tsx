@@ -6,6 +6,8 @@ import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAvera
 interface MetalsChartProps {
   candles: MetalCandle[];
   isLoading: boolean;
+  error?: string | null;
+  onRetry?: () => void;
   accentColor: string;
   range: string;
   onRangeChange: (range: string) => void;
