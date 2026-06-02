@@ -614,14 +614,24 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           <span>{biLabel('فرۆشتن', 'Sell')}</span><span>{biLabel('بێلایەن', 'Neutral')}</span><span>{biLabel('کڕین', 'Buy')}</span>
         </div>
 
-        <div className="flex gap-2 mt-3 text-xs">
+        <div className="flex gap-2 mt-3 text-xs flex-wrap items-center">
           <span className="px-2 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81]">{biLabel('کڕین', 'Buy')} {summary.buyCount}</span>
           <span className="px-2 py-1 rounded bg-[#848e9c]/10 text-[#848e9c]">{biLabel('بێلایەن', 'Neutral')} {summary.neutralCount}</span>
           <span className="px-2 py-1 rounded bg-[#f6465d]/10 text-[#f6465d]">{biLabel('فرۆشتن', 'Sell')} {summary.sellCount}</span>
+          <button
+            type="button"
+            onClick={() => setShowPctSummary(v => !v)}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#1a1e2e] text-[#848e9c] hover:text-white hover:bg-[#2a2e3e] transition-colors ml-auto"
+            aria-pressed={showPctSummary}
+            title={biLabel('پوختەی %١٠٠ پیشان بدە/شاردنەوە', 'Toggle %100 summary')}
+          >
+            {showPctSummary ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+            <span className="font-bold">{biLabel('%١٠٠', '%100')}</span>
+          </button>
         </div>
 
         {/* Buy vs Sell percentage out of 100% */}
-        {(() => {
+        {showPctSummary && (() => {
           const total = summary.buyCount + summary.sellCount + summary.neutralCount || 1;
           const buyPct = Math.round((summary.buyCount / total) * 100);
           const sellPct = Math.round((summary.sellCount / total) * 100);
