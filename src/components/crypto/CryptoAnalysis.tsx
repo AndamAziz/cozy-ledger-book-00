@@ -618,6 +618,25 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           <span className="px-2 py-1 rounded bg-[#848e9c]/10 text-[#848e9c]">{biLabel('بێلایەن', 'Neutral')} {summary.neutralCount}</span>
           <span className="px-2 py-1 rounded bg-[#f6465d]/10 text-[#f6465d]">{biLabel('فرۆشتن', 'Sell')} {summary.sellCount}</span>
         </div>
+
+        {/* Buy vs Sell percentage out of 100% */}
+        {(() => {
+          const total = summary.buyCount + summary.sellCount + summary.neutralCount || 1;
+          const buyPct = Math.round((summary.buyCount / total) * 100);
+          const sellPct = Math.round((summary.sellCount / total) * 100);
+          return (
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+                <span className="text-[#0ecb81]">{biLabel('کڕین', 'Buy')} {buyPct}%</span>
+                <span className="text-[#f6465d]">{sellPct}% {biLabel('فرۆشتن', 'Sell')}</span>
+              </div>
+              <div className="flex h-2.5 rounded-full overflow-hidden bg-[#1a1e2e]">
+                <div className="bg-[#0ecb81] transition-all duration-500" style={{ width: `${buyPct}%` }} />
+                <div className="bg-[#f6465d] transition-all duration-500" style={{ width: `${sellPct}%` }} />
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* 24h High / Low (highest & lowest price in 1 day) */}
