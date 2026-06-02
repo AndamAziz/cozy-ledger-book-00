@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { OHLCCandle, TIMEFRAMES } from '@/lib/krakenApi';
-import { computeIndicators, summarizeSignals, SignalType } from '@/lib/indicators';
+import { computeIndicators, summarizeSignals, computeBuySellPct, SignalType } from '@/lib/indicators';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
