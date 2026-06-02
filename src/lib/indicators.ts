@@ -174,3 +174,35 @@ export function summarizeSignals(ind: IndicatorResult, price: number): SignalSum
 
   return { signal, score, buyCount, sellCount, neutralCount };
 }
+
+export interface BuySellPct {
+  /** Whether there is any signal data to compute percentages from. */
+  hasData: boolean;
+  buyPct: number;
+  sellPct: number;
+  neutralPct: number;
+  total: number;
+}
+
+/**
+ * Shared, pure helper for the 100% Buy/Sell breakdown.
+ * Used identically by Crypto and Metals via CryptoAnalysis.
+ * Guards against a zero total so we never divide by zero.
+ */
+export function computeBuySellPct(
+  summary: Pick<SignalSummary, 'buyCount' | 'sellCount' | 'neutralCount'>
+): BuySellPct {
+  const buyCount = Math.max(0, summary.buyCount ?? 0);
+  const sellCount = Math.max(0, summary.sellCount ?? 0);
+  const neutralCount = Math.max(0, summary.neutralCount ?? 0);
+  const total = buyCount + sellCount + neutralCount;
+
+  if (total <= 0) {
+    return { hasData: false, buyPct: 0, sellPct: 0, neutralPct: 0, total: 0 };
+  }
+
+  const buyPct = Math.round((buyCount / total) * 100);
+  const sellPct = Math.round((sellCount / total) * 100);
+  const neutralPct = Math.round((neutralCount / total) * 100);
+  return { hasData: true, buyPct, sellPct, neutralPct, total };
+}
