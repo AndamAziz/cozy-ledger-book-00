@@ -4,7 +4,7 @@ import { computeIndicators, summarizeSignals, SignalType } from '@/lib/indicator
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft, Copy, Check } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft, Copy, Check, Eye, EyeOff } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 interface CryptoAnalysisProps {
@@ -147,6 +147,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [showSignals, setShowSignals] = useState(false);
   const [selectedSignal, setSelectedSignal] = useState<SentSignal | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [showPctSummary, setShowPctSummary] = useState(true);
 
   const copyToClipboard = async (text: string, key: string) => {
     try {
@@ -613,14 +614,24 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           <span>{biLabel('فرۆشتن', 'Sell')}</span><span>{biLabel('بێلایەن', 'Neutral')}</span><span>{biLabel('کڕین', 'Buy')}</span>
         </div>
 
-        <div className="flex gap-2 mt-3 text-xs">
+        <div className="flex gap-2 mt-3 text-xs flex-wrap items-center">
           <span className="px-2 py-1 rounded bg-[#0ecb81]/10 text-[#0ecb81]">{biLabel('کڕین', 'Buy')} {summary.buyCount}</span>
           <span className="px-2 py-1 rounded bg-[#848e9c]/10 text-[#848e9c]">{biLabel('بێلایەن', 'Neutral')} {summary.neutralCount}</span>
           <span className="px-2 py-1 rounded bg-[#f6465d]/10 text-[#f6465d]">{biLabel('فرۆشتن', 'Sell')} {summary.sellCount}</span>
+          <button
+            type="button"
+            onClick={() => setShowPctSummary(v => !v)}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#1a1e2e] text-[#848e9c] hover:text-white hover:bg-[#2a2e3e] transition-colors ml-auto"
+            aria-pressed={showPctSummary}
+            title={biLabel('پوختەی %١٠٠ پیشان بدە/شاردنەوە', 'Toggle %100 summary')}
+          >
+            {showPctSummary ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+            <span className="font-bold">{biLabel('%١٠٠', '%100')}</span>
+          </button>
         </div>
 
         {/* Buy vs Sell percentage out of 100% */}
-        {(() => {
+        {showPctSummary && (() => {
           const total = summary.buyCount + summary.sellCount + summary.neutralCount || 1;
           const buyPct = Math.round((summary.buyCount / total) * 100);
           const sellPct = Math.round((summary.sellCount / total) * 100);
