@@ -632,9 +632,14 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
         {/* Buy vs Sell percentage out of 100% */}
         {showPctSummary && (() => {
-          const total = summary.buyCount + summary.sellCount + summary.neutralCount || 1;
-          const buyPct = Math.round((summary.buyCount / total) * 100);
-          const sellPct = Math.round((summary.sellCount / total) * 100);
+          const { hasData, buyPct, sellPct } = computeBuySellPct(summary);
+          if (!hasData) {
+            return (
+              <div className="mt-3 text-center text-xs text-[#848e9c] bg-[#1a1e2e] rounded-lg py-3">
+                {biLabel('داتای نیشاندەر بەردەست نییە بۆ پوختەی %١٠٠', 'No indicator data available for the %100 summary')}
+              </div>
+            );
+          }
           return (
             <div className="mt-3">
               <div className="flex items-center justify-between text-xs font-bold mb-1.5">
