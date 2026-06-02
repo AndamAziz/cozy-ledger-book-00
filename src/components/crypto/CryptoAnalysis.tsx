@@ -147,6 +147,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [showSignals, setShowSignals] = useState(false);
   const [selectedSignal, setSelectedSignal] = useState<SentSignal | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [showPctSummary, setShowPctSummary] = useState(true);
 
   const copyToClipboard = async (text: string, key: string) => {
     try {
