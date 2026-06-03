@@ -745,7 +745,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       <div className="flex-1 relative min-h-[300px] md:min-h-[500px]">
         <div ref={chartContainerRef} className="absolute inset-0" />
 
-        <PnLSummaryPanel realizedPnl={realizedPnl} unrealizedPnl={unrealizedPnl} language={language} />
+
 
         {/* Depth-of-market ladder (MT5 style) overlaid on the right edge */}
         {showDOM && currentPrice > 0 && (
