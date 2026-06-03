@@ -50,10 +50,14 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [tradeSide, setTradeSide] = useState<TradeSide>(null);
   const [tradeAmount, setTradeAmount] = useState(0.001);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
-  // Price captured the moment Buy/Sell is pressed — basis for live P/L.
+  // Average entry price of the open position (weighted across multiple adds).
   const [entryPrice, setEntryPrice] = useState<number | null>(null);
+  // Total accumulated quantity of the open position.
+  const [positionQty, setPositionQty] = useState(0);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
+
+  const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 
   const handleRefreshTrade = () => {
     const ind = computeIndicators(candles);
@@ -62,11 +66,11 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     setTradePct({ hasData, buyPct, sellPct });
   };
 
-  // Realise the profit / loss of an open position into the demo balance.
-  const realize = (side: 'buy' | 'sell', entry: number | null) => {
-    if (!entry || entry <= 0 || currentPrice <= 0) return;
+  // Realise the profit / loss of the whole open position into the demo balance.
+  const realize = (side: 'buy' | 'sell', entry: number | null, qty: number) => {
+    if (!entry || entry <= 0 || currentPrice <= 0 || qty <= 0) return;
     const diff = side === 'buy' ? currentPrice - entry : entry - currentPrice;
-    const pnlValue = diff * tradeAmount;
+    const pnlValue = diff * qty;
     applyPnl(pnlValue);
     const profit = pnlValue >= 0;
     toast({
@@ -75,19 +79,32 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     });
   };
 
-  const handleTrade = (side: 'buy' | 'sell') => {
-    if (tradeSide === side) {
-      // Closing the open position.
-      realize(side, entryPrice);
-      setTradeSide(null);
-      setEntryPrice(null);
-      return;
-    }
-    // Switching sides closes the previous position first.
-    if (tradeSide) realize(tradeSide, entryPrice);
+  // Open or ADD to a position. Multiple presses on the same side stack:
+  // the quantity accumulates and the entry price is averaged. The opposite
+  // side is blocked while a position is open (close it first).
+  const handleAdd = (side: 'buy' | 'sell') => {
     if (balance <= 0) return;
-    setTradeSide(side);
-    setEntryPrice(currentPrice > 0 ? currentPrice : null);
+    if (tradeSide && tradeSide !== side) return;
+    const price = currentPrice;
+    if (price <= 0) return;
+    if (!tradeSide || positionQty <= 0 || entryPrice == null) {
+      setTradeSide(side);
+      setEntryPrice(price);
+      setPositionQty(tradeAmount);
+    } else {
+      const newQty = +(positionQty + tradeAmount).toFixed(6);
+      setEntryPrice(((entryPrice * positionQty) + price * tradeAmount) / newQty);
+      setPositionQty(newQty);
+    }
+  };
+
+  // Close the whole position and realise its P/L.
+  const handleClose = () => {
+    if (!tradeSide || positionQty <= 0) return;
+    realize(tradeSide, entryPrice, positionQty);
+    setTradeSide(null);
+    setEntryPrice(null);
+    setPositionQty(0);
   };
 
 
