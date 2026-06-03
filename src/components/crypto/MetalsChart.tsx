@@ -257,8 +257,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       rightPriceScale: {
         borderColor: 'rgba(132,142,156,0.15)',
         scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom },
-        entireTextOnly: true,
-        ticksVisible: false,
+        entireTextOnly: false,
+        ticksVisible: true,
       },
       timeScale: {
         borderColor: 'rgba(132,142,156,0.15)',
@@ -267,7 +267,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         rightOffset: preset.rightOffset,
         barSpacing: preset.barSpacing,
         minBarSpacing: preset.minBarSpacing,
-        ticksVisible: false,
+        ticksVisible: true,
       },
       width: rect.width || 600,
       height: rect.height || 300,
