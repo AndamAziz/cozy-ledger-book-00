@@ -960,7 +960,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
 
       {/* Chart — grows to fill the screen in landscape (MT5-style) */}
-      <div className="relative h-[72vh] sm:h-[340px] landscape:h-[82vh] landscape:max-h-[560px]">
+      <div className="relative h-[72vh] sm:h-[340px] landscape:h-[88vh] landscape:max-h-none">
         <div ref={chartContainerRef} className="absolute inset-0" />
 
 
