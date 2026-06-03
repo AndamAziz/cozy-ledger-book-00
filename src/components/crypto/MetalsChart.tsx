@@ -8,6 +8,7 @@ import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAvera
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
+import { attachTpSlDrag } from '@/lib/tpSlDrag';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
@@ -90,10 +91,16 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const tradeLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<any>(null);
+  // TP / SL price-line objects per side so they can be dragged live.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tpLineRef = useRef<any>(null);
+  const tpLineRef = useRef<Record<'buy' | 'sell', any>>({ buy: null, sell: null });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const slLineRef = useRef<any>(null);
+  const slLineRef = useRef<Record<'buy' | 'sell', any>>({ buy: null, sell: null });
+  // Active drag override (so live ticks recreating lines keep the dragged price).
+  const dragRef = useRef<{ side: 'buy' | 'sell'; kind: 'tp' | 'sl'; price: number } | null>(null);
+  // Always-fresh snapshot of the open legs for the drag helper.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const legsRef = useRef<{ buy: any; sell: any }>({ buy: null, sell: null });
   const [tradeAmount, setTradeAmount] = useState(0.01);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
@@ -115,6 +122,11 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const otherHasLegs = position && position.symbol !== mySymbol &&
     ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
   const otherPositionLabel = otherHasLegs ? position!.label : null;
+
+  // Keep a fresh snapshot of the legs for the TP/SL drag helper.
+  legsRef.current = { buy: buyLeg, sell: sellLeg };
+
+
 
   // (Live per-trade P/L is shown directly on the chart, MT5-style, below.)
   const price = livePrice();
@@ -551,25 +563,35 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       });
       // TP / SL apply to the whole leg — bold lines so the user clearly sees
       // WHERE profit (green) and loss (deep crimson) sit on the chart.
-      if (leg.takeProfit && leg.takeProfit > 0) {
-        tradeLineRef.current.push(seriesRef.current.createPriceLine({
-          price: leg.takeProfit,
+      // They are DRAGGABLE: a live drag override keeps the price while ticks redraw.
+      const drag = dragRef.current;
+      const tpPrice = drag && drag.side === side && drag.kind === 'tp' ? drag.price : leg.takeProfit;
+      const slPrice = drag && drag.side === side && drag.kind === 'sl' ? drag.price : leg.stopLoss;
+      tpLineRef.current[side] = null;
+      slLineRef.current[side] = null;
+      if (tpPrice && tpPrice > 0) {
+        const line = seriesRef.current.createPriceLine({
+          price: tpPrice,
           color: '#0ecb81',
           lineWidth: 2,
           lineStyle: 2,
           axisLabelVisible: true,
           title: `${isBuy ? 'B' : 'S'} ${bi('قازانج', 'TP')} ▲`,
-        }));
+        });
+        tradeLineRef.current.push(line);
+        tpLineRef.current[side] = line;
       }
-      if (leg.stopLoss && leg.stopLoss > 0) {
-        tradeLineRef.current.push(seriesRef.current.createPriceLine({
-          price: leg.stopLoss,
+      if (slPrice && slPrice > 0) {
+        const line = seriesRef.current.createPriceLine({
+          price: slPrice,
           color: '#8b0a1a',
           lineWidth: 2,
           lineStyle: 2,
           axisLabelVisible: true,
           title: `${isBuy ? 'B' : 'S'} ${bi('زیان', 'SL')} ▼`,
-        }));
+        });
+        tradeLineRef.current.push(line);
+        slLineRef.current[side] = line;
       }
     };
 
@@ -615,6 +637,25 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
+
+  // Enable dragging the TP / SL lines directly on the chart. Releasing the line
+  // commits the new level automatically (no extra data entry needed).
+  useEffect(() => {
+    const chart = chartRef.current;
+    const container = chartContainerRef.current;
+    if (!chart || !container || !seriesRef.current) return;
+    return attachTpSlDrag({
+      container,
+      chart,
+      getSeries: () => seriesRef.current,
+      getLegs: () => legsRef.current,
+      lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
+      dragRef,
+      onCommit: (side, tp, sl) => setTpSl(side, tp, sl),
+    });
+  }, [seriesVersion, setTpSl]);
+
+
 
   // OHLC view of the metal candles for the indicator-series helpers.
   const ohlcForIndicators = useMemo(
