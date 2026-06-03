@@ -198,13 +198,11 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
     return () => { active = false; };
   }, []);
 
-  const persist = useCallback((nextBalance: number, nextRealized?: number) => {
+  const persist = useCallback((next: number) => {
     if (!userId) return;
-    const update: Record<string, unknown> = { balance: nextBalance, updated_at: new Date().toISOString() };
-    if (typeof nextRealized === 'number') update.realized_pnl = nextRealized;
     supabase
       .from('demo_accounts')
-      .update(update)
+      .update({ balance: next, updated_at: new Date().toISOString() })
       .eq('user_id', userId)
       .then(() => { /* fire and forget */ });
   }, [userId]);
@@ -216,14 +214,6 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
       return next;
     });
   }, [persist]);
-
-  const applyRealized = useCallback((delta: number) => {
-    setRealizedPnl((prev) => {
-      const next = +(prev + delta).toFixed(2);
-      persist(balance, next);
-      return next;
-    });
-  }, [persist, balance]);
 
   const renew = useCallback(() => {
     setBalance(DEMO_STARTING_BALANCE);
