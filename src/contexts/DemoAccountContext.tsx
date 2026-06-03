@@ -276,15 +276,36 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
     persist(DEMO_STARTING_BALANCE);
   }, [persist]);
 
-  // Realise a closed leg into the balance + announce it. Deferred so it never
-  // runs inside a setState updater.
-  const settle = useCallback((side: PositionSide, entry: number, qty: number, exit: number, reason: 'manual' | 'tp' | 'sl') => {
+  // Realise a closed leg into the balance, record it in the journal + announce
+  // it. Deferred so it never runs inside a setState updater.
+  const settle = useCallback((
+    side: PositionSide,
+    entry: number,
+    qty: number,
+    exit: number,
+    reason: CloseReason,
+    meta: { symbol: string; label: string; openedAt: number },
+  ) => {
     const diff = side === 'buy' ? exit - entry : entry - exit;
     const pnlValue = diff * qty;
     const profit = pnlValue >= 0;
+    const record: TradeRecord = {
+      id: newFillId(),
+      symbol: meta.symbol,
+      label: meta.label,
+      side,
+      entryPrice: entry,
+      exitPrice: exit,
+      qty,
+      pnl: +pnlValue.toFixed(2),
+      openedAt: meta.openedAt,
+      closedAt: Math.floor(Date.now() / 1000),
+      reason,
+    };
     queueMicrotask(() => {
       applyPnl(pnlValue);
       setRealizedPnl(prev => +(prev + pnlValue).toFixed(2));
+      setJournal(prev => [record, ...prev].slice(0, JOURNAL_LIMIT));
       const head = reason === 'tp'
         ? bi('بەرزبوونەوەی قازانج 🎯', 'Take Profit hit 🎯')
         : reason === 'sl'
