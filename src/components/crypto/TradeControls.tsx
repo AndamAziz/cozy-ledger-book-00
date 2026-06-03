@@ -195,58 +195,89 @@ export function TradeControls({
           )}
         </div>
 
-        {/* TP / SL inputs */}
-        <div className="grid grid-cols-2 gap-2">
-          <label className="flex items-center gap-1.5 rounded-md bg-[#090c11] border border-[#0ecb81]/30 px-2 py-1.5">
-            <Target className="h-3.5 w-3.5 text-[#0ecb81] shrink-0" />
-            <input
-              type="number"
-              inputMode="decimal"
-              value={leg.takeProfit ?? ''}
-              onChange={(e) => onSetTpSl(side, parseNum(e.target.value), leg.stopLoss)}
-              placeholder={bi('قازانج', 'Take Profit')}
-              className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-[#0ecb81] placeholder:text-[#0ecb81]/40 outline-none tabular-nums"
-            />
-          </label>
-          <label className="flex items-center gap-1.5 rounded-md bg-[#090c11] border border-[#f6465d]/30 px-2 py-1.5">
-            <ShieldAlert className="h-3.5 w-3.5 text-[#f6465d] shrink-0" />
-            <input
-              type="number"
-              inputMode="decimal"
-              value={leg.stopLoss ?? ''}
-              onChange={(e) => onSetTpSl(side, leg.takeProfit, parseNum(e.target.value))}
-              placeholder={bi('زیان', 'Stop Loss')}
-              className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-[#f6465d] placeholder:text-[#f6465d]/40 outline-none tabular-nums"
-            />
-          </label>
-        </div>
-
-        {/* Quick presets + clear + close */}
-        <div className="flex items-center justify-between gap-1.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] sm:text-[10px] text-[#848e9c]">{bi('خێرا', 'Quick')}</span>
-            {[0.5, 1, 2].map((p) => {
-              const [tp, sl] = presetTpSl(side, leg.entryPrice, p);
-              return (
-                <button
-                  key={p}
-                  onClick={() => onSetTpSl(side, tp, sl)}
-                  className="px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded border border-white/10 text-[#848e9c] hover:text-white hover:bg-white/5 active:scale-95 transition-colors tabular-nums"
-                >
-                  ±{p}%
-                </button>
-              );
-            })}
-            {(leg.takeProfit != null || leg.stopLoss != null) && (
+        {/* TP / SL — collapsible dropdown to keep the chart area roomy */}
+        {(() => {
+          const open = tpSlOpen[side];
+          const hasTpSl = leg.takeProfit != null || leg.stopLoss != null;
+          return (
+            <div className="rounded-md border border-white/10 bg-[#090c11]">
               <button
-                onClick={() => onSetTpSl(side, null, null)}
-                className="text-[9px] sm:text-[10px] font-bold text-[#848e9c] hover:text-white transition-colors"
+                type="button"
+                onClick={() => setTpSlOpen((s) => ({ ...s, [side]: !s[side] }))}
+                className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] sm:text-xs"
               >
-                {bi('سڕینەوە', 'Clear')}
+                <span className="flex items-center gap-1.5 font-bold text-[#848e9c]">
+                  <Target className="h-3.5 w-3.5 text-[#0ecb81]" />
+                  {bi('قازانج و زیان', 'TP & SL')}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  {hasTpSl && !open && (
+                    <span className="tabular-nums text-[9px] sm:text-[10px]">
+                      {leg.takeProfit != null && <span className="text-[#0ecb81]">TP {fmtPrice(leg.takeProfit)}</span>}
+                      {leg.takeProfit != null && leg.stopLoss != null && <span className="text-[#848e9c]"> · </span>}
+                      {leg.stopLoss != null && <span className="text-[#f6465d]">SL {fmtPrice(leg.stopLoss)}</span>}
+                    </span>
+                  )}
+                  {open ? <ChevronUp className="h-4 w-4 text-[#848e9c]" /> : <ChevronDown className="h-4 w-4 text-[#848e9c]" />}
+                </span>
               </button>
-            )}
-          </div>
-        </div>
+
+              {open && (
+                <div className="px-2 pb-2 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-1.5 rounded-md bg-[#0d1117] border border-[#0ecb81]/30 px-2 py-1.5">
+                      <Target className="h-3.5 w-3.5 text-[#0ecb81] shrink-0" />
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={leg.takeProfit ?? ''}
+                        onChange={(e) => onSetTpSl(side, parseNum(e.target.value), leg.stopLoss)}
+                        placeholder={bi('قازانج', 'Take Profit')}
+                        className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-[#0ecb81] placeholder:text-[#0ecb81]/40 outline-none tabular-nums"
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5 rounded-md bg-[#0d1117] border border-[#f6465d]/30 px-2 py-1.5">
+                      <ShieldAlert className="h-3.5 w-3.5 text-[#f6465d] shrink-0" />
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={leg.stopLoss ?? ''}
+                        onChange={(e) => onSetTpSl(side, leg.takeProfit, parseNum(e.target.value))}
+                        placeholder={bi('زیان', 'Stop Loss')}
+                        className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-[#f6465d] placeholder:text-[#f6465d]/40 outline-none tabular-nums"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Quick presets + clear */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] sm:text-[10px] text-[#848e9c]">{bi('خێرا', 'Quick')}</span>
+                    {[0.5, 1, 2].map((p) => {
+                      const [tp, sl] = presetTpSl(side, leg.entryPrice, p);
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => onSetTpSl(side, tp, sl)}
+                          className="px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded border border-white/10 text-[#848e9c] hover:text-white hover:bg-white/5 active:scale-95 transition-colors tabular-nums"
+                        >
+                          ±{p}%
+                        </button>
+                      );
+                    })}
+                    {hasTpSl && (
+                      <button
+                        onClick={() => onSetTpSl(side, null, null)}
+                        className="text-[9px] sm:text-[10px] font-bold text-[#848e9c] hover:text-white transition-colors"
+                      >
+                        {bi('سڕینەوە', 'Clear')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Close this leg — shows the live P/L right on the button (green/red) */}
         <button
