@@ -195,6 +195,11 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       }
     }
 
+    // Reset stale price-line refs and notify the trade-line effect to redraw.
+    priceLineRef.current = null;
+    tradeLineRef.current = null;
+    setSeriesVersion(v => v + 1);
+
     return () => {
       resizeObserver.disconnect();
       chart.remove();
