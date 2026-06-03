@@ -245,14 +245,18 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
         ? prev
         : { symbol, label, currentPrice: price, buy: null, sell: null };
 
-      const existing = base[side];
+      const now = Math.floor(Date.now() / 1000);
+      const fill: Fill = { id: newFillId(), entryPrice: price, qty: amount, entryTime: now };
+      const existing = normalizeLeg(base[side]);
       const nextLeg: PositionLeg = existing && existing.qty > 0
         ? (() => {
             const newQty = +(existing.qty + amount).toFixed(6);
             const newEntry = ((existing.entryPrice * existing.qty) + price * amount) / newQty;
-            return { ...existing, entryPrice: newEntry, qty: newQty };
+            // Keep the averaged entry for settlement, but record THIS trade
+            // as its own fill so the chart shows it separately.
+            return { ...existing, entryPrice: newEntry, qty: newQty, fills: [...existing.fills, fill] };
           })()
-        : { entryPrice: price, qty: amount, takeProfit: null, stopLoss: null, entryTime: Math.floor(Date.now() / 1000) };
+        : { entryPrice: price, qty: amount, takeProfit: null, stopLoss: null, entryTime: now, fills: [fill] };
 
       return { ...base, label, currentPrice: price, [side]: nextLeg };
     });
