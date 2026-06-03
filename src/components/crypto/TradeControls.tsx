@@ -15,11 +15,23 @@ interface TradeControlsProps {
   activeSide: TradeSide;
   amount: number;
   pct: TradePct | null;
+  /** Price captured when Buy/Sell was pressed (the entry). */
+  entryPrice: number | null;
+  /** Live moving price used to compute profit / loss. */
+  currentPrice: number;
+  /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
+  timeframeLabel?: string;
   onBuy: () => void;
   onSell: () => void;
   onRefresh: () => void;
   onAmountChange: (amount: number) => void;
 }
+
+const fmtMoney = (n: number) => {
+  const abs = Math.abs(n);
+  const digits = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: digits });
+};
 
 /**
  * Buy / Refresh / Sell control strip rendered directly above a chart.
@@ -27,11 +39,15 @@ interface TradeControlsProps {
  *  - Buy / Sell draw a coloured line on the chart at the current price.
  *  - Refresh recomputes the analysed Buy/Sell percentages shown below the buttons.
  *  - Amount chips (0.001 / 0.05 / 0.1) sit under the centre refresh button.
+ *  - While a side is active, live profit / loss vs the entry is shown.
  */
 export function TradeControls({
   activeSide,
   amount,
   pct,
+  entryPrice,
+  currentPrice,
+  timeframeLabel,
   onBuy,
   onSell,
   onRefresh,
@@ -39,6 +55,13 @@ export function TradeControls({
 }: TradeControlsProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+
+  // Profit / loss vs the entry price, in the chosen timeframe.
+  let pnl: { value: number; pct: number; positive: boolean } | null = null;
+  if (activeSide && entryPrice && entryPrice > 0 && currentPrice > 0) {
+    const diff = activeSide === 'buy' ? currentPrice - entryPrice : entryPrice - currentPrice;
+    pnl = { value: diff * amount, pct: (diff / entryPrice) * 100, positive: diff >= 0 };
+  }
 
   return (
     <div className="border-b border-white/5 bg-[#090c11] px-3 py-2.5">
@@ -92,6 +115,33 @@ export function TradeControls({
           {bi('فرۆشتن', 'Sell')}
         </button>
       </div>
+
+      {/* Live profit / loss vs entry — shown while a side is active */}
+      {pnl && entryPrice && (
+        <div className="mt-2 rounded-lg bg-[#0d1117] border border-white/5 px-2.5 py-2">
+          <div className="flex items-center justify-between text-[10px] sm:text-xs">
+            <span className="text-[#848e9c]">
+              {activeSide === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}
+              {timeframeLabel ? ` · ${timeframeLabel}` : ''}
+            </span>
+            <span className="text-[#848e9c]">
+              {bi('چوونەژوورەوە', 'Entry')}: <span className="text-white tabular-nums">{fmtMoney(entryPrice)}</span>
+            </span>
+          </div>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className={`text-sm sm:text-base font-bold tabular-nums ${pnl.positive ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+              {pnl.positive ? '+' : '−'}{fmtMoney(Math.abs(pnl.value))}
+            </span>
+            <span className={`text-[11px] sm:text-xs font-bold tabular-nums ${pnl.positive ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+              {pnl.positive ? '+' : '−'}{Math.abs(pnl.pct).toFixed(2)}%
+            </span>
+          </div>
+          <p className="mt-0.5 text-[9px] sm:text-[10px] text-[#848e9c]">
+            {pnl.positive ? bi('قازانج', 'Profit') : bi('زیان', 'Loss')} · {bi('بڕ', 'Qty')} {amount}
+          </p>
+        </div>
+      )}
+
 
       {/* Buy/Sell percentages — shown after pressing refresh */}
       {pct && (

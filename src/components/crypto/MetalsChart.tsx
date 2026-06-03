@@ -66,21 +66,34 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [tradeSide, setTradeSide] = useState<TradeSide>(null);
   const [tradeAmount, setTradeAmount] = useState(0.001);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
+  // Price captured the moment Buy/Sell is pressed — basis for live P/L.
+  const [entryPrice, setEntryPrice] = useState<number | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
+
+  const livePrice = () => (currentPrice && currentPrice > 0
+    ? currentPrice
+    : (candles.length ? candles[candles.length - 1].close : 0));
 
   const handleRefreshTrade = () => {
     const ohlc: OHLCCandle[] = candles.map(c => ({
       time: c.time, open: c.close, high: c.high, low: c.low, close: c.close, volume: 0,
     }));
     const ind = computeIndicators(ohlc);
-    const price = currentPrice && currentPrice > 0
-      ? currentPrice
-      : (candles.length ? candles[candles.length - 1].close : 0);
-    const summary = summarizeSignals(ind, price);
+    const summary = summarizeSignals(ind, livePrice());
     const { hasData, buyPct, sellPct } = computeBuySellPct(summary);
     setTradePct({ hasData, buyPct, sellPct });
   };
+
+  const handleTrade = (side: 'buy' | 'sell') => {
+    setTradeSide(prev => {
+      if (prev === side) { setEntryPrice(null); return null; }
+      const p = livePrice();
+      setEntryPrice(p > 0 ? p : null);
+      return side;
+    });
+  };
+
 
   // Auto layout: spacing computed from chart width + candle count + timeframe.
   const [autoFit, setAutoFit] = useState(true);
@@ -468,8 +481,11 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         activeSide={tradeSide}
         amount={tradeAmount}
         pct={tradePct}
-        onBuy={() => setTradeSide(prev => (prev === 'buy' ? null : 'buy'))}
-        onSell={() => setTradeSide(prev => (prev === 'sell' ? null : 'sell'))}
+        entryPrice={entryPrice}
+        currentPrice={livePrice()}
+        timeframeLabel={RANGES.find(r => r.key === range)?.label}
+        onBuy={() => handleTrade('buy')}
+        onSell={() => handleTrade('sell')}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
       />
