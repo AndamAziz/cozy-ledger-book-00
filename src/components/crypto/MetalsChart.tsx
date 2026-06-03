@@ -783,6 +783,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       <div className="relative h-[250px] sm:h-[320px]">
         <div ref={chartContainerRef} className="absolute inset-0" />
 
+        <PnLSummaryPanel realizedPnl={realizedPnl} unrealizedPnl={unrealizedPnl} language={language} />
+
         {/* Live floating P/L overlay (like pro trading apps) */}
         {(buyLeg || sellLeg) && livePrice() > 0 && (
           <div className="absolute top-2 left-2 z-20 flex max-h-[80%] flex-col gap-1.5 overflow-hidden pointer-events-none">
