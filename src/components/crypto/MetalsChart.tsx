@@ -85,14 +85,23 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
   // The position only counts for THIS chart when it belongs to this metal.
   const myPos = position && position.symbol === mySymbol ? position : null;
-  const tradeSide: TradeSide = myPos?.side ?? null;
-  const entryPrice = myPos?.entryPrice ?? null;
-  const positionQty = myPos?.qty ?? 0;
-  const takeProfit = myPos?.takeProfit ?? null;
-  const stopLoss = myPos?.stopLoss ?? null;
-  const otherPositionLabel = position && position.symbol !== mySymbol
-    ? `${position.label} · ${position.side === 'buy' ? (language === 'en' ? 'Buy' : 'کڕین') : (language === 'en' ? 'Sell' : 'فرۆشتن')}`
-    : null;
+  const buyLeg = myPos?.buy && myPos.buy.qty > 0 ? myPos.buy : null;
+  const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
+  const otherHasLegs = position && position.symbol !== mySymbol &&
+    ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
+  const otherPositionLabel = otherHasLegs ? position!.label : null;
+
+  // Track the live-price direction for the up/down indicator on the buttons.
+  const prevPriceRef = useRef<number>(0);
+  const [priceDir, setPriceDir] = useState<'up' | 'down' | null>(null);
+  useEffect(() => {
+    const p = livePrice();
+    if (p <= 0) return;
+    const prev = prevPriceRef.current;
+    if (prev > 0 && p !== prev) setPriceDir(p > prev ? 'up' : 'down');
+    prevPriceRef.current = p;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPrice, candles]);
 
   const handleRefreshTrade = () => {
     const ohlc: OHLCCandle[] = candles.map(c => ({
@@ -104,19 +113,19 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     setTradePct({ hasData, buyPct, sellPct });
   };
 
-  // Open or ADD to a position (stacking, averaged). A position on another asset
-  // must be closed first.
+  // Open or ADD to a leg. Buy and Sell can both be open at once (hedge mode).
+  // A position on another asset must be closed first.
   const handleAdd = (side: 'buy' | 'sell') => {
     if (balance <= 0) return;
     const price = livePrice();
     if (price <= 0) return;
     if (otherPositionLabel) return;
-    if (tradeSide && tradeSide !== side) return;
     openOrAdd({ symbol: mySymbol, label: name || bi('کانزا', 'Metal'), side, price, amount: tradeAmount });
   };
 
-  // Close the whole position and realise its P/L (handled in context).
-  const handleClose = () => closePosition();
+  // Close one leg and realise its P/L (handled in context).
+  const handleClose = (side: 'buy' | 'sell') => closePosition(side);
+
 
   // Reset only the analysis percentages when switching metals; the open
   // position itself persists in the shared context until closed manually.
