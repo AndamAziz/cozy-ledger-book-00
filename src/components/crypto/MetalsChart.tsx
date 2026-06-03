@@ -91,6 +91,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const positionQty = myPos?.qty ?? 0;
   const takeProfit = myPos?.takeProfit ?? null;
   const stopLoss = myPos?.stopLoss ?? null;
+  const otherPositionLabel = position && position.symbol !== mySymbol
+    ? `${position.label} · ${position.side === 'buy' ? (language === 'en' ? 'Buy' : 'کڕین') : (language === 'en' ? 'Sell' : 'فرۆشتن')}`
+    : null;
 
   const handleRefreshTrade = () => {
     const ohlc: OHLCCandle[] = candles.map(c => ({
