@@ -403,25 +403,26 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}${tag} ${fmtQty(f.qty)}${pnlText}`,
         }));
       });
-      // TP / SL apply to the whole leg.
+      // TP / SL apply to the whole leg — drawn as bold lines on the chart so
+      // the user clearly sees WHERE profit (green) and loss (deep crimson) sit.
       if (leg.takeProfit && leg.takeProfit > 0) {
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
           price: leg.takeProfit,
           color: '#0ecb81',
-          lineWidth: 1,
+          lineWidth: 2,
           lineStyle: 2,
           axisLabelVisible: true,
-          title: `${isBuy ? 'B' : 'S'} ${bi('قازانج', 'TP')}`,
+          title: `${isBuy ? 'B' : 'S'} ${bi('قازانج', 'TP')} ▲`,
         }));
       }
       if (leg.stopLoss && leg.stopLoss > 0) {
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
           price: leg.stopLoss,
-          color: '#f6465d',
-          lineWidth: 1,
+          color: '#8b0a1a',
+          lineWidth: 2,
           lineStyle: 2,
           axisLabelVisible: true,
-          title: `${isBuy ? 'B' : 'S'} ${bi('زیان', 'SL')}`,
+          title: `${isBuy ? 'B' : 'S'} ${bi('زیان', 'SL')} ▼`,
         }));
       }
     };
