@@ -57,14 +57,21 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
   // The position only counts for THIS chart when it belongs to this pair.
   const myPos = position && position.symbol === pair ? position : null;
-  const tradeSide: TradeSide = myPos?.side ?? null;
-  const entryPrice = myPos?.entryPrice ?? null;
-  const positionQty = myPos?.qty ?? 0;
-  const takeProfit = myPos?.takeProfit ?? null;
-  const stopLoss = myPos?.stopLoss ?? null;
-  const otherPositionLabel = position && position.symbol !== pair
-    ? `${position.label} · ${position.side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}`
-    : null;
+  const buyLeg = myPos?.buy && myPos.buy.qty > 0 ? myPos.buy : null;
+  const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
+  const otherHasLegs = position && position.symbol !== pair &&
+    ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
+  const otherPositionLabel = otherHasLegs ? position!.label : null;
+
+  // Track the live-price direction for the up/down indicator on the buttons.
+  const prevPriceRef = useRef<number>(0);
+  const [priceDir, setPriceDir] = useState<'up' | 'down' | null>(null);
+  useEffect(() => {
+    if (currentPrice <= 0) return;
+    const prev = prevPriceRef.current;
+    if (prev > 0 && currentPrice !== prev) setPriceDir(currentPrice > prev ? 'up' : 'down');
+    prevPriceRef.current = currentPrice;
+  }, [currentPrice]);
 
   const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 
@@ -75,17 +82,17 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     setTradePct({ hasData, buyPct, sellPct });
   };
 
-  // Open or ADD to a position. Multiple presses on the same side stack
-  // (averaged entry). A position on another asset must be closed first.
+  // Open or ADD to a leg. Buy and Sell can both be open at once (hedge mode).
+  // A position on another asset must be closed first.
   const handleAdd = (side: 'buy' | 'sell') => {
     if (balance <= 0 || currentPrice <= 0) return;
     if (otherPositionLabel) return;
-    if (tradeSide && tradeSide !== side) return;
     openOrAdd({ symbol: pair, label: `${symbol}/USD`, side, price: currentPrice, amount: tradeAmount });
   };
 
-  // Close the whole position and realise its P/L (handled in context).
-  const handleClose = () => closePosition();
+  // Close one leg and realise its P/L (handled in context).
+  const handleClose = (side: 'buy' | 'sell') => closePosition(side);
+
 
 
 
