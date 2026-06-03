@@ -43,6 +43,20 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
 
+  // Buy/Sell trade controls (identical logic to Metals).
+  const [tradeSide, setTradeSide] = useState<TradeSide>(null);
+  const [tradeAmount, setTradeAmount] = useState(0.001);
+  const [tradePct, setTradePct] = useState<TradePct | null>(null);
+  // Bumped whenever the chart series is recreated so the trade line redraws.
+  const [seriesVersion, setSeriesVersion] = useState(0);
+
+  const handleRefreshTrade = () => {
+    const ind = computeIndicators(candles);
+    const summary = summarizeSignals(ind, currentPrice);
+    const { hasData, buyPct, sellPct } = computeBuySellPct(summary);
+    setTradePct({ hasData, buyPct, sellPct });
+  };
+
   // Auto layout: spacing computed from chart width + candle count + timeframe.
   const [autoFit, setAutoFit] = useState(true);
   const [containerWidth, setContainerWidth] = useState(600);
