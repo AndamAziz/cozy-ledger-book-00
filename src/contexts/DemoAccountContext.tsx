@@ -87,9 +87,11 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
     try {
       const raw = localStorage.getItem(POSITION_KEY);
       if (!raw) return null;
-      const parsed = JSON.parse(raw) as OpenPosition & { side?: PositionSide; entryPrice?: number; qty?: number; takeProfit?: number | null; stopLoss?: number | null };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const parsed: any = JSON.parse(raw);
+      if (!parsed) return null;
       // Migrate the previous single-leg shape ({ side, entryPrice, qty, ... }).
-      if (parsed && (parsed as { side?: PositionSide }).side && !('buy' in parsed)) {
+      if (parsed.side && !('buy' in parsed)) {
         const leg: PositionLeg = {
           entryPrice: parsed.entryPrice ?? 0,
           qty: parsed.qty ?? 0,
