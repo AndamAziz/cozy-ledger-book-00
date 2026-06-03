@@ -7,6 +7,9 @@ export const DEMO_STARTING_BALANCE = 200;
 
 export type PositionSide = 'buy' | 'sell';
 
+/** localStorage key used to persist the open position across refreshes. */
+const POSITION_KEY = 'demo_open_position';
+
 /**
  * A single open trade that lives at the page level so it PERSISTS while the
  * user navigates between Crypto / Forex / Metals tabs or switches assets —
