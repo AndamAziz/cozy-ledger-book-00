@@ -572,7 +572,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
           color: lp > 0 ? (inProfit ? '#0ecb81' : '#f6465d') : (isBuy ? '#0ecb81' : '#f6465d'),
           lineWidth: 1,
           lineStyle: 0,
-          axisLabelVisible: true,
+          // Keep the P/L on the line itself but DON'T stack a box on the price
+          // axis — that kept the scale numbers from showing when zoomed in.
+          axisLabelVisible: false,
           title,
         }));
       });
