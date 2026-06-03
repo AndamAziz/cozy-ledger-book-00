@@ -63,7 +63,26 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState(DEMO_STARTING_BALANCE);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
-  const [position, setPosition] = useState<OpenPosition | null>(null);
+  // Restore any open position saved before the app was refreshed / closed.
+  const [position, setPosition] = useState<OpenPosition | null>(() => {
+    try {
+      const raw = localStorage.getItem(POSITION_KEY);
+      return raw ? (JSON.parse(raw) as OpenPosition) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Keep the open position in localStorage so it survives a refresh / re-open.
+  useEffect(() => {
+    try {
+      if (position && position.qty > 0) {
+        localStorage.setItem(POSITION_KEY, JSON.stringify(position));
+      } else {
+        localStorage.removeItem(POSITION_KEY);
+      }
+    } catch { /* ignore storage errors */ }
+  }, [position]);
 
   useEffect(() => {
     let active = true;
