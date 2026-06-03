@@ -328,7 +328,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
   }, [settle]);
 
   return (
-    <DemoAccountContext.Provider value={{ balance, loading, ready: !!userId, position, openOrAdd, updatePrice, setTpSl, closePosition, applyPnl, renew }}>
+    <DemoAccountContext.Provider value={{ balance, loading, ready: !!userId, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition, applyPnl, renew }}>
       {children}
     </DemoAccountContext.Provider>
   );
