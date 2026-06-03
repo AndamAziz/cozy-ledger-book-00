@@ -30,7 +30,7 @@ export default function CryptoTracker() {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
-  const [cryptoView, setCryptoView] = useState<CryptoView>('chart');
+  const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(60);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -38,13 +38,16 @@ export default function CryptoTracker() {
   const [coinsMap, setCoinsMap] = useState<Map<string, KrakenCoin>>(new Map());
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedForexCode, setSelectedForexCode] = useState<string | null>(null);
-  const [selectedMetalCode, setSelectedMetalCode] = useState<string | null>('XAU');
+  const [selectedMetalCode, setSelectedMetalCode] = useState<string | null>(null);
+  const [metalInitialView, setMetalInitialView] = useState<'market' | 'analysis'>('market');
   const coinsRef = useRef(coinsMap);
   coinsRef.current = coinsMap;
 
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading } = useForexData();
   const { metals, isLoading: metalsLoading, marketOpen: metalsMarketOpen } = useMetalsData();
+  const cryptoOverview = useCryptoOverview(activeTab === 'crypto' && cryptoView === 'overview');
+  const metalsOverview = useMetalsOverview(activeTab === 'metals' && selectedMetalCode === null);
 
   // Fetch initial ticker data
   useEffect(() => {
