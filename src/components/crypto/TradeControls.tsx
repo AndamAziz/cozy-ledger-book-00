@@ -370,6 +370,36 @@ export function TradeControls({
           )}
           {buyLeg && buyLeg.qty > 0 && <LegPanel side="buy" leg={buyLeg} />}
           {sellLeg && sellLeg.qty > 0 && <LegPanel side="sell" leg={sellLeg} />}
+
+          {/* Batch close: Close Profit / Close Loss / Close All (MT5 style) */}
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => closeBatch('profit')}
+              disabled={!hasProfit}
+              className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-bold border bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20 active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <span>{bi('داخستنی قازانج', 'Close Profit')}</span>
+              <span className="tabular-nums text-[#0ecb81]">+${fmtMoney(Math.abs(profitSum))}</span>
+            </button>
+            <button
+              onClick={() => closeBatch('loss')}
+              disabled={!hasLoss}
+              className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-bold border bg-[#f6465d]/10 text-[#f6465d] border-[#f6465d]/40 hover:bg-[#f6465d]/20 active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <span>{bi('داخستنی زیان', 'Close Loss')}</span>
+              <span className="tabular-nums text-[#f6465d]">−${fmtMoney(Math.abs(lossSum))}</span>
+            </button>
+            <button
+              onClick={() => closeBatch('all')}
+              disabled={!hasAny}
+              className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-bold border bg-[#1a1e2e] text-white border-white/10 hover:bg-[#252a3a] active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <span>{bi('داخستنی هەموو', 'Close All')}</span>
+              <span className="tabular-nums" style={{ color: totalPnl >= 0 ? '#0ecb81' : '#f6465d' }}>
+                {totalPnl >= 0 ? '+' : '−'}${fmtMoney(Math.abs(totalPnl))}
+              </span>
+            </button>
+          </div>
         </div>
       ) : null}
 
