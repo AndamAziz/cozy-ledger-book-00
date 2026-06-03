@@ -15,11 +15,23 @@ interface TradeControlsProps {
   activeSide: TradeSide;
   amount: number;
   pct: TradePct | null;
+  /** Price captured when Buy/Sell was pressed (the entry). */
+  entryPrice: number | null;
+  /** Live moving price used to compute profit / loss. */
+  currentPrice: number;
+  /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
+  timeframeLabel?: string;
   onBuy: () => void;
   onSell: () => void;
   onRefresh: () => void;
   onAmountChange: (amount: number) => void;
 }
+
+const fmtMoney = (n: number) => {
+  const abs = Math.abs(n);
+  const digits = abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: digits });
+};
 
 /**
  * Buy / Refresh / Sell control strip rendered directly above a chart.
@@ -27,11 +39,15 @@ interface TradeControlsProps {
  *  - Buy / Sell draw a coloured line on the chart at the current price.
  *  - Refresh recomputes the analysed Buy/Sell percentages shown below the buttons.
  *  - Amount chips (0.001 / 0.05 / 0.1) sit under the centre refresh button.
+ *  - While a side is active, live profit / loss vs the entry is shown.
  */
 export function TradeControls({
   activeSide,
   amount,
   pct,
+  entryPrice,
+  currentPrice,
+  timeframeLabel,
   onBuy,
   onSell,
   onRefresh,
@@ -39,6 +55,13 @@ export function TradeControls({
 }: TradeControlsProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+
+  // Profit / loss vs the entry price, in the chosen timeframe.
+  let pnl: { value: number; pct: number; positive: boolean } | null = null;
+  if (activeSide && entryPrice && entryPrice > 0 && currentPrice > 0) {
+    const diff = activeSide === 'buy' ? currentPrice - entryPrice : entryPrice - currentPrice;
+    pnl = { value: diff * amount, pct: (diff / entryPrice) * 100, positive: diff >= 0 };
+  }
 
   return (
     <div className="border-b border-white/5 bg-[#090c11] px-3 py-2.5">
