@@ -47,6 +47,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [tradeSide, setTradeSide] = useState<TradeSide>(null);
   const [tradeAmount, setTradeAmount] = useState(0.001);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
+  // Price captured the moment Buy/Sell is pressed — basis for live P/L.
+  const [entryPrice, setEntryPrice] = useState<number | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
 
@@ -56,6 +58,15 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     const { hasData, buyPct, sellPct } = computeBuySellPct(summary);
     setTradePct({ hasData, buyPct, sellPct });
   };
+
+  const handleTrade = (side: 'buy' | 'sell') => {
+    setTradeSide(prev => {
+      if (prev === side) { setEntryPrice(null); return null; }
+      setEntryPrice(currentPrice > 0 ? currentPrice : null);
+      return side;
+    });
+  };
+
 
   // Auto layout: spacing computed from chart width + candle count + timeframe.
   const [autoFit, setAutoFit] = useState(true);
