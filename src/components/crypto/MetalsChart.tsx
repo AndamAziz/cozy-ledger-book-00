@@ -497,26 +497,38 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     }
     tradeLineRef.current = [];
 
-    const drawLeg = (side: 'buy' | 'sell', leg: { entryPrice: number; qty: number; takeProfit: number | null; stopLoss: number | null } | null) => {
-      if (!leg || leg.entryPrice <= 0 || leg.qty <= 0) return;
+    const lp = livePrice();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const legFills = (leg: any): { id: string; entryPrice: number; qty: number; entryTime: number }[] =>
+      (leg?.fills && leg.fills.length)
+        ? leg.fills
+        : (leg ? [{ id: 'agg', entryPrice: leg.entryPrice, qty: leg.qty, entryTime: leg.entryTime }] : []);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const drawLeg = (side: 'buy' | 'sell', leg: any) => {
+      if (!leg || leg.qty <= 0) return;
       const isBuy = side === 'buy';
-      // Live profit / loss for this leg — colours the entry label on the axis.
-      const lp = livePrice();
-      const diff = lp > 0 ? (isBuy ? lp - leg.entryPrice : leg.entryPrice - lp) : 0;
-      const pnlVal = diff * leg.qty;
-      const inProfit = pnlVal >= 0;
-      const pnlText = lp > 0
-        ? ` ${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        : '';
-      tradeLineRef.current.push(seriesRef.current.createPriceLine({
-        price: leg.entryPrice,
-        // Entry label is tinted by live P/L (green = profit, red = loss).
-        color: lp > 0 ? (inProfit ? '#0ecb81' : '#f6465d') : (isBuy ? '#0ecb81' : '#f6465d'),
-        lineWidth: 2,
-        lineStyle: 0,
-        axisLabelVisible: true,
-        title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(leg.qty)}${pnlText}`,
-      }));
+      const fills = legFills(leg);
+      // One entry line PER individual trade, each with its own live P/L.
+      fills.forEach((f, i) => {
+        if (f.entryPrice <= 0 || f.qty <= 0) return;
+        const diff = lp > 0 ? (isBuy ? lp - f.entryPrice : f.entryPrice - lp) : 0;
+        const pnlVal = diff * f.qty;
+        const inProfit = pnlVal >= 0;
+        const pnlText = lp > 0
+          ? ` ${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : '';
+        const tag = fills.length > 1 ? ` #${i + 1}` : '';
+        tradeLineRef.current.push(seriesRef.current.createPriceLine({
+          price: f.entryPrice,
+          // Entry label is tinted by live P/L (green = profit, red = loss).
+          color: lp > 0 ? (inProfit ? '#0ecb81' : '#f6465d') : (isBuy ? '#0ecb81' : '#f6465d'),
+          lineWidth: 1,
+          lineStyle: 0,
+          axisLabelVisible: true,
+          title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}${tag} ${fmtQty(f.qty)}${pnlText}`,
+        }));
+      });
       if (leg.takeProfit && leg.takeProfit > 0) {
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
           price: leg.takeProfit,
@@ -542,7 +554,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     drawLeg('buy', buyLeg);
     drawLeg('sell', sellLeg);
 
-    // Arrow marker on the candle where each leg was opened.
+    // Arrow marker on the candle where each trade was opened.
     if (!markersRef.current) {
       markersRef.current = createSeriesMarkers(seriesRef.current, []);
     }
@@ -557,13 +569,27 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       }
       return nearest;
     };
-    const markers: any[] = [];
-    if (buyLeg) {
-      markers.push({ time: snap(buyLeg.entryTime) as Time, position: 'belowBar', color: '#0ecb81', shape: 'arrowUp', text: `${bi('کڕین', 'Buy')} ${fmtQty(buyLeg.qty)}` });
-    }
-    if (sellLeg) {
-      markers.push({ time: snap(sellLeg.entryTime) as Time, position: 'aboveBar', color: '#f6465d', shape: 'arrowDown', text: `${bi('فرۆشتن', 'Sell')} ${fmtQty(sellLeg.qty)}` });
-    }
+    // Aggregate fills per candle+side so markers never collide on one bar.
+    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number }>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const collect = (side: 'buy' | 'sell', leg: any) => {
+      for (const f of legFills(leg)) {
+        const t = snap(f.entryTime) as number;
+        const key = `${side}-${t}`;
+        const prev = markerAgg.get(key);
+        if (prev) prev.qty = +(prev.qty + f.qty).toFixed(6);
+        else markerAgg.set(key, { time: t, side, qty: f.qty });
+      }
+    };
+    if (buyLeg) collect('buy', buyLeg);
+    if (sellLeg) collect('sell', sellLeg);
+    const markers: any[] = Array.from(markerAgg.values()).map((m) => ({
+      time: m.time as Time,
+      position: m.side === 'buy' ? 'belowBar' : 'aboveBar',
+      color: m.side === 'buy' ? '#0ecb81' : '#f6465d',
+      shape: m.side === 'buy' ? 'arrowUp' : 'arrowDown',
+      text: `${m.side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(m.qty)}`,
+    }));
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
