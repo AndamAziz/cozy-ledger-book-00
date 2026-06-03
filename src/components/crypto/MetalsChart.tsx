@@ -310,6 +310,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     };
     chart.subscribeCrosshairMove(handleCrosshairMove);
 
+    // Reset stale trade-line ref and notify the trade-line effect to redraw.
+    tradeLineRef.current = null;
+    setSeriesVersion(v => v + 1);
+
     return () => {
       resizeObserver.disconnect();
       chart.remove();
