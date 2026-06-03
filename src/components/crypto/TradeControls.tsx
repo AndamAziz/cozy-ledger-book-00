@@ -280,10 +280,10 @@ export function TradeControls({
         <button
           onClick={onBuy}
           disabled={depleted || !!otherPositionLabel}
-          className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-lg font-bold transition-colors active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
+          className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-lg font-bold transition-all active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
             buyLeg && buyLeg.qty > 0
-              ? 'bg-[#0ecb81] text-black border-white ring-2 ring-white/60 shadow-lg'
-              : 'bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20'
+              ? 'bg-gradient-to-b from-[#0ecb81] to-[#0aa96b] text-black border-[#0ecb81] ring-1 ring-white/40 shadow-[0_6px_22px_-6px_rgba(14,203,129,0.75)]'
+              : 'bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20 hover:shadow-[0_4px_16px_-8px_rgba(14,203,129,0.6)]'
           }`}
         >
           <span className="text-xs sm:text-sm">{bi('کڕین', 'Buy')}{buyLeg && buyLeg.qty > 0 ? ' +' : ''}</span>
