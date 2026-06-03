@@ -45,7 +45,8 @@ export function useMetalsOverview(enabled: boolean) {
         }));
         return [meta.code, analyzeCandles(candles, 0)] as const;
       } catch {
-        return [meta.code, { closes: [], summary: null }] as const;
+        const empty: OverviewSignal = { closes: [], summary: null };
+        return [meta.code, empty] as const;
       }
     })
       .then((results) => {

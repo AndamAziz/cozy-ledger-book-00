@@ -20,7 +20,8 @@ export function useCryptoOverview(enabled: boolean) {
         const candles = await fetchOHLC(pair, 1440);
         return [pair, analyzeCandles(candles, 0)] as const;
       } catch {
-        return [pair, { closes: [], summary: null }] as const;
+        const empty: OverviewSignal = { closes: [], summary: null };
+        return [pair, empty] as const;
       }
     })
       .then((results) => {
