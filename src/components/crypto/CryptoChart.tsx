@@ -826,6 +826,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           </div>
         )}
       </div>
+
+      {/* Trade history / journal modal */}
+      <TradeJournalModal open={showJournal} onClose={() => setShowJournal(false)} />
     </div>
   );
 }
