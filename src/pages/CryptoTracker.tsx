@@ -162,11 +162,12 @@ export default function CryptoTracker() {
     : (selectedMetalCode || bi('هەڵبژێرە', 'Select'));
 
   return (
-    <>
+    <DemoAccountProvider>
       <Helmet>
         <title>{activeTab === 'crypto' ? bi('شوێنکەوتنی کریپتۆ', 'Crypto Tracker') : activeTab === 'forex' ? bi('نرخی دراو', 'Forex Rates') : bi('کانزا بەهادارەکان', 'Precious Metals')} - {bi('نرخی ڕاستەوخۆ', 'Live Prices')}</title>
         <meta name="description" content="Real-time cryptocurrency and forex price tracker" />
       </Helmet>
+
 
       <div className="h-[100dvh] flex flex-col bg-[#0a0e17] text-white overflow-hidden">
         {/* Top bar */}
