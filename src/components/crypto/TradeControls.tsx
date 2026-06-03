@@ -116,6 +116,33 @@ export function TradeControls({
         </button>
       </div>
 
+      {/* Live profit / loss vs entry — shown while a side is active */}
+      {pnl && entryPrice && (
+        <div className="mt-2 rounded-lg bg-[#0d1117] border border-white/5 px-2.5 py-2">
+          <div className="flex items-center justify-between text-[10px] sm:text-xs">
+            <span className="text-[#848e9c]">
+              {activeSide === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}
+              {timeframeLabel ? ` · ${timeframeLabel}` : ''}
+            </span>
+            <span className="text-[#848e9c]">
+              {bi('چوونەژوورەوە', 'Entry')}: <span className="text-white tabular-nums">{fmtMoney(entryPrice)}</span>
+            </span>
+          </div>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className={`text-sm sm:text-base font-bold tabular-nums ${pnl.positive ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+              {pnl.positive ? '+' : '−'}{fmtMoney(Math.abs(pnl.value))}
+            </span>
+            <span className={`text-[11px] sm:text-xs font-bold tabular-nums ${pnl.positive ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+              {pnl.positive ? '+' : '−'}{Math.abs(pnl.pct).toFixed(2)}%
+            </span>
+          </div>
+          <p className="mt-0.5 text-[9px] sm:text-[10px] text-[#848e9c]">
+            {pnl.positive ? bi('قازانج', 'Profit') : bi('زیان', 'Loss')} · {bi('بڕ', 'Qty')} {amount}
+          </p>
+        </div>
+      )}
+
+
       {/* Buy/Sell percentages — shown after pressing refresh */}
       {pct && (
         pct.hasData ? (
