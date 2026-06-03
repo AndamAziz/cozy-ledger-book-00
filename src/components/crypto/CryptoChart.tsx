@@ -355,8 +355,11 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         activeSide={tradeSide}
         amount={tradeAmount}
         pct={tradePct}
-        onBuy={() => setTradeSide(prev => (prev === 'buy' ? null : 'buy'))}
-        onSell={() => setTradeSide(prev => (prev === 'sell' ? null : 'sell'))}
+        entryPrice={entryPrice}
+        currentPrice={currentPrice}
+        timeframeLabel={TIMEFRAMES.find(t => t.interval === interval)?.label}
+        onBuy={() => handleTrade('buy')}
+        onSell={() => handleTrade('sell')}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
       />
