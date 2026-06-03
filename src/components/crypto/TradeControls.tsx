@@ -1,5 +1,6 @@
-import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown } from 'lucide-react';
+import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { suggestHoldMinutes } from '@/lib/indicators';
 
 export type TradeSide = 'buy' | 'sell' | null;
 
