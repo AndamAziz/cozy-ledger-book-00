@@ -463,6 +463,16 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
   return (
     <div className="border-b border-[#1a1e2e]">
+      {/* Buy / Refresh / Sell controls above the chart */}
+      <TradeControls
+        activeSide={tradeSide}
+        amount={tradeAmount}
+        pct={tradePct}
+        onBuy={() => setTradeSide(prev => (prev === 'buy' ? null : 'buy'))}
+        onSell={() => setTradeSide(prev => (prev === 'sell' ? null : 'sell'))}
+        onRefresh={handleRefreshTrade}
+        onAmountChange={setTradeAmount}
+      />
       {/* Controls */}
       <div className="border-b border-white/5">
         {/* Timeframes row (underline active) */}
