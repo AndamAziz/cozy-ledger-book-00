@@ -389,7 +389,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
       if (!prev || !prev[side] || prev[side]!.qty <= 0) return prev;
       const leg = prev[side]!;
       const exit = prev.currentPrice > 0 ? prev.currentPrice : leg.entryPrice;
-      settle(side, leg.entryPrice, leg.qty, exit, 'manual');
+      settle(side, leg.entryPrice, leg.qty, exit, 'manual', { symbol: prev.symbol, label: prev.label, openedAt: leg.entryTime });
       const next = { ...prev, [side]: null };
       return hasOpenLeg(next) ? next : null;
     });
