@@ -410,6 +410,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         entryPrice={entryPrice}
         positionQty={positionQty}
         currentPrice={currentPrice}
+        takeProfit={takeProfit}
+        stopLoss={stopLoss}
+        otherPositionLabel={otherPositionLabel}
         timeframeLabel={TIMEFRAMES.find(t => t.interval === interval)?.label}
         balance={balance}
         onRenew={renew}
@@ -418,6 +421,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
+        onSetTpSl={setTpSl}
       />
 
       {/* Header */}
