@@ -6,7 +6,6 @@ import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
-import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CryptoChartProps {
@@ -30,6 +29,10 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tpLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const slLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
   // Tracks the current series identity so we only auto-fit the view when the
   // timeframe / symbol / chart type changes — never on live price ticks (which
@@ -45,17 +48,23 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
 
-  // Buy/Sell trade controls (identical logic to Metals).
-  const { balance, applyPnl, renew } = useDemoAccount();
-  const [tradeSide, setTradeSide] = useState<TradeSide>(null);
+  // Shared demo account + the single open position (persists across navigation).
+  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   const [tradeAmount, setTradeAmount] = useState(0.001);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
-  // Average entry price of the open position (weighted across multiple adds).
-  const [entryPrice, setEntryPrice] = useState<number | null>(null);
-  // Total accumulated quantity of the open position.
-  const [positionQty, setPositionQty] = useState(0);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
+
+  // The position only counts for THIS chart when it belongs to this pair.
+  const myPos = position && position.symbol === pair ? position : null;
+  const tradeSide: TradeSide = myPos?.side ?? null;
+  const entryPrice = myPos?.entryPrice ?? null;
+  const positionQty = myPos?.qty ?? 0;
+  const takeProfit = myPos?.takeProfit ?? null;
+  const stopLoss = myPos?.stopLoss ?? null;
+  const otherPositionLabel = position && position.symbol !== pair
+    ? `${position.label} · ${position.side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}`
+    : null;
 
   const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 
@@ -66,46 +75,17 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     setTradePct({ hasData, buyPct, sellPct });
   };
 
-  // Realise the profit / loss of the whole open position into the demo balance.
-  const realize = (side: 'buy' | 'sell', entry: number | null, qty: number) => {
-    if (!entry || entry <= 0 || currentPrice <= 0 || qty <= 0) return;
-    const diff = side === 'buy' ? currentPrice - entry : entry - currentPrice;
-    const pnlValue = diff * qty;
-    applyPnl(pnlValue);
-    const profit = pnlValue >= 0;
-    toast({
-      title: profit ? bi('قازانج 🎉', 'Profit 🎉') : bi('زیان', 'Loss'),
-      description: `${profit ? '+' : '−'}$${Math.abs(pnlValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    });
-  };
-
-  // Open or ADD to a position. Multiple presses on the same side stack:
-  // the quantity accumulates and the entry price is averaged. The opposite
-  // side is blocked while a position is open (close it first).
+  // Open or ADD to a position. Multiple presses on the same side stack
+  // (averaged entry). A position on another asset must be closed first.
   const handleAdd = (side: 'buy' | 'sell') => {
-    if (balance <= 0) return;
+    if (balance <= 0 || currentPrice <= 0) return;
+    if (otherPositionLabel) return;
     if (tradeSide && tradeSide !== side) return;
-    const price = currentPrice;
-    if (price <= 0) return;
-    if (!tradeSide || positionQty <= 0 || entryPrice == null) {
-      setTradeSide(side);
-      setEntryPrice(price);
-      setPositionQty(tradeAmount);
-    } else {
-      const newQty = +(positionQty + tradeAmount).toFixed(6);
-      setEntryPrice(((entryPrice * positionQty) + price * tradeAmount) / newQty);
-      setPositionQty(newQty);
-    }
+    openOrAdd({ symbol: pair, label: `${symbol}/USD`, side, price: currentPrice, amount: tradeAmount });
   };
 
-  // Close the whole position and realise its P/L.
-  const handleClose = () => {
-    if (!tradeSide || positionQty <= 0) return;
-    realize(tradeSide, entryPrice, positionQty);
-    setTradeSide(null);
-    setEntryPrice(null);
-    setPositionQty(0);
-  };
+  // Close the whole position and realise its P/L (handled in context).
+  const handleClose = () => closePosition();
 
 
 
@@ -344,13 +324,21 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     });
   }, [currentPrice, symbol]);
 
-  // Draw the average-entry line for the open position (green buy / red sell).
+  // Push the live price into the shared position so P/L updates and TP/SL
+  // can auto-close even while this asset is on screen.
+  useEffect(() => {
+    if (currentPrice > 0) updatePrice(pair, currentPrice);
+  }, [currentPrice, pair, updatePrice]);
+
+  // Draw the entry line + TP/SL lines for the open position.
   useEffect(() => {
     if (!seriesRef.current) return;
 
-    if (tradeLineRef.current) {
-      try { seriesRef.current.removePriceLine(tradeLineRef.current); } catch { /* ignore */ }
-      tradeLineRef.current = null;
+    for (const ref of [tradeLineRef, tpLineRef, slLineRef]) {
+      if (ref.current) {
+        try { seriesRef.current.removePriceLine(ref.current); } catch { /* ignore */ }
+        ref.current = null;
+      }
     }
 
     if (!tradeSide || !entryPrice || entryPrice <= 0 || positionQty <= 0) return;
@@ -364,7 +352,28 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       axisLabelVisible: true,
       title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(positionQty)}`,
     });
-  }, [tradeSide, entryPrice, positionQty, seriesVersion, language]);
+
+    if (takeProfit && takeProfit > 0) {
+      tpLineRef.current = seriesRef.current.createPriceLine({
+        price: takeProfit,
+        color: '#0ecb81',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: bi('قازانج', 'TP'),
+      });
+    }
+    if (stopLoss && stopLoss > 0) {
+      slLineRef.current = seriesRef.current.createPriceLine({
+        price: stopLoss,
+        color: '#f6465d',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: bi('زیان', 'SL'),
+      });
+    }
+  }, [tradeSide, entryPrice, positionQty, takeProfit, stopLoss, seriesVersion, language]);
 
 
   const stepper = (
@@ -400,6 +409,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         entryPrice={entryPrice}
         positionQty={positionQty}
         currentPrice={currentPrice}
+        takeProfit={takeProfit}
+        stopLoss={stopLoss}
+        otherPositionLabel={otherPositionLabel}
         timeframeLabel={TIMEFRAMES.find(t => t.interval === interval)?.label}
         balance={balance}
         onRenew={renew}
@@ -408,6 +420,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
+        onSetTpSl={setTpSl}
       />
 
       {/* Header */}
