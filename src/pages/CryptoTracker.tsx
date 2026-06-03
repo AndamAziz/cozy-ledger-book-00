@@ -6,6 +6,8 @@ import { useKrakenWebSocket } from '@/hooks/useKrakenWebSocket';
 import { useKrakenOHLC } from '@/hooks/useKrakenOHLC';
 import { useForexData } from '@/hooks/useForexData';
 import { useMetalsData } from '@/hooks/useMetalsData';
+import { useCryptoOverview } from '@/hooks/useCryptoOverview';
+import { useMetalsOverview } from '@/hooks/useMetalsOverview';
 import { CryptoChart } from '@/components/crypto/CryptoChart';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { CoinList } from '@/components/crypto/CoinList';
@@ -13,12 +15,15 @@ import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
 import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
+import { AssetOverview } from '@/components/crypto/AssetOverview';
 import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
+import { METALS_META } from '@/lib/metalsApi';
+import { OverviewEntry } from '@/lib/overview';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
-type CryptoView = 'chart' | 'analysis';
+type CryptoView = 'overview' | 'chart' | 'analysis';
 
 export default function CryptoTracker() {
   const navigate = useNavigate();
