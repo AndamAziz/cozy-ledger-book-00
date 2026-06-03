@@ -20,6 +20,7 @@ import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
 import { METALS_META } from '@/lib/metalsApi';
 import { OverviewEntry } from '@/lib/overview';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { DemoAccountProvider } from '@/contexts/DemoAccountContext';
 import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
@@ -162,11 +163,12 @@ export default function CryptoTracker() {
     : (selectedMetalCode || bi('هەڵبژێرە', 'Select'));
 
   return (
-    <>
+    <DemoAccountProvider>
       <Helmet>
         <title>{activeTab === 'crypto' ? bi('شوێنکەوتنی کریپتۆ', 'Crypto Tracker') : activeTab === 'forex' ? bi('نرخی دراو', 'Forex Rates') : bi('کانزا بەهادارەکان', 'Precious Metals')} - {bi('نرخی ڕاستەوخۆ', 'Live Prices')}</title>
         <meta name="description" content="Real-time cryptocurrency and forex price tracker" />
       </Helmet>
+
 
       <div className="h-[100dvh] flex flex-col bg-[#0a0e17] text-white overflow-hidden">
         {/* Top bar */}
@@ -434,6 +436,7 @@ export default function CryptoTracker() {
           onClose={() => setShowConverter(false)}
         />
       )}
-    </>
+    </DemoAccountProvider>
+
   );
 }

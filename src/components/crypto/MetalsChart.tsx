@@ -8,6 +8,8 @@ import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAvera
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
+import { useDemoAccount } from '@/contexts/DemoAccountContext';
+import { toast } from '@/hooks/use-toast';
 import type { OHLCCandle } from '@/lib/krakenApi';
 
 interface MetalsChartProps {
@@ -61,6 +63,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [maType, setMaType] = useState<MAType>('MA');
 
   // Buy/Sell trade controls (identical logic to Crypto).
+  const { balance, applyPnl, renew } = useDemoAccount();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
   const [tradeSide, setTradeSide] = useState<TradeSide>(null);
@@ -85,14 +88,34 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     setTradePct({ hasData, buyPct, sellPct });
   };
 
-  const handleTrade = (side: 'buy' | 'sell') => {
-    setTradeSide(prev => {
-      if (prev === side) { setEntryPrice(null); return null; }
-      const p = livePrice();
-      setEntryPrice(p > 0 ? p : null);
-      return side;
+  // Realise the profit / loss of an open position into the demo balance.
+  const realize = (side: 'buy' | 'sell', entry: number | null) => {
+    const exit = livePrice();
+    if (!entry || entry <= 0 || exit <= 0) return;
+    const diff = side === 'buy' ? exit - entry : entry - exit;
+    const pnlValue = diff * tradeAmount;
+    applyPnl(pnlValue);
+    const profit = pnlValue >= 0;
+    toast({
+      title: profit ? bi('قازانج 🎉', 'Profit 🎉') : bi('زیان', 'Loss'),
+      description: `${profit ? '+' : '−'}£${Math.abs(pnlValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     });
   };
+
+  const handleTrade = (side: 'buy' | 'sell') => {
+    if (tradeSide === side) {
+      realize(side, entryPrice);
+      setTradeSide(null);
+      setEntryPrice(null);
+      return;
+    }
+    if (tradeSide) realize(tradeSide, entryPrice);
+    if (balance <= 0) return;
+    const p = livePrice();
+    setTradeSide(side);
+    setEntryPrice(p > 0 ? p : null);
+  };
+
 
 
   // Auto layout: spacing computed from chart width + candle count + timeframe.
@@ -484,6 +507,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         entryPrice={entryPrice}
         currentPrice={livePrice()}
         timeframeLabel={RANGES.find(r => r.key === range)?.label}
+        balance={balance}
+        onRenew={renew}
         onBuy={() => handleTrade('buy')}
         onSell={() => handleTrade('sell')}
         onRefresh={handleRefreshTrade}

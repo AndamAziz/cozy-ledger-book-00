@@ -5,6 +5,8 @@ import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAvera
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
+import { useDemoAccount } from '@/contexts/DemoAccountContext';
+import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CryptoChartProps {
@@ -44,6 +46,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [maType, setMaType] = useState<MAType>('MA');
 
   // Buy/Sell trade controls (identical logic to Metals).
+  const { balance, applyPnl, renew } = useDemoAccount();
   const [tradeSide, setTradeSide] = useState<TradeSide>(null);
   const [tradeAmount, setTradeAmount] = useState(0.001);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
@@ -59,13 +62,34 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     setTradePct({ hasData, buyPct, sellPct });
   };
 
-  const handleTrade = (side: 'buy' | 'sell') => {
-    setTradeSide(prev => {
-      if (prev === side) { setEntryPrice(null); return null; }
-      setEntryPrice(currentPrice > 0 ? currentPrice : null);
-      return side;
+  // Realise the profit / loss of an open position into the demo balance.
+  const realize = (side: 'buy' | 'sell', entry: number | null) => {
+    if (!entry || entry <= 0 || currentPrice <= 0) return;
+    const diff = side === 'buy' ? currentPrice - entry : entry - currentPrice;
+    const pnlValue = diff * tradeAmount;
+    applyPnl(pnlValue);
+    const profit = pnlValue >= 0;
+    toast({
+      title: profit ? bi('قازانج 🎉', 'Profit 🎉') : bi('زیان', 'Loss'),
+      description: `${profit ? '+' : '−'}£${Math.abs(pnlValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     });
   };
+
+  const handleTrade = (side: 'buy' | 'sell') => {
+    if (tradeSide === side) {
+      // Closing the open position.
+      realize(side, entryPrice);
+      setTradeSide(null);
+      setEntryPrice(null);
+      return;
+    }
+    // Switching sides closes the previous position first.
+    if (tradeSide) realize(tradeSide, entryPrice);
+    if (balance <= 0) return;
+    setTradeSide(side);
+    setEntryPrice(currentPrice > 0 ? currentPrice : null);
+  };
+
 
 
   // Auto layout: spacing computed from chart width + candle count + timeframe.
@@ -358,6 +382,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         entryPrice={entryPrice}
         currentPrice={currentPrice}
         timeframeLabel={TIMEFRAMES.find(t => t.interval === interval)?.label}
+        balance={balance}
+        onRenew={renew}
         onBuy={() => handleTrade('buy')}
         onSell={() => handleTrade('sell')}
         onRefresh={handleRefreshTrade}
