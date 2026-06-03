@@ -563,25 +563,35 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       });
       // TP / SL apply to the whole leg — bold lines so the user clearly sees
       // WHERE profit (green) and loss (deep crimson) sit on the chart.
-      if (leg.takeProfit && leg.takeProfit > 0) {
-        tradeLineRef.current.push(seriesRef.current.createPriceLine({
-          price: leg.takeProfit,
+      // They are DRAGGABLE: a live drag override keeps the price while ticks redraw.
+      const drag = dragRef.current;
+      const tpPrice = drag && drag.side === side && drag.kind === 'tp' ? drag.price : leg.takeProfit;
+      const slPrice = drag && drag.side === side && drag.kind === 'sl' ? drag.price : leg.stopLoss;
+      tpLineRef.current[side] = null;
+      slLineRef.current[side] = null;
+      if (tpPrice && tpPrice > 0) {
+        const line = seriesRef.current.createPriceLine({
+          price: tpPrice,
           color: '#0ecb81',
           lineWidth: 2,
           lineStyle: 2,
           axisLabelVisible: true,
           title: `${isBuy ? 'B' : 'S'} ${bi('قازانج', 'TP')} ▲`,
-        }));
+        });
+        tradeLineRef.current.push(line);
+        tpLineRef.current[side] = line;
       }
-      if (leg.stopLoss && leg.stopLoss > 0) {
-        tradeLineRef.current.push(seriesRef.current.createPriceLine({
-          price: leg.stopLoss,
+      if (slPrice && slPrice > 0) {
+        const line = seriesRef.current.createPriceLine({
+          price: slPrice,
           color: '#8b0a1a',
           lineWidth: 2,
           lineStyle: 2,
           axisLabelVisible: true,
           title: `${isBuy ? 'B' : 'S'} ${bi('زیان', 'SL')} ▼`,
-        }));
+        });
+        tradeLineRef.current.push(line);
+        slLineRef.current[side] = line;
       }
     };
 
