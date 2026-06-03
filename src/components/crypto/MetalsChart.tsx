@@ -638,6 +638,25 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
 
+  // Enable dragging the TP / SL lines directly on the chart. Releasing the line
+  // commits the new level automatically (no extra data entry needed).
+  useEffect(() => {
+    const chart = chartRef.current;
+    const container = chartContainerRef.current;
+    if (!chart || !container || !seriesRef.current) return;
+    return attachTpSlDrag({
+      container,
+      chart,
+      getSeries: () => seriesRef.current,
+      getLegs: () => legsRef.current,
+      lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
+      dragRef,
+      onCommit: (side, tp, sl) => setTpSl(side, tp, sl),
+    });
+  }, [seriesVersion, setTpSl]);
+
+
+
   // OHLC view of the metal candles for the indicator-series helpers.
   const ohlcForIndicators = useMemo(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
