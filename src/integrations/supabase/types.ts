@@ -92,6 +92,30 @@ export type Database = {
         }
         Relationships: []
       }
+      demo_accounts: {
+        Row: {
+          balance: number
+          created_at: string
+          starting_balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          starting_balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          starting_balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
