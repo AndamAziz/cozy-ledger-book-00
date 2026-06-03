@@ -461,13 +461,23 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     });
   }, [currentPrice, name, accentColor]);
 
-  // Draw the average-entry line for the open position (green buy / red sell).
+  // Push the live price into the shared position so P/L updates and TP/SL
+  // can auto-close while this metal is on screen.
+  useEffect(() => {
+    const p = livePrice();
+    if (p > 0) updatePrice(mySymbol, p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPrice, candles, mySymbol, updatePrice]);
+
+  // Draw the entry line + TP/SL lines for the open position.
   useEffect(() => {
     if (!seriesRef.current) return;
 
-    if (tradeLineRef.current) {
-      try { seriesRef.current.removePriceLine(tradeLineRef.current); } catch { /* ignore */ }
-      tradeLineRef.current = null;
+    for (const ref of [tradeLineRef, tpLineRef, slLineRef]) {
+      if (ref.current) {
+        try { seriesRef.current.removePriceLine(ref.current); } catch { /* ignore */ }
+        ref.current = null;
+      }
     }
 
     if (!tradeSide || !entryPrice || entryPrice <= 0 || positionQty <= 0) return;
@@ -481,7 +491,28 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       axisLabelVisible: true,
       title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(positionQty)}`,
     });
-  }, [tradeSide, entryPrice, positionQty, seriesVersion, language]);
+
+    if (takeProfit && takeProfit > 0) {
+      tpLineRef.current = seriesRef.current.createPriceLine({
+        price: takeProfit,
+        color: '#0ecb81',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: bi('قازانج', 'TP'),
+      });
+    }
+    if (stopLoss && stopLoss > 0) {
+      slLineRef.current = seriesRef.current.createPriceLine({
+        price: stopLoss,
+        color: '#f6465d',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: bi('زیان', 'SL'),
+      });
+    }
+  }, [tradeSide, entryPrice, positionQty, takeProfit, stopLoss, seriesVersion, language]);
 
 
   const stepper = (
