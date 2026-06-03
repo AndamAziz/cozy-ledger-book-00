@@ -21,6 +21,10 @@ interface TradeControlsProps {
   currentPrice: number;
   /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
   timeframeLabel?: string;
+  /** Virtual demo account balance (£). */
+  balance: number;
+  /** Reset the demo balance back to the starting amount. */
+  onRenew: () => void;
   onBuy: () => void;
   onSell: () => void;
   onRefresh: () => void;
