@@ -106,6 +106,24 @@ export function TradeControls({
         )}
       </div>
 
+      {/* Position summary — avg entry + total qty */}
+      {hasPosition && entryPrice && (
+        <div className="mb-2 flex items-center justify-between rounded-md bg-[#0d1117] border border-white/5 px-2.5 py-1.5">
+          <div className="flex items-center gap-2 text-[10px] sm:text-xs">
+            <span className={`font-bold ${activeSide === 'buy' ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+              {activeSide === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}
+            </span>
+            <span className="text-[#848e9c]">·</span>
+            <span className="text-[#848e9c]">{bi('ناوەندی', 'Avg')}</span>
+            <span className="text-white font-bold tabular-nums">{fmtMoney(entryPrice)}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-xs">
+            <span className="text-[#848e9c]">{bi('بڕ', 'Size')}</span>
+            <span className="text-white font-bold tabular-nums">{fmtQty(positionQty)}</span>
+          </div>
+        </div>
+      )}
+
       {/* Buttons row: Buy | Refresh (centre) | Sell — Buy/Sell stack on each press */}
       <div className="flex items-stretch gap-2">
         <button
