@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, CandlestickSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -8,6 +8,7 @@ import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAvera
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
+import { PnLSummaryPanel } from '@/components/crypto/PnLSummaryPanel';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import type { OHLCCandle } from '@/lib/krakenApi';
 
@@ -68,7 +69,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [maType, setMaType] = useState<MAType>('MA');
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, renew, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,6 +99,24 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const otherHasLegs = position && position.symbol !== mySymbol &&
     ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
   const otherPositionLabel = otherHasLegs ? position!.label : null;
+
+  // Total unrealized P/L across all fills on this chart.
+  const price = livePrice();
+  const unrealizedPnl = useMemo(() => {
+    if (!myPos || price <= 0) return 0;
+    let total = 0;
+    if (myPos.buy?.fills) {
+      for (const f of myPos.buy.fills) {
+        total += (price - f.entryPrice) * f.qty;
+      }
+    }
+    if (myPos.sell?.fills) {
+      for (const f of myPos.sell.fills) {
+        total += (f.entryPrice - price) * f.qty;
+      }
+    }
+    return +total.toFixed(2);
+  }, [myPos, price]);
 
   // Track the live-price direction for the up/down indicator on the buttons.
   const prevPriceRef = useRef<number>(0);
@@ -763,6 +782,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       {/* Chart */}
       <div className="relative h-[250px] sm:h-[320px]">
         <div ref={chartContainerRef} className="absolute inset-0" />
+
+        <PnLSummaryPanel realizedPnl={realizedPnl} unrealizedPnl={unrealizedPnl} language={language} />
 
         {/* Live floating P/L overlay (like pro trading apps) */}
         {(buyLeg || sellLeg) && livePrice() > 0 && (

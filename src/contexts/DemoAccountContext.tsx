@@ -92,6 +92,8 @@ interface DemoAccountValue {
   ready: boolean;
   /** The open position (may carry both a buy and a sell leg), or null. */
   position: OpenPosition | null;
+  /** Cumulative realized P/L from all closed trades. */
+  realizedPnl: number;
   /** Open a new leg or stack onto an existing one on the same asset+side. */
   openOrAdd: (args: { symbol: string; label: string; side: PositionSide; price: number; amount: number }) => void;
   /** Update the live price for the asset that owns the position; triggers TP/SL. */
@@ -118,6 +120,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState(DEMO_STARTING_BALANCE);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [realizedPnl, setRealizedPnl] = useState(0);
   // Restore any open position saved before the app was refreshed / closed.
   const [position, setPosition] = useState<OpenPosition | null>(() => {
     try {
@@ -164,6 +167,16 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore storage errors */ }
   }, [position]);
 
+  // Persist realized PnL to the database whenever it changes.
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from('demo_accounts')
+      .update({ realized_pnl: realizedPnl })
+      .eq('user_id', userId)
+      .then(() => { /* fire and forget */ });
+  }, [realizedPnl, userId]);
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -174,18 +187,20 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
 
       const { data } = await supabase
         .from('demo_accounts')
-        .select('balance')
+        .select('balance, realized_pnl')
         .eq('user_id', user.id)
         .maybeSingle();
       if (!active) return;
 
       if (data) {
         setBalance(Number(data.balance));
+        setRealizedPnl(Number(data.realized_pnl ?? 0));
       } else {
         await supabase.from('demo_accounts').insert({
           user_id: user.id,
           balance: DEMO_STARTING_BALANCE,
           starting_balance: DEMO_STARTING_BALANCE,
+          realized_pnl: 0,
         });
       }
       setLoading(false);
@@ -223,6 +238,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
     const profit = pnlValue >= 0;
     queueMicrotask(() => {
       applyPnl(pnlValue);
+      setRealizedPnl(prev => +(prev + pnlValue).toFixed(2));
       const head = reason === 'tp'
         ? bi('بەرزبوونەوەی قازانج 🎯', 'Take Profit hit 🎯')
         : reason === 'sl'
@@ -313,7 +329,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
   }, [settle]);
 
   return (
-    <DemoAccountContext.Provider value={{ balance, loading, ready: !!userId, position, openOrAdd, updatePrice, setTpSl, closePosition, applyPnl, renew }}>
+    <DemoAccountContext.Provider value={{ balance, loading, ready: !!userId, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition, applyPnl, renew }}>
       {children}
     </DemoAccountContext.Provider>
   );
@@ -328,6 +344,7 @@ export function useDemoAccount(): DemoAccountValue {
       loading: false,
       ready: false,
       position: null,
+      realizedPnl: 0,
       openOrAdd: () => {},
       updatePrice: () => {},
       setTpSl: () => {},

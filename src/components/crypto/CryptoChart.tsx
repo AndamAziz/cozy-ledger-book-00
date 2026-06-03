@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
+import { PnLSummaryPanel } from '@/components/crypto/PnLSummaryPanel';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -51,7 +52,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [maType, setMaType] = useState<MAType>('MA');
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, renew, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   const [tradeAmount, setTradeAmount] = useState(0.01);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
@@ -64,6 +65,23 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const otherHasLegs = position && position.symbol !== pair &&
     ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
   const otherPositionLabel = otherHasLegs ? position!.label : null;
+
+  // Total unrealized P/L across all fills on this chart.
+  const unrealizedPnl = useMemo(() => {
+    if (!myPos || currentPrice <= 0) return 0;
+    let total = 0;
+    if (myPos.buy?.fills) {
+      for (const f of myPos.buy.fills) {
+        total += (currentPrice - f.entryPrice) * f.qty;
+      }
+    }
+    if (myPos.sell?.fills) {
+      for (const f of myPos.sell.fills) {
+        total += (f.entryPrice - currentPrice) * f.qty;
+      }
+    }
+    return +total.toFixed(2);
+  }, [myPos, currentPrice]);
 
   // Track the live-price direction for the up/down indicator on the buttons.
   const prevPriceRef = useRef<number>(0);
@@ -618,6 +636,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       {/* Chart */}
       <div className="flex-1 relative min-h-[300px] md:min-h-[500px]">
         <div ref={chartContainerRef} className="absolute inset-0" />
+
+        <PnLSummaryPanel realizedPnl={realizedPnl} unrealizedPnl={unrealizedPnl} language={language} />
 
         {/* Live floating P/L overlay (like pro trading apps) */}
         {(buyLeg || sellLeg) && currentPrice > 0 && (
