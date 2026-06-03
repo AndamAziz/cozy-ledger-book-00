@@ -294,19 +294,20 @@ export function TradeControls({
         </div>
       )}
 
-      {/* Buy | Refresh (centre) | Sell — both sides can be open at once.
+      {/* Sell (left) | Refresh (centre) | Buy (right) — MT5 layout, forced LTR
+          so the sides stay fixed in both languages. Both can be open at once.
           Each button shows the LIVE price with an up/down indicator. */}
-      <div className="flex items-stretch gap-2">
+      <div dir="ltr" className="flex items-stretch gap-2">
         <button
-          onClick={onBuy}
+          onClick={onSell}
           disabled={depleted || !!otherPositionLabel}
           className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-lg font-bold transition-all active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
-            buyLeg && buyLeg.qty > 0
-              ? 'bg-gradient-to-b from-[#0ecb81] to-[#0aa96b] text-black border-[#0ecb81] ring-1 ring-white/40 shadow-[0_6px_22px_-6px_rgba(14,203,129,0.75)]'
-              : 'bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20 hover:shadow-[0_4px_16px_-8px_rgba(14,203,129,0.6)]'
+            sellLeg && sellLeg.qty > 0
+              ? 'bg-gradient-to-b from-[#f6465d] to-[#d12a40] text-white border-[#f6465d] ring-1 ring-white/40 shadow-[0_6px_22px_-6px_rgba(246,70,93,0.75)]'
+              : 'bg-[#f6465d]/10 text-[#f6465d] border-[#f6465d]/40 hover:bg-[#f6465d]/20 hover:shadow-[0_4px_16px_-8px_rgba(246,70,93,0.6)]'
           }`}
         >
-          <span className="text-xs sm:text-sm">{bi('کڕین', 'Buy')}{buyLeg && buyLeg.qty > 0 ? ' +' : ''}</span>
+          <span className="text-xs sm:text-sm">{bi('فرۆشتن', 'Sell')}{sellLeg && sellLeg.qty > 0 ? ' +' : ''}</span>
           {currentPrice > 0 && (
             <span className="flex items-center gap-0.5 text-[10px] sm:text-[11px] tabular-nums opacity-90">
               {priceUp && <ArrowUp className="h-3 w-3" />}
@@ -343,15 +344,15 @@ export function TradeControls({
         </div>
 
         <button
-          onClick={onSell}
+          onClick={onBuy}
           disabled={depleted || !!otherPositionLabel}
           className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-lg font-bold transition-all active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
-            sellLeg && sellLeg.qty > 0
-              ? 'bg-gradient-to-b from-[#f6465d] to-[#d12a40] text-white border-[#f6465d] ring-1 ring-white/40 shadow-[0_6px_22px_-6px_rgba(246,70,93,0.75)]'
-              : 'bg-[#f6465d]/10 text-[#f6465d] border-[#f6465d]/40 hover:bg-[#f6465d]/20 hover:shadow-[0_4px_16px_-8px_rgba(246,70,93,0.6)]'
+            buyLeg && buyLeg.qty > 0
+              ? 'bg-gradient-to-b from-[#0ecb81] to-[#0aa96b] text-black border-[#0ecb81] ring-1 ring-white/40 shadow-[0_6px_22px_-6px_rgba(14,203,129,0.75)]'
+              : 'bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20 hover:shadow-[0_4px_16px_-8px_rgba(14,203,129,0.6)]'
           }`}
         >
-          <span className="text-xs sm:text-sm">{bi('فرۆشتن', 'Sell')}{sellLeg && sellLeg.qty > 0 ? ' +' : ''}</span>
+          <span className="text-xs sm:text-sm">{bi('کڕین', 'Buy')}{buyLeg && buyLeg.qty > 0 ? ' +' : ''}</span>
           {currentPrice > 0 && (
             <span className="flex items-center gap-0.5 text-[10px] sm:text-[11px] tabular-nums opacity-90">
               {priceUp && <ArrowUp className="h-3 w-3" />}
