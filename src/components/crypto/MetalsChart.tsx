@@ -548,6 +548,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         entryPrice={entryPrice}
         positionQty={positionQty}
         currentPrice={livePrice()}
+        takeProfit={takeProfit}
+        stopLoss={stopLoss}
+        otherPositionLabel={otherPositionLabel}
         timeframeLabel={RANGES.find(r => r.key === range)?.label}
         balance={balance}
         onRenew={renew}
@@ -556,6 +559,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
+        onSetTpSl={setTpSl}
       />
 
       {/* Controls */}
