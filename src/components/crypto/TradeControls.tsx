@@ -114,6 +114,23 @@ export function TradeControls({
   const totalPnl = (buyPnl?.value ?? 0) + (sellPnl?.value ?? 0);
   const hasAny = !!(buyPnl || sellPnl);
 
+  // Suggested holding time after analysis (based on conviction + timeframe).
+  const hold = pct && pct.hasData && timeframeMinutes
+    ? suggestHoldMinutes(pct, timeframeMinutes)
+    : null;
+
+  // Human-readable duration in the active language (minutes / hours / days).
+  const fmtDuration = (mins: number): string => {
+    if (mins < 60) return `${mins} ${bi('خولەک', 'min')}`;
+    if (mins < 1440) {
+      const h = Math.round((mins / 60) * 10) / 10;
+      return `${h} ${bi('کاتژمێر', 'hr')}`;
+    }
+    const d = Math.round((mins / 1440) * 10) / 10;
+    return `${d} ${bi('ڕۆژ', 'day')}`;
+  };
+
+
   const parseNum = (v: string): number | null => {
     if (v.trim() === '') return null;
     const n = Number(v);
