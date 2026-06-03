@@ -14,6 +14,10 @@ interface CryptoAnalysisProps {
   change24h: number;
   interval?: number;
   timeframeLabel?: string;
+  /** Demo-account position key to trade on (e.g. the pair or `metal:Gold`). */
+  tradeSymbol?: string;
+  /** Human label shown for the traded position. */
+  tradeLabel?: string;
 }
 
 type Recommendation = 'buy' | 'sell' | 'hold';
