@@ -357,7 +357,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
         const hitTp = buy.takeProfit != null && price >= buy.takeProfit;
         const hitSl = buy.stopLoss != null && price <= buy.stopLoss;
         if (hitTp || hitSl) {
-          settle('buy', buy.entryPrice, buy.qty, hitTp ? buy.takeProfit! : buy.stopLoss!, hitTp ? 'tp' : 'sl');
+          settle('buy', buy.entryPrice, buy.qty, hitTp ? buy.takeProfit! : buy.stopLoss!, hitTp ? 'tp' : 'sl', { symbol: prev.symbol, label: prev.label, openedAt: buy.entryTime });
           buy = null;
         }
       }
@@ -365,7 +365,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
         const hitTp = sell.takeProfit != null && price <= sell.takeProfit;
         const hitSl = sell.stopLoss != null && price >= sell.stopLoss;
         if (hitTp || hitSl) {
-          settle('sell', sell.entryPrice, sell.qty, hitTp ? sell.takeProfit! : sell.stopLoss!, hitTp ? 'tp' : 'sl');
+          settle('sell', sell.entryPrice, sell.qty, hitTp ? sell.takeProfit! : sell.stopLoss!, hitTp ? 'tp' : 'sl', { symbol: prev.symbol, label: prev.label, openedAt: sell.entryTime });
           sell = null;
         }
       }
