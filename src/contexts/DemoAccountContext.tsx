@@ -150,6 +150,23 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [realizedPnl, setRealizedPnl] = useState(0);
+  // Closed-trade journal, restored from localStorage (newest first).
+  const [journal, setJournal] = useState<TradeRecord[]>(() => {
+    try {
+      const raw = localStorage.getItem(JOURNAL_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist the journal whenever it changes.
+  useEffect(() => {
+    try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(journal)); } catch { /* ignore */ }
+  }, [journal]);
+
+  const clearJournal = useCallback(() => setJournal([]), []);
   // Restore any open position saved before the app was refreshed / closed.
   const [position, setPosition] = useState<OpenPosition | null>(() => {
     try {
