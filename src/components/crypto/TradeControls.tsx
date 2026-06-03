@@ -1,5 +1,6 @@
-import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown } from 'lucide-react';
+import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { suggestHoldMinutes } from '@/lib/indicators';
 
 export type TradeSide = 'buy' | 'sell' | null;
 
@@ -34,6 +35,8 @@ interface TradeControlsProps {
   otherPositionLabel: string | null;
   /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
   timeframeLabel?: string;
+  /** Duration (minutes) of one candle of the selected timeframe — for the hold hint. */
+  timeframeMinutes?: number;
   /** Virtual demo account balance ($). */
   balance: number;
   /** Reset the demo balance back to the starting amount. */
@@ -91,6 +94,7 @@ export function TradeControls({
   sellLeg,
   otherPositionLabel,
   timeframeLabel,
+  timeframeMinutes,
   balance,
   onRenew,
   onBuy,
@@ -109,6 +113,23 @@ export function TradeControls({
   const sellPnl = sellLeg && sellLeg.qty > 0 ? legPnl('sell', sellLeg, currentPrice) : null;
   const totalPnl = (buyPnl?.value ?? 0) + (sellPnl?.value ?? 0);
   const hasAny = !!(buyPnl || sellPnl);
+
+  // Suggested holding time after analysis (based on conviction + timeframe).
+  const hold = pct && pct.hasData && timeframeMinutes
+    ? suggestHoldMinutes(pct, timeframeMinutes)
+    : null;
+
+  // Human-readable duration in the active language (minutes / hours / days).
+  const fmtDuration = (mins: number): string => {
+    if (mins < 60) return `${mins} ${bi('خولەک', 'min')}`;
+    if (mins < 1440) {
+      const h = Math.round((mins / 60) * 10) / 10;
+      return `${h} ${bi('کاتژمێر', 'hr')}`;
+    }
+    const d = Math.round((mins / 1440) * 10) / 10;
+    return `${d} ${bi('ڕۆژ', 'day')}`;
+  };
+
 
   const parseNum = (v: string): number | null => {
     if (v.trim() === '') return null;
@@ -336,7 +357,24 @@ export function TradeControls({
               <div className="bg-[#0ecb81]" style={{ width: `${pct.buyPct}%` }} />
               <div className="bg-[#f6465d]" style={{ width: `${pct.sellPct}%` }} />
             </div>
+
+            {/* Suggested holding time after analysis */}
+            {hold && hold.side !== 'neutral' && hold.minutes > 0 && (
+              <div className={`mt-2 flex items-center justify-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[10px] sm:text-xs font-bold ${
+                hold.side === 'buy'
+                  ? 'bg-[#0ecb81]/10 border-[#0ecb81]/30 text-[#0ecb81]'
+                  : 'bg-[#f6465d]/10 border-[#f6465d]/30 text-[#f6465d]'
+              }`}>
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {hold.side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}{' '}
+                  {bi('هۆڵدی بکە بۆ نزیکەی', 'hold for ~')}{' '}
+                  <span className="tabular-nums">{fmtDuration(hold.minutes)}</span>
+                </span>
+              </div>
+            )}
           </div>
+
         ) : (
           <p className="mt-2 text-center text-[10px] sm:text-xs text-[#848e9c]">
             {bi('داتای پێویست نییە بۆ شیکاری', 'Not enough data to analyse yet')}

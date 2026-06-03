@@ -206,3 +206,25 @@ export function computeBuySellPct(
   const neutralPct = Math.round((neutralCount / total) * 100);
   return { hasData: true, buyPct, sellPct, neutralPct, total };
 }
+
+export interface HoldSuggestion {
+  /** Dominant side the analysis leans toward. */
+  side: SignalType;
+  /** Suggested holding time in minutes (0 when there is no clear bias). */
+  minutes: number;
+}
+
+/**
+ * Suggest how long to HOLD a Buy/Sell after analysis, based on the dominant
+ * signal's conviction and the selected chart timeframe. Stronger agreement →
+ * ride the move for more candles; a balanced read → a short scalp.
+ */
+export function suggestHoldMinutes(pct: Pick<BuySellPct, 'hasData' | 'buyPct' | 'sellPct'>, timeframeMinutes: number): HoldSuggestion {
+  if (!pct.hasData || timeframeMinutes <= 0) return { side: 'neutral', minutes: 0 };
+  const side: SignalType = pct.buyPct > pct.sellPct ? 'buy' : pct.sellPct > pct.buyPct ? 'sell' : 'neutral';
+  if (side === 'neutral') return { side, minutes: 0 };
+  const conviction = Math.max(pct.buyPct, pct.sellPct) / 100; // 0..1
+  const candles = Math.round(2 + conviction * 6); // hold ~2..8 candles
+  return { side, minutes: candles * timeframeMinutes };
+}
+
