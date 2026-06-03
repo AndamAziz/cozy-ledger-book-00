@@ -148,6 +148,24 @@ export function TradeControls({
   const priceUp = priceDir === 'up';
   const priceDown = priceDir === 'down';
 
+  // MT5 one-click volume stepper (lots), min 0.01, 0.01 increments.
+  const decVolume = () => onAmountChange(Math.max(0.01, +(amount - 0.01).toFixed(2)));
+  const incVolume = () => onAmountChange(+(amount + 0.01).toFixed(2));
+
+  // Render a price MT5-style: smaller leading digits, larger last two ("big figure").
+  const renderMtPrice = (value: number, color: string) => {
+    if (!value || value <= 0) return <span className="text-base font-bold" style={{ color }}>--</span>;
+    const s = fmtPrice(value);
+    const main = s.slice(0, -2);
+    const last = s.slice(-2);
+    return (
+      <span className="flex items-baseline font-bold leading-none tabular-nums" style={{ color }}>
+        <span className="text-xs sm:text-sm opacity-90">{main}</span>
+        <span className="text-lg sm:text-xl">{last}</span>
+      </span>
+    );
+  };
+
   // Reusable open-leg panel (avg entry · size · live P/L · TP/SL · close).
   const LegPanel = ({ side, leg }: { side: 'buy' | 'sell'; leg: LegInfo }) => {
     const isBuy = side === 'buy';
