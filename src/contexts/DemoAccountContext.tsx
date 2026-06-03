@@ -396,7 +396,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
   }, [settle]);
 
   return (
-    <DemoAccountContext.Provider value={{ balance, loading, ready: !!userId, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition, applyPnl, renew }}>
+    <DemoAccountContext.Provider value={{ balance, loading, ready: !!userId, position, realizedPnl, journal, clearJournal, openOrAdd, updatePrice, setTpSl, closePosition, applyPnl, renew }}>
       {children}
     </DemoAccountContext.Provider>
   );
@@ -412,6 +412,8 @@ export function useDemoAccount(): DemoAccountValue {
       ready: false,
       position: null,
       realizedPnl: 0,
+      journal: [],
+      clearJournal: () => {},
       openOrAdd: () => {},
       updatePrice: () => {},
       setTpSl: () => {},
