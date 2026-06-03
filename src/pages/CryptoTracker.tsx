@@ -117,6 +117,40 @@ export default function CryptoTracker() {
   const currentCoin = coinsMap.get(selectedPair);
   const currentPrice = currentCoin?.price || 0;
 
+  const cryptoEntries: OverviewEntry[] = TRACKED_PAIRS.map((pair) => {
+    const coin = coinsMap.get(pair);
+    const sym = getSymbolFromPair(pair);
+    const meta = getCoinMeta(sym);
+    const sig = cryptoOverview.data[pair];
+    return {
+      key: pair,
+      symbol: getDisplaySymbol(sym),
+      name: coin?.name ?? meta.name,
+      logo: coin?.logo ?? meta.logo,
+      price: coin?.price ?? 0,
+      change: coin?.change24h ?? 0,
+      closes: (sig?.closes ?? []).slice(-40),
+      summary: sig?.summary ?? null,
+      accentColor: '#f0b90b',
+    };
+  });
+
+  const metalsEntries: OverviewEntry[] = METALS_META.map((meta) => {
+    const m = metals.find((x) => x.code === meta.code);
+    const sig = metalsOverview.data[meta.code];
+    return {
+      key: meta.code,
+      symbol: meta.symbol.replace('/USD', ''),
+      name: meta.name,
+      logo: meta.emoji,
+      price: m?.price ?? 0,
+      change: m?.change ?? 0,
+      closes: (sig?.closes ?? []).slice(-40),
+      summary: sig?.summary ?? null,
+      accentColor: meta.category === 'oil' ? '#e67e22' : '#d4af37',
+    };
+  });
+
   const listTitle =
     activeTab === 'crypto' ? bi('دراوەکان', 'Coins')
     : activeTab === 'forex' ? bi('دراوی نێودەوڵەتی', 'Currencies')
