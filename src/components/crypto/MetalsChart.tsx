@@ -69,10 +69,14 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [tradeSide, setTradeSide] = useState<TradeSide>(null);
   const [tradeAmount, setTradeAmount] = useState(0.001);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
-  // Price captured the moment Buy/Sell is pressed — basis for live P/L.
+  // Average entry price of the open position (weighted across multiple adds).
   const [entryPrice, setEntryPrice] = useState<number | null>(null);
+  // Total accumulated quantity of the open position.
+  const [positionQty, setPositionQty] = useState(0);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
+
+  const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 
   const livePrice = () => (currentPrice && currentPrice > 0
     ? currentPrice
@@ -88,12 +92,12 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     setTradePct({ hasData, buyPct, sellPct });
   };
 
-  // Realise the profit / loss of an open position into the demo balance.
-  const realize = (side: 'buy' | 'sell', entry: number | null) => {
+  // Realise the profit / loss of the whole open position into the demo balance.
+  const realize = (side: 'buy' | 'sell', entry: number | null, qty: number) => {
     const exit = livePrice();
-    if (!entry || entry <= 0 || exit <= 0) return;
+    if (!entry || entry <= 0 || exit <= 0 || qty <= 0) return;
     const diff = side === 'buy' ? exit - entry : entry - exit;
-    const pnlValue = diff * tradeAmount;
+    const pnlValue = diff * qty;
     applyPnl(pnlValue);
     const profit = pnlValue >= 0;
     toast({
@@ -102,26 +106,41 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     });
   };
 
-  const handleTrade = (side: 'buy' | 'sell') => {
-    if (tradeSide === side) {
-      realize(side, entryPrice);
-      setTradeSide(null);
-      setEntryPrice(null);
-      return;
-    }
-    if (tradeSide) realize(tradeSide, entryPrice);
+  // Open or ADD to a position. Multiple presses on the same side stack:
+  // the quantity accumulates and the entry price is averaged. The opposite
+  // side is blocked while a position is open (close it first).
+  const handleAdd = (side: 'buy' | 'sell') => {
     if (balance <= 0) return;
-    const p = livePrice();
-    setTradeSide(side);
-    setEntryPrice(p > 0 ? p : null);
+    if (tradeSide && tradeSide !== side) return;
+    const price = livePrice();
+    if (price <= 0) return;
+    if (!tradeSide || positionQty <= 0 || entryPrice == null) {
+      setTradeSide(side);
+      setEntryPrice(price);
+      setPositionQty(tradeAmount);
+    } else {
+      const newQty = +(positionQty + tradeAmount).toFixed(6);
+      setEntryPrice(((entryPrice * positionQty) + price * tradeAmount) / newQty);
+      setPositionQty(newQty);
+    }
+  };
+
+  // Close the whole position and realise its P/L.
+  const handleClose = () => {
+    if (!tradeSide || positionQty <= 0) return;
+    realize(tradeSide, entryPrice, positionQty);
+    setTradeSide(null);
+    setEntryPrice(null);
+    setPositionQty(0);
   };
 
   // When the selected asset changes (e.g. switching to XAUUSD), reset all trade
-  // state so Buy/Sell/Refresh logic starts fresh on the newly selected asset
+  // state so Buy/Sell/Close logic starts fresh on the newly selected asset
   // instead of carrying over the previous asset's entry price & analysis.
   useEffect(() => {
     setTradeSide(null);
     setEntryPrice(null);
+    setPositionQty(0);
     setTradePct(null);
     if (tradeLineRef.current && seriesRef.current) {
       try { seriesRef.current.removePriceLine(tradeLineRef.current); } catch { /* ignore */ }
@@ -465,7 +484,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     });
   }, [currentPrice, name, accentColor]);
 
-  // Draw the Buy (green) / Sell (red) line from the moving price line.
+  // Draw the average-entry line for the open position (green buy / red sell).
   useEffect(() => {
     if (!seriesRef.current) return;
 
@@ -474,21 +493,19 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       tradeLineRef.current = null;
     }
 
-    const price = currentPrice && currentPrice > 0
-      ? currentPrice
-      : (candles.length ? candles[candles.length - 1].close : 0);
-    if (!tradeSide || price <= 0) return;
+    if (!tradeSide || !entryPrice || entryPrice <= 0 || positionQty <= 0) return;
 
     const isBuy = tradeSide === 'buy';
     tradeLineRef.current = seriesRef.current.createPriceLine({
-      price,
+      price: entryPrice,
       color: isBuy ? '#0ecb81' : '#f6465d',
       lineWidth: 2,
       lineStyle: 0,
       axisLabelVisible: true,
-      title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${tradeAmount}`,
+      title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(positionQty)}`,
     });
-  }, [tradeSide, tradeAmount, currentPrice, candles, seriesVersion, language]);
+  }, [tradeSide, entryPrice, positionQty, seriesVersion, language]);
+
 
   const stepper = (
     label: string,
@@ -521,15 +538,18 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         amount={tradeAmount}
         pct={tradePct}
         entryPrice={entryPrice}
+        positionQty={positionQty}
         currentPrice={livePrice()}
         timeframeLabel={RANGES.find(r => r.key === range)?.label}
         balance={balance}
         onRenew={renew}
-        onBuy={() => handleTrade('buy')}
-        onSell={() => handleTrade('sell')}
+        onBuy={() => handleAdd('buy')}
+        onSell={() => handleAdd('sell')}
+        onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
       />
+
       {/* Controls */}
       <div className="border-b border-white/5">
         {/* Timeframes row (underline active) */}

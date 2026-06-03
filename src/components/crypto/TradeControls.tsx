@@ -1,4 +1,4 @@
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export type TradeSide = 'buy' | 'sell' | null;
@@ -15,8 +15,10 @@ interface TradeControlsProps {
   activeSide: TradeSide;
   amount: number;
   pct: TradePct | null;
-  /** Price captured when Buy/Sell was pressed (the entry). */
+  /** Average entry price of the open position. */
   entryPrice: number | null;
+  /** Total accumulated quantity of the open position. */
+  positionQty: number;
   /** Live moving price used to compute profit / loss. */
   currentPrice: number;
   /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
@@ -27,6 +29,8 @@ interface TradeControlsProps {
   onRenew: () => void;
   onBuy: () => void;
   onSell: () => void;
+  /** Close the whole open position and realise its profit / loss. */
+  onClose: () => void;
   onRefresh: () => void;
   onAmountChange: (amount: number) => void;
 }
@@ -37,25 +41,32 @@ const fmtMoney = (n: number) => {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: digits });
 };
 
+const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
+
 /**
  * Buy / Refresh / Sell control strip rendered directly above a chart.
  * Identical behaviour for Crypto and Metals:
- *  - Buy / Sell draw a coloured line on the chart at the current price.
+ *  - Buy / Sell open or ADD to a position on that side (multiple presses stack,
+ *    averaging the entry price and accumulating quantity).
+ *  - A dedicated Close button (shown only while a position is open) closes the
+ *    whole position and realises the profit / loss into the balance.
+ *  - The opposite side is disabled while a position is open — close it first.
  *  - Refresh recomputes the analysed Buy/Sell percentages shown below the buttons.
  *  - Amount chips (0.001 / 0.05 / 0.1) sit under the centre refresh button.
- *  - While a side is active, live profit / loss vs the entry is shown.
  */
 export function TradeControls({
   activeSide,
   amount,
   pct,
   entryPrice,
+  positionQty,
   currentPrice,
   timeframeLabel,
   balance,
   onRenew,
   onBuy,
   onSell,
+  onClose,
   onRefresh,
   onAmountChange,
 }: TradeControlsProps) {
@@ -63,14 +74,13 @@ export function TradeControls({
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
 
   const depleted = balance <= 0;
+  const hasPosition = !!activeSide && positionQty > 0;
 
-
-
-  // Profit / loss vs the entry price, in the chosen timeframe.
+  // Profit / loss vs the average entry price, in the chosen timeframe.
   let pnl: { value: number; pct: number; positive: boolean } | null = null;
-  if (activeSide && entryPrice && entryPrice > 0 && currentPrice > 0) {
+  if (hasPosition && entryPrice && entryPrice > 0 && currentPrice > 0) {
     const diff = activeSide === 'buy' ? currentPrice - entryPrice : entryPrice - currentPrice;
-    pnl = { value: diff * amount, pct: (diff / entryPrice) * 100, positive: diff >= 0 };
+    pnl = { value: diff * positionQty, pct: (diff / entryPrice) * 100, positive: diff >= 0 };
   }
 
   return (
@@ -96,18 +106,18 @@ export function TradeControls({
         )}
       </div>
 
-      {/* Buttons row: Buy | Refresh (centre) | Sell */}
+      {/* Buttons row: Buy | Refresh (centre) | Sell — Buy/Sell stack on each press */}
       <div className="flex items-stretch gap-2">
         <button
           onClick={onBuy}
-          disabled={depleted && activeSide !== 'buy'}
+          disabled={depleted || activeSide === 'sell'}
           className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
             activeSide === 'buy'
               ? 'bg-[#0ecb81] text-black border-white ring-2 ring-white/70 shadow-lg'
               : 'bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20'
           }`}
         >
-          {activeSide === 'buy' ? bi('داخستنی کڕین', 'Close Buy') : bi('کڕین', 'Buy')}
+          {bi('کڕین', 'Buy')}{activeSide === 'buy' ? ' +' : ''}
         </button>
 
 
@@ -139,19 +149,33 @@ export function TradeControls({
 
         <button
           onClick={onSell}
-          disabled={depleted && activeSide !== 'sell'}
+          disabled={depleted || activeSide === 'buy'}
           className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
             activeSide === 'sell'
               ? 'bg-[#f6465d] text-white border-white ring-2 ring-white/70 shadow-lg'
               : 'bg-[#f6465d]/10 text-[#f6465d] border-[#f6465d]/40 hover:bg-[#f6465d]/20'
           }`}
         >
-          {activeSide === 'sell' ? bi('داخستنی فرۆشتن', 'Close Sell') : bi('فرۆشتن', 'Sell')}
+          {bi('فرۆشتن', 'Sell')}{activeSide === 'sell' ? ' +' : ''}
         </button>
       </div>
 
+      {/* Dedicated Close button — only while a position is open */}
+      {hasPosition && (
+        <button
+          onClick={onClose}
+          className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-[#f0b90b] text-black border border-[#f0b90b] hover:bg-[#f0b90b]/90 active:scale-95 transition-colors"
+        >
+          <X className="h-4 w-4" />
+          {activeSide === 'buy'
+            ? bi('داخستنی کڕین', 'Close Buy')
+            : bi('داخستنی فرۆشتن', 'Close Sell')}
+          <span className="tabular-nums opacity-80">· {fmtQty(positionQty)}</span>
+        </button>
+      )}
 
-      {/* Live profit / loss vs entry — shown while a side is active */}
+
+      {/* Live profit / loss vs entry — shown while a position is open */}
       {pnl && entryPrice && (
         <div className="mt-2 rounded-lg bg-[#0d1117] border border-white/5 px-2.5 py-2">
           <div className="flex items-center justify-between text-[10px] sm:text-xs">
@@ -160,7 +184,7 @@ export function TradeControls({
               {timeframeLabel ? ` · ${timeframeLabel}` : ''}
             </span>
             <span className="text-[#848e9c]">
-              {bi('چوونەژوورەوە', 'Entry')}: <span className="text-white tabular-nums">{fmtMoney(entryPrice)}</span>
+              {bi('ناوەند', 'Avg')}: <span className="text-white tabular-nums">{fmtMoney(entryPrice)}</span>
             </span>
           </div>
           <div className="mt-1 flex items-baseline justify-between">
@@ -172,7 +196,7 @@ export function TradeControls({
             </span>
           </div>
           <p className="mt-0.5 text-[9px] sm:text-[10px] text-[#848e9c]">
-            {pnl.positive ? bi('قازانج', 'Profit') : bi('زیان', 'Loss')} · {bi('بڕ', 'Qty')} {amount}
+            {pnl.positive ? bi('قازانج', 'Profit') : bi('زیان', 'Loss')} · {bi('بڕ', 'Qty')} {fmtQty(positionQty)}
           </p>
         </div>
       )}
