@@ -405,13 +405,24 @@ export default function CryptoTracker() {
               }}
             />
           ) : (
-            <MetalsDetail
-              key={`${selectedMetalCode}-${metalInitialView}`}
-              metals={metals}
-              selectedCode={selectedMetalCode}
-              isLoading={metalsLoading}
-              initialView={metalInitialView}
-            />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
+                <button
+                  onClick={() => setSelectedMetalCode(null)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition-colors"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span>{bi('پوختە', 'Overview')}</span>
+                </button>
+              </div>
+              <MetalsDetail
+                key={`${selectedMetalCode}-${metalInitialView}`}
+                metals={metals}
+                selectedCode={selectedMetalCode}
+                isLoading={metalsLoading}
+                initialView={metalInitialView}
+              />
+            </div>
           )}
         </div>
       </div>
