@@ -100,6 +100,24 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
   const otherPositionLabel = otherHasLegs ? position!.label : null;
 
+  // Total unrealized P/L across all fills on this chart.
+  const price = livePrice();
+  const unrealizedPnl = useMemo(() => {
+    if (!myPos || price <= 0) return 0;
+    let total = 0;
+    if (myPos.buy?.fills) {
+      for (const f of myPos.buy.fills) {
+        total += (price - f.entryPrice) * f.qty;
+      }
+    }
+    if (myPos.sell?.fills) {
+      for (const f of myPos.sell.fills) {
+        total += (f.entryPrice - price) * f.qty;
+      }
+    }
+    return +total.toFixed(2);
+  }, [myPos, price]);
+
   // Track the live-price direction for the up/down indicator on the buttons.
   const prevPriceRef = useRef<number>(0);
   const [priceDir, setPriceDir] = useState<'up' | 'down' | null>(null);
