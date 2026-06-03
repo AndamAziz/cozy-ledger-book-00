@@ -219,7 +219,7 @@ export interface HoldSuggestion {
  * signal's conviction and the selected chart timeframe. Stronger agreement →
  * ride the move for more candles; a balanced read → a short scalp.
  */
-export function suggestHoldMinutes(pct: BuySellPct, timeframeMinutes: number): HoldSuggestion {
+export function suggestHoldMinutes(pct: Pick<BuySellPct, 'hasData' | 'buyPct' | 'sellPct'>, timeframeMinutes: number): HoldSuggestion {
   if (!pct.hasData || timeframeMinutes <= 0) return { side: 'neutral', minutes: 0 };
   const side: SignalType = pct.buyPct > pct.sellPct ? 'buy' : pct.sellPct > pct.buyPct ? 'sell' : 'neutral';
   if (side === 'neutral') return { side, minutes: 0 };
