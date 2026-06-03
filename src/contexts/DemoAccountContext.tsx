@@ -120,6 +120,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState(DEMO_STARTING_BALANCE);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [realizedPnl, setRealizedPnl] = useState(0);
   // Restore any open position saved before the app was refreshed / closed.
   const [position, setPosition] = useState<OpenPosition | null>(() => {
     try {
