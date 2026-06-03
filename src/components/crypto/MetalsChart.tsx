@@ -376,6 +376,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
     // Reset stale trade-line ref and notify the trade-line effect to redraw.
     tradeLineRef.current = null;
+    markersRef.current = null;
     setSeriesVersion(v => v + 1);
 
     return () => {
