@@ -337,50 +337,55 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     if (currentPrice > 0) updatePrice(pair, currentPrice);
   }, [currentPrice, pair, updatePrice]);
 
-  // Draw the entry line + TP/SL lines for the open position.
+  // Draw the entry line + TP/SL lines for each open leg (buy and/or sell).
   useEffect(() => {
     if (!seriesRef.current) return;
 
-    for (const ref of [tradeLineRef, tpLineRef, slLineRef]) {
-      if (ref.current) {
-        try { seriesRef.current.removePriceLine(ref.current); } catch { /* ignore */ }
-        ref.current = null;
+    // Remove any previously drawn lines (stored as an array in tradeLineRef).
+    if (Array.isArray(tradeLineRef.current)) {
+      for (const line of tradeLineRef.current) {
+        try { seriesRef.current.removePriceLine(line); } catch { /* ignore */ }
       }
     }
+    tradeLineRef.current = [];
 
-    if (!tradeSide || !entryPrice || entryPrice <= 0 || positionQty <= 0) return;
-
-    const isBuy = tradeSide === 'buy';
-    tradeLineRef.current = seriesRef.current.createPriceLine({
-      price: entryPrice,
-      color: isBuy ? '#0ecb81' : '#f6465d',
-      lineWidth: 2,
-      lineStyle: 0,
-      axisLabelVisible: true,
-      title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(positionQty)}`,
-    });
-
-    if (takeProfit && takeProfit > 0) {
-      tpLineRef.current = seriesRef.current.createPriceLine({
-        price: takeProfit,
-        color: '#0ecb81',
-        lineWidth: 1,
-        lineStyle: 2,
+    const drawLeg = (side: 'buy' | 'sell', leg: { entryPrice: number; qty: number; takeProfit: number | null; stopLoss: number | null } | null) => {
+      if (!leg || leg.entryPrice <= 0 || leg.qty <= 0) return;
+      const isBuy = side === 'buy';
+      tradeLineRef.current.push(seriesRef.current.createPriceLine({
+        price: leg.entryPrice,
+        color: isBuy ? '#0ecb81' : '#f6465d',
+        lineWidth: 2,
+        lineStyle: 0,
         axisLabelVisible: true,
-        title: bi('قازانج', 'TP'),
-      });
-    }
-    if (stopLoss && stopLoss > 0) {
-      slLineRef.current = seriesRef.current.createPriceLine({
-        price: stopLoss,
-        color: '#f6465d',
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: bi('زیان', 'SL'),
-      });
-    }
-  }, [tradeSide, entryPrice, positionQty, takeProfit, stopLoss, seriesVersion, language]);
+        title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(leg.qty)}`,
+      }));
+      if (leg.takeProfit && leg.takeProfit > 0) {
+        tradeLineRef.current.push(seriesRef.current.createPriceLine({
+          price: leg.takeProfit,
+          color: '#0ecb81',
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: `${isBuy ? 'B' : 'S'} ${bi('قازانج', 'TP')}`,
+        }));
+      }
+      if (leg.stopLoss && leg.stopLoss > 0) {
+        tradeLineRef.current.push(seriesRef.current.createPriceLine({
+          price: leg.stopLoss,
+          color: '#f6465d',
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: `${isBuy ? 'B' : 'S'} ${bi('زیان', 'SL')}`,
+        }));
+      }
+    };
+
+    drawLeg('buy', buyLeg);
+    drawLeg('sell', sellLeg);
+  }, [buyLeg, sellLeg, seriesVersion, language]);
+
 
 
   const stepper = (
