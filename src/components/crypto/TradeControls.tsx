@@ -75,18 +75,36 @@ export function TradeControls({
 
   return (
     <div className="border-b border-white/5 bg-[#090c11] px-3 py-2.5">
+      {/* Demo account balance */}
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="text-[10px] sm:text-xs">
+          <span className="text-[#848e9c]">{bi('باڵانسی دیمۆ', 'Demo Balance')}: </span>
+          <span className={`font-bold tabular-nums ${depleted ? 'text-[#f6465d]' : 'text-white'}`}>£{fmtMoney(balance)}</span>
+        </div>
+        {depleted && (
+          <button
+            onClick={onRenew}
+            className="px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md bg-[#f0b90b] text-black hover:bg-[#f0b90b]/90 active:scale-95 transition-colors"
+          >
+            {bi('نوێکردنەوەی £100,000', 'Renew £100,000')}
+          </button>
+        )}
+      </div>
+
       {/* Buttons row: Buy | Refresh (centre) | Sell */}
       <div className="flex items-stretch gap-2">
         <button
           onClick={onBuy}
-          className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors active:scale-95 border ${
+          disabled={depleted && activeSide !== 'buy'}
+          className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
             activeSide === 'buy'
               ? 'bg-[#0ecb81] text-black border-[#0ecb81]'
               : 'bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20'
           }`}
         >
-          {bi('کڕین', 'Buy')}
+          {activeSide === 'buy' ? bi('داخستنی کڕین', 'Close Buy') : bi('کڕین', 'Buy')}
         </button>
+
 
         <div className="flex flex-col items-center justify-start gap-1.5 shrink-0">
           <button
