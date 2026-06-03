@@ -682,6 +682,32 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
 
+          {/* RSI / MACD indicator panes + Depth of Market toggle (MT5 style) */}
+          {([['RSI', showRSI, () => setShowRSI(v => !v)], ['MACD', showMACD, () => setShowMACD(v => !v)], [bi('قووڵایی', 'DOM'), showDOM, () => setShowDOM(v => !v)]] as const).map(([label, active, onClick]) => (
+            <button
+              key={label}
+              onClick={onClick}
+              className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+                active ? 'bg-[#f0b90b1a] text-[#f0b90b] border-[#f0b90b55]' : 'text-[#848e9c] border-white/5 hover:text-white'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+
+          <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
+
+          {/* Trade journal opener */}
+          <button
+            onClick={() => setShowJournal(true)}
+            className="shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border text-[#848e9c] border-white/5 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
+          >
+            {bi('تۆمار', 'Journal')}
+          </button>
+
+          <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
+
+
           {/* Chart type */}
           {([['candlestick', bi('شمع', 'Candles')], ['area', bi('ناوچە', 'Area')], ['line', bi('هێڵ', 'Line')]] as const).map(([type, label]) => (
             <button
