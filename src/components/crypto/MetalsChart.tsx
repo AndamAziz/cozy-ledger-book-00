@@ -62,25 +62,35 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
 
-  // Buy/Sell trade controls (identical logic to Crypto).
-  const { balance, applyPnl, renew } = useDemoAccount();
+  // Shared demo account + the single open position (persists across navigation).
+  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
-  const [tradeSide, setTradeSide] = useState<TradeSide>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tpLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const slLineRef = useRef<any>(null);
   const [tradeAmount, setTradeAmount] = useState(0.001);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
-  // Average entry price of the open position (weighted across multiple adds).
-  const [entryPrice, setEntryPrice] = useState<number | null>(null);
-  // Total accumulated quantity of the open position.
-  const [positionQty, setPositionQty] = useState(0);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
+
+  // Unique key for this metal so its position is isolated from other assets.
+  const mySymbol = `metal:${name || ''}`;
 
   const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 
   const livePrice = () => (currentPrice && currentPrice > 0
     ? currentPrice
     : (candles.length ? candles[candles.length - 1].close : 0));
+
+  // The position only counts for THIS chart when it belongs to this metal.
+  const myPos = position && position.symbol === mySymbol ? position : null;
+  const tradeSide: TradeSide = myPos?.side ?? null;
+  const entryPrice = myPos?.entryPrice ?? null;
+  const positionQty = myPos?.qty ?? 0;
+  const takeProfit = myPos?.takeProfit ?? null;
+  const stopLoss = myPos?.stopLoss ?? null;
 
   const handleRefreshTrade = () => {
     const ohlc: OHLCCandle[] = candles.map(c => ({
@@ -92,60 +102,24 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     setTradePct({ hasData, buyPct, sellPct });
   };
 
-  // Realise the profit / loss of the whole open position into the demo balance.
-  const realize = (side: 'buy' | 'sell', entry: number | null, qty: number) => {
-    const exit = livePrice();
-    if (!entry || entry <= 0 || exit <= 0 || qty <= 0) return;
-    const diff = side === 'buy' ? exit - entry : entry - exit;
-    const pnlValue = diff * qty;
-    applyPnl(pnlValue);
-    const profit = pnlValue >= 0;
-    toast({
-      title: profit ? bi('قازانج 🎉', 'Profit 🎉') : bi('زیان', 'Loss'),
-      description: `${profit ? '+' : '−'}$${Math.abs(pnlValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    });
-  };
-
-  // Open or ADD to a position. Multiple presses on the same side stack:
-  // the quantity accumulates and the entry price is averaged. The opposite
-  // side is blocked while a position is open (close it first).
+  // Open or ADD to a position (stacking, averaged). A position on another asset
+  // must be closed first.
   const handleAdd = (side: 'buy' | 'sell') => {
     if (balance <= 0) return;
-    if (tradeSide && tradeSide !== side) return;
     const price = livePrice();
     if (price <= 0) return;
-    if (!tradeSide || positionQty <= 0 || entryPrice == null) {
-      setTradeSide(side);
-      setEntryPrice(price);
-      setPositionQty(tradeAmount);
-    } else {
-      const newQty = +(positionQty + tradeAmount).toFixed(6);
-      setEntryPrice(((entryPrice * positionQty) + price * tradeAmount) / newQty);
-      setPositionQty(newQty);
-    }
+    if (otherPositionLabel) return;
+    if (tradeSide && tradeSide !== side) return;
+    openOrAdd({ symbol: mySymbol, label: name || bi('کانزا', 'Metal'), side, price, amount: tradeAmount });
   };
 
-  // Close the whole position and realise its P/L.
-  const handleClose = () => {
-    if (!tradeSide || positionQty <= 0) return;
-    realize(tradeSide, entryPrice, positionQty);
-    setTradeSide(null);
-    setEntryPrice(null);
-    setPositionQty(0);
-  };
+  // Close the whole position and realise its P/L (handled in context).
+  const handleClose = () => closePosition();
 
-  // When the selected asset changes (e.g. switching to XAUUSD), reset all trade
-  // state so Buy/Sell/Close logic starts fresh on the newly selected asset
-  // instead of carrying over the previous asset's entry price & analysis.
+  // Reset only the analysis percentages when switching metals; the open
+  // position itself persists in the shared context until closed manually.
   useEffect(() => {
-    setTradeSide(null);
-    setEntryPrice(null);
-    setPositionQty(0);
     setTradePct(null);
-    if (tradeLineRef.current && seriesRef.current) {
-      try { seriesRef.current.removePriceLine(tradeLineRef.current); } catch { /* ignore */ }
-      tradeLineRef.current = null;
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name]);
 
