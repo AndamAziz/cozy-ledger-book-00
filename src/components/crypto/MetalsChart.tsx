@@ -549,24 +549,26 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
           title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}${tag} ${fmtQty(f.qty)}${pnlText}`,
         }));
       });
+      // TP / SL apply to the whole leg — bold lines so the user clearly sees
+      // WHERE profit (green) and loss (deep crimson) sit on the chart.
       if (leg.takeProfit && leg.takeProfit > 0) {
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
           price: leg.takeProfit,
           color: '#0ecb81',
-          lineWidth: 1,
+          lineWidth: 2,
           lineStyle: 2,
           axisLabelVisible: true,
-          title: `${isBuy ? 'B' : 'S'} ${bi('قازانج', 'TP')}`,
+          title: `${isBuy ? 'B' : 'S'} ${bi('قازانج', 'TP')} ▲`,
         }));
       }
       if (leg.stopLoss && leg.stopLoss > 0) {
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
           price: leg.stopLoss,
-          color: '#f6465d',
-          lineWidth: 1,
+          color: '#8b0a1a',
+          lineWidth: 2,
           lineStyle: 2,
           axisLabelVisible: true,
-          title: `${isBuy ? 'B' : 'S'} ${bi('زیان', 'SL')}`,
+          title: `${isBuy ? 'B' : 'S'} ${bi('زیان', 'SL')} ▼`,
         }));
       }
     };
