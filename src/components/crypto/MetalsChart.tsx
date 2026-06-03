@@ -728,6 +728,40 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       {/* Chart */}
       <div className="relative h-[250px] sm:h-[320px]">
         <div ref={chartContainerRef} className="absolute inset-0" />
+
+        {/* Live floating P/L overlay (like pro trading apps) */}
+        {(buyLeg || sellLeg) && livePrice() > 0 && (
+          <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 pointer-events-none">
+            {([['buy', buyLeg], ['sell', sellLeg]] as const).map(([side, leg]) => {
+              if (!leg || leg.qty <= 0) return null;
+              const price = livePrice();
+              const diff = side === 'buy' ? price - leg.entryPrice : leg.entryPrice - price;
+              const value = diff * leg.qty;
+              const pct = leg.entryPrice > 0 ? (diff / leg.entryPrice) * 100 : 0;
+              const up = value >= 0;
+              const accent = side === 'buy' ? '#0ecb81' : '#f6465d';
+              return (
+                <div
+                  key={side}
+                  className="rounded-md border bg-[#0a0e17]/85 backdrop-blur px-2 py-1 shadow-lg"
+                  style={{ borderColor: `${accent}55` }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold" style={{ color: accent }}>
+                      {side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}
+                    </span>
+                    <span className="text-[10px] text-[#848e9c] tabular-nums">{fmtQty(leg.qty)} @ ${leg.entryPrice.toLocaleString(undefined, { maximumFractionDigits: leg.entryPrice < 1 ? 6 : 2 })}</span>
+                  </div>
+                  <div className={`text-xs font-extrabold tabular-nums ${up ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+                    {up ? '+' : '−'}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <span className="ms-1 text-[10px] font-bold">({up ? '+' : '−'}{Math.abs(pct).toFixed(2)}%)</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <div
           ref={tooltipRef}
           className="absolute hidden z-20 pointer-events-none rounded-lg border border-[#2a2e3e] p-2.5 shadow-xl"
