@@ -193,6 +193,8 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
           currentPrice={selected.price}
           change24h={selected.change}
           timeframeLabel={RANGE_LABELS[chartRange] ?? chartRange}
+          tradeSymbol={`metal:${selected.name}`}
+          tradeLabel={selected.name}
         />
       ) : (
       <>
