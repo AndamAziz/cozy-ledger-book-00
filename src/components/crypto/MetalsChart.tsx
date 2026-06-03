@@ -76,6 +76,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [showMACD, setShowMACD] = useState(false);
   const [showDOM, setShowDOM] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
+  // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
+  const [showTradeDetails, setShowTradeDetails] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rsiSeriesRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -547,11 +549,17 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         const diff = lp > 0 ? (isBuy ? lp - f.entryPrice : f.entryPrice - lp) : 0;
         const pnlVal = diff * f.qty;
         const inProfit = pnlVal >= 0;
-        // Only the live profit/loss is shown (green = profit, red = loss).
-        // No price/qty clutter — keeps the chart clean like MT5.
-        const pnlText = lp > 0
+        // Live P/L always shown (green = profit, red = loss). When the details
+        // toggle is on, prefix with Buy/Sell label, qty and entry price (MT5).
+        const pnl = lp > 0
           ? `${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : (isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell'));
+          : '';
+        const sideLabel = isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell');
+        const tag = fills.length > 1 ? ` #${i + 1}` : '';
+        let title = pnl || sideLabel;
+        if (showTradeDetails) {
+          title = `${sideLabel}${tag} ${fmtQty(f.qty)} @ $${f.entryPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}${pnl ? ` ${pnl}` : ''}`;
+        }
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
           price: f.entryPrice,
           // Entry label is tinted by live P/L (green = profit, red = loss).
@@ -559,7 +567,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
           lineWidth: 1,
           lineStyle: 0,
           axisLabelVisible: true,
-          title: pnlText,
+          title,
         }));
       });
       // TP / SL apply to the whole leg — bold lines so the user clearly sees
@@ -637,7 +645,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     }));
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails]);
 
   // Enable dragging the TP / SL lines directly on the chart. Releasing the line
   // commits the new level automatically (no extra data entry needed).
@@ -876,6 +884,16 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
             className="shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border text-[#848e9c] border-white/5 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
           >
             {bi('تۆمار', 'Journal')}
+          </button>
+
+          {/* Toggle: show qty + entry price on trade labels, or just P/L */}
+          <button
+            onClick={() => setShowTradeDetails(v => !v)}
+            className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+              showTradeDetails ? 'bg-[#f0b90b1a] text-[#f0b90b] border-[#f0b90b55]' : 'text-[#848e9c] border-white/5 hover:text-white'
+            }`}
+          >
+            {bi('وردەکاری', 'Details')}
           </button>
 
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
