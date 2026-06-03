@@ -123,12 +123,15 @@ export function CoinList({ coins, selectedPair, onSelectPair, isLoading }: CoinL
                 )}
                 <button
                   onClick={() => onSelectPair(coin.pair)}
-                  className={`w-full grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center px-3 py-2.5 transition-colors text-left ${
+                  className={`relative w-full grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center px-3 py-2.5 transition-all text-left ${
                     isSelected
-                      ? 'bg-[#1a1e2e]'
+                      ? 'bg-gradient-to-r from-[#0ecb81]/12 via-[#0ecb81]/5 to-transparent'
                       : 'hover:bg-[#131722]'
                   }`}
                 >
+                  {isSelected && (
+                    <span className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-[#0ecb81] shadow-[0_0_8px_#0ecb81]" />
+                  )}
                   <button
                     onClick={(e) => toggleFavorite(coin.pair, e)}
                     className="p-0.5 rounded hover:bg-[#2a2e3e] transition-colors"

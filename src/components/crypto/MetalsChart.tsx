@@ -500,13 +500,22 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     const drawLeg = (side: 'buy' | 'sell', leg: { entryPrice: number; qty: number; takeProfit: number | null; stopLoss: number | null } | null) => {
       if (!leg || leg.entryPrice <= 0 || leg.qty <= 0) return;
       const isBuy = side === 'buy';
+      // Live profit / loss for this leg — colours the entry label on the axis.
+      const lp = livePrice();
+      const diff = lp > 0 ? (isBuy ? lp - leg.entryPrice : leg.entryPrice - lp) : 0;
+      const pnlVal = diff * leg.qty;
+      const inProfit = pnlVal >= 0;
+      const pnlText = lp > 0
+        ? ` ${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : '';
       tradeLineRef.current.push(seriesRef.current.createPriceLine({
         price: leg.entryPrice,
-        color: isBuy ? '#0ecb81' : '#f6465d',
+        // Entry label is tinted by live P/L (green = profit, red = loss).
+        color: lp > 0 ? (inProfit ? '#0ecb81' : '#f6465d') : (isBuy ? '#0ecb81' : '#f6465d'),
         lineWidth: 2,
         lineStyle: 0,
         axisLabelVisible: true,
-        title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(leg.qty)}`,
+        title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(leg.qty)}${pnlText}`,
       }));
       if (leg.takeProfit && leg.takeProfit > 0) {
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
@@ -557,7 +566,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     }
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
 
 
 
@@ -731,7 +740,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
         {/* Live floating P/L overlay (like pro trading apps) */}
         {(buyLeg || sellLeg) && livePrice() > 0 && (
-          <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 pointer-events-none">
+          <div className="absolute top-2 left-2 z-20 flex flex-col gap-1.5 pointer-events-none">
             {([['buy', buyLeg], ['sell', sellLeg]] as const).map(([side, leg]) => {
               if (!leg || leg.qty <= 0) return null;
               const price = livePrice();
@@ -740,21 +749,27 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
               const pct = leg.entryPrice > 0 ? (diff / leg.entryPrice) * 100 : 0;
               const up = value >= 0;
               const accent = side === 'buy' ? '#0ecb81' : '#f6465d';
+              const pnlColor = up ? '#0ecb81' : '#f6465d';
               return (
                 <div
                   key={side}
-                  className="rounded-md border bg-[#0a0e17]/85 backdrop-blur px-2 py-1 shadow-lg"
-                  style={{ borderColor: `${accent}55` }}
+                  className="relative overflow-hidden rounded-lg border bg-[#0a0e17]/90 backdrop-blur-md ps-2.5 pe-3 py-1.5"
+                  style={{ borderColor: `${pnlColor}66`, boxShadow: `0 4px 18px -6px ${pnlColor}66, inset 0 0 0 1px ${pnlColor}1a` }}
                 >
+                  <span className="absolute inset-y-0 start-0 w-[3px]" style={{ background: accent }} />
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold" style={{ color: accent }}>
+                    <span className="rounded px-1 py-px text-[9px] font-extrabold uppercase tracking-wide" style={{ color: '#0a0e17', background: accent }}>
                       {side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}
                     </span>
                     <span className="text-[10px] text-[#848e9c] tabular-nums">{fmtQty(leg.qty)} @ ${leg.entryPrice.toLocaleString(undefined, { maximumFractionDigits: leg.entryPrice < 1 ? 6 : 2 })}</span>
                   </div>
-                  <div className={`text-xs font-extrabold tabular-nums ${up ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-                    {up ? '+' : '−'}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    <span className="ms-1 text-[10px] font-bold">({up ? '+' : '−'}{Math.abs(pct).toFixed(2)}%)</span>
+                  <div className="mt-0.5 flex items-baseline gap-1.5">
+                    <span className="text-[15px] font-extrabold leading-none tabular-nums" style={{ color: pnlColor }}>
+                      {up ? '+' : '−'}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="rounded px-1 text-[10px] font-bold tabular-nums" style={{ color: pnlColor, background: `${pnlColor}1f` }}>
+                      {up ? '▲' : '▼'} {Math.abs(pct).toFixed(2)}%
+                    </span>
                   </div>
                 </div>
               );
