@@ -52,6 +52,8 @@ export function TradeControls({
   entryPrice,
   currentPrice,
   timeframeLabel,
+  balance,
+  onRenew,
   onBuy,
   onSell,
   onRefresh,
@@ -59,6 +61,10 @@ export function TradeControls({
 }: TradeControlsProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+
+  const depleted = balance <= 0;
+
+
 
   // Profit / loss vs the entry price, in the chosen timeframe.
   let pnl: { value: number; pct: number; positive: boolean } | null = null;
