@@ -26,6 +26,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const priceLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tradeLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
   // Tracks the current series identity so we only auto-fit the view when the
   // timeframe / symbol / chart type changes — never on live price ticks (which
