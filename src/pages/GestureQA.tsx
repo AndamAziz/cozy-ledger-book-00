@@ -70,6 +70,8 @@ const CHECKS: CheckItem[] = [
 
 const STORAGE_KEY = 'gesture-qa-checklist';
 
+type ChartKind = 'crypto' | 'metals';
+
 export default function GestureQA() {
   const { language, dir } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
@@ -79,38 +81,44 @@ export default function GestureQA() {
     return 'ios';
   });
 
+  // Each chart (Crypto / Metals) gets its own independent checklist per OS.
+  const [chart, setChart] = useState<ChartKind>('crypto');
+
+  const keyFor = (o: OS, c: ChartKind) => `${STORAGE_KEY}-${o}-${c}`;
+
   const [checked, setChecked] = useState<Record<string, boolean>>(() => {
     try {
-      const raw = localStorage.getItem(`${STORAGE_KEY}-${os}`);
+      const raw = localStorage.getItem(keyFor(os, chart));
       return raw ? JSON.parse(raw) : {};
     } catch {
       return {};
     }
   });
 
-  // Reload saved state whenever the selected OS changes (separate checklist per OS).
+  // Reload saved state whenever the selected OS or chart changes.
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(`${STORAGE_KEY}-${os}`);
+      const raw = localStorage.getItem(keyFor(os, chart));
       setChecked(raw ? JSON.parse(raw) : {});
     } catch {
       setChecked({});
     }
-  }, [os]);
+  }, [os, chart]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(`${STORAGE_KEY}-${os}`, JSON.stringify(checked));
+      localStorage.setItem(keyFor(os, chart), JSON.stringify(checked));
     } catch {
       /* ignore */
     }
-  }, [checked, os]);
+  }, [checked, os, chart]);
 
   const toggle = (id: string) => setChecked((c) => ({ ...c, [id]: !c[id] }));
   const reset = () => setChecked({});
 
   const doneCount = useMemo(() => CHECKS.filter((c) => checked[c.id]).length, [checked]);
   const allDone = doneCount === CHECKS.length;
+
 
   // Live gesture sandbox: a pinch-zoomable / pan box inside a scrollable page,
   // so the user can feel scroll-vs-zoom before testing the real chart.
@@ -211,10 +219,37 @@ export default function GestureQA() {
           })}
         </div>
 
+        {/* Chart selector — independent checklist per chart */}
+        <div className="grid grid-cols-2 gap-2">
+          {(['crypto', 'metals'] as ChartKind[]).map((c) => {
+            const active = chart === c;
+            return (
+              <button
+                key={c}
+                onClick={() => setChart(c)}
+                className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-bold transition-colors ${
+                  active
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {c === 'crypto' ? bi('چارتی کریپتۆ', 'Crypto chart') : bi('چارتی فلز', 'Metals chart')}
+              </button>
+            );
+          })}
+        </div>
+
+
+
         {/* Progress */}
         <div className="rounded-lg border border-border bg-card p-3">
           <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="font-bold">{bi('پێشکەوتن', 'Progress')}</span>
+            <span className="font-bold">
+              {bi('پێشکەوتن', 'Progress')}
+              <span className="ms-1.5 font-normal text-muted-foreground">
+                · {chart === 'crypto' ? bi('کریپتۆ', 'Crypto') : bi('فلز', 'Metals')} · {os === 'ios' ? 'iOS' : bi('ئەندرۆید', 'Android')}
+              </span>
+            </span>
             <span className={`font-bold tabular-nums ${allDone ? 'text-[#0ecb81]' : 'text-muted-foreground'}`}>
               {doneCount}/{CHECKS.length}
             </span>
