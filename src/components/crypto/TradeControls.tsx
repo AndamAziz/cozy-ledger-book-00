@@ -226,17 +226,37 @@ export function TradeControls({
           </div>
         </div>
 
-        {/* Close this leg */}
+        {/* Close this leg — shows the live P/L right on the button (green/red) */}
         <button
           onClick={() => onClose(side)}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[11px] sm:text-xs font-bold bg-[#f0b90b] text-black border border-[#f0b90b] hover:bg-[#f0b90b]/90 active:scale-95 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-md text-[11px] sm:text-xs font-bold bg-[#1a1e2e] text-white border border-white/10 hover:bg-[#252a3a] active:scale-95 transition-colors"
         >
-          <X className="h-3.5 w-3.5" />
-          {isBuy ? bi('داخستنی کڕین', 'Close Buy') : bi('داخستنی فرۆشتن', 'Close Sell')}
-          <span className="tabular-nums opacity-80">· {fmtQty(leg.qty)}</span>
+          <X className="h-3.5 w-3.5 opacity-70" />
+          <span>{isBuy ? bi('داخستنی کڕین', 'Close Buy') : bi('داخستنی فرۆشتن', 'Close Sell')}</span>
+          {pnl && (
+            <span
+              className="px-1.5 py-0.5 rounded tabular-nums"
+              style={{ color: pnl.positive ? '#0ecb81' : '#f6465d', background: `${pnl.positive ? '#0ecb81' : '#f6465d'}1f` }}
+            >
+              {pnl.positive ? '+' : '−'}${fmtMoney(Math.abs(pnl.value))}
+            </span>
+          )}
         </button>
       </div>
     );
+  };
+
+  // Batch close helpers — close legs by profit / loss / all at once.
+  const profitSum = (buyPnl?.positive ? buyPnl.value : 0) + (sellPnl?.positive ? sellPnl.value : 0);
+  const lossSum = (buyPnl && !buyPnl.positive ? buyPnl.value : 0) + (sellPnl && !sellPnl.positive ? sellPnl.value : 0);
+  const hasProfit = !!(buyPnl?.positive || sellPnl?.positive);
+  const hasLoss = !!((buyPnl && !buyPnl.positive) || (sellPnl && !sellPnl.positive));
+
+  const closeBatch = (mode: 'profit' | 'loss' | 'all') => {
+    const wantBuy = mode === 'all' ? !!(buyLeg && buyLeg.qty > 0) : buyPnl ? (mode === 'profit' ? buyPnl.positive : !buyPnl.positive) : false;
+    const wantSell = mode === 'all' ? !!(sellLeg && sellLeg.qty > 0) : sellPnl ? (mode === 'profit' ? sellPnl.positive : !sellPnl.positive) : false;
+    if (wantBuy) onClose('buy');
+    if (wantSell) onClose('sell');
   };
 
   return (
@@ -350,6 +370,36 @@ export function TradeControls({
           )}
           {buyLeg && buyLeg.qty > 0 && <LegPanel side="buy" leg={buyLeg} />}
           {sellLeg && sellLeg.qty > 0 && <LegPanel side="sell" leg={sellLeg} />}
+
+          {/* Batch close: Close Profit / Close Loss / Close All (MT5 style) */}
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => closeBatch('profit')}
+              disabled={!hasProfit}
+              className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-bold border bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20 active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <span>{bi('داخستنی قازانج', 'Close Profit')}</span>
+              <span className="tabular-nums text-[#0ecb81]">+${fmtMoney(Math.abs(profitSum))}</span>
+            </button>
+            <button
+              onClick={() => closeBatch('loss')}
+              disabled={!hasLoss}
+              className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-bold border bg-[#f6465d]/10 text-[#f6465d] border-[#f6465d]/40 hover:bg-[#f6465d]/20 active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <span>{bi('داخستنی زیان', 'Close Loss')}</span>
+              <span className="tabular-nums text-[#f6465d]">−${fmtMoney(Math.abs(lossSum))}</span>
+            </button>
+            <button
+              onClick={() => closeBatch('all')}
+              disabled={!hasAny}
+              className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-bold border bg-[#1a1e2e] text-white border-white/10 hover:bg-[#252a3a] active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <span>{bi('داخستنی هەموو', 'Close All')}</span>
+              <span className="tabular-nums" style={{ color: totalPnl >= 0 ? '#0ecb81' : '#f6465d' }}>
+                {totalPnl >= 0 ? '+' : '−'}${fmtMoney(Math.abs(totalPnl))}
+              </span>
+            </button>
+          </div>
         </div>
       ) : null}
 

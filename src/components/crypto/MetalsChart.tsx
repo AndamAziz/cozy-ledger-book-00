@@ -11,7 +11,7 @@ import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
-import { PnLSummaryPanel } from '@/components/crypto/PnLSummaryPanel';
+
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import type { OHLCCandle } from '@/lib/krakenApi';
 
@@ -85,7 +85,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const macdSignalRef = useRef<any>(null);
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -116,23 +116,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
   const otherPositionLabel = otherHasLegs ? position!.label : null;
 
-  // Total unrealized P/L across all fills on this chart.
+  // (Live per-trade P/L is shown directly on the chart, MT5-style, below.)
   const price = livePrice();
-  const unrealizedPnl = useMemo(() => {
-    if (!myPos || price <= 0) return 0;
-    let total = 0;
-    if (myPos.buy?.fills) {
-      for (const f of myPos.buy.fills) {
-        total += (price - f.entryPrice) * f.qty;
-      }
-    }
-    if (myPos.sell?.fills) {
-      for (const f of myPos.sell.fills) {
-        total += (f.entryPrice - price) * f.qty;
-      }
-    }
-    return +total.toFixed(2);
-  }, [myPos, price]);
 
   // Track the live-price direction for the up/down indicator on the buttons.
   const prevPriceRef = useRef<number>(0);
@@ -906,7 +891,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       <div className="relative h-[250px] sm:h-[320px]">
         <div ref={chartContainerRef} className="absolute inset-0" />
 
-        <PnLSummaryPanel realizedPnl={realizedPnl} unrealizedPnl={unrealizedPnl} language={language} />
+
 
         {/* Depth-of-market ladder (MT5 style) overlaid on the right edge */}
         {showDOM && currentPrice > 0 && (
