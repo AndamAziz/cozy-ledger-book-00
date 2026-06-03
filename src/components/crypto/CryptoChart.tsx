@@ -435,7 +435,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     }
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
 
 
 
