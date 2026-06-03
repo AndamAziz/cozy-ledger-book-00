@@ -344,7 +344,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     });
   }, [currentPrice, symbol]);
 
-  // Draw the Buy (green) / Sell (red) line from the moving price line.
+  // Draw the average-entry line for the open position (green buy / red sell).
   useEffect(() => {
     if (!seriesRef.current) return;
 
@@ -353,18 +353,19 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       tradeLineRef.current = null;
     }
 
-    if (!tradeSide || currentPrice <= 0) return;
+    if (!tradeSide || !entryPrice || entryPrice <= 0 || positionQty <= 0) return;
 
     const isBuy = tradeSide === 'buy';
     tradeLineRef.current = seriesRef.current.createPriceLine({
-      price: currentPrice,
+      price: entryPrice,
       color: isBuy ? '#0ecb81' : '#f6465d',
       lineWidth: 2,
       lineStyle: 0,
       axisLabelVisible: true,
-      title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${tradeAmount}`,
+      title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(positionQty)}`,
     });
-  }, [tradeSide, tradeAmount, currentPrice, seriesVersion, language]);
+  }, [tradeSide, entryPrice, positionQty, seriesVersion, language]);
+
 
   const stepper = (
     label: string,
