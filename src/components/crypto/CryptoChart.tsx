@@ -83,22 +83,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
   const otherPositionLabel = otherHasLegs ? position!.label : null;
 
-  // Total unrealized P/L across all fills on this chart.
-  const unrealizedPnl = useMemo(() => {
-    if (!myPos || currentPrice <= 0) return 0;
-    let total = 0;
-    if (myPos.buy?.fills) {
-      for (const f of myPos.buy.fills) {
-        total += (currentPrice - f.entryPrice) * f.qty;
-      }
-    }
-    if (myPos.sell?.fills) {
-      for (const f of myPos.sell.fills) {
-        total += (f.entryPrice - currentPrice) * f.qty;
-      }
-    }
-    return +total.toFixed(2);
-  }, [myPos, currentPrice]);
+  // (Live per-trade P/L is shown directly on the chart, MT5-style, below.)
 
   // Track the live-price direction for the up/down indicator on the buttons.
   const prevPriceRef = useRef<number>(0);
