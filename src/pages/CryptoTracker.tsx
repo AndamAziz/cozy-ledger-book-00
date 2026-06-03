@@ -30,7 +30,7 @@ export default function CryptoTracker() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
-  const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
+  const [activeTab, setActiveTab] = useState<TrackerTab>('metals');
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(60);
@@ -39,7 +39,7 @@ export default function CryptoTracker() {
   const [coinsMap, setCoinsMap] = useState<Map<string, KrakenCoin>>(new Map());
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedForexCode, setSelectedForexCode] = useState<string | null>(null);
-  const [selectedMetalCode, setSelectedMetalCode] = useState<string | null>(null);
+  const [selectedMetalCode, setSelectedMetalCode] = useState<string | null>('XAU');
   const [metalInitialView, setMetalInitialView] = useState<'market' | 'analysis'>('market');
   const coinsRef = useRef(coinsMap);
   coinsRef.current = coinsMap;
