@@ -177,7 +177,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
 
       const { data } = await supabase
         .from('demo_accounts')
-        .select('balance')
+        .select('balance, realized_pnl')
         .eq('user_id', user.id)
         .maybeSingle();
       if (!active) return;
