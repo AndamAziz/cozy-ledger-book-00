@@ -206,6 +206,11 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         minBarSpacing: preset.minBarSpacing,
         ticksVisible: true,
       },
+      // One-finger VERTICAL swipes are released to the page so the user can
+      // scroll up/down; only horizontal pan + pinch-zoom stay on the chart.
+      handleScroll: {
+        vertTouchDrag: false,
+      },
       width: rect.width || 600,
       height: rect.height || 400,
     });
