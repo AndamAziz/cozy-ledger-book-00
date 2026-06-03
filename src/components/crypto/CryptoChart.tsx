@@ -71,7 +71,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     const profit = pnlValue >= 0;
     toast({
       title: profit ? bi('قازانج 🎉', 'Profit 🎉') : bi('زیان', 'Loss'),
-      description: `${profit ? '+' : '−'}£${Math.abs(pnlValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      description: `${profit ? '+' : '−'}$${Math.abs(pnlValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     });
   };
 
