@@ -74,6 +74,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [showMACD, setShowMACD] = useState(false);
   const [showDOM, setShowDOM] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
+  // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
+  const [showTradeDetails, setShowTradeDetails] = useState(false);
 
   // Shared demo account + the single open position (persists across navigation).
   const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
