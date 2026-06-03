@@ -944,6 +944,26 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       </div>
 
 
+      {/* Buy / Refresh / Sell controls directly above the chart (MT5 style) */}
+      <TradeControls
+        amount={tradeAmount}
+        pct={tradePct}
+        currentPrice={livePrice()}
+        priceDir={priceDir}
+        buyLeg={buyLeg}
+        sellLeg={sellLeg}
+        otherPositionLabel={otherPositionLabel}
+        timeframeLabel={RANGES.find(r => r.key === range)?.label}
+        timeframeMinutes={RANGE_MINUTES[range] ?? 5}
+        balance={balance}
+        onRenew={renew}
+        onBuy={() => handleAdd('buy')}
+        onSell={() => handleAdd('sell')}
+        onClose={handleClose}
+        onRefresh={handleRefreshTrade}
+        onAmountChange={setTradeAmount}
+        onSetTpSl={setTpSl}
+      />
 
       {/* Chart — grows to fill the screen in landscape (MT5-style) */}
       <div className="relative h-[72vh] sm:h-[340px] landscape:h-[88vh] landscape:max-h-none">
