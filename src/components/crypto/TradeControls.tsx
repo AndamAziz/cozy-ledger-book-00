@@ -134,13 +134,14 @@ export function TradeControls({
 
         <button
           onClick={onSell}
-          className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors active:scale-95 border ${
+          disabled={depleted && activeSide !== 'sell'}
+          className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
             activeSide === 'sell'
               ? 'bg-[#f6465d] text-white border-[#f6465d]'
               : 'bg-[#f6465d]/10 text-[#f6465d] border-[#f6465d]/40 hover:bg-[#f6465d]/20'
           }`}
         >
-          {bi('فرۆشتن', 'Sell')}
+          {activeSide === 'sell' ? bi('داخستنی فرۆشتن', 'Close Sell') : bi('فرۆشتن', 'Sell')}
         </button>
       </div>
 
