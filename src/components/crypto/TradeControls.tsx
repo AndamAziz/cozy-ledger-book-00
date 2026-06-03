@@ -1,4 +1,5 @@
 import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { suggestHoldMinutes, suggestHoldAcrossTimeframes } from '@/lib/indicators';
 
