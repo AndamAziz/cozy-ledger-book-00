@@ -175,7 +175,7 @@ export function TradeControls({
     const main = s.slice(0, -2);
     const last = s.slice(-2);
     return (
-      <span className="flex items-baseline font-bold leading-none tabular-nums" style={{ color }}>
+      <span className="relative flex items-baseline font-bold leading-none tabular-nums" style={{ color }}>
         <span className="text-xs sm:text-sm opacity-90">{main}</span>
         <span className="text-lg sm:text-xl">{last}</span>
       </span>
