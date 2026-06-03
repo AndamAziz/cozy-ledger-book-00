@@ -35,6 +35,8 @@ interface TradeControlsProps {
   otherPositionLabel: string | null;
   /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
   timeframeLabel?: string;
+  /** Duration (minutes) of one candle of the selected timeframe — for the hold hint. */
+  timeframeMinutes?: number;
   /** Virtual demo account balance ($). */
   balance: number;
   /** Reset the demo balance back to the starting amount. */
