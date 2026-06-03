@@ -343,6 +343,7 @@ export function useDemoAccount(): DemoAccountValue {
       loading: false,
       ready: false,
       position: null,
+      realizedPnl: 0,
       openOrAdd: () => {},
       updatePrice: () => {},
       setTpSl: () => {},
