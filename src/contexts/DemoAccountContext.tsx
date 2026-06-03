@@ -9,6 +9,31 @@ export type PositionSide = 'buy' | 'sell';
 
 /** localStorage key used to persist the open position across refreshes. */
 const POSITION_KEY = 'demo_open_position';
+/** localStorage key used to persist the closed-trade journal. */
+const JOURNAL_KEY = 'demo_trade_journal';
+/** Maximum journal entries kept (newest first). */
+const JOURNAL_LIMIT = 200;
+
+/** How a closed trade was settled. */
+export type CloseReason = 'manual' | 'tp' | 'sl';
+
+/**
+ * One CLOSED trade recorded in the journal / trade history (MT5 style).
+ * Stored newest-first so the history table reads top-to-bottom.
+ */
+export interface TradeRecord {
+  id: string;
+  symbol: string;
+  label: string;
+  side: PositionSide;
+  entryPrice: number;
+  exitPrice: number;
+  qty: number;
+  pnl: number;
+  openedAt: number; // epoch seconds
+  closedAt: number; // epoch seconds
+  reason: CloseReason;
+}
 
 /**
  * A single individual fill (one Buy or one Sell press) at its OWN price.
@@ -94,6 +119,10 @@ interface DemoAccountValue {
   position: OpenPosition | null;
   /** Cumulative realized P/L from all closed trades. */
   realizedPnl: number;
+  /** Closed-trade history (newest first), persisted locally. */
+  journal: TradeRecord[];
+  /** Clear the entire trade journal. */
+  clearJournal: () => void;
   /** Open a new leg or stack onto an existing one on the same asset+side. */
   openOrAdd: (args: { symbol: string; label: string; side: PositionSide; price: number; amount: number }) => void;
   /** Update the live price for the asset that owns the position; triggers TP/SL. */
@@ -121,6 +150,23 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [realizedPnl, setRealizedPnl] = useState(0);
+  // Closed-trade journal, restored from localStorage (newest first).
+  const [journal, setJournal] = useState<TradeRecord[]>(() => {
+    try {
+      const raw = localStorage.getItem(JOURNAL_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist the journal whenever it changes.
+  useEffect(() => {
+    try { localStorage.setItem(JOURNAL_KEY, JSON.stringify(journal)); } catch { /* ignore */ }
+  }, [journal]);
+
+  const clearJournal = useCallback(() => setJournal([]), []);
   // Restore any open position saved before the app was refreshed / closed.
   const [position, setPosition] = useState<OpenPosition | null>(() => {
     try {
@@ -230,15 +276,36 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
     persist(DEMO_STARTING_BALANCE);
   }, [persist]);
 
-  // Realise a closed leg into the balance + announce it. Deferred so it never
-  // runs inside a setState updater.
-  const settle = useCallback((side: PositionSide, entry: number, qty: number, exit: number, reason: 'manual' | 'tp' | 'sl') => {
+  // Realise a closed leg into the balance, record it in the journal + announce
+  // it. Deferred so it never runs inside a setState updater.
+  const settle = useCallback((
+    side: PositionSide,
+    entry: number,
+    qty: number,
+    exit: number,
+    reason: CloseReason,
+    meta: { symbol: string; label: string; openedAt: number },
+  ) => {
     const diff = side === 'buy' ? exit - entry : entry - exit;
     const pnlValue = diff * qty;
     const profit = pnlValue >= 0;
+    const record: TradeRecord = {
+      id: newFillId(),
+      symbol: meta.symbol,
+      label: meta.label,
+      side,
+      entryPrice: entry,
+      exitPrice: exit,
+      qty,
+      pnl: +pnlValue.toFixed(2),
+      openedAt: meta.openedAt,
+      closedAt: Math.floor(Date.now() / 1000),
+      reason,
+    };
     queueMicrotask(() => {
       applyPnl(pnlValue);
       setRealizedPnl(prev => +(prev + pnlValue).toFixed(2));
+      setJournal(prev => [record, ...prev].slice(0, JOURNAL_LIMIT));
       const head = reason === 'tp'
         ? bi('بەرزبوونەوەی قازانج 🎯', 'Take Profit hit 🎯')
         : reason === 'sl'
@@ -290,7 +357,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
         const hitTp = buy.takeProfit != null && price >= buy.takeProfit;
         const hitSl = buy.stopLoss != null && price <= buy.stopLoss;
         if (hitTp || hitSl) {
-          settle('buy', buy.entryPrice, buy.qty, hitTp ? buy.takeProfit! : buy.stopLoss!, hitTp ? 'tp' : 'sl');
+          settle('buy', buy.entryPrice, buy.qty, hitTp ? buy.takeProfit! : buy.stopLoss!, hitTp ? 'tp' : 'sl', { symbol: prev.symbol, label: prev.label, openedAt: buy.entryTime });
           buy = null;
         }
       }
@@ -298,7 +365,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
         const hitTp = sell.takeProfit != null && price <= sell.takeProfit;
         const hitSl = sell.stopLoss != null && price >= sell.stopLoss;
         if (hitTp || hitSl) {
-          settle('sell', sell.entryPrice, sell.qty, hitTp ? sell.takeProfit! : sell.stopLoss!, hitTp ? 'tp' : 'sl');
+          settle('sell', sell.entryPrice, sell.qty, hitTp ? sell.takeProfit! : sell.stopLoss!, hitTp ? 'tp' : 'sl', { symbol: prev.symbol, label: prev.label, openedAt: sell.entryTime });
           sell = null;
         }
       }
@@ -322,14 +389,14 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
       if (!prev || !prev[side] || prev[side]!.qty <= 0) return prev;
       const leg = prev[side]!;
       const exit = prev.currentPrice > 0 ? prev.currentPrice : leg.entryPrice;
-      settle(side, leg.entryPrice, leg.qty, exit, 'manual');
+      settle(side, leg.entryPrice, leg.qty, exit, 'manual', { symbol: prev.symbol, label: prev.label, openedAt: leg.entryTime });
       const next = { ...prev, [side]: null };
       return hasOpenLeg(next) ? next : null;
     });
   }, [settle]);
 
   return (
-    <DemoAccountContext.Provider value={{ balance, loading, ready: !!userId, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition, applyPnl, renew }}>
+    <DemoAccountContext.Provider value={{ balance, loading, ready: !!userId, position, realizedPnl, journal, clearJournal, openOrAdd, updatePrice, setTpSl, closePosition, applyPnl, renew }}>
       {children}
     </DemoAccountContext.Provider>
   );
@@ -345,6 +412,8 @@ export function useDemoAccount(): DemoAccountValue {
       ready: false,
       position: null,
       realizedPnl: 0,
+      journal: [],
+      clearJournal: () => {},
       openOrAdd: () => {},
       updatePrice: () => {},
       setTpSl: () => {},

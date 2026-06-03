@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, Time, createSeriesMarkers } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, HistogramSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
+import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
+import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
+import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
 import { PnLSummaryPanel } from '@/components/crypto/PnLSummaryPanel';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -37,6 +40,15 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const slLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
+  // Indicator pane series (RSI + MACD) drawn in their own panes below price.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rsiSeriesRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const macdHistRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const macdLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const macdSignalRef = useRef<any>(null);
   // Tracks the current series identity so we only auto-fit the view when the
   // timeframe / symbol / chart type changes — never on live price ticks (which
   // would otherwise reset the user's manual zoom & pan).
@@ -50,6 +62,11 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [chartType, setChartType] = useState<'candlestick' | 'line' | 'area'>('candlestick');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
+  // MT5-style extras: RSI / MACD panes, depth-of-market ladder, trade journal.
+  const [showRSI, setShowRSI] = useState(false);
+  const [showMACD, setShowMACD] = useState(false);
+  const [showDOM, setShowDOM] = useState(false);
+  const [showJournal, setShowJournal] = useState(false);
 
   // Shared demo account + the single open position (persists across navigation).
   const { balance, renew, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
@@ -470,6 +487,86 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
 
+  // Create / remove the RSI and MACD panes (and their data) when toggled or
+  // when the chart is recreated. Each indicator gets its own pane below price.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const removeAll = () => {
+      [rsiSeriesRef, macdHistRef, macdLineRef, macdSignalRef].forEach((ref) => {
+        if (ref.current) {
+          try { chart.removeSeries(ref.current); } catch { /* ignore */ }
+          ref.current = null;
+        }
+      });
+    };
+    removeAll();
+
+    let paneIndex = 1;
+
+    if (showRSI) {
+      const s = chart.addSeries(LineSeries, {
+        color: '#f0b90b', lineWidth: 2,
+        priceLineVisible: false, lastValueVisible: true,
+        priceFormat: { type: 'custom', minMove: 0.01, formatter: (v: number) => v.toFixed(0) },
+      }, paneIndex);
+      if (candles.length) s.setData(rsiSeries(candles).map((d) => ({ time: d.time as Time, value: d.value })));
+      try {
+        s.createPriceLine({ price: 70, color: '#f6465d', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+        s.createPriceLine({ price: 30, color: '#0ecb81', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+      } catch { /* ignore */ }
+      rsiSeriesRef.current = s;
+      try { chart.panes()[paneIndex]?.setStretchFactor(1); } catch { /* ignore */ }
+      paneIndex++;
+    }
+
+    if (showMACD) {
+      const data = candles.length ? macdSeries(candles) : { macd: [], signal: [], histogram: [] };
+      const hist = chart.addSeries(HistogramSeries, {
+        priceLineVisible: false, lastValueVisible: false,
+      }, paneIndex);
+      hist.setData(data.histogram.map((d) => ({
+        time: d.time as Time, value: d.value,
+        color: d.value >= 0 ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)',
+      })));
+      const macdL = chart.addSeries(LineSeries, { color: '#2962ff', lineWidth: 2, priceLineVisible: false, lastValueVisible: false }, paneIndex);
+      macdL.setData(data.macd.map((d) => ({ time: d.time as Time, value: d.value })));
+      const sigL = chart.addSeries(LineSeries, { color: '#f0b90b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, paneIndex);
+      sigL.setData(data.signal.map((d) => ({ time: d.time as Time, value: d.value })));
+      macdHistRef.current = hist;
+      macdLineRef.current = macdL;
+      macdSignalRef.current = sigL;
+      try { chart.panes()[paneIndex]?.setStretchFactor(1); } catch { /* ignore */ }
+    }
+
+    // Keep the price pane dominant relative to indicator panes.
+    try { chart.panes()[0]?.setStretchFactor(showRSI || showMACD ? 3 : 1); } catch { /* ignore */ }
+
+    return removeAll;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRSI, showMACD, seriesVersion]);
+
+  // Live-update the indicator pane data as new candles arrive.
+  useEffect(() => {
+    if (!candles.length) return;
+    if (rsiSeriesRef.current) {
+      rsiSeriesRef.current.setData(rsiSeries(candles).map((d) => ({ time: d.time as Time, value: d.value })));
+    }
+    if (macdHistRef.current && macdLineRef.current && macdSignalRef.current) {
+      const data = macdSeries(candles);
+      macdHistRef.current.setData(data.histogram.map((d) => ({
+        time: d.time as Time, value: d.value,
+        color: d.value >= 0 ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)',
+      })));
+      macdLineRef.current.setData(data.macd.map((d) => ({ time: d.time as Time, value: d.value })));
+      macdSignalRef.current.setData(data.signal.map((d) => ({ time: d.time as Time, value: d.value })));
+    }
+  }, [candles]);
+
+
+
+
 
 
   const stepper = (
@@ -585,6 +682,32 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
 
+          {/* RSI / MACD indicator panes + Depth of Market toggle (MT5 style) */}
+          {([['RSI', showRSI, () => setShowRSI(v => !v)], ['MACD', showMACD, () => setShowMACD(v => !v)], [bi('قووڵایی', 'DOM'), showDOM, () => setShowDOM(v => !v)]] as const).map(([label, active, onClick]) => (
+            <button
+              key={label}
+              onClick={onClick}
+              className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+                active ? 'bg-[#f0b90b1a] text-[#f0b90b] border-[#f0b90b55]' : 'text-[#848e9c] border-white/5 hover:text-white'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+
+          <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
+
+          {/* Trade journal opener */}
+          <button
+            onClick={() => setShowJournal(true)}
+            className="shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border text-[#848e9c] border-white/5 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
+          >
+            {bi('تۆمار', 'Journal')}
+          </button>
+
+          <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
+
+
           {/* Chart type */}
           {([['candlestick', bi('شمع', 'Candles')], ['area', bi('ناوچە', 'Area')], ['line', bi('هێڵ', 'Line')]] as const).map(([type, label]) => (
             <button
@@ -639,6 +762,18 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
         <PnLSummaryPanel realizedPnl={realizedPnl} unrealizedPnl={unrealizedPnl} language={language} />
 
+        {/* Depth-of-market ladder (MT5 style) overlaid on the right edge */}
+        {showDOM && currentPrice > 0 && (
+          <div className="absolute top-2 end-2 z-20 w-[150px] sm:w-[190px]">
+            <OrderBookPanel
+              symbol={`${symbol}/USD`}
+              currentPrice={currentPrice}
+              onClose={() => setShowDOM(false)}
+            />
+          </div>
+        )}
+
+
         {/* Live floating P/L overlay (like pro trading apps) */}
         {(buyLeg || sellLeg) && currentPrice > 0 && (
           <div className="absolute top-2 left-2 z-10 flex max-h-[80%] flex-col gap-1.5 overflow-hidden pointer-events-none">
@@ -691,6 +826,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           </div>
         )}
       </div>
+
+      {/* Trade history / journal modal */}
+      <TradeJournalModal open={showJournal} onClose={() => setShowJournal(false)} />
     </div>
   );
 }
