@@ -292,6 +292,28 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     });
   }, [currentPrice, symbol]);
 
+  // Draw the Buy (green) / Sell (red) line from the moving price line.
+  useEffect(() => {
+    if (!seriesRef.current) return;
+
+    if (tradeLineRef.current) {
+      try { seriesRef.current.removePriceLine(tradeLineRef.current); } catch { /* ignore */ }
+      tradeLineRef.current = null;
+    }
+
+    if (!tradeSide || currentPrice <= 0) return;
+
+    const isBuy = tradeSide === 'buy';
+    tradeLineRef.current = seriesRef.current.createPriceLine({
+      price: currentPrice,
+      color: isBuy ? '#0ecb81' : '#f6465d',
+      lineWidth: 2,
+      lineStyle: 0,
+      axisLabelVisible: true,
+      title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${tradeAmount}`,
+    });
+  }, [tradeSide, tradeAmount, currentPrice, seriesVersion, language]);
+
   const stepper = (
     label: string,
     value: number,
