@@ -352,25 +352,38 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     }
     tradeLineRef.current = [];
 
-    const drawLeg = (side: 'buy' | 'sell', leg: { entryPrice: number; qty: number; takeProfit: number | null; stopLoss: number | null } | null) => {
-      if (!leg || leg.entryPrice <= 0 || leg.qty <= 0) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const legFills = (leg: any): { id: string; entryPrice: number; qty: number; entryTime: number }[] =>
+      (leg?.fills && leg.fills.length)
+        ? leg.fills
+        : (leg ? [{ id: 'agg', entryPrice: leg.entryPrice, qty: leg.qty, entryTime: leg.entryTime }] : []);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const drawLeg = (side: 'buy' | 'sell', leg: any) => {
+      if (!leg || leg.qty <= 0) return;
       const isBuy = side === 'buy';
-      // Live profit / loss for this leg — colours the entry label on the axis.
-      const diff = currentPrice > 0 ? (isBuy ? currentPrice - leg.entryPrice : leg.entryPrice - currentPrice) : 0;
-      const pnlVal = diff * leg.qty;
-      const inProfit = pnlVal >= 0;
-      const pnlText = currentPrice > 0
-        ? ` ${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        : '';
-      tradeLineRef.current.push(seriesRef.current.createPriceLine({
-        price: leg.entryPrice,
-        // Entry label is tinted by live P/L (green = profit, red = loss).
-        color: currentPrice > 0 ? (inProfit ? '#0ecb81' : '#f6465d') : (isBuy ? '#0ecb81' : '#f6465d'),
-        lineWidth: 2,
-        lineStyle: 0,
-        axisLabelVisible: true,
-        title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(leg.qty)}${pnlText}`,
-      }));
+      const fills = legFills(leg);
+      // One entry line PER individual trade, each with its own live P/L.
+      fills.forEach((f, i) => {
+        if (f.entryPrice <= 0 || f.qty <= 0) return;
+        const diff = currentPrice > 0 ? (isBuy ? currentPrice - f.entryPrice : f.entryPrice - currentPrice) : 0;
+        const pnlVal = diff * f.qty;
+        const inProfit = pnlVal >= 0;
+        const pnlText = currentPrice > 0
+          ? ` ${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : '';
+        const tag = fills.length > 1 ? ` #${i + 1}` : '';
+        tradeLineRef.current.push(seriesRef.current.createPriceLine({
+          price: f.entryPrice,
+          // Entry label is tinted by live P/L (green = profit, red = loss).
+          color: currentPrice > 0 ? (inProfit ? '#0ecb81' : '#f6465d') : (isBuy ? '#0ecb81' : '#f6465d'),
+          lineWidth: 1,
+          lineStyle: 0,
+          axisLabelVisible: true,
+          title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}${tag} ${fmtQty(f.qty)}${pnlText}`,
+        }));
+      });
+      // TP / SL apply to the whole leg.
       if (leg.takeProfit && leg.takeProfit > 0) {
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
           price: leg.takeProfit,
@@ -396,8 +409,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     drawLeg('buy', buyLeg);
     drawLeg('sell', sellLeg);
 
-    // Place an arrow marker on the exact candle where each leg was opened so
-    // the user can SEE on the chart where the Buy/Sell happened.
+    // Place an arrow marker on the exact candle where each trade was opened so
+    // the user can SEE on the chart where every Buy/Sell happened.
     if (!markersRef.current) {
       markersRef.current = createSeriesMarkers(seriesRef.current, []);
     }
@@ -414,25 +427,27 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       }
       return nearest;
     };
-    const markers: any[] = [];
-    if (buyLeg) {
-      markers.push({
-        time: snap(buyLeg.entryTime) as Time,
-        position: 'belowBar',
-        color: '#0ecb81',
-        shape: 'arrowUp',
-        text: `${bi('کڕین', 'Buy')} ${fmtQty(buyLeg.qty)}`,
-      });
-    }
-    if (sellLeg) {
-      markers.push({
-        time: snap(sellLeg.entryTime) as Time,
-        position: 'aboveBar',
-        color: '#f6465d',
-        shape: 'arrowDown',
-        text: `${bi('فرۆشتن', 'Sell')} ${fmtQty(sellLeg.qty)}`,
-      });
-    }
+    // Aggregate fills landing on the same candle (per side) so markers never
+    // collide on a single bar but still reflect each trade's total size.
+    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number }>();
+    const collect = (side: 'buy' | 'sell', leg: any) => {
+      for (const f of legFills(leg)) {
+        const t = snap(f.entryTime) as number;
+        const key = `${side}-${t}`;
+        const prev = markerAgg.get(key);
+        if (prev) prev.qty = +(prev.qty + f.qty).toFixed(6);
+        else markerAgg.set(key, { time: t, side, qty: f.qty });
+      }
+    };
+    if (buyLeg) collect('buy', buyLeg);
+    if (sellLeg) collect('sell', sellLeg);
+    const markers: any[] = Array.from(markerAgg.values()).map((m) => ({
+      time: m.time as Time,
+      position: m.side === 'buy' ? 'belowBar' : 'aboveBar',
+      color: m.side === 'buy' ? '#0ecb81' : '#f6465d',
+      shape: m.side === 'buy' ? 'arrowUp' : 'arrowDown',
+      text: `${m.side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(m.qty)}`,
+    }));
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
@@ -606,38 +621,45 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
         {/* Live floating P/L overlay (like pro trading apps) */}
         {(buyLeg || sellLeg) && currentPrice > 0 && (
-          <div className="absolute top-2 left-2 z-10 flex flex-col gap-1.5 pointer-events-none">
-            {([['buy', buyLeg], ['sell', sellLeg]] as const).map(([side, leg]) => {
-              if (!leg || leg.qty <= 0) return null;
-              const diff = side === 'buy' ? currentPrice - leg.entryPrice : leg.entryPrice - currentPrice;
-              const value = diff * leg.qty;
-              const pct = leg.entryPrice > 0 ? (diff / leg.entryPrice) * 100 : 0;
-              const up = value >= 0;
+          <div className="absolute top-2 left-2 z-10 flex max-h-[80%] flex-col gap-1.5 overflow-hidden pointer-events-none">
+            {([['buy', buyLeg], ['sell', sellLeg]] as const).flatMap(([side, leg]) => {
+              if (!leg || leg.qty <= 0) return [];
               const accent = side === 'buy' ? '#0ecb81' : '#f6465d';
-              const pnlColor = up ? '#0ecb81' : '#f6465d';
-              return (
-                <div
-                  key={side}
-                  className="relative overflow-hidden rounded-lg border bg-[#0a0e17]/90 backdrop-blur-md ps-2.5 pe-3 py-1.5"
-                  style={{ borderColor: `${pnlColor}66`, boxShadow: `0 4px 18px -6px ${pnlColor}66, inset 0 0 0 1px ${pnlColor}1a` }}
-                >
-                  <span className="absolute inset-y-0 start-0 w-[3px]" style={{ background: accent }} />
-                  <div className="flex items-center gap-1.5">
-                    <span className="rounded px-1 py-px text-[9px] font-extrabold uppercase tracking-wide" style={{ color: '#0a0e17', background: accent }}>
-                      {side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}
-                    </span>
-                    <span className="text-[10px] text-[#848e9c] tabular-nums">{fmtQty(leg.qty)} @ ${leg.entryPrice.toLocaleString(undefined, { maximumFractionDigits: leg.entryPrice < 1 ? 6 : 2 })}</span>
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const fills: any[] = (leg as any).fills && (leg as any).fills.length
+                ? (leg as any).fills
+                : [{ id: 'agg', entryPrice: leg.entryPrice, qty: leg.qty }];
+              return fills.map((f, i) => {
+                const diff = side === 'buy' ? currentPrice - f.entryPrice : f.entryPrice - currentPrice;
+                const value = diff * f.qty;
+                const pct = f.entryPrice > 0 ? (diff / f.entryPrice) * 100 : 0;
+                const up = value >= 0;
+                const pnlColor = up ? '#0ecb81' : '#f6465d';
+                const tag = fills.length > 1 ? ` #${i + 1}` : '';
+                return (
+                  <div
+                    key={`${side}-${f.id ?? i}`}
+                    className="relative overflow-hidden rounded-lg border bg-[#0a0e17]/90 backdrop-blur-md ps-2.5 pe-3 py-1.5"
+                    style={{ borderColor: `${pnlColor}66`, boxShadow: `0 4px 18px -6px ${pnlColor}66, inset 0 0 0 1px ${pnlColor}1a` }}
+                  >
+                    <span className="absolute inset-y-0 start-0 w-[3px]" style={{ background: accent }} />
+                    <div className="flex items-center gap-1.5">
+                      <span className="rounded px-1 py-px text-[9px] font-extrabold uppercase tracking-wide" style={{ color: '#0a0e17', background: accent }}>
+                        {side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}{tag}
+                      </span>
+                      <span className="text-[10px] text-[#848e9c] tabular-nums">{fmtQty(f.qty)} @ ${f.entryPrice.toLocaleString(undefined, { maximumFractionDigits: f.entryPrice < 1 ? 6 : 2 })}</span>
+                    </div>
+                    <div className="mt-0.5 flex items-baseline gap-1.5">
+                      <span className="text-[15px] font-extrabold leading-none tabular-nums" style={{ color: pnlColor }}>
+                        {up ? '+' : '−'}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className="rounded px-1 text-[10px] font-bold tabular-nums" style={{ color: pnlColor, background: `${pnlColor}1f` }}>
+                        {up ? '▲' : '▼'} {Math.abs(pct).toFixed(2)}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-0.5 flex items-baseline gap-1.5">
-                    <span className="text-[15px] font-extrabold leading-none tabular-nums" style={{ color: pnlColor }}>
-                      {up ? '+' : '−'}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                    <span className="rounded px-1 text-[10px] font-bold tabular-nums" style={{ color: pnlColor, background: `${pnlColor}1f` }}>
-                      {up ? '▲' : '▼'} {Math.abs(pct).toFixed(2)}%
-                    </span>
-                  </div>
-                </div>
-              );
+                );
+              });
             })}
           </div>
         )}

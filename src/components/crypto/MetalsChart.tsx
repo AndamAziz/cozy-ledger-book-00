@@ -497,26 +497,38 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     }
     tradeLineRef.current = [];
 
-    const drawLeg = (side: 'buy' | 'sell', leg: { entryPrice: number; qty: number; takeProfit: number | null; stopLoss: number | null } | null) => {
-      if (!leg || leg.entryPrice <= 0 || leg.qty <= 0) return;
+    const lp = livePrice();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const legFills = (leg: any): { id: string; entryPrice: number; qty: number; entryTime: number }[] =>
+      (leg?.fills && leg.fills.length)
+        ? leg.fills
+        : (leg ? [{ id: 'agg', entryPrice: leg.entryPrice, qty: leg.qty, entryTime: leg.entryTime }] : []);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const drawLeg = (side: 'buy' | 'sell', leg: any) => {
+      if (!leg || leg.qty <= 0) return;
       const isBuy = side === 'buy';
-      // Live profit / loss for this leg — colours the entry label on the axis.
-      const lp = livePrice();
-      const diff = lp > 0 ? (isBuy ? lp - leg.entryPrice : leg.entryPrice - lp) : 0;
-      const pnlVal = diff * leg.qty;
-      const inProfit = pnlVal >= 0;
-      const pnlText = lp > 0
-        ? ` ${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        : '';
-      tradeLineRef.current.push(seriesRef.current.createPriceLine({
-        price: leg.entryPrice,
-        // Entry label is tinted by live P/L (green = profit, red = loss).
-        color: lp > 0 ? (inProfit ? '#0ecb81' : '#f6465d') : (isBuy ? '#0ecb81' : '#f6465d'),
-        lineWidth: 2,
-        lineStyle: 0,
-        axisLabelVisible: true,
-        title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(leg.qty)}${pnlText}`,
-      }));
+      const fills = legFills(leg);
+      // One entry line PER individual trade, each with its own live P/L.
+      fills.forEach((f, i) => {
+        if (f.entryPrice <= 0 || f.qty <= 0) return;
+        const diff = lp > 0 ? (isBuy ? lp - f.entryPrice : f.entryPrice - lp) : 0;
+        const pnlVal = diff * f.qty;
+        const inProfit = pnlVal >= 0;
+        const pnlText = lp > 0
+          ? ` ${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : '';
+        const tag = fills.length > 1 ? ` #${i + 1}` : '';
+        tradeLineRef.current.push(seriesRef.current.createPriceLine({
+          price: f.entryPrice,
+          // Entry label is tinted by live P/L (green = profit, red = loss).
+          color: lp > 0 ? (inProfit ? '#0ecb81' : '#f6465d') : (isBuy ? '#0ecb81' : '#f6465d'),
+          lineWidth: 1,
+          lineStyle: 0,
+          axisLabelVisible: true,
+          title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}${tag} ${fmtQty(f.qty)}${pnlText}`,
+        }));
+      });
       if (leg.takeProfit && leg.takeProfit > 0) {
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
           price: leg.takeProfit,
@@ -542,7 +554,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     drawLeg('buy', buyLeg);
     drawLeg('sell', sellLeg);
 
-    // Arrow marker on the candle where each leg was opened.
+    // Arrow marker on the candle where each trade was opened.
     if (!markersRef.current) {
       markersRef.current = createSeriesMarkers(seriesRef.current, []);
     }
@@ -557,13 +569,27 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       }
       return nearest;
     };
-    const markers: any[] = [];
-    if (buyLeg) {
-      markers.push({ time: snap(buyLeg.entryTime) as Time, position: 'belowBar', color: '#0ecb81', shape: 'arrowUp', text: `${bi('کڕین', 'Buy')} ${fmtQty(buyLeg.qty)}` });
-    }
-    if (sellLeg) {
-      markers.push({ time: snap(sellLeg.entryTime) as Time, position: 'aboveBar', color: '#f6465d', shape: 'arrowDown', text: `${bi('فرۆشتن', 'Sell')} ${fmtQty(sellLeg.qty)}` });
-    }
+    // Aggregate fills per candle+side so markers never collide on one bar.
+    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number }>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const collect = (side: 'buy' | 'sell', leg: any) => {
+      for (const f of legFills(leg)) {
+        const t = snap(f.entryTime) as number;
+        const key = `${side}-${t}`;
+        const prev = markerAgg.get(key);
+        if (prev) prev.qty = +(prev.qty + f.qty).toFixed(6);
+        else markerAgg.set(key, { time: t, side, qty: f.qty });
+      }
+    };
+    if (buyLeg) collect('buy', buyLeg);
+    if (sellLeg) collect('sell', sellLeg);
+    const markers: any[] = Array.from(markerAgg.values()).map((m) => ({
+      time: m.time as Time,
+      position: m.side === 'buy' ? 'belowBar' : 'aboveBar',
+      color: m.side === 'buy' ? '#0ecb81' : '#f6465d',
+      shape: m.side === 'buy' ? 'arrowUp' : 'arrowDown',
+      text: `${m.side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(m.qty)}`,
+    }));
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
@@ -740,39 +766,46 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
         {/* Live floating P/L overlay (like pro trading apps) */}
         {(buyLeg || sellLeg) && livePrice() > 0 && (
-          <div className="absolute top-2 left-2 z-20 flex flex-col gap-1.5 pointer-events-none">
-            {([['buy', buyLeg], ['sell', sellLeg]] as const).map(([side, leg]) => {
-              if (!leg || leg.qty <= 0) return null;
+          <div className="absolute top-2 left-2 z-20 flex max-h-[80%] flex-col gap-1.5 overflow-hidden pointer-events-none">
+            {([['buy', buyLeg], ['sell', sellLeg]] as const).flatMap(([side, leg]) => {
+              if (!leg || leg.qty <= 0) return [];
               const price = livePrice();
-              const diff = side === 'buy' ? price - leg.entryPrice : leg.entryPrice - price;
-              const value = diff * leg.qty;
-              const pct = leg.entryPrice > 0 ? (diff / leg.entryPrice) * 100 : 0;
-              const up = value >= 0;
               const accent = side === 'buy' ? '#0ecb81' : '#f6465d';
-              const pnlColor = up ? '#0ecb81' : '#f6465d';
-              return (
-                <div
-                  key={side}
-                  className="relative overflow-hidden rounded-lg border bg-[#0a0e17]/90 backdrop-blur-md ps-2.5 pe-3 py-1.5"
-                  style={{ borderColor: `${pnlColor}66`, boxShadow: `0 4px 18px -6px ${pnlColor}66, inset 0 0 0 1px ${pnlColor}1a` }}
-                >
-                  <span className="absolute inset-y-0 start-0 w-[3px]" style={{ background: accent }} />
-                  <div className="flex items-center gap-1.5">
-                    <span className="rounded px-1 py-px text-[9px] font-extrabold uppercase tracking-wide" style={{ color: '#0a0e17', background: accent }}>
-                      {side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}
-                    </span>
-                    <span className="text-[10px] text-[#848e9c] tabular-nums">{fmtQty(leg.qty)} @ ${leg.entryPrice.toLocaleString(undefined, { maximumFractionDigits: leg.entryPrice < 1 ? 6 : 2 })}</span>
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const fills: any[] = (leg as any).fills && (leg as any).fills.length
+                ? (leg as any).fills
+                : [{ id: 'agg', entryPrice: leg.entryPrice, qty: leg.qty }];
+              return fills.map((f, i) => {
+                const diff = side === 'buy' ? price - f.entryPrice : f.entryPrice - price;
+                const value = diff * f.qty;
+                const pct = f.entryPrice > 0 ? (diff / f.entryPrice) * 100 : 0;
+                const up = value >= 0;
+                const pnlColor = up ? '#0ecb81' : '#f6465d';
+                const tag = fills.length > 1 ? ` #${i + 1}` : '';
+                return (
+                  <div
+                    key={`${side}-${f.id ?? i}`}
+                    className="relative overflow-hidden rounded-lg border bg-[#0a0e17]/90 backdrop-blur-md ps-2.5 pe-3 py-1.5"
+                    style={{ borderColor: `${pnlColor}66`, boxShadow: `0 4px 18px -6px ${pnlColor}66, inset 0 0 0 1px ${pnlColor}1a` }}
+                  >
+                    <span className="absolute inset-y-0 start-0 w-[3px]" style={{ background: accent }} />
+                    <div className="flex items-center gap-1.5">
+                      <span className="rounded px-1 py-px text-[9px] font-extrabold uppercase tracking-wide" style={{ color: '#0a0e17', background: accent }}>
+                        {side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}{tag}
+                      </span>
+                      <span className="text-[10px] text-[#848e9c] tabular-nums">{fmtQty(f.qty)} @ ${f.entryPrice.toLocaleString(undefined, { maximumFractionDigits: f.entryPrice < 1 ? 6 : 2 })}</span>
+                    </div>
+                    <div className="mt-0.5 flex items-baseline gap-1.5">
+                      <span className="text-[15px] font-extrabold leading-none tabular-nums" style={{ color: pnlColor }}>
+                        {up ? '+' : '−'}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className="rounded px-1 text-[10px] font-bold tabular-nums" style={{ color: pnlColor, background: `${pnlColor}1f` }}>
+                        {up ? '▲' : '▼'} {Math.abs(pct).toFixed(2)}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-0.5 flex items-baseline gap-1.5">
-                    <span className="text-[15px] font-extrabold leading-none tabular-nums" style={{ color: pnlColor }}>
-                      {up ? '+' : '−'}${Math.abs(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                    <span className="rounded px-1 text-[10px] font-bold tabular-nums" style={{ color: pnlColor, background: `${pnlColor}1f` }}>
-                      {up ? '▲' : '▼'} {Math.abs(pct).toFixed(2)}%
-                    </span>
-                  </div>
-                </div>
-              );
+                );
+              });
             })}
           </div>
         )}

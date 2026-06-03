@@ -11,6 +11,22 @@ export type PositionSide = 'buy' | 'sell';
 const POSITION_KEY = 'demo_open_position';
 
 /**
+ * A single individual fill (one Buy or one Sell press) at its OWN price.
+ * Every press records a fill so the chart can show each trade separately,
+ * each with its own live profit / loss, instead of one averaged blob.
+ */
+export interface Fill {
+  /** Unique id for the fill. */
+  id: string;
+  /** The exact price this individual trade was opened at. */
+  entryPrice: number;
+  /** Quantity of this individual trade. */
+  qty: number;
+  /** Epoch SECONDS when this individual trade was opened. */
+  entryTime: number;
+}
+
+/**
  * A single directional leg of a position (the buy side OR the sell side).
  * Each leg stacks independently with its own averaged entry, size and exits.
  */
@@ -25,7 +41,25 @@ export interface PositionLeg {
   stopLoss: number | null;
   /** Epoch SECONDS when the leg was first opened (used to mark the chart). */
   entryTime: number;
+  /** Every individual trade that makes up this leg (one per Buy/Sell press). */
+  fills: Fill[];
 }
+
+/** Generate a reasonably unique id for a fill. */
+const newFillId = () =>
+  (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+/** Ensure a leg always carries a fills array (back-compat for old saves). */
+const normalizeLeg = (leg: PositionLeg | null): PositionLeg | null => {
+  if (!leg || leg.qty <= 0) return leg;
+  if (Array.isArray(leg.fills) && leg.fills.length > 0) return leg;
+  return {
+    ...leg,
+    fills: [{ id: newFillId(), entryPrice: leg.entryPrice, qty: leg.qty, entryTime: leg.entryTime }],
+  };
+};
 
 /**
  * The open position for ONE asset. It can hold a buy leg AND a sell leg at the
@@ -94,12 +128,14 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
       if (!parsed) return null;
       // Migrate the previous single-leg shape ({ side, entryPrice, qty, ... }).
       if (parsed.side && !('buy' in parsed)) {
+        const entryTime = parsed.entryTime ?? Math.floor(Date.now() / 1000);
         const leg: PositionLeg = {
           entryPrice: parsed.entryPrice ?? 0,
           qty: parsed.qty ?? 0,
           takeProfit: parsed.takeProfit ?? null,
           stopLoss: parsed.stopLoss ?? null,
-          entryTime: parsed.entryTime ?? Math.floor(Date.now() / 1000),
+          entryTime,
+          fills: [{ id: newFillId(), entryPrice: parsed.entryPrice ?? 0, qty: parsed.qty ?? 0, entryTime }],
         };
         return {
           symbol: parsed.symbol,
@@ -109,7 +145,9 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
           sell: parsed.side === 'sell' ? leg : null,
         };
       }
-      return parsed as OpenPosition;
+      // Back-fill the fills array on legs saved before per-fill tracking.
+      const pos = parsed as OpenPosition;
+      return { ...pos, buy: normalizeLeg(pos.buy), sell: normalizeLeg(pos.sell) };
     } catch {
       return null;
     }
@@ -207,14 +245,18 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
         ? prev
         : { symbol, label, currentPrice: price, buy: null, sell: null };
 
-      const existing = base[side];
+      const now = Math.floor(Date.now() / 1000);
+      const fill: Fill = { id: newFillId(), entryPrice: price, qty: amount, entryTime: now };
+      const existing = normalizeLeg(base[side]);
       const nextLeg: PositionLeg = existing && existing.qty > 0
         ? (() => {
             const newQty = +(existing.qty + amount).toFixed(6);
             const newEntry = ((existing.entryPrice * existing.qty) + price * amount) / newQty;
-            return { ...existing, entryPrice: newEntry, qty: newQty };
+            // Keep the averaged entry for settlement, but record THIS trade
+            // as its own fill so the chart shows it separately.
+            return { ...existing, entryPrice: newEntry, qty: newQty, fills: [...existing.fills, fill] };
           })()
-        : { entryPrice: price, qty: amount, takeProfit: null, stopLoss: null, entryTime: Math.floor(Date.now() / 1000) };
+        : { entryPrice: price, qty: amount, takeProfit: null, stopLoss: null, entryTime: now, fills: [fill] };
 
       return { ...base, label, currentPrice: price, [side]: nextLeg };
     });
