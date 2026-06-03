@@ -269,6 +269,11 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         minBarSpacing: preset.minBarSpacing,
         ticksVisible: true,
       },
+      // One-finger VERTICAL swipes are released to the page so the user can
+      // scroll up/down; only horizontal pan + pinch-zoom stay on the chart.
+      handleScroll: {
+        vertTouchDrag: false,
+      },
       width: rect.width || 600,
       height: rect.height || 300,
     });
