@@ -1,5 +1,5 @@
 import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { suggestHoldMinutes, suggestHoldAcrossTimeframes } from '@/lib/indicators';
 
@@ -152,6 +152,18 @@ export function TradeControls({
   const priceUp = priceDir === 'up';
   const priceDown = priceDir === 'down';
 
+  // Flash the Buy/Sell buttons green on each up-tick and red on each down-tick.
+  // A new `id` on every change re-triggers the short (<1s) flash animation.
+  const prevPriceRef = useRef(currentPrice);
+  const [flash, setFlash] = useState<{ id: number; up: boolean } | null>(null);
+  useEffect(() => {
+    const prev = prevPriceRef.current;
+    if (currentPrice > 0 && prev > 0 && currentPrice !== prev) {
+      setFlash({ id: Date.now() + Math.random(), up: currentPrice > prev });
+    }
+    prevPriceRef.current = currentPrice;
+  }, [currentPrice]);
+
   // MT5 one-click volume stepper (lots), min 0.01, 0.01 increments.
   const decVolume = () => onAmountChange(Math.max(0.01, +(amount - 0.01).toFixed(2)));
   const incVolume = () => onAmountChange(+(amount + 0.01).toFixed(2));
@@ -163,7 +175,7 @@ export function TradeControls({
     const main = s.slice(0, -2);
     const last = s.slice(-2);
     return (
-      <span className="flex items-baseline font-bold leading-none tabular-nums" style={{ color }}>
+      <span className="relative flex items-baseline font-bold leading-none tabular-nums" style={{ color }}>
         <span className="text-xs sm:text-sm opacity-90">{main}</span>
         <span className="text-lg sm:text-xl">{last}</span>
       </span>
@@ -359,7 +371,14 @@ export function TradeControls({
             sellLeg && sellLeg.qty > 0 ? 'ring-2 ring-inset ring-white/70' : ''
           }`}
         >
-          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
+          {flash && (
+            <span
+              key={flash.id}
+              className="pointer-events-none absolute inset-0 animate-price-flash"
+              style={{ backgroundColor: flash.up ? '#0ecb81' : '#f6465d' }}
+            />
+          )}
+          <span className="relative text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
             {bi('فرۆشتن', 'Sell')}{sellLeg && sellLeg.qty > 0 ? ' +' : ''}
           </span>
           {renderMtPrice(currentPrice, '#ffffff')}
@@ -404,7 +423,14 @@ export function TradeControls({
             buyLeg && buyLeg.qty > 0 ? 'ring-2 ring-inset ring-white/70' : ''
           }`}
         >
-          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
+          {flash && (
+            <span
+              key={flash.id}
+              className="pointer-events-none absolute inset-0 animate-price-flash"
+              style={{ backgroundColor: flash.up ? '#0ecb81' : '#f6465d' }}
+            />
+          )}
+          <span className="relative text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
             {bi('کڕین', 'Buy')}{buyLeg && buyLeg.qty > 0 ? ' +' : ''}
           </span>
           {renderMtPrice(currentPrice, '#ffffff')}

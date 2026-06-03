@@ -107,6 +107,10 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.85" },
         },
+        "price-flash": {
+          "0%": { opacity: "0.55" },
+          "100%": { opacity: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -114,6 +118,7 @@ export default {
         "slide-up": "slide-up 0.3s ease-out",
         "fade-in": "fade-in 0.3s ease",
         pulse: "pulse 2s infinite",
+        "price-flash": "price-flash 0.5s ease-out forwards",
       },
     },
   },
