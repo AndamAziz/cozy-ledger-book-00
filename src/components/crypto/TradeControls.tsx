@@ -130,6 +130,14 @@ export function TradeControls({
     return `${d} ${bi('ڕۆژ', 'day')}`;
   };
 
+  // Recommended action + holding times across timeframes (M1..4H).
+  const recommendation = pct && pct.hasData ? suggestHoldAcrossTimeframes(pct) : null;
+  const recSide = recommendation?.side ?? 'neutral';
+  const recIsBuy = recSide === 'buy';
+  const recIsSell = recSide === 'sell';
+
+
+
 
   const parseNum = (v: string): number | null => {
     if (v.trim() === '') return null;
