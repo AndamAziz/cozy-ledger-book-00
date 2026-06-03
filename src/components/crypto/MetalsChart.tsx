@@ -60,6 +60,28 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
 
+  // Buy/Sell trade controls (identical logic to Crypto).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tradeLineRef = useRef<any>(null);
+  const [tradeSide, setTradeSide] = useState<TradeSide>(null);
+  const [tradeAmount, setTradeAmount] = useState(0.001);
+  const [tradePct, setTradePct] = useState<TradePct | null>(null);
+  // Bumped whenever the chart series is recreated so the trade line redraws.
+  const [seriesVersion, setSeriesVersion] = useState(0);
+
+  const handleRefreshTrade = () => {
+    const ohlc: OHLCCandle[] = candles.map(c => ({
+      time: c.time, open: c.close, high: c.high, low: c.low, close: c.close, volume: 0,
+    }));
+    const ind = computeIndicators(ohlc);
+    const price = currentPrice && currentPrice > 0
+      ? currentPrice
+      : (candles.length ? candles[candles.length - 1].close : 0);
+    const summary = summarizeSignals(ind, price);
+    const { hasData, buyPct, sellPct } = computeBuySellPct(summary);
+    setTradePct({ hasData, buyPct, sellPct });
+  };
+
   // Auto layout: spacing computed from chart width + candle count + timeframe.
   const [autoFit, setAutoFit] = useState(true);
   const [containerWidth, setContainerWidth] = useState(600);
