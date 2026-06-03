@@ -238,6 +238,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
     const profit = pnlValue >= 0;
     queueMicrotask(() => {
       applyPnl(pnlValue);
+      setRealizedPnl(prev => +(prev + pnlValue).toFixed(2));
       const head = reason === 'tp'
         ? bi('بەرزبوونەوەی قازانج 🎯', 'Take Profit hit 🎯')
         : reason === 'sl'
