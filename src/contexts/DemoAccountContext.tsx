@@ -184,11 +184,13 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
 
       if (data) {
         setBalance(Number(data.balance));
+        setRealizedPnl(Number(data.realized_pnl ?? 0));
       } else {
         await supabase.from('demo_accounts').insert({
           user_id: user.id,
           balance: DEMO_STARTING_BALANCE,
           starting_balance: DEMO_STARTING_BALANCE,
+          realized_pnl: 0,
         });
       }
       setLoading(false);
