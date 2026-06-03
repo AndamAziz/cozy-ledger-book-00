@@ -355,13 +355,21 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     const drawLeg = (side: 'buy' | 'sell', leg: { entryPrice: number; qty: number; takeProfit: number | null; stopLoss: number | null } | null) => {
       if (!leg || leg.entryPrice <= 0 || leg.qty <= 0) return;
       const isBuy = side === 'buy';
+      // Live profit / loss for this leg — colours the entry label on the axis.
+      const diff = currentPrice > 0 ? (isBuy ? currentPrice - leg.entryPrice : leg.entryPrice - currentPrice) : 0;
+      const pnlVal = diff * leg.qty;
+      const inProfit = pnlVal >= 0;
+      const pnlText = currentPrice > 0
+        ? ` ${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : '';
       tradeLineRef.current.push(seriesRef.current.createPriceLine({
         price: leg.entryPrice,
-        color: isBuy ? '#0ecb81' : '#f6465d',
+        // Entry label is tinted by live P/L (green = profit, red = loss).
+        color: currentPrice > 0 ? (inProfit ? '#0ecb81' : '#f6465d') : (isBuy ? '#0ecb81' : '#f6465d'),
         lineWidth: 2,
         lineStyle: 0,
         axisLabelVisible: true,
-        title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(leg.qty)}`,
+        title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(leg.qty)}${pnlText}`,
       }));
       if (leg.takeProfit && leg.takeProfit > 0) {
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
