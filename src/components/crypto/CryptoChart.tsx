@@ -339,6 +339,16 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
   return (
     <div className="flex flex-col h-full">
+      {/* Buy / Refresh / Sell controls above the chart */}
+      <TradeControls
+        activeSide={tradeSide}
+        amount={tradeAmount}
+        pct={tradePct}
+        onBuy={() => setTradeSide(prev => (prev === 'buy' ? null : 'buy'))}
+        onSell={() => setTradeSide(prev => (prev === 'sell' ? null : 'sell'))}
+        onRefresh={handleRefreshTrade}
+        onAmountChange={setTradeAmount}
+      />
       {/* Header */}
       <div className="border-b border-white/5">
         {/* Symbol + price */}
