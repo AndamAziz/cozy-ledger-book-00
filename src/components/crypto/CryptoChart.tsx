@@ -643,26 +643,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
   return (
     <div className="flex flex-col h-full">
-      {/* Buy / Refresh / Sell controls above the chart */}
-      <TradeControls
-        amount={tradeAmount}
-        pct={tradePct}
-        currentPrice={currentPrice}
-        priceDir={priceDir}
-        buyLeg={buyLeg}
-        sellLeg={sellLeg}
-        otherPositionLabel={otherPositionLabel}
-        timeframeLabel={TIMEFRAMES.find(t => t.interval === interval)?.label}
-        timeframeMinutes={interval}
-        balance={balance}
-        onRenew={renew}
-        onBuy={() => handleAdd('buy')}
-        onSell={() => handleAdd('sell')}
-        onClose={handleClose}
-        onRefresh={handleRefreshTrade}
-        onAmountChange={setTradeAmount}
-        onSetTpSl={setTpSl}
-      />
+
 
       {/* Header */}
       <div className="border-b border-white/5">
