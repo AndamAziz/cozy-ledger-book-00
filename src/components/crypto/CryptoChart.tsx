@@ -399,10 +399,11 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         const diff = currentPrice > 0 ? (isBuy ? currentPrice - f.entryPrice : f.entryPrice - currentPrice) : 0;
         const pnlVal = diff * f.qty;
         const inProfit = pnlVal >= 0;
+        // Only the live profit/loss is shown (green = profit, red = loss).
+        // No price/qty clutter — keeps the chart clean like MT5.
         const pnlText = currentPrice > 0
-          ? ` ${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : '';
-        const tag = fills.length > 1 ? ` #${i + 1}` : '';
+          ? `${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : (isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell'));
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
           price: f.entryPrice,
           // Entry label is tinted by live P/L (green = profit, red = loss).
@@ -410,7 +411,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           lineWidth: 1,
           lineStyle: 0,
           axisLabelVisible: true,
-          title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}${tag} ${fmtQty(f.qty)}${pnlText}`,
+          title: pnlText,
         }));
       });
       // TP / SL apply to the whole leg — drawn as bold lines on the chart so
