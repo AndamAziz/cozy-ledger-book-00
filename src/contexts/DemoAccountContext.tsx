@@ -274,6 +274,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
   const renew = useCallback(() => {
     setBalance(DEMO_STARTING_BALANCE);
     persist(DEMO_STARTING_BALANCE);
+    try { localStorage.removeItem('chart_show_trade_details'); } catch {}
   }, [persist]);
 
   // Realise a closed leg into the balance, record it in the journal + announce
