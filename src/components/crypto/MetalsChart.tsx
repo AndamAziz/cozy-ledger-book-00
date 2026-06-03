@@ -547,11 +547,17 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         const diff = lp > 0 ? (isBuy ? lp - f.entryPrice : f.entryPrice - lp) : 0;
         const pnlVal = diff * f.qty;
         const inProfit = pnlVal >= 0;
-        // Only the live profit/loss is shown (green = profit, red = loss).
-        // No price/qty clutter — keeps the chart clean like MT5.
-        const pnlText = lp > 0
+        // Live P/L always shown (green = profit, red = loss). When the details
+        // toggle is on, prefix with Buy/Sell label, qty and entry price (MT5).
+        const pnl = lp > 0
           ? `${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : (isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell'));
+          : '';
+        const sideLabel = isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell');
+        const tag = fills.length > 1 ? ` #${i + 1}` : '';
+        let title = pnl || sideLabel;
+        if (showTradeDetails) {
+          title = `${sideLabel}${tag} ${fmtQty(f.qty)} @ $${f.entryPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}${pnl ? ` ${pnl}` : ''}`;
+        }
         tradeLineRef.current.push(seriesRef.current.createPriceLine({
           price: f.entryPrice,
           // Entry label is tinted by live P/L (green = profit, red = loss).
@@ -559,7 +565,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
           lineWidth: 1,
           lineStyle: 0,
           axisLabelVisible: true,
-          title: pnlText,
+          title,
+        }));
         }));
       });
       // TP / SL apply to the whole leg — bold lines so the user clearly sees
