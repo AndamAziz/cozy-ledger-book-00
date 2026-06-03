@@ -368,7 +368,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       lineWidth: 1,
       lineStyle: 2,
       axisLabelVisible: true,
-      title: `${symbol} $${currentPrice.toLocaleString()}`,
+      // Price already shows once on the standard axis label — keep only the
+      // symbol in the title so the value isn't duplicated.
+      title: `${symbol}`,
     });
   }, [currentPrice, symbol]);
 
