@@ -77,7 +77,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [showDOM, setShowDOM] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
   // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
-  const [showTradeDetails, setShowTradeDetails] = useState(false);
+  const [showTradeDetails, setShowTradeDetails] = useState(() => {
+    try { return localStorage.getItem('chart_show_trade_details') === 'true'; } catch { return false; }
+  });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rsiSeriesRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,6 +109,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
+
+  useEffect(() => {
+    try { localStorage.setItem('chart_show_trade_details', String(showTradeDetails)); } catch {}
+  }, [showTradeDetails]);
 
   // Unique key for this metal so its position is isolated from other assets.
   const mySymbol = `metal:${name || ''}`;
