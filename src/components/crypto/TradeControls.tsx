@@ -110,6 +110,9 @@ export function TradeControls({
 
   const depleted = balance <= 0;
 
+  // TP/SL section is collapsed by default (dropdown) so the chart has more room.
+  const [tpSlOpen, setTpSlOpen] = useState<{ buy: boolean; sell: boolean }>({ buy: false, sell: false });
+
   const buyPnl = buyLeg && buyLeg.qty > 0 ? legPnl('buy', buyLeg, currentPrice) : null;
   const sellPnl = sellLeg && sellLeg.qty > 0 ? legPnl('sell', sellLeg, currentPrice) : null;
   const totalPnl = (buyPnl?.value ?? 0) + (sellPnl?.value ?? 0);
