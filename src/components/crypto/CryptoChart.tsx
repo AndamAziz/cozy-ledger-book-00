@@ -493,6 +493,25 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
 
+  // Enable dragging the TP / SL lines directly on the chart. Releasing the line
+  // commits the new level automatically (no extra data entry needed).
+  useEffect(() => {
+    const chart = chartRef.current;
+    const container = chartContainerRef.current;
+    if (!chart || !container || !seriesRef.current) return;
+    return attachTpSlDrag({
+      container,
+      chart,
+      getSeries: () => seriesRef.current,
+      getLegs: () => legsRef.current,
+      lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
+      dragRef,
+      onCommit: (side, tp, sl) => setTpSl(side, tp, sl),
+    });
+  }, [seriesVersion, setTpSl]);
+
+
+
   // Create / remove the RSI and MACD panes (and their data) when toggled or
   // when the chart is recreated. Each indicator gets its own pane below price.
   useEffect(() => {
