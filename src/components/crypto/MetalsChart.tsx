@@ -538,15 +538,18 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         amount={tradeAmount}
         pct={tradePct}
         entryPrice={entryPrice}
+        positionQty={positionQty}
         currentPrice={livePrice()}
         timeframeLabel={RANGES.find(r => r.key === range)?.label}
         balance={balance}
         onRenew={renew}
-        onBuy={() => handleTrade('buy')}
-        onSell={() => handleTrade('sell')}
+        onBuy={() => handleAdd('buy')}
+        onSell={() => handleAdd('sell')}
+        onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
       />
+
       {/* Controls */}
       <div className="border-b border-white/5">
         {/* Timeframes row (underline active) */}
