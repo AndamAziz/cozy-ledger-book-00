@@ -554,14 +554,12 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     <div className="border-b border-[#1a1e2e]">
       {/* Buy / Refresh / Sell controls above the chart */}
       <TradeControls
-        activeSide={tradeSide}
         amount={tradeAmount}
         pct={tradePct}
-        entryPrice={entryPrice}
-        positionQty={positionQty}
         currentPrice={livePrice()}
-        takeProfit={takeProfit}
-        stopLoss={stopLoss}
+        priceDir={priceDir}
+        buyLeg={buyLeg}
+        sellLeg={sellLeg}
         otherPositionLabel={otherPositionLabel}
         timeframeLabel={RANGES.find(r => r.key === range)?.label}
         balance={balance}
