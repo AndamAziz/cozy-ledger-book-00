@@ -40,6 +40,15 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const slLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
+  // Indicator pane series (RSI + MACD) drawn in their own panes below price.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rsiSeriesRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const macdHistRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const macdLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const macdSignalRef = useRef<any>(null);
   // Tracks the current series identity so we only auto-fit the view when the
   // timeframe / symbol / chart type changes — never on live price ticks (which
   // would otherwise reset the user's manual zoom & pan).
@@ -53,6 +62,11 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [chartType, setChartType] = useState<'candlestick' | 'line' | 'area'>('candlestick');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
+  // MT5-style extras: RSI / MACD panes, depth-of-market ladder, trade journal.
+  const [showRSI, setShowRSI] = useState(false);
+  const [showMACD, setShowMACD] = useState(false);
+  const [showDOM, setShowDOM] = useState(false);
+  const [showJournal, setShowJournal] = useState(false);
 
   // Shared demo account + the single open position (persists across navigation).
   const { balance, renew, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
