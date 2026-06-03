@@ -507,6 +507,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         entryPrice={entryPrice}
         currentPrice={livePrice()}
         timeframeLabel={RANGES.find(r => r.key === range)?.label}
+        balance={balance}
+        onRenew={renew}
         onBuy={() => handleTrade('buy')}
         onSell={() => handleTrade('sell')}
         onRefresh={handleRefreshTrade}
