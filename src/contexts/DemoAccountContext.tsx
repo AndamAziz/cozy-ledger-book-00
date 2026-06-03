@@ -11,6 +11,22 @@ export type PositionSide = 'buy' | 'sell';
 const POSITION_KEY = 'demo_open_position';
 
 /**
+ * A single individual fill (one Buy or one Sell press) at its OWN price.
+ * Every press records a fill so the chart can show each trade separately,
+ * each with its own live profit / loss, instead of one averaged blob.
+ */
+export interface Fill {
+  /** Unique id for the fill. */
+  id: string;
+  /** The exact price this individual trade was opened at. */
+  entryPrice: number;
+  /** Quantity of this individual trade. */
+  qty: number;
+  /** Epoch SECONDS when this individual trade was opened. */
+  entryTime: number;
+}
+
+/**
  * A single directional leg of a position (the buy side OR the sell side).
  * Each leg stacks independently with its own averaged entry, size and exits.
  */
@@ -25,7 +41,25 @@ export interface PositionLeg {
   stopLoss: number | null;
   /** Epoch SECONDS when the leg was first opened (used to mark the chart). */
   entryTime: number;
+  /** Every individual trade that makes up this leg (one per Buy/Sell press). */
+  fills: Fill[];
 }
+
+/** Generate a reasonably unique id for a fill. */
+const newFillId = () =>
+  (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+/** Ensure a leg always carries a fills array (back-compat for old saves). */
+const normalizeLeg = (leg: PositionLeg | null): PositionLeg | null => {
+  if (!leg || leg.qty <= 0) return leg;
+  if (Array.isArray(leg.fills) && leg.fills.length > 0) return leg;
+  return {
+    ...leg,
+    fills: [{ id: newFillId(), entryPrice: leg.entryPrice, qty: leg.qty, entryTime: leg.entryTime }],
+  };
+};
 
 /**
  * The open position for ONE asset. It can hold a buy leg AND a sell leg at the
