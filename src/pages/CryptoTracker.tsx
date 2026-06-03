@@ -20,6 +20,7 @@ import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
 import { METALS_META } from '@/lib/metalsApi';
 import { OverviewEntry } from '@/lib/overview';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { DemoAccountProvider } from '@/contexts/DemoAccountContext';
 import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
