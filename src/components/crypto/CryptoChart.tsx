@@ -637,6 +637,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       <div className="flex-1 relative min-h-[300px] md:min-h-[500px]">
         <div ref={chartContainerRef} className="absolute inset-0" />
 
+        <PnLSummaryPanel realizedPnl={realizedPnl} unrealizedPnl={unrealizedPnl} language={language} />
+
         {/* Live floating P/L overlay (like pro trading apps) */}
         {(buyLeg || sellLeg) && currentPrice > 0 && (
           <div className="absolute top-2 left-2 z-10 flex max-h-[80%] flex-col gap-1.5 overflow-hidden pointer-events-none">
