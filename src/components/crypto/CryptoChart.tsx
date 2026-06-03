@@ -3,6 +3,8 @@ import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaS
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
+import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
+import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CryptoChartProps {
@@ -24,6 +26,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const priceLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tradeLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
   // Tracks the current series identity so we only auto-fit the view when the
   // timeframe / symbol / chart type changes — never on live price ticks (which
@@ -38,6 +42,20 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [chartType, setChartType] = useState<'candlestick' | 'line' | 'area'>('candlestick');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
+
+  // Buy/Sell trade controls (identical logic to Metals).
+  const [tradeSide, setTradeSide] = useState<TradeSide>(null);
+  const [tradeAmount, setTradeAmount] = useState(0.001);
+  const [tradePct, setTradePct] = useState<TradePct | null>(null);
+  // Bumped whenever the chart series is recreated so the trade line redraws.
+  const [seriesVersion, setSeriesVersion] = useState(0);
+
+  const handleRefreshTrade = () => {
+    const ind = computeIndicators(candles);
+    const summary = summarizeSignals(ind, currentPrice);
+    const { hasData, buyPct, sellPct } = computeBuySellPct(summary);
+    setTradePct({ hasData, buyPct, sellPct });
+  };
 
   // Auto layout: spacing computed from chart width + candle count + timeframe.
   const [autoFit, setAutoFit] = useState(true);
@@ -177,6 +195,11 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       }
     }
 
+    // Reset stale price-line refs and notify the trade-line effect to redraw.
+    priceLineRef.current = null;
+    tradeLineRef.current = null;
+    setSeriesVersion(v => v + 1);
+
     return () => {
       resizeObserver.disconnect();
       chart.remove();
@@ -269,6 +292,28 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     });
   }, [currentPrice, symbol]);
 
+  // Draw the Buy (green) / Sell (red) line from the moving price line.
+  useEffect(() => {
+    if (!seriesRef.current) return;
+
+    if (tradeLineRef.current) {
+      try { seriesRef.current.removePriceLine(tradeLineRef.current); } catch { /* ignore */ }
+      tradeLineRef.current = null;
+    }
+
+    if (!tradeSide || currentPrice <= 0) return;
+
+    const isBuy = tradeSide === 'buy';
+    tradeLineRef.current = seriesRef.current.createPriceLine({
+      price: currentPrice,
+      color: isBuy ? '#0ecb81' : '#f6465d',
+      lineWidth: 2,
+      lineStyle: 0,
+      axisLabelVisible: true,
+      title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${tradeAmount}`,
+    });
+  }, [tradeSide, tradeAmount, currentPrice, seriesVersion, language]);
+
   const stepper = (
     label: string,
     value: number,
@@ -294,6 +339,16 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
   return (
     <div className="flex flex-col h-full">
+      {/* Buy / Refresh / Sell controls above the chart */}
+      <TradeControls
+        activeSide={tradeSide}
+        amount={tradeAmount}
+        pct={tradePct}
+        onBuy={() => setTradeSide(prev => (prev === 'buy' ? null : 'buy'))}
+        onSell={() => setTradeSide(prev => (prev === 'sell' ? null : 'sell'))}
+        onRefresh={handleRefreshTrade}
+        onAmountChange={setTradeAmount}
+      />
       {/* Header */}
       <div className="border-b border-white/5">
         {/* Symbol + price */}

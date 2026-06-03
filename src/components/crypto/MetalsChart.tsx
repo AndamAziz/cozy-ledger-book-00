@@ -6,6 +6,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
+import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
+import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
+import type { OHLCCandle } from '@/lib/krakenApi';
 
 interface MetalsChartProps {
   candles: MetalCandle[];
@@ -56,6 +59,28 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [chartType, setChartType] = useState<'candles' | 'area' | 'line'>('candles');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
+
+  // Buy/Sell trade controls (identical logic to Crypto).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tradeLineRef = useRef<any>(null);
+  const [tradeSide, setTradeSide] = useState<TradeSide>(null);
+  const [tradeAmount, setTradeAmount] = useState(0.001);
+  const [tradePct, setTradePct] = useState<TradePct | null>(null);
+  // Bumped whenever the chart series is recreated so the trade line redraws.
+  const [seriesVersion, setSeriesVersion] = useState(0);
+
+  const handleRefreshTrade = () => {
+    const ohlc: OHLCCandle[] = candles.map(c => ({
+      time: c.time, open: c.close, high: c.high, low: c.low, close: c.close, volume: 0,
+    }));
+    const ind = computeIndicators(ohlc);
+    const price = currentPrice && currentPrice > 0
+      ? currentPrice
+      : (candles.length ? candles[candles.length - 1].close : 0);
+    const summary = summarizeSignals(ind, price);
+    const { hasData, buyPct, sellPct } = computeBuySellPct(summary);
+    setTradePct({ hasData, buyPct, sellPct });
+  };
 
   // Auto layout: spacing computed from chart width + candle count + timeframe.
   const [autoFit, setAutoFit] = useState(true);
@@ -285,6 +310,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     };
     chart.subscribeCrosshairMove(handleCrosshairMove);
 
+    // Reset stale trade-line ref and notify the trade-line effect to redraw.
+    tradeLineRef.current = null;
+    setSeriesVersion(v => v + 1);
+
     return () => {
       resizeObserver.disconnect();
       chart.remove();
@@ -384,6 +413,31 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     });
   }, [currentPrice, name, accentColor]);
 
+  // Draw the Buy (green) / Sell (red) line from the moving price line.
+  useEffect(() => {
+    if (!seriesRef.current) return;
+
+    if (tradeLineRef.current) {
+      try { seriesRef.current.removePriceLine(tradeLineRef.current); } catch { /* ignore */ }
+      tradeLineRef.current = null;
+    }
+
+    const price = currentPrice && currentPrice > 0
+      ? currentPrice
+      : (candles.length ? candles[candles.length - 1].close : 0);
+    if (!tradeSide || price <= 0) return;
+
+    const isBuy = tradeSide === 'buy';
+    tradeLineRef.current = seriesRef.current.createPriceLine({
+      price,
+      color: isBuy ? '#0ecb81' : '#f6465d',
+      lineWidth: 2,
+      lineStyle: 0,
+      axisLabelVisible: true,
+      title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${tradeAmount}`,
+    });
+  }, [tradeSide, tradeAmount, currentPrice, candles, seriesVersion, language]);
+
   const stepper = (
     label: string,
     value: number,
@@ -409,6 +463,16 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
   return (
     <div className="border-b border-[#1a1e2e]">
+      {/* Buy / Refresh / Sell controls above the chart */}
+      <TradeControls
+        activeSide={tradeSide}
+        amount={tradeAmount}
+        pct={tradePct}
+        onBuy={() => setTradeSide(prev => (prev === 'buy' ? null : 'buy'))}
+        onSell={() => setTradeSide(prev => (prev === 'sell' ? null : 'sell'))}
+        onRefresh={handleRefreshTrade}
+        onAmountChange={setTradeAmount}
+      />
       {/* Controls */}
       <div className="border-b border-white/5">
         {/* Timeframes row (underline active) */}
