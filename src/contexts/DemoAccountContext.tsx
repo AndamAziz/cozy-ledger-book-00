@@ -9,6 +9,31 @@ export type PositionSide = 'buy' | 'sell';
 
 /** localStorage key used to persist the open position across refreshes. */
 const POSITION_KEY = 'demo_open_position';
+/** localStorage key used to persist the closed-trade journal. */
+const JOURNAL_KEY = 'demo_trade_journal';
+/** Maximum journal entries kept (newest first). */
+const JOURNAL_LIMIT = 200;
+
+/** How a closed trade was settled. */
+export type CloseReason = 'manual' | 'tp' | 'sl';
+
+/**
+ * One CLOSED trade recorded in the journal / trade history (MT5 style).
+ * Stored newest-first so the history table reads top-to-bottom.
+ */
+export interface TradeRecord {
+  id: string;
+  symbol: string;
+  label: string;
+  side: PositionSide;
+  entryPrice: number;
+  exitPrice: number;
+  qty: number;
+  pnl: number;
+  openedAt: number; // epoch seconds
+  closedAt: number; // epoch seconds
+  reason: CloseReason;
+}
 
 /**
  * A single individual fill (one Buy or one Sell press) at its OWN price.
