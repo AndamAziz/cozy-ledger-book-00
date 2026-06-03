@@ -268,32 +268,6 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
         </div>
       </div>
 
-      {/* Other commodities */}
-      <div className="p-4">
-        <h3 className="text-sm font-semibold text-white mb-3">{bi('کاڵای تر', 'Other Commodities')}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {otherItems.map(m => {
-            const mPositive = m.change > 0;
-            const mNeutral = m.change === 0;
-            return (
-              <div key={m.code} className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-3 flex items-center gap-3">
-                <span className="text-2xl">{m.emoji}</span>
-                <div className="min-w-0">
-                  <p className="text-xs text-[#848e9c]">{m.name}</p>
-                  <p className="text-sm font-bold text-white tabular-nums">
-                    ${m.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <span className={`text-[10px] font-medium ${
-                    mNeutral ? 'text-[#848e9c]' : mPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
-                  }`}>
-                    {mNeutral ? '0.00%' : `${mPositive ? '+' : ''}${m.change.toFixed(2)}%`}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
       </>
       )}
     </div>
