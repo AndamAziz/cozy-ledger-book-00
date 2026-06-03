@@ -1,6 +1,6 @@
 import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { suggestHoldMinutes } from '@/lib/indicators';
+import { suggestHoldMinutes, suggestHoldAcrossTimeframes } from '@/lib/indicators';
 
 export type TradeSide = 'buy' | 'sell' | null;
 
@@ -129,6 +129,14 @@ export function TradeControls({
     const d = Math.round((mins / 1440) * 10) / 10;
     return `${d} ${bi('ڕۆژ', 'day')}`;
   };
+
+  // Recommended action + holding times across timeframes (M1..4H).
+  const recommendation = pct && pct.hasData ? suggestHoldAcrossTimeframes(pct) : null;
+  const recSide = recommendation?.side ?? 'neutral';
+  const recIsBuy = recSide === 'buy';
+  const recIsSell = recSide === 'sell';
+
+
 
 
   const parseNum = (v: string): number | null => {
@@ -373,7 +381,54 @@ export function TradeControls({
                 </span>
               </div>
             )}
+
+            {/* Recommended action button driven by the prediction */}
+            {recommendation && recSide !== 'neutral' && (
+              <button
+                onClick={recIsBuy ? onBuy : onSell}
+                disabled={depleted || !!otherPositionLabel}
+                className={`mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs sm:text-sm font-bold border transition-colors active:scale-95 disabled:opacity-40 disabled:pointer-events-none ${
+                  recIsBuy
+                    ? 'bg-[#0ecb81] text-black border-[#0ecb81] hover:bg-[#0ecb81]/90'
+                    : 'bg-[#f6465d] text-white border-[#f6465d] hover:bg-[#f6465d]/90'
+                }`}
+              >
+                {recIsBuy ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                {bi('پێشنیار', 'Recommended')}: {recIsBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}
+                <span className="opacity-80">({Math.max(pct.buyPct, pct.sellPct)}%)</span>
+              </button>
+            )}
+
+            {/* Suggested holding time across timeframes (M1..4H) */}
+            {recommendation && recSide !== 'neutral' && recommendation.rows.length > 0 && (
+              <div className="mt-2">
+                <p className="text-[9px] sm:text-[10px] text-[#848e9c] mb-1 flex items-center gap-1">
+                  <Clock className="h-3 w-3 shrink-0" />
+                  {recIsBuy ? bi('کڕین هۆڵد بکە بۆ', 'Hold Buy for') : bi('فرۆشتن هۆڵد بکە بۆ', 'Hold Sell for')}
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {recommendation.rows.map((row) => (
+                    <div
+                      key={row.label}
+                      className={`rounded-md border px-1.5 py-1 text-center ${
+                        recIsBuy
+                          ? 'bg-[#0ecb81]/5 border-[#0ecb81]/20'
+                          : 'bg-[#f6465d]/5 border-[#f6465d]/20'
+                      }`}
+                    >
+                      <div className={`text-[9px] sm:text-[10px] font-bold ${recIsBuy ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+                        {row.label}
+                      </div>
+                      <div className="text-[10px] sm:text-xs font-bold text-white tabular-nums">
+                        {fmtDuration(row.minutes)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
 
         ) : (
           <p className="mt-2 text-center text-[10px] sm:text-xs text-[#848e9c]">

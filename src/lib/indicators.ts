@@ -228,3 +228,36 @@ export function suggestHoldMinutes(pct: Pick<BuySellPct, 'hasData' | 'buyPct' | 
   return { side, minutes: candles * timeframeMinutes };
 }
 
+/** Standard holding timeframes shown after analysis (label + minutes per candle). */
+export const HOLD_TIMEFRAMES: { label: string; minutes: number }[] = [
+  { label: 'M1', minutes: 1 },
+  { label: '5M', minutes: 5 },
+  { label: '15M', minutes: 15 },
+  { label: '30M', minutes: 30 },
+  { label: '1H', minutes: 60 },
+  { label: '4H', minutes: 240 },
+];
+
+export interface TimeframeHold {
+  /** Timeframe label (M1 / 5M / ...). */
+  label: string;
+  /** Suggested holding time in minutes for this timeframe. */
+  minutes: number;
+}
+
+/**
+ * Suggest holding times across the standard timeframes (M1..4H) for the
+ * dominant side, so the user sees how long to hold the Buy/Sell on each.
+ */
+export function suggestHoldAcrossTimeframes(
+  pct: Pick<BuySellPct, 'hasData' | 'buyPct' | 'sellPct'>
+): { side: SignalType; rows: TimeframeHold[] } {
+  if (!pct.hasData) return { side: 'neutral', rows: [] };
+  const side: SignalType = pct.buyPct > pct.sellPct ? 'buy' : pct.sellPct > pct.buyPct ? 'sell' : 'neutral';
+  if (side === 'neutral') return { side, rows: [] };
+  const conviction = Math.max(pct.buyPct, pct.sellPct) / 100; // 0..1
+  const candles = Math.round(2 + conviction * 6); // hold ~2..8 candles
+  const rows = HOLD_TIMEFRAMES.map((tf) => ({ label: tf.label, minutes: candles * tf.minutes }));
+  return { side, rows };
+}
+
