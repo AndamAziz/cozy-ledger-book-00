@@ -85,14 +85,23 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
   // The position only counts for THIS chart when it belongs to this metal.
   const myPos = position && position.symbol === mySymbol ? position : null;
-  const tradeSide: TradeSide = myPos?.side ?? null;
-  const entryPrice = myPos?.entryPrice ?? null;
-  const positionQty = myPos?.qty ?? 0;
-  const takeProfit = myPos?.takeProfit ?? null;
-  const stopLoss = myPos?.stopLoss ?? null;
-  const otherPositionLabel = position && position.symbol !== mySymbol
-    ? `${position.label} · ${position.side === 'buy' ? (language === 'en' ? 'Buy' : 'کڕین') : (language === 'en' ? 'Sell' : 'فرۆشتن')}`
-    : null;
+  const buyLeg = myPos?.buy && myPos.buy.qty > 0 ? myPos.buy : null;
+  const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
+  const otherHasLegs = position && position.symbol !== mySymbol &&
+    ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
+  const otherPositionLabel = otherHasLegs ? position!.label : null;
+
+  // Track the live-price direction for the up/down indicator on the buttons.
+  const prevPriceRef = useRef<number>(0);
+  const [priceDir, setPriceDir] = useState<'up' | 'down' | null>(null);
+  useEffect(() => {
+    const p = livePrice();
+    if (p <= 0) return;
+    const prev = prevPriceRef.current;
+    if (prev > 0 && p !== prev) setPriceDir(p > prev ? 'up' : 'down');
+    prevPriceRef.current = p;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPrice, candles]);
 
   const handleRefreshTrade = () => {
     const ohlc: OHLCCandle[] = candles.map(c => ({
@@ -104,19 +113,19 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     setTradePct({ hasData, buyPct, sellPct });
   };
 
-  // Open or ADD to a position (stacking, averaged). A position on another asset
-  // must be closed first.
+  // Open or ADD to a leg. Buy and Sell can both be open at once (hedge mode).
+  // A position on another asset must be closed first.
   const handleAdd = (side: 'buy' | 'sell') => {
     if (balance <= 0) return;
     const price = livePrice();
     if (price <= 0) return;
     if (otherPositionLabel) return;
-    if (tradeSide && tradeSide !== side) return;
     openOrAdd({ symbol: mySymbol, label: name || bi('کانزا', 'Metal'), side, price, amount: tradeAmount });
   };
 
-  // Close the whole position and realise its P/L (handled in context).
-  const handleClose = () => closePosition();
+  // Close one leg and realise its P/L (handled in context).
+  const handleClose = (side: 'buy' | 'sell') => closePosition(side);
+
 
   // Reset only the analysis percentages when switching metals; the open
   // position itself persists in the shared context until closed manually.
@@ -468,50 +477,54 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPrice, candles, mySymbol, updatePrice]);
 
-  // Draw the entry line + TP/SL lines for the open position.
+  // Draw the entry line + TP/SL lines for each open leg (buy and/or sell).
   useEffect(() => {
     if (!seriesRef.current) return;
 
-    for (const ref of [tradeLineRef, tpLineRef, slLineRef]) {
-      if (ref.current) {
-        try { seriesRef.current.removePriceLine(ref.current); } catch { /* ignore */ }
-        ref.current = null;
+    if (Array.isArray(tradeLineRef.current)) {
+      for (const line of tradeLineRef.current) {
+        try { seriesRef.current.removePriceLine(line); } catch { /* ignore */ }
       }
     }
+    tradeLineRef.current = [];
 
-    if (!tradeSide || !entryPrice || entryPrice <= 0 || positionQty <= 0) return;
-
-    const isBuy = tradeSide === 'buy';
-    tradeLineRef.current = seriesRef.current.createPriceLine({
-      price: entryPrice,
-      color: isBuy ? '#0ecb81' : '#f6465d',
-      lineWidth: 2,
-      lineStyle: 0,
-      axisLabelVisible: true,
-      title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(positionQty)}`,
-    });
-
-    if (takeProfit && takeProfit > 0) {
-      tpLineRef.current = seriesRef.current.createPriceLine({
-        price: takeProfit,
-        color: '#0ecb81',
-        lineWidth: 1,
-        lineStyle: 2,
+    const drawLeg = (side: 'buy' | 'sell', leg: { entryPrice: number; qty: number; takeProfit: number | null; stopLoss: number | null } | null) => {
+      if (!leg || leg.entryPrice <= 0 || leg.qty <= 0) return;
+      const isBuy = side === 'buy';
+      tradeLineRef.current.push(seriesRef.current.createPriceLine({
+        price: leg.entryPrice,
+        color: isBuy ? '#0ecb81' : '#f6465d',
+        lineWidth: 2,
+        lineStyle: 0,
         axisLabelVisible: true,
-        title: bi('قازانج', 'TP'),
-      });
-    }
-    if (stopLoss && stopLoss > 0) {
-      slLineRef.current = seriesRef.current.createPriceLine({
-        price: stopLoss,
-        color: '#f6465d',
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: bi('زیان', 'SL'),
-      });
-    }
-  }, [tradeSide, entryPrice, positionQty, takeProfit, stopLoss, seriesVersion, language]);
+        title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(leg.qty)}`,
+      }));
+      if (leg.takeProfit && leg.takeProfit > 0) {
+        tradeLineRef.current.push(seriesRef.current.createPriceLine({
+          price: leg.takeProfit,
+          color: '#0ecb81',
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: `${isBuy ? 'B' : 'S'} ${bi('قازانج', 'TP')}`,
+        }));
+      }
+      if (leg.stopLoss && leg.stopLoss > 0) {
+        tradeLineRef.current.push(seriesRef.current.createPriceLine({
+          price: leg.stopLoss,
+          color: '#f6465d',
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: `${isBuy ? 'B' : 'S'} ${bi('زیان', 'SL')}`,
+        }));
+      }
+    };
+
+    drawLeg('buy', buyLeg);
+    drawLeg('sell', sellLeg);
+  }, [buyLeg, sellLeg, seriesVersion, language]);
+
 
 
   const stepper = (
@@ -541,14 +554,12 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     <div className="border-b border-[#1a1e2e]">
       {/* Buy / Refresh / Sell controls above the chart */}
       <TradeControls
-        activeSide={tradeSide}
         amount={tradeAmount}
         pct={tradePct}
-        entryPrice={entryPrice}
-        positionQty={positionQty}
         currentPrice={livePrice()}
-        takeProfit={takeProfit}
-        stopLoss={stopLoss}
+        priceDir={priceDir}
+        buyLeg={buyLeg}
+        sellLeg={sellLeg}
         otherPositionLabel={otherPositionLabel}
         timeframeLabel={RANGES.find(r => r.key === range)?.label}
         balance={balance}
