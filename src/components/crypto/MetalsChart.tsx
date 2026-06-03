@@ -481,8 +481,11 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         activeSide={tradeSide}
         amount={tradeAmount}
         pct={tradePct}
-        onBuy={() => setTradeSide(prev => (prev === 'buy' ? null : 'buy'))}
-        onSell={() => setTradeSide(prev => (prev === 'sell' ? null : 'sell'))}
+        entryPrice={entryPrice}
+        currentPrice={livePrice()}
+        timeframeLabel={RANGES.find(r => r.key === range)?.label}
+        onBuy={() => handleTrade('buy')}
+        onSell={() => handleTrade('sell')}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
       />
