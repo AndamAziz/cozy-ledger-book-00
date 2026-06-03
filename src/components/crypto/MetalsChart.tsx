@@ -567,7 +567,6 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
           axisLabelVisible: true,
           title,
         }));
-        }));
       });
       // TP / SL apply to the whole leg — bold lines so the user clearly sees
       // WHERE profit (green) and loss (deep crimson) sit on the chart.
