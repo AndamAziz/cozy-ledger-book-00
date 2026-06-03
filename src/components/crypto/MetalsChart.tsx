@@ -6,6 +6,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
+import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
+import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
+import type { OHLCCandle } from '@/lib/krakenApi';
 
 interface MetalsChartProps {
   candles: MetalCandle[];
