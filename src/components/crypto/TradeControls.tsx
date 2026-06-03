@@ -152,6 +152,18 @@ export function TradeControls({
   const priceUp = priceDir === 'up';
   const priceDown = priceDir === 'down';
 
+  // Flash the Buy/Sell buttons green on each up-tick and red on each down-tick.
+  // A new `id` on every change re-triggers the short (<1s) flash animation.
+  const prevPriceRef = useRef(currentPrice);
+  const [flash, setFlash] = useState<{ id: number; up: boolean } | null>(null);
+  useEffect(() => {
+    const prev = prevPriceRef.current;
+    if (currentPrice > 0 && prev > 0 && currentPrice !== prev) {
+      setFlash({ id: Date.now() + Math.random(), up: currentPrice > prev });
+    }
+    prevPriceRef.current = currentPrice;
+  }, [currentPrice]);
+
   // MT5 one-click volume stepper (lots), min 0.01, 0.01 increments.
   const decVolume = () => onAmountChange(Math.max(0.01, +(amount - 0.01).toFixed(2)));
   const incVolume = () => onAmountChange(+(amount + 0.01).toFixed(2));
