@@ -23,6 +23,8 @@ export interface PositionLeg {
   takeProfit: number | null;
   /** Stop-loss trigger price (auto-closes in loss) or null. */
   stopLoss: number | null;
+  /** Epoch SECONDS when the leg was first opened (used to mark the chart). */
+  entryTime: number;
 }
 
 /**
@@ -97,6 +99,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
           qty: parsed.qty ?? 0,
           takeProfit: parsed.takeProfit ?? null,
           stopLoss: parsed.stopLoss ?? null,
+          entryTime: parsed.entryTime ?? Math.floor(Date.now() / 1000),
         };
         return {
           symbol: parsed.symbol,
@@ -211,7 +214,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
             const newEntry = ((existing.entryPrice * existing.qty) + price * amount) / newQty;
             return { ...existing, entryPrice: newEntry, qty: newQty };
           })()
-        : { entryPrice: price, qty: amount, takeProfit: null, stopLoss: null };
+        : { entryPrice: price, qty: amount, takeProfit: null, stopLoss: null, entryTime: Math.floor(Date.now() / 1000) };
 
       return { ...base, label, currentPrice: price, [side]: nextLeg };
     });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, Time } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
@@ -28,6 +28,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const priceLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markersRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tpLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -237,6 +239,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     // Reset stale price-line refs and notify the trade-line effect to redraw.
     priceLineRef.current = null;
     tradeLineRef.current = null;
+    markersRef.current = null;
     setSeriesVersion(v => v + 1);
 
     return () => {
@@ -384,7 +387,47 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
     drawLeg('buy', buyLeg);
     drawLeg('sell', sellLeg);
-  }, [buyLeg, sellLeg, seriesVersion, language]);
+
+    // Place an arrow marker on the exact candle where each leg was opened so
+    // the user can SEE on the chart where the Buy/Sell happened.
+    if (!markersRef.current) {
+      markersRef.current = createSeriesMarkers(seriesRef.current, []);
+    }
+    const lastTime = candles.length ? candles[candles.length - 1].time : Math.floor(Date.now() / 1000);
+    const firstTime = candles.length ? candles[0].time : 0;
+    const snap = (t: number) => {
+      if (!candles.length) return t as number;
+      // Clamp the entry time into the visible candle range so the marker shows.
+      const clamped = Math.min(Math.max(t, firstTime), lastTime);
+      // Find the nearest candle time.
+      let nearest = candles[0].time;
+      for (const c of candles) {
+        if (Math.abs(c.time - clamped) < Math.abs(nearest - clamped)) nearest = c.time;
+      }
+      return nearest;
+    };
+    const markers: any[] = [];
+    if (buyLeg) {
+      markers.push({
+        time: snap(buyLeg.entryTime) as Time,
+        position: 'belowBar',
+        color: '#0ecb81',
+        shape: 'arrowUp',
+        text: `${bi('کڕین', 'Buy')} ${fmtQty(buyLeg.qty)}`,
+      });
+    }
+    if (sellLeg) {
+      markers.push({
+        time: snap(sellLeg.entryTime) as Time,
+        position: 'aboveBar',
+        color: '#f6465d',
+        shape: 'arrowDown',
+        text: `${bi('فرۆشتن', 'Sell')} ${fmtQty(sellLeg.qty)}`,
+      });
+    }
+    markers.sort((a, b) => (a.time as number) - (b.time as number));
+    markersRef.current.setMarkers(markers);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles]);
 
 
 

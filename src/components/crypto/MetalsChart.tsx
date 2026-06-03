@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, CandlestickSeries, Time } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, CandlestickSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -71,6 +71,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markersRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tpLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -374,6 +376,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
     // Reset stale trade-line ref and notify the trade-line effect to redraw.
     tradeLineRef.current = null;
+    markersRef.current = null;
     setSeriesVersion(v => v + 1);
 
     return () => {
@@ -529,7 +532,32 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
     drawLeg('buy', buyLeg);
     drawLeg('sell', sellLeg);
-  }, [buyLeg, sellLeg, seriesVersion, language]);
+
+    // Arrow marker on the candle where each leg was opened.
+    if (!markersRef.current) {
+      markersRef.current = createSeriesMarkers(seriesRef.current, []);
+    }
+    const lastTime = candles.length ? (candles[candles.length - 1].time as number) : Math.floor(Date.now() / 1000);
+    const firstTime = candles.length ? (candles[0].time as number) : 0;
+    const snap = (t: number) => {
+      if (!candles.length) return t;
+      const clamped = Math.min(Math.max(t, firstTime), lastTime);
+      let nearest = candles[0].time as number;
+      for (const c of candles) {
+        if (Math.abs((c.time as number) - clamped) < Math.abs(nearest - clamped)) nearest = c.time as number;
+      }
+      return nearest;
+    };
+    const markers: any[] = [];
+    if (buyLeg) {
+      markers.push({ time: snap(buyLeg.entryTime) as Time, position: 'belowBar', color: '#0ecb81', shape: 'arrowUp', text: `${bi('کڕین', 'Buy')} ${fmtQty(buyLeg.qty)}` });
+    }
+    if (sellLeg) {
+      markers.push({ time: snap(sellLeg.entryTime) as Time, position: 'aboveBar', color: '#f6465d', shape: 'arrowDown', text: `${bi('فرۆشتن', 'Sell')} ${fmtQty(sellLeg.qty)}` });
+    }
+    markers.sort((a, b) => (a.time as number) - (b.time as number));
+    markersRef.current.setMarkers(markers);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles]);
 
 
 
