@@ -629,6 +629,87 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
 
+  // OHLC view of the metal candles for the indicator-series helpers.
+  const ohlcForIndicators = useMemo(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    () => candles.map((c) => ({ time: c.time as number, open: c.open, high: c.high, low: c.low, close: c.close })) as any,
+    [candles],
+  );
+
+  // Create / remove the RSI and MACD panes when toggled or chart is recreated.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const removeAll = () => {
+      [rsiSeriesRef, macdHistRef, macdLineRef, macdSignalRef].forEach((ref) => {
+        if (ref.current) {
+          try { chart.removeSeries(ref.current); } catch { /* ignore */ }
+          ref.current = null;
+        }
+      });
+    };
+    removeAll();
+
+    let paneIndex = 1;
+
+    if (showRSI) {
+      const s = chart.addSeries(LineSeries, {
+        color: '#f0b90b', lineWidth: 2,
+        priceLineVisible: false, lastValueVisible: true,
+        priceFormat: { type: 'custom', minMove: 0.01, formatter: (v: number) => v.toFixed(0) },
+      }, paneIndex);
+      if (candles.length) s.setData(rsiSeries(ohlcForIndicators).map((d) => ({ time: d.time as Time, value: d.value })));
+      try {
+        s.createPriceLine({ price: 70, color: '#f6465d', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+        s.createPriceLine({ price: 30, color: '#0ecb81', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+      } catch { /* ignore */ }
+      rsiSeriesRef.current = s;
+      try { chart.panes()[paneIndex]?.setStretchFactor(1); } catch { /* ignore */ }
+      paneIndex++;
+    }
+
+    if (showMACD) {
+      const data = candles.length ? macdSeries(ohlcForIndicators) : { macd: [], signal: [], histogram: [] };
+      const hist = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, paneIndex);
+      hist.setData(data.histogram.map((d) => ({
+        time: d.time as Time, value: d.value,
+        color: d.value >= 0 ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)',
+      })));
+      const macdL = chart.addSeries(LineSeries, { color: '#2962ff', lineWidth: 2, priceLineVisible: false, lastValueVisible: false }, paneIndex);
+      macdL.setData(data.macd.map((d) => ({ time: d.time as Time, value: d.value })));
+      const sigL = chart.addSeries(LineSeries, { color: '#f0b90b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, paneIndex);
+      sigL.setData(data.signal.map((d) => ({ time: d.time as Time, value: d.value })));
+      macdHistRef.current = hist;
+      macdLineRef.current = macdL;
+      macdSignalRef.current = sigL;
+      try { chart.panes()[paneIndex]?.setStretchFactor(1); } catch { /* ignore */ }
+    }
+
+    try { chart.panes()[0]?.setStretchFactor(showRSI || showMACD ? 3 : 1); } catch { /* ignore */ }
+
+    return removeAll;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRSI, showMACD, seriesVersion]);
+
+  // Live-update the indicator pane data as new candles arrive.
+  useEffect(() => {
+    if (!candles.length) return;
+    if (rsiSeriesRef.current) {
+      rsiSeriesRef.current.setData(rsiSeries(ohlcForIndicators).map((d) => ({ time: d.time as Time, value: d.value })));
+    }
+    if (macdHistRef.current && macdLineRef.current && macdSignalRef.current) {
+      const data = macdSeries(ohlcForIndicators);
+      macdHistRef.current.setData(data.histogram.map((d) => ({
+        time: d.time as Time, value: d.value,
+        color: d.value >= 0 ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)',
+      })));
+      macdLineRef.current.setData(data.macd.map((d) => ({ time: d.time as Time, value: d.value })));
+      macdSignalRef.current.setData(data.signal.map((d) => ({ time: d.time as Time, value: d.value })));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candles]);
+
 
 
   const stepper = (
