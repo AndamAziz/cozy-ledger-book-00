@@ -167,6 +167,16 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore storage errors */ }
   }, [position]);
 
+  // Persist realized PnL to the database whenever it changes.
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from('demo_accounts')
+      .update({ realized_pnl: realizedPnl })
+      .eq('user_id', userId)
+      .then(() => { /* fire and forget */ });
+  }, [realizedPnl, userId]);
+
   useEffect(() => {
     let active = true;
     (async () => {
