@@ -514,7 +514,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       lineWidth: 1,
       lineStyle: 2,
       axisLabelVisible: true,
-      title: `${name || ''} $${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      // Price already shows once on the standard axis label — keep only the
+      // metal name in the title so the value isn't duplicated.
+      title: `${name || ''}`,
     });
   }, [currentPrice, name, accentColor]);
 
