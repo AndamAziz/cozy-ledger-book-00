@@ -382,6 +382,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         entryPrice={entryPrice}
         currentPrice={currentPrice}
         timeframeLabel={TIMEFRAMES.find(t => t.interval === interval)?.label}
+        balance={balance}
+        onRenew={renew}
         onBuy={() => handleTrade('buy')}
         onSell={() => handleTrade('sell')}
         onRefresh={handleRefreshTrade}
