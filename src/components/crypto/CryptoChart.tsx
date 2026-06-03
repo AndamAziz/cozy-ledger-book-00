@@ -424,7 +424,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           color: currentPrice > 0 ? (inProfit ? '#0ecb81' : '#f6465d') : (isBuy ? '#0ecb81' : '#f6465d'),
           lineWidth: 1,
           lineStyle: 0,
-          axisLabelVisible: true,
+          // Keep the P/L on the line itself but DON'T stack a box on the price
+          // axis — that kept the scale numbers from showing when zoomed in.
+          axisLabelVisible: false,
           title,
         }));
       });
@@ -807,7 +809,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
 
       {/* Chart */}
-      <div className="flex-1 relative min-h-[300px] md:min-h-[500px]">
+      <div className="flex-1 relative min-h-[300px] md:min-h-[500px] landscape:min-h-[80vh]">
         <div ref={chartContainerRef} className="absolute inset-0" />
 
 
