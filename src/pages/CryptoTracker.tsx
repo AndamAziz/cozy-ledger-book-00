@@ -435,6 +435,7 @@ export default function CryptoTracker() {
           onClose={() => setShowConverter(false)}
         />
       )}
-    </>
+    </DemoAccountProvider>
+
   );
 }
