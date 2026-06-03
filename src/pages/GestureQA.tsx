@@ -219,6 +219,28 @@ export default function GestureQA() {
           })}
         </div>
 
+        {/* Chart selector — independent checklist per chart */}
+        <div className="grid grid-cols-2 gap-2">
+          {(['crypto', 'metals'] as ChartKind[]).map((c) => {
+            const active = chart === c;
+            return (
+              <button
+                key={c}
+                onClick={() => setChart(c)}
+                className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-bold transition-colors ${
+                  active
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {c === 'crypto' ? bi('چارتی کریپتۆ', 'Crypto chart') : bi('چارتی فلز', 'Metals chart')}
+              </button>
+            );
+          })}
+        </div>
+
+
+
         {/* Progress */}
         <div className="rounded-lg border border-border bg-card p-3">
           <div className="mb-2 flex items-center justify-between text-sm">
