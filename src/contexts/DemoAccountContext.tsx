@@ -119,6 +119,10 @@ interface DemoAccountValue {
   position: OpenPosition | null;
   /** Cumulative realized P/L from all closed trades. */
   realizedPnl: number;
+  /** Closed-trade history (newest first), persisted locally. */
+  journal: TradeRecord[];
+  /** Clear the entire trade journal. */
+  clearJournal: () => void;
   /** Open a new leg or stack onto an existing one on the same asset+side. */
   openOrAdd: (args: { symbol: string; label: string; side: PositionSide; price: number; amount: number }) => void;
   /** Update the live price for the asset that owns the position; triggers TP/SL. */
