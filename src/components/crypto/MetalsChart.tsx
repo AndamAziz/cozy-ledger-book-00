@@ -116,6 +116,22 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     setEntryPrice(p > 0 ? p : null);
   };
 
+  // When the selected asset changes (e.g. switching to XAUUSD), reset all trade
+  // state so Buy/Sell/Refresh logic starts fresh on the newly selected asset
+  // instead of carrying over the previous asset's entry price & analysis.
+  useEffect(() => {
+    setTradeSide(null);
+    setEntryPrice(null);
+    setTradePct(null);
+    if (tradeLineRef.current && seriesRef.current) {
+      try { seriesRef.current.removePriceLine(tradeLineRef.current); } catch { /* ignore */ }
+      tradeLineRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name]);
+
+
+
 
 
   // Auto layout: spacing computed from chart width + candle count + timeframe.
