@@ -23,6 +23,8 @@ export interface PositionLeg {
   takeProfit: number | null;
   /** Stop-loss trigger price (auto-closes in loss) or null. */
   stopLoss: number | null;
+  /** Epoch SECONDS when the leg was first opened (used to mark the chart). */
+  entryTime: number;
 }
 
 /**
