@@ -762,6 +762,18 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
         <PnLSummaryPanel realizedPnl={realizedPnl} unrealizedPnl={unrealizedPnl} language={language} />
 
+        {/* Depth-of-market ladder (MT5 style) overlaid on the right edge */}
+        {showDOM && currentPrice > 0 && (
+          <div className="absolute top-2 end-2 z-20 w-[150px] sm:w-[190px]">
+            <OrderBookPanel
+              symbol={`${symbol}/USD`}
+              currentPrice={currentPrice}
+              onClose={() => setShowDOM(false)}
+            />
+          </div>
+        )}
+
+
         {/* Live floating P/L overlay (like pro trading apps) */}
         {(buyLeg || sellLeg) && currentPrice > 0 && (
           <div className="absolute top-2 left-2 z-10 flex max-h-[80%] flex-col gap-1.5 overflow-hidden pointer-events-none">
