@@ -739,6 +739,16 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
             {bi('تۆمار', 'Journal')}
           </button>
 
+          {/* Toggle: show qty + entry price on trade labels, or just P/L */}
+          <button
+            onClick={() => setShowTradeDetails(v => !v)}
+            className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+              showTradeDetails ? 'bg-[#f0b90b1a] text-[#f0b90b] border-[#f0b90b55]' : 'text-[#848e9c] border-white/5 hover:text-white'
+            }`}
+          >
+            {bi('وردەکاری', 'Details')}
+          </button>
+
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
 
 
