@@ -423,7 +423,14 @@ export function TradeControls({
             buyLeg && buyLeg.qty > 0 ? 'ring-2 ring-inset ring-white/70' : ''
           }`}
         >
-          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
+          {flash && (
+            <span
+              key={flash.id}
+              className="pointer-events-none absolute inset-0 animate-price-flash"
+              style={{ backgroundColor: flash.up ? '#0ecb81' : '#f6465d' }}
+            />
+          )}
+          <span className="relative text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
             {bi('کڕین', 'Buy')}{buyLeg && buyLeg.qty > 0 ? ' +' : ''}
           </span>
           {renderMtPrice(currentPrice, '#ffffff')}
