@@ -122,6 +122,11 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
   const otherPositionLabel = otherHasLegs ? position!.label : null;
 
+  // Keep a fresh snapshot of the legs for the TP/SL drag helper.
+  legsRef.current = { buy: buyLeg, sell: sellLeg };
+
+
+
   // (Live per-trade P/L is shown directly on the chart, MT5-style, below.)
   const price = livePrice();
 
