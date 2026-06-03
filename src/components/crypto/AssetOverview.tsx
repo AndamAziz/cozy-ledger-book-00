@@ -39,7 +39,13 @@ function OverviewCard({
     signal === 'buy' ? bi('کڕین', 'Buy') : signal === 'sell' ? bi('فرۆشتن', 'Sell') : bi('بێلایەن', 'Neutral');
 
   return (
-    <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-3 flex flex-col gap-2.5">
+    <div
+      className="group relative overflow-hidden bg-gradient-to-b from-[#11161f] to-[#0d1117] border border-[#1a1e2e] rounded-xl p-3 flex flex-col gap-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#0ecb81]/30 hover:shadow-[0_10px_30px_-12px_rgba(14,203,129,0.35)]"
+    >
+      <span
+        className="absolute inset-x-0 top-0 h-[2px] opacity-70"
+        style={{ background: `linear-gradient(90deg, transparent, ${signalColor}, transparent)` }}
+      />
       {/* Header: logo + symbol + price */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
