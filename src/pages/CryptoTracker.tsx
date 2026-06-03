@@ -6,6 +6,8 @@ import { useKrakenWebSocket } from '@/hooks/useKrakenWebSocket';
 import { useKrakenOHLC } from '@/hooks/useKrakenOHLC';
 import { useForexData } from '@/hooks/useForexData';
 import { useMetalsData } from '@/hooks/useMetalsData';
+import { useCryptoOverview } from '@/hooks/useCryptoOverview';
+import { useMetalsOverview } from '@/hooks/useMetalsOverview';
 import { CryptoChart } from '@/components/crypto/CryptoChart';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { CoinList } from '@/components/crypto/CoinList';
@@ -13,19 +15,22 @@ import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
 import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
+import { AssetOverview } from '@/components/crypto/AssetOverview';
 import { CurrencyConverter } from '@/components/crypto/CurrencyConverter';
+import { METALS_META } from '@/lib/metalsApi';
+import { OverviewEntry } from '@/lib/overview';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid } from 'lucide-react';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
-type CryptoView = 'chart' | 'analysis';
+type CryptoView = 'overview' | 'chart' | 'analysis';
 
 export default function CryptoTracker() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const [activeTab, setActiveTab] = useState<TrackerTab>('crypto');
-  const [cryptoView, setCryptoView] = useState<CryptoView>('chart');
+  const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(60);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -33,13 +38,16 @@ export default function CryptoTracker() {
   const [coinsMap, setCoinsMap] = useState<Map<string, KrakenCoin>>(new Map());
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedForexCode, setSelectedForexCode] = useState<string | null>(null);
-  const [selectedMetalCode, setSelectedMetalCode] = useState<string | null>('XAU');
+  const [selectedMetalCode, setSelectedMetalCode] = useState<string | null>(null);
+  const [metalInitialView, setMetalInitialView] = useState<'market' | 'analysis'>('market');
   const coinsRef = useRef(coinsMap);
   coinsRef.current = coinsMap;
 
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading } = useForexData();
   const { metals, isLoading: metalsLoading, marketOpen: metalsMarketOpen } = useMetalsData();
+  const cryptoOverview = useCryptoOverview(activeTab === 'crypto' && cryptoView === 'overview');
+  const metalsOverview = useMetalsOverview(activeTab === 'metals' && selectedMetalCode === null);
 
   // Fetch initial ticker data
   useEffect(() => {
@@ -108,6 +116,40 @@ export default function CryptoTracker() {
 
   const currentCoin = coinsMap.get(selectedPair);
   const currentPrice = currentCoin?.price || 0;
+
+  const cryptoEntries: OverviewEntry[] = TRACKED_PAIRS.map((pair) => {
+    const coin = coinsMap.get(pair);
+    const sym = getSymbolFromPair(pair);
+    const meta = getCoinMeta(sym);
+    const sig = cryptoOverview.data[pair];
+    return {
+      key: pair,
+      symbol: getDisplaySymbol(sym),
+      name: coin?.name ?? meta.name,
+      logo: coin?.logo ?? meta.logo,
+      price: coin?.price ?? 0,
+      change: coin?.change24h ?? 0,
+      closes: (sig?.closes ?? []).slice(-40),
+      summary: sig?.summary ?? null,
+      accentColor: '#f0b90b',
+    };
+  });
+
+  const metalsEntries: OverviewEntry[] = METALS_META.map((meta) => {
+    const m = metals.find((x) => x.code === meta.code);
+    const sig = metalsOverview.data[meta.code];
+    return {
+      key: meta.code,
+      symbol: meta.symbol.replace('/USD', ''),
+      name: meta.name,
+      logo: meta.emoji,
+      price: m?.price ?? 0,
+      change: m?.change ?? 0,
+      closes: (sig?.closes ?? []).slice(-40),
+      summary: sig?.summary ?? null,
+      accentColor: meta.category === 'oil' ? '#e67e22' : '#d4af37',
+    };
+  });
 
   const listTitle =
     activeTab === 'crypto' ? bi('دراوەکان', 'Coins')
@@ -272,9 +314,18 @@ export default function CryptoTracker() {
           {/* Main content */}
           {activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Chart / Analysis sub-toggle */}
+              {/* Overview / Chart / Analysis sub-toggle */}
               <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
                 <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setCryptoView('overview')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
+                      cryptoView === 'overview' ? 'bg-[#2a2e3e] text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                    <span>{bi('پوختە', 'Overview')}</span>
+                  </button>
                   <button
                     onClick={() => setCryptoView('chart')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
@@ -296,7 +347,18 @@ export default function CryptoTracker() {
                 </div>
               </div>
 
-              {cryptoView === 'chart' ? (
+              {cryptoView === 'overview' ? (
+                <AssetOverview
+                  title={bi('پوختەی کریپتۆ', 'Crypto Overview')}
+                  subtitle={bi('نرخ، گۆڕان و سیگناڵی کڕین/فرۆشتن', 'Price, change & Buy/Sell signals')}
+                  entries={cryptoEntries}
+                  isLoading={cryptoOverview.isLoading}
+                  onOpen={(pair, mode) => {
+                    setSelectedPair(pair);
+                    setCryptoView(mode);
+                  }}
+                />
+              ) : cryptoView === 'chart' ? (
                 <>
                   <CryptoChart
                     pair={selectedPair}
@@ -331,12 +393,36 @@ export default function CryptoTracker() {
               selectedCode={selectedForexCode}
               isLoading={forexLoading}
             />
-          ) : (
-            <MetalsDetail
-              metals={metals}
-              selectedCode={selectedMetalCode}
-              isLoading={metalsLoading}
+          ) : selectedMetalCode === null ? (
+            <AssetOverview
+              title={bi('پوختەی کاڵاکان', 'Commodities Overview')}
+              subtitle={bi('نرخ، گۆڕان و سیگناڵی کڕین/فرۆشتن', 'Price, change & Buy/Sell signals')}
+              entries={metalsEntries}
+              isLoading={metalsOverview.isLoading}
+              onOpen={(code, mode) => {
+                setMetalInitialView(mode === 'analysis' ? 'analysis' : 'market');
+                setSelectedMetalCode(code);
+              }}
             />
+          ) : (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
+                <button
+                  onClick={() => setSelectedMetalCode(null)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition-colors"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span>{bi('پوختە', 'Overview')}</span>
+                </button>
+              </div>
+              <MetalsDetail
+                key={`${selectedMetalCode}-${metalInitialView}`}
+                metals={metals}
+                selectedCode={selectedMetalCode}
+                isLoading={metalsLoading}
+                initialView={metalInitialView}
+              />
+            </div>
           )}
         </div>
       </div>

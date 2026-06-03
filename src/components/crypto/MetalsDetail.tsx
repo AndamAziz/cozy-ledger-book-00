@@ -16,13 +16,14 @@ interface MetalsDetailProps {
   metals: Metal[];
   selectedCode: string | null;
   isLoading: boolean;
+  initialView?: 'market' | 'analysis';
 }
 
-export function MetalsDetail({ metals, selectedCode, isLoading }: MetalsDetailProps) {
+export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'market' }: MetalsDetailProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
   const [chartRange, setChartRange] = useState('1d');
-  const [view, setView] = useState<'market' | 'analysis'>('market');
+  const [view, setView] = useState<'market' | 'analysis'>(initialView);
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const livePrice = selected?.price || 0;
   const { candles: historyCandles, isLoading: historyLoading, error: historyError, refetch: refetchHistory } = useMetalsHistory(selectedCode, chartRange, livePrice);
