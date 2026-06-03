@@ -891,7 +891,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       <div className="relative h-[250px] sm:h-[320px]">
         <div ref={chartContainerRef} className="absolute inset-0" />
 
-        <PnLSummaryPanel realizedPnl={realizedPnl} unrealizedPnl={unrealizedPnl} language={language} />
+
 
         {/* Depth-of-market ladder (MT5 style) overlaid on the right edge */}
         {showDOM && currentPrice > 0 && (
