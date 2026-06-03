@@ -52,7 +52,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [maType, setMaType] = useState<MAType>('MA');
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, renew, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   const [tradeAmount, setTradeAmount] = useState(0.01);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
