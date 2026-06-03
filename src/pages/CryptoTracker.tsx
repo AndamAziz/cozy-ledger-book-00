@@ -386,6 +386,8 @@ export default function CryptoTracker() {
                   currentPrice={currentPrice}
                   change24h={currentCoin?.change24h ?? 0}
                   interval={interval}
+                  tradeSymbol={selectedPair}
+                  tradeLabel={`${getDisplaySymbol(getSymbolFromPair(selectedPair))}/USD`}
                 />
               )}
             </div>
