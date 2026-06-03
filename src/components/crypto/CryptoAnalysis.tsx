@@ -785,7 +785,56 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               </div>
             )}
 
-            {/* Levels grid */}
+            {/* Execute the recommendation on the demo account */}
+            {(tradeSummary.recommendation === 'buy' || tradeSummary.recommendation === 'sell') && (
+              <div className="px-4 py-3 border-b border-[#1a1e2e] space-y-2">
+                {otherOpen ? (
+                  <div className="flex items-center gap-2 rounded-md bg-[#f0b90b]/10 border border-[#f0b90b]/30 px-2.5 py-1.5 text-[11px] text-[#f0b90b]">
+                    <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                    <span>{biLabel('پۆزیشنێکی کراوەت هەیە لەسەر', 'You have an open position on')} <span className="font-bold">{otherOpen}</span> — {biLabel('سەرەتا دایبخە', 'close it first')}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-[#848e9c]">{biLabel('بڕ', 'Amount')}</span>
+                      {TRADE_AMOUNTS.map((a) => (
+                        <button
+                          key={a}
+                          onClick={() => setTradeAmount(a)}
+                          className={`px-2 py-0.5 text-[10px] font-bold rounded border transition-colors tabular-nums ${
+                            tradeAmount === a ? 'bg-[#f0b90b] text-black border-[#f0b90b]' : 'text-[#848e9c] border-white/10 hover:text-white'
+                          }`}
+                        >
+                          {a}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => doTrade(tradeSummary.recommendation as 'buy' | 'sell')}
+                      disabled={balance <= 0 || currentPrice <= 0}
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold border transition-colors active:scale-95 disabled:opacity-40 disabled:pointer-events-none ${
+                        tradeSummary.recommendation === 'buy'
+                          ? 'bg-[#0ecb81] text-black border-[#0ecb81] hover:bg-[#0ecb81]/90'
+                          : 'bg-[#f6465d] text-white border-[#f6465d] hover:bg-[#f6465d]/90'
+                      }`}
+                    >
+                      {tradeSummary.recommendation === 'buy' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                      {tradeSummary.recommendation === 'buy'
+                        ? biLabel('کڕین بکە بە دیمۆ', 'Buy on Demo')
+                        : biLabel('فرۆشتن بکە بە دیمۆ', 'Sell on Demo')}
+                      <span className="opacity-80 tabular-nums">· {tradeAmount}</span>
+                    </button>
+                    {myPos && ((myPos.buy?.qty ?? 0) > 0 || (myPos.sell?.qty ?? 0) > 0) && (
+                      <p className="text-[10px] text-[#848e9c] text-center">
+                        {biLabel('پۆزیشنی کراوە', 'Open position')}: {(myPos.buy?.qty ?? 0) > 0 ? `${biLabel('کڕین', 'Buy')} ${myPos!.buy!.qty}` : ''} {(myPos.sell?.qty ?? 0) > 0 ? `${biLabel('فرۆشتن', 'Sell')} ${myPos!.sell!.qty}` : ''}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+
             <div className="grid grid-cols-2 gap-px bg-[#1a1e2e]">
               <div className="bg-[#0d1117] px-4 py-2.5">
                 <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><LogIn className="h-3 w-3" />{biLabel('خاڵی چوونەژوورەوە', 'Entry')}</div>
