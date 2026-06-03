@@ -70,6 +70,19 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [chartType, setChartType] = useState<'candles' | 'area' | 'line'>('candles');
   const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
   const [maType, setMaType] = useState<MAType>('MA');
+  // MT5-style extras: RSI / MACD panes, depth-of-market ladder, trade journal.
+  const [showRSI, setShowRSI] = useState(false);
+  const [showMACD, setShowMACD] = useState(false);
+  const [showDOM, setShowDOM] = useState(false);
+  const [showJournal, setShowJournal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rsiSeriesRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const macdHistRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const macdLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const macdSignalRef = useRef<any>(null);
 
   // Shared demo account + the single open position (persists across navigation).
   const { balance, renew, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
