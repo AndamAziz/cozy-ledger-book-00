@@ -206,6 +206,11 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         minBarSpacing: preset.minBarSpacing,
         ticksVisible: true,
       },
+      // One-finger VERTICAL swipes are released to the page so the user can
+      // scroll up/down; only horizontal pan + pinch-zoom stay on the chart.
+      handleScroll: {
+        vertTouchDrag: false,
+      },
       width: rect.width || 600,
       height: rect.height || 400,
     });
@@ -638,26 +643,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
   return (
     <div className="flex flex-col h-full">
-      {/* Buy / Refresh / Sell controls above the chart */}
-      <TradeControls
-        amount={tradeAmount}
-        pct={tradePct}
-        currentPrice={currentPrice}
-        priceDir={priceDir}
-        buyLeg={buyLeg}
-        sellLeg={sellLeg}
-        otherPositionLabel={otherPositionLabel}
-        timeframeLabel={TIMEFRAMES.find(t => t.interval === interval)?.label}
-        timeframeMinutes={interval}
-        balance={balance}
-        onRenew={renew}
-        onBuy={() => handleAdd('buy')}
-        onSell={() => handleAdd('sell')}
-        onClose={handleClose}
-        onRefresh={handleRefreshTrade}
-        onAmountChange={setTradeAmount}
-        onSetTpSl={setTpSl}
-      />
+
 
       {/* Header */}
       <div className="border-b border-white/5">
@@ -809,6 +795,26 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         </div>
       </div>
 
+      {/* Buy / Refresh / Sell controls directly above the chart (MT5 style) */}
+      <TradeControls
+        amount={tradeAmount}
+        pct={tradePct}
+        currentPrice={currentPrice}
+        priceDir={priceDir}
+        buyLeg={buyLeg}
+        sellLeg={sellLeg}
+        otherPositionLabel={otherPositionLabel}
+        timeframeLabel={TIMEFRAMES.find(t => t.interval === interval)?.label}
+        timeframeMinutes={interval}
+        balance={balance}
+        onRenew={renew}
+        onBuy={() => handleAdd('buy')}
+        onSell={() => handleAdd('sell')}
+        onClose={handleClose}
+        onRefresh={handleRefreshTrade}
+        onAmountChange={setTradeAmount}
+        onSetTpSl={setTpSl}
+      />
 
       {/* Chart */}
       <div className="flex-1 relative min-h-[72vh] md:min-h-[500px] landscape:min-h-[88vh]">
