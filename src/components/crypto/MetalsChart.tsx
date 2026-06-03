@@ -76,6 +76,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const [showMACD, setShowMACD] = useState(false);
   const [showDOM, setShowDOM] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
+  // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
+  const [showTradeDetails, setShowTradeDetails] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rsiSeriesRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
