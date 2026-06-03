@@ -92,6 +92,8 @@ interface DemoAccountValue {
   ready: boolean;
   /** The open position (may carry both a buy and a sell leg), or null. */
   position: OpenPosition | null;
+  /** Cumulative realized P/L from all closed trades. */
+  realizedPnl: number;
   /** Open a new leg or stack onto an existing one on the same asset+side. */
   openOrAdd: (args: { symbol: string; label: string; side: PositionSide; price: number; amount: number }) => void;
   /** Update the live price for the asset that owns the position; triggers TP/SL. */
