@@ -128,12 +128,14 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
       if (!parsed) return null;
       // Migrate the previous single-leg shape ({ side, entryPrice, qty, ... }).
       if (parsed.side && !('buy' in parsed)) {
+        const entryTime = parsed.entryTime ?? Math.floor(Date.now() / 1000);
         const leg: PositionLeg = {
           entryPrice: parsed.entryPrice ?? 0,
           qty: parsed.qty ?? 0,
           takeProfit: parsed.takeProfit ?? null,
           stopLoss: parsed.stopLoss ?? null,
-          entryTime: parsed.entryTime ?? Math.floor(Date.now() / 1000),
+          entryTime,
+          fills: [{ id: newFillId(), entryPrice: parsed.entryPrice ?? 0, qty: parsed.qty ?? 0, entryTime }],
         };
         return {
           symbol: parsed.symbol,
@@ -143,7 +145,9 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
           sell: parsed.side === 'sell' ? leg : null,
         };
       }
-      return parsed as OpenPosition;
+      // Back-fill the fills array on legs saved before per-fill tracking.
+      const pos = parsed as OpenPosition;
+      return { ...pos, buy: normalizeLeg(pos.buy), sell: normalizeLeg(pos.sell) };
     } catch {
       return null;
     }
