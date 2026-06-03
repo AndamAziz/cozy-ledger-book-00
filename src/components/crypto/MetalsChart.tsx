@@ -413,6 +413,31 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     });
   }, [currentPrice, name, accentColor]);
 
+  // Draw the Buy (green) / Sell (red) line from the moving price line.
+  useEffect(() => {
+    if (!seriesRef.current) return;
+
+    if (tradeLineRef.current) {
+      try { seriesRef.current.removePriceLine(tradeLineRef.current); } catch { /* ignore */ }
+      tradeLineRef.current = null;
+    }
+
+    const price = currentPrice && currentPrice > 0
+      ? currentPrice
+      : (candles.length ? candles[candles.length - 1].close : 0);
+    if (!tradeSide || price <= 0) return;
+
+    const isBuy = tradeSide === 'buy';
+    tradeLineRef.current = seriesRef.current.createPriceLine({
+      price,
+      color: isBuy ? '#0ecb81' : '#f6465d',
+      lineWidth: 2,
+      lineStyle: 0,
+      axisLabelVisible: true,
+      title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${tradeAmount}`,
+    });
+  }, [tradeSide, tradeAmount, currentPrice, candles, seriesVersion, language]);
+
   const stepper = (
     label: string,
     value: number,
