@@ -8,6 +8,7 @@ import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAvera
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
+import { attachTpSlDrag } from '@/lib/tpSlDrag';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
