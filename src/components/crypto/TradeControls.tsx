@@ -1,4 +1,4 @@
-import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock } from 'lucide-react';
+import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { suggestHoldMinutes, suggestHoldAcrossTimeframes } from '@/lib/indicators';
 
@@ -148,6 +148,24 @@ export function TradeControls({
   const priceUp = priceDir === 'up';
   const priceDown = priceDir === 'down';
 
+  // MT5 one-click volume stepper (lots), min 0.01, 0.01 increments.
+  const decVolume = () => onAmountChange(Math.max(0.01, +(amount - 0.01).toFixed(2)));
+  const incVolume = () => onAmountChange(+(amount + 0.01).toFixed(2));
+
+  // Render a price MT5-style: smaller leading digits, larger last two ("big figure").
+  const renderMtPrice = (value: number, color: string) => {
+    if (!value || value <= 0) return <span className="text-base font-bold" style={{ color }}>--</span>;
+    const s = fmtPrice(value);
+    const main = s.slice(0, -2);
+    const last = s.slice(-2);
+    return (
+      <span className="flex items-baseline font-bold leading-none tabular-nums" style={{ color }}>
+        <span className="text-xs sm:text-sm opacity-90">{main}</span>
+        <span className="text-lg sm:text-xl">{last}</span>
+      </span>
+    );
+  };
+
   // Reusable open-leg panel (avg entry · size · live P/L · TP/SL · close).
   const LegPanel = ({ side, leg }: { side: 'buy' | 'sell'; leg: LegInfo }) => {
     const isBuy = side === 'buy';
@@ -294,72 +312,67 @@ export function TradeControls({
         </div>
       )}
 
-      {/* Sell (left) | Refresh (centre) | Buy (right) — MT5 layout, forced LTR
-          so the sides stay fixed in both languages. Both can be open at once.
-          Each button shows the LIVE price with an up/down indicator. */}
-      <div dir="ltr" className="flex items-stretch gap-2">
+      {/* MT5 one-click trade bar: SELL (red, left) · volume stepper · BUY (blue,
+          right). Forced LTR so the sides stay fixed in both languages.
+          Both sides can be open at once (hedge mode). */}
+      <div dir="ltr" className="flex items-stretch rounded-lg overflow-hidden border border-white/10">
+        {/* SELL block */}
         <button
           onClick={onSell}
           disabled={depleted || !!otherPositionLabel}
-          className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-lg font-bold transition-all active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
-            sellLeg && sellLeg.qty > 0
-              ? 'bg-gradient-to-b from-[#f6465d] to-[#d12a40] text-white border-[#f6465d] ring-1 ring-white/40 shadow-[0_6px_22px_-6px_rgba(246,70,93,0.75)]'
-              : 'bg-[#f6465d]/10 text-[#f6465d] border-[#f6465d]/40 hover:bg-[#f6465d]/20 hover:shadow-[0_4px_16px_-8px_rgba(246,70,93,0.6)]'
+          className={`relative flex-1 flex flex-col justify-center text-left px-3 py-2 transition-all active:opacity-90 disabled:opacity-40 disabled:pointer-events-none bg-[#f6465d] ${
+            sellLeg && sellLeg.qty > 0 ? 'ring-2 ring-inset ring-white/70' : ''
           }`}
         >
-          <span className="text-xs sm:text-sm">{bi('فرۆشتن', 'Sell')}{sellLeg && sellLeg.qty > 0 ? ' +' : ''}</span>
-          {currentPrice > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] sm:text-[11px] tabular-nums opacity-90">
-              {priceUp && <ArrowUp className="h-3 w-3" />}
-              {priceDown && <ArrowDown className="h-3 w-3" />}
-              ${fmtPrice(currentPrice)}
-            </span>
-          )}
+          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
+            {bi('فرۆشتن', 'Sell')}{sellLeg && sellLeg.qty > 0 ? ' +' : ''}
+          </span>
+          {renderMtPrice(currentPrice, '#ffffff')}
         </button>
 
-        <div className="flex flex-col items-center justify-start gap-1.5 shrink-0">
-          <button
-            onClick={onRefresh}
-            aria-label={bi('نوێکردنەوە', 'Refresh')}
-            className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#1a1e2e] text-[#f0b90b] border border-white/10 hover:bg-[#252a3a] active:scale-95 transition-colors"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-          {/* Amount alternatives under the refresh button */}
-          <div className="flex items-center gap-1">
-            {TRADE_AMOUNTS.map((a) => (
-              <button
-                key={a}
-                onClick={() => onAmountChange(a)}
-                className={`px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold rounded border transition-colors tabular-nums ${
-                  amount === a
-                    ? 'bg-[#f0b90b] text-black border-[#f0b90b]'
-                    : 'text-[#848e9c] border-white/10 hover:text-white'
-                }`}
-              >
-                {a}
-              </button>
-            ))}
+        {/* Center: volume stepper + live tick dot + refresh */}
+        <div className="flex flex-col items-center justify-center bg-[#0d1117] px-2 min-w-[78px] sm:min-w-[92px]">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={decVolume}
+              aria-label={bi('کەمکردنەوە', 'Decrease')}
+              className="w-6 h-6 flex items-center justify-center rounded text-[#848e9c] hover:text-white hover:bg-white/5 active:scale-90 transition-colors"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+            <span className="text-sm sm:text-base font-bold text-white tabular-nums w-9 text-center">{amount.toFixed(2)}</span>
+            <button
+              onClick={incVolume}
+              aria-label={bi('زیادکردن', 'Increase')}
+              className="w-6 h-6 flex items-center justify-center rounded text-[#848e9c] hover:text-white hover:bg-white/5 active:scale-90 transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <span className={`h-1.5 w-1.5 rounded-full transition-colors ${priceUp ? 'bg-[#0ecb81]' : priceDown ? 'bg-[#f6465d]' : 'bg-[#848e9c]'}`} />
+            <button
+              onClick={onRefresh}
+              aria-label={bi('نوێکردنەوە', 'Refresh')}
+              className="flex items-center justify-center text-[#848e9c] hover:text-[#f0b90b] active:scale-90 transition-colors"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
 
+        {/* BUY block */}
         <button
           onClick={onBuy}
           disabled={depleted || !!otherPositionLabel}
-          className={`flex-1 flex flex-col items-center justify-center py-1.5 rounded-lg font-bold transition-all active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
-            buyLeg && buyLeg.qty > 0
-              ? 'bg-gradient-to-b from-[#0ecb81] to-[#0aa96b] text-black border-[#0ecb81] ring-1 ring-white/40 shadow-[0_6px_22px_-6px_rgba(14,203,129,0.75)]'
-              : 'bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20 hover:shadow-[0_4px_16px_-8px_rgba(14,203,129,0.6)]'
+          className={`relative flex-1 flex flex-col justify-center items-end text-right px-3 py-2 transition-all active:opacity-90 disabled:opacity-40 disabled:pointer-events-none bg-[#2962ff] ${
+            buyLeg && buyLeg.qty > 0 ? 'ring-2 ring-inset ring-white/70' : ''
           }`}
         >
-          <span className="text-xs sm:text-sm">{bi('کڕین', 'Buy')}{buyLeg && buyLeg.qty > 0 ? ' +' : ''}</span>
-          {currentPrice > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] sm:text-[11px] tabular-nums opacity-90">
-              {priceUp && <ArrowUp className="h-3 w-3" />}
-              {priceDown && <ArrowDown className="h-3 w-3" />}
-              ${fmtPrice(currentPrice)}
-            </span>
-          )}
+          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
+            {bi('کڕین', 'Buy')}{buyLeg && buyLeg.qty > 0 ? ' +' : ''}
+          </span>
+          {renderMtPrice(currentPrice, '#ffffff')}
         </button>
       </div>
 
