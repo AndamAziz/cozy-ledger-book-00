@@ -1,4 +1,4 @@
-import { RefreshCw, X } from 'lucide-react';
+import { RefreshCw, X, Target, ShieldAlert } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export type TradeSide = 'buy' | 'sell' | null;
@@ -21,6 +21,12 @@ interface TradeControlsProps {
   positionQty: number;
   /** Live moving price used to compute profit / loss. */
   currentPrice: number;
+  /** Take-profit price of the open position (or null). */
+  takeProfit: number | null;
+  /** Stop-loss price of the open position (or null). */
+  stopLoss: number | null;
+  /** Label of an OPEN position that belongs to a DIFFERENT asset (or null). */
+  otherPositionLabel: string | null;
   /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
   timeframeLabel?: string;
   /** Virtual demo account balance ($). */
@@ -33,6 +39,8 @@ interface TradeControlsProps {
   onClose: () => void;
   onRefresh: () => void;
   onAmountChange: (amount: number) => void;
+  /** Set / clear the take-profit and stop-loss levels. */
+  onSetTpSl: (takeProfit: number | null, stopLoss: number | null) => void;
 }
 
 const fmtMoney = (n: number) => {
@@ -43,16 +51,20 @@ const fmtMoney = (n: number) => {
 
 const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 
+// Symmetric TP/SL preset based on a percentage of the entry price.
+const presetTpSl = (side: 'buy' | 'sell', entry: number, pct: number): [number, number] => {
+  const delta = entry * (pct / 100);
+  const tp = side === 'buy' ? entry + delta : entry - delta;
+  const sl = side === 'buy' ? entry - delta : entry + delta;
+  return [+tp.toFixed(6), +sl.toFixed(6)];
+};
+
 /**
  * Buy / Refresh / Sell control strip rendered directly above a chart.
- * Identical behaviour for Crypto and Metals:
- *  - Buy / Sell open or ADD to a position on that side (multiple presses stack,
- *    averaging the entry price and accumulating quantity).
- *  - A dedicated Close button (shown only while a position is open) closes the
- *    whole position and realises the profit / loss into the balance.
- *  - The opposite side is disabled while a position is open — close it first.
- *  - Refresh recomputes the analysed Buy/Sell percentages shown below the buttons.
- *  - Amount chips (0.001 / 0.05 / 0.1) sit under the centre refresh button.
+ *  - Buy / Sell open or ADD to a position on that side (stacking, averaged).
+ *  - A dedicated Close button realises the whole position's P/L.
+ *  - A Take-Profit / Stop-Loss panel lets the user arm automatic exits.
+ *  - The position survives navigation: it only closes manually or via TP/SL.
  */
 export function TradeControls({
   activeSide,
@@ -61,6 +73,9 @@ export function TradeControls({
   entryPrice,
   positionQty,
   currentPrice,
+  takeProfit,
+  stopLoss,
+  otherPositionLabel,
   timeframeLabel,
   balance,
   onRenew,
@@ -69,6 +84,7 @@ export function TradeControls({
   onClose,
   onRefresh,
   onAmountChange,
+  onSetTpSl,
 }: TradeControlsProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
@@ -82,6 +98,12 @@ export function TradeControls({
     const diff = activeSide === 'buy' ? currentPrice - entryPrice : entryPrice - currentPrice;
     pnl = { value: diff * positionQty, pct: (diff / entryPrice) * 100, positive: diff >= 0 };
   }
+
+  const parseNum = (v: string): number | null => {
+    if (v.trim() === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
 
   return (
     <div className="border-b border-white/5 bg-[#090c11] px-3 py-2.5">
@@ -106,6 +128,18 @@ export function TradeControls({
         )}
       </div>
 
+      {/* Banner: an open position lives on a different asset */}
+      {otherPositionLabel && (
+        <div className="mb-2 flex items-center gap-2 rounded-md bg-[#f0b90b]/10 border border-[#f0b90b]/30 px-2.5 py-1.5 text-[10px] sm:text-xs text-[#f0b90b]">
+          <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            {bi('پۆزیشنێکی کراوەت هەیە لەسەر', 'You have an open position on')}{' '}
+            <span className="font-bold">{otherPositionLabel}</span>{' '}
+            {bi('— سەرەتا دایبخە', '— close it first')}
+          </span>
+        </div>
+      )}
+
       {/* Position summary — avg entry + total qty */}
       {hasPosition && entryPrice && (
         <div className="mb-2 flex items-center justify-between rounded-md bg-[#0d1117] border border-white/5 px-2.5 py-1.5">
@@ -128,7 +162,7 @@ export function TradeControls({
       <div className="flex items-stretch gap-2">
         <button
           onClick={onBuy}
-          disabled={depleted || activeSide === 'sell'}
+          disabled={depleted || activeSide === 'sell' || !!otherPositionLabel}
           className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
             activeSide === 'buy'
               ? 'bg-[#0ecb81] text-black border-white ring-2 ring-white/70 shadow-lg'
@@ -167,7 +201,7 @@ export function TradeControls({
 
         <button
           onClick={onSell}
-          disabled={depleted || activeSide === 'buy'}
+          disabled={depleted || activeSide === 'buy' || !!otherPositionLabel}
           className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
             activeSide === 'sell'
               ? 'bg-[#f6465d] text-white border-white ring-2 ring-white/70 shadow-lg'
@@ -177,6 +211,65 @@ export function TradeControls({
           {bi('فرۆشتن', 'Sell')}{activeSide === 'sell' ? ' +' : ''}
         </button>
       </div>
+
+      {/* Take-Profit / Stop-Loss panel — only while a position is open */}
+      {hasPosition && entryPrice && (
+        <div className="mt-2 rounded-lg bg-[#0d1117] border border-white/5 px-2.5 py-2 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-xs font-bold text-[#848e9c]">{bi('داخستنی خۆکار', 'Auto Exit')} · TP / SL</span>
+            {(takeProfit != null || stopLoss != null) && (
+              <button
+                onClick={() => onSetTpSl(null, null)}
+                className="text-[9px] sm:text-[10px] font-bold text-[#848e9c] hover:text-white transition-colors"
+              >
+                {bi('سڕینەوە', 'Clear')}
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex items-center gap-1.5 rounded-md bg-[#090c11] border border-[#0ecb81]/30 px-2 py-1.5">
+              <Target className="h-3.5 w-3.5 text-[#0ecb81] shrink-0" />
+              <input
+                type="number"
+                inputMode="decimal"
+                value={takeProfit ?? ''}
+                onChange={(e) => onSetTpSl(parseNum(e.target.value), stopLoss)}
+                placeholder={bi('قازانج', 'Take Profit')}
+                className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-[#0ecb81] placeholder:text-[#0ecb81]/40 outline-none tabular-nums"
+              />
+            </label>
+            <label className="flex items-center gap-1.5 rounded-md bg-[#090c11] border border-[#f6465d]/30 px-2 py-1.5">
+              <ShieldAlert className="h-3.5 w-3.5 text-[#f6465d] shrink-0" />
+              <input
+                type="number"
+                inputMode="decimal"
+                value={stopLoss ?? ''}
+                onChange={(e) => onSetTpSl(takeProfit, parseNum(e.target.value))}
+                placeholder={bi('زیان', 'Stop Loss')}
+                className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-[#f6465d] placeholder:text-[#f6465d]/40 outline-none tabular-nums"
+              />
+            </label>
+          </div>
+
+          {/* Quick symmetric presets relative to the entry price */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] sm:text-[10px] text-[#848e9c]">{bi('خێرا', 'Quick')}</span>
+            {[0.5, 1, 2].map((p) => {
+              const [tp, sl] = presetTpSl(activeSide as 'buy' | 'sell', entryPrice, p);
+              return (
+                <button
+                  key={p}
+                  onClick={() => onSetTpSl(tp, sl)}
+                  className="px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded border border-white/10 text-[#848e9c] hover:text-white hover:bg-white/5 active:scale-95 transition-colors tabular-nums"
+                >
+                  ±{p}%
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Dedicated Close button — only while a position is open */}
       {hasPosition && (
