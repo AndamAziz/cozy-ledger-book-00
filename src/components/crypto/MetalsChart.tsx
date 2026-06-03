@@ -34,6 +34,12 @@ const RANGES = [
   { key: '1y', label: '1Y' },
 ];
 
+// Approximate candle duration (minutes) per range, used for the hold hint.
+const RANGE_MINUTES: Record<string, number> = {
+  '1min': 1, '5min': 5, '15min': 15, '1d': 1440, '5d': 1440, '1mo': 1440, '3mo': 1440, '1y': 1440,
+};
+
+
 const INTRADAY_RANGES = new Set(['1min', '5min', '15min', '1d', '5d']);
 
 export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, range, onRangeChange, currentPrice, name }: MetalsChartProps) {
