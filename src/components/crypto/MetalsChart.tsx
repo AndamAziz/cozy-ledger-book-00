@@ -98,7 +98,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     const profit = pnlValue >= 0;
     toast({
       title: profit ? bi('قازانج 🎉', 'Profit 🎉') : bi('زیان', 'Loss'),
-      description: `${profit ? '+' : '−'}£${Math.abs(pnlValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      description: `${profit ? '+' : '−'}$${Math.abs(pnlValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     });
   };
 

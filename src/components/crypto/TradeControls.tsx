@@ -21,7 +21,7 @@ interface TradeControlsProps {
   currentPrice: number;
   /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
   timeframeLabel?: string;
-  /** Virtual demo account balance (£). */
+  /** Virtual demo account balance ($). */
   balance: number;
   /** Reset the demo balance back to the starting amount. */
   onRenew: () => void;
@@ -75,18 +75,23 @@ export function TradeControls({
 
   return (
     <div className="border-b border-white/5 bg-[#090c11] px-3 py-2.5">
-      {/* Demo account balance */}
+      {/* Demo account balance + live profit/loss */}
       <div className="flex items-center justify-between mb-2 gap-2">
         <div className="text-[10px] sm:text-xs">
           <span className="text-[#848e9c]">{bi('باڵانسی دیمۆ', 'Demo Balance')}: </span>
-          <span className={`font-bold tabular-nums ${depleted ? 'text-[#f6465d]' : 'text-white'}`}>£{fmtMoney(balance)}</span>
+          <span className={`font-bold tabular-nums ${depleted ? 'text-[#f6465d]' : 'text-white'}`}>${fmtMoney(balance)}</span>
+          {pnl && (
+            <span className={`ms-2 font-bold tabular-nums ${pnl.positive ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+              ({pnl.positive ? '+' : '−'}${fmtMoney(Math.abs(pnl.value))})
+            </span>
+          )}
         </div>
         {depleted && (
           <button
             onClick={onRenew}
             className="px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md bg-[#f0b90b] text-black hover:bg-[#f0b90b]/90 active:scale-95 transition-colors"
           >
-            {bi('نوێکردنەوەی £100,000', 'Renew £100,000')}
+            {bi('نوێکردنەوەی $200', 'Renew $200')}
           </button>
         )}
       </div>
@@ -98,7 +103,7 @@ export function TradeControls({
           disabled={depleted && activeSide !== 'buy'}
           className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
             activeSide === 'buy'
-              ? 'bg-[#0ecb81] text-black border-[#0ecb81]'
+              ? 'bg-[#0ecb81] text-black border-white ring-2 ring-white/70 shadow-lg'
               : 'bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20'
           }`}
         >
@@ -137,13 +142,14 @@ export function TradeControls({
           disabled={depleted && activeSide !== 'sell'}
           className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-colors active:scale-95 border disabled:opacity-40 disabled:pointer-events-none ${
             activeSide === 'sell'
-              ? 'bg-[#f6465d] text-white border-[#f6465d]'
+              ? 'bg-[#f6465d] text-white border-white ring-2 ring-white/70 shadow-lg'
               : 'bg-[#f6465d]/10 text-[#f6465d] border-[#f6465d]/40 hover:bg-[#f6465d]/20'
           }`}
         >
           {activeSide === 'sell' ? bi('داخستنی فرۆشتن', 'Close Sell') : bi('فرۆشتن', 'Sell')}
         </button>
       </div>
+
 
       {/* Live profit / loss vs entry — shown while a side is active */}
       {pnl && entryPrice && (

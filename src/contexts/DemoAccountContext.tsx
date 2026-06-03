@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export const DEMO_STARTING_BALANCE = 100000;
+export const DEMO_STARTING_BALANCE = 200;
 
 interface DemoAccountValue {
   balance: number;
