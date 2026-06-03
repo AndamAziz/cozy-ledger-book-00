@@ -217,6 +217,14 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
     });
   }, [persist]);
 
+  const applyRealized = useCallback((delta: number) => {
+    setRealizedPnl((prev) => {
+      const next = +(prev + delta).toFixed(2);
+      persist(balance, next);
+      return next;
+    });
+  }, [persist, balance]);
+
   const renew = useCallback(() => {
     setBalance(DEMO_STARTING_BALANCE);
     persist(DEMO_STARTING_BALANCE);
