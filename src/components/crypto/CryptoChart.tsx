@@ -325,13 +325,21 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     });
   }, [currentPrice, symbol]);
 
-  // Draw the average-entry line for the open position (green buy / red sell).
+  // Push the live price into the shared position so P/L updates and TP/SL
+  // can auto-close even while this asset is on screen.
+  useEffect(() => {
+    if (currentPrice > 0) updatePrice(pair, currentPrice);
+  }, [currentPrice, pair, updatePrice]);
+
+  // Draw the entry line + TP/SL lines for the open position.
   useEffect(() => {
     if (!seriesRef.current) return;
 
-    if (tradeLineRef.current) {
-      try { seriesRef.current.removePriceLine(tradeLineRef.current); } catch { /* ignore */ }
-      tradeLineRef.current = null;
+    for (const ref of [tradeLineRef, tpLineRef, slLineRef]) {
+      if (ref.current) {
+        try { seriesRef.current.removePriceLine(ref.current); } catch { /* ignore */ }
+        ref.current = null;
+      }
     }
 
     if (!tradeSide || !entryPrice || entryPrice <= 0 || positionQty <= 0) return;
@@ -345,7 +353,28 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       axisLabelVisible: true,
       title: `${isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(positionQty)}`,
     });
-  }, [tradeSide, entryPrice, positionQty, seriesVersion, language]);
+
+    if (takeProfit && takeProfit > 0) {
+      tpLineRef.current = seriesRef.current.createPriceLine({
+        price: takeProfit,
+        color: '#0ecb81',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: bi('قازانج', 'TP'),
+      });
+    }
+    if (stopLoss && stopLoss > 0) {
+      slLineRef.current = seriesRef.current.createPriceLine({
+        price: stopLoss,
+        color: '#f6465d',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: bi('زیان', 'SL'),
+      });
+    }
+  }, [tradeSide, entryPrice, positionQty, takeProfit, stopLoss, seriesVersion, language]);
 
 
   const stepper = (
