@@ -9,7 +9,6 @@ import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
-import { toast } from '@/hooks/use-toast';
 import type { OHLCCandle } from '@/lib/krakenApi';
 
 interface MetalsChartProps {
