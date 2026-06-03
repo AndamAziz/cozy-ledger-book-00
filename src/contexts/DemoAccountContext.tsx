@@ -99,6 +99,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
           qty: parsed.qty ?? 0,
           takeProfit: parsed.takeProfit ?? null,
           stopLoss: parsed.stopLoss ?? null,
+          entryTime: parsed.entryTime ?? Math.floor(Date.now() / 1000),
         };
         return {
           symbol: parsed.symbol,
