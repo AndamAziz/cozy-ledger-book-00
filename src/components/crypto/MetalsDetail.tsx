@@ -116,7 +116,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
   const isNeutral = selected.change === 0;
   const isOil = selected.category === 'oil';
   const accentColor = isOil ? '#e67e22' : '#d4af37';
-  const otherItems = metals.filter(m => m.code !== selectedCode);
+  
 
   return (
     <div className="flex-1 flex flex-col bg-[#0a0e17] overflow-y-auto">
