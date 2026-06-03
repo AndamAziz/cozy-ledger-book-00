@@ -244,7 +244,12 @@ export default function GestureQA() {
         {/* Progress */}
         <div className="rounded-lg border border-border bg-card p-3">
           <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="font-bold">{bi('پێشکەوتن', 'Progress')}</span>
+            <span className="font-bold">
+              {bi('پێشکەوتن', 'Progress')}
+              <span className="ms-1.5 font-normal text-muted-foreground">
+                · {chart === 'crypto' ? bi('کریپتۆ', 'Crypto') : bi('فلز', 'Metals')} · {os === 'ios' ? 'iOS' : bi('ئەندرۆید', 'Android')}
+              </span>
+            </span>
             <span className={`font-bold tabular-nums ${allDone ? 'text-[#0ecb81]' : 'text-muted-foreground'}`}>
               {doneCount}/{CHECKS.length}
             </span>
