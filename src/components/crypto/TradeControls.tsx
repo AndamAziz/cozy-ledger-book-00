@@ -94,6 +94,7 @@ export function TradeControls({
   sellLeg,
   otherPositionLabel,
   timeframeLabel,
+  timeframeMinutes,
   balance,
   onRenew,
   onBuy,
