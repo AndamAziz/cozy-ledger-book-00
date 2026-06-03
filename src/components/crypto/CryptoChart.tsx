@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, HistogramSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
@@ -8,7 +8,7 @@ import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
-import { PnLSummaryPanel } from '@/components/crypto/PnLSummaryPanel';
+
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -69,7 +69,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [showJournal, setShowJournal] = useState(false);
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, position, realizedPnl, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   const [tradeAmount, setTradeAmount] = useState(0.01);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
