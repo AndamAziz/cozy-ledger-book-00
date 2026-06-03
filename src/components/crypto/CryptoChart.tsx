@@ -500,7 +500,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     }));
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails]);
 
   // Enable dragging the TP / SL lines directly on the chart. Releasing the line
   // commits the new level automatically (no extra data entry needed).
