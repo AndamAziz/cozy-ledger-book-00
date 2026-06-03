@@ -314,9 +314,18 @@ export default function CryptoTracker() {
           {/* Main content */}
           {activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Chart / Analysis sub-toggle */}
+              {/* Overview / Chart / Analysis sub-toggle */}
               <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
                 <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setCryptoView('overview')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
+                      cryptoView === 'overview' ? 'bg-[#2a2e3e] text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                    <span>{bi('پوختە', 'Overview')}</span>
+                  </button>
                   <button
                     onClick={() => setCryptoView('chart')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
@@ -338,7 +347,18 @@ export default function CryptoTracker() {
                 </div>
               </div>
 
-              {cryptoView === 'chart' ? (
+              {cryptoView === 'overview' ? (
+                <AssetOverview
+                  title={bi('پوختەی کریپتۆ', 'Crypto Overview')}
+                  subtitle={bi('نرخ، گۆڕان و سیگناڵی کڕین/فرۆشتن', 'Price, change & Buy/Sell signals')}
+                  entries={cryptoEntries}
+                  isLoading={cryptoOverview.isLoading}
+                  onOpen={(pair, mode) => {
+                    setSelectedPair(pair);
+                    setCryptoView(mode);
+                  }}
+                />
+              ) : cryptoView === 'chart' ? (
                 <>
                   <CryptoChart
                     pair={selectedPair}
@@ -373,11 +393,24 @@ export default function CryptoTracker() {
               selectedCode={selectedForexCode}
               isLoading={forexLoading}
             />
+          ) : selectedMetalCode === null ? (
+            <AssetOverview
+              title={bi('پوختەی کاڵاکان', 'Commodities Overview')}
+              subtitle={bi('نرخ، گۆڕان و سیگناڵی کڕین/فرۆشتن', 'Price, change & Buy/Sell signals')}
+              entries={metalsEntries}
+              isLoading={metalsOverview.isLoading}
+              onOpen={(code, mode) => {
+                setMetalInitialView(mode === 'analysis' ? 'analysis' : 'market');
+                setSelectedMetalCode(code);
+              }}
+            />
           ) : (
             <MetalsDetail
+              key={`${selectedMetalCode}-${metalInitialView}`}
               metals={metals}
               selectedCode={selectedMetalCode}
               isLoading={metalsLoading}
+              initialView={metalInitialView}
             />
           )}
         </div>
