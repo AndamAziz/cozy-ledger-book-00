@@ -214,7 +214,7 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
             const newEntry = ((existing.entryPrice * existing.qty) + price * amount) / newQty;
             return { ...existing, entryPrice: newEntry, qty: newQty };
           })()
-        : { entryPrice: price, qty: amount, takeProfit: null, stopLoss: null };
+        : { entryPrice: price, qty: amount, takeProfit: null, stopLoss: null, entryTime: Math.floor(Date.now() / 1000) };
 
       return { ...base, label, currentPrice: price, [side]: nextLeg };
     });
