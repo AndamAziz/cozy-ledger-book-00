@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, CandlestickSeries, Time, createSeriesMarkers } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, CandlestickSeries, HistogramSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -7,7 +7,10 @@ import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
+import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
+import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
+import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
 import { PnLSummaryPanel } from '@/components/crypto/PnLSummaryPanel';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import type { OHLCCandle } from '@/lib/krakenApi';
