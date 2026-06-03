@@ -110,6 +110,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
 
+  useEffect(() => {
+    try { localStorage.setItem('chart_show_trade_details', String(showTradeDetails)); } catch {}
+  }, [showTradeDetails]);
+
   // Unique key for this metal so its position is isolated from other assets.
   const mySymbol = `metal:${name || ''}`;
 

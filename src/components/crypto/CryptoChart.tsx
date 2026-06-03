@@ -109,6 +109,10 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     prevPriceRef.current = currentPrice;
   }, [currentPrice]);
 
+  useEffect(() => {
+    try { localStorage.setItem('chart_show_trade_details', String(showTradeDetails)); } catch {}
+  }, [showTradeDetails]);
+
   const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 
   const handleRefreshTrade = () => {
