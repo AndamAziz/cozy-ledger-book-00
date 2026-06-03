@@ -1009,6 +1009,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
           </div>
         )}
       </div>
+
+      {/* Trade history / journal modal */}
+      <TradeJournalModal open={showJournal} onClose={() => setShowJournal(false)} />
     </div>
   );
 }
