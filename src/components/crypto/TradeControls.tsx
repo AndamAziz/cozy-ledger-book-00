@@ -18,7 +18,7 @@ export interface LegInfo {
   stopLoss: number | null;
 }
 
-export const TRADE_AMOUNTS = [0.001, 0.05, 0.1];
+export const TRADE_AMOUNTS = [0.01, 0.05, 0.1];
 
 interface TradeControlsProps {
   amount: number;

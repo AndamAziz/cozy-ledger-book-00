@@ -77,7 +77,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const tpLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const slLineRef = useRef<any>(null);
-  const [tradeAmount, setTradeAmount] = useState(0.001);
+  const [tradeAmount, setTradeAmount] = useState(0.01);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
