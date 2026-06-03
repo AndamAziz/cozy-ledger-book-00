@@ -487,6 +487,86 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice]);
 
+  // Create / remove the RSI and MACD panes (and their data) when toggled or
+  // when the chart is recreated. Each indicator gets its own pane below price.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const removeAll = () => {
+      [rsiSeriesRef, macdHistRef, macdLineRef, macdSignalRef].forEach((ref) => {
+        if (ref.current) {
+          try { chart.removeSeries(ref.current); } catch { /* ignore */ }
+          ref.current = null;
+        }
+      });
+    };
+    removeAll();
+
+    let paneIndex = 1;
+
+    if (showRSI) {
+      const s = chart.addSeries(LineSeries, {
+        color: '#f0b90b', lineWidth: 2,
+        priceLineVisible: false, lastValueVisible: true,
+        priceFormat: { type: 'custom', minMove: 0.01, formatter: (v: number) => v.toFixed(0) },
+      }, paneIndex);
+      if (candles.length) s.setData(rsiSeries(candles).map((d) => ({ time: d.time as Time, value: d.value })));
+      try {
+        s.createPriceLine({ price: 70, color: '#f6465d', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+        s.createPriceLine({ price: 30, color: '#0ecb81', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+      } catch { /* ignore */ }
+      rsiSeriesRef.current = s;
+      try { chart.panes()[paneIndex]?.setStretchFactor(1); } catch { /* ignore */ }
+      paneIndex++;
+    }
+
+    if (showMACD) {
+      const data = candles.length ? macdSeries(candles) : { macd: [], signal: [], histogram: [] };
+      const hist = chart.addSeries(HistogramSeries, {
+        priceLineVisible: false, lastValueVisible: false,
+      }, paneIndex);
+      hist.setData(data.histogram.map((d) => ({
+        time: d.time as Time, value: d.value,
+        color: d.value >= 0 ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)',
+      })));
+      const macdL = chart.addSeries(LineSeries, { color: '#2962ff', lineWidth: 2, priceLineVisible: false, lastValueVisible: false }, paneIndex);
+      macdL.setData(data.macd.map((d) => ({ time: d.time as Time, value: d.value })));
+      const sigL = chart.addSeries(LineSeries, { color: '#f0b90b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false }, paneIndex);
+      sigL.setData(data.signal.map((d) => ({ time: d.time as Time, value: d.value })));
+      macdHistRef.current = hist;
+      macdLineRef.current = macdL;
+      macdSignalRef.current = sigL;
+      try { chart.panes()[paneIndex]?.setStretchFactor(1); } catch { /* ignore */ }
+    }
+
+    // Keep the price pane dominant relative to indicator panes.
+    try { chart.panes()[0]?.setStretchFactor(showRSI || showMACD ? 3 : 1); } catch { /* ignore */ }
+
+    return removeAll;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRSI, showMACD, seriesVersion]);
+
+  // Live-update the indicator pane data as new candles arrive.
+  useEffect(() => {
+    if (!candles.length) return;
+    if (rsiSeriesRef.current) {
+      rsiSeriesRef.current.setData(rsiSeries(candles).map((d) => ({ time: d.time as Time, value: d.value })));
+    }
+    if (macdHistRef.current && macdLineRef.current && macdSignalRef.current) {
+      const data = macdSeries(candles);
+      macdHistRef.current.setData(data.histogram.map((d) => ({
+        time: d.time as Time, value: d.value,
+        color: d.value >= 0 ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)',
+      })));
+      macdLineRef.current.setData(data.macd.map((d) => ({ time: d.time as Time, value: d.value })));
+      macdSignalRef.current.setData(data.signal.map((d) => ({ time: d.time as Time, value: d.value })));
+    }
+  }, [candles]);
+
+
+
+
 
 
   const stepper = (
