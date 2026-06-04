@@ -106,7 +106,8 @@ export function TradeControls({
   onSetTpSl,
 }: TradeControlsProps) {
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
+  const bi = (ku: string, en: string, tr?: string) =>
+    language === 'tr' ? (tr ?? en) : language === 'en' ? en : ku;
 
   const depleted = balance <= 0;
 
