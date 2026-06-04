@@ -1,4 +1,4 @@
-export type Language = 'ku' | 'en' | 'ar' | 'fa';
+export type Language = 'ku' | 'en' | 'ar' | 'fa' | 'tr';
 
 export const translations = {
   ku: {
