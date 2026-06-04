@@ -140,9 +140,9 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     openOrAdd({ symbol: posKey, label: tradeLabel ?? `${symbol}/USD`, side, price: currentPrice, amount: tradeAmount });
     toast({ title: side === 'buy' ? biLabel('کڕین کرا ✅', 'Buy placed ✅') : biLabel('فرۆشتن کرا ✅', 'Sell placed ✅') });
   };
-  const [langMode, setLangMode] = useState<LangMode>(language === 'en' ? 'en' : 'ku');
+  const [langMode, setLangMode] = useState<LangMode>(language === 'en' || language === 'tr' ? 'en' : 'ku');
   useEffect(() => {
-    setLangMode(language === 'en' ? 'en' : 'ku');
+    setLangMode(language === 'en' || language === 'tr' ? 'en' : 'ku');
   }, [language]);
 
   // Chart image analysis state
