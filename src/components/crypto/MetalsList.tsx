@@ -13,7 +13,7 @@ interface MetalsListProps {
 
 export function MetalsList({ metals, selectedCode, onSelectMetal, isLoading, marketOpen = true }: MetalsListProps) {
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const prevPricesRef = useRef<Map<string, number>>(new Map());
   const [flashMap, setFlashMap] = useState<Map<string, 'up' | 'down'>>(new Map());
 

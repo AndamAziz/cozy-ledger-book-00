@@ -144,7 +144,7 @@ const fmtUsd = (n: number) =>
 
 export function DemoAccountProvider({ children }: { children: ReactNode }) {
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
   const [balance, setBalance] = useState(DEMO_STARTING_BALANCE);
   const [loading, setLoading] = useState(true);

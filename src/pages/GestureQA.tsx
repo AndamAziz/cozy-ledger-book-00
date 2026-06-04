@@ -74,7 +74,7 @@ type ChartKind = 'crypto' | 'metals';
 
 export default function GestureQA() {
   const { language, dir } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
   const [os, setOs] = useState<OS>(() => {
     if (typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent)) return 'android';

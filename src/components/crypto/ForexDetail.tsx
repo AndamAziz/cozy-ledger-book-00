@@ -10,7 +10,7 @@ interface ForexDetailProps {
 
 export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetailProps) {
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const selected = selectedCode ? currencies.find(c => c.code === selectedCode) : null;
   const meta = selectedCode ? CURRENCIES.find(c => c.code === selectedCode) : null;
 

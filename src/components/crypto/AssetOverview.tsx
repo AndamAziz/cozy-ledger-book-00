@@ -121,7 +121,7 @@ function OverviewCard({
 /** At-a-glance overview grid: price, change, sparkline + Buy/Sell signal per asset. */
 export function AssetOverview({ title, subtitle, entries, isLoading, onOpen }: AssetOverviewProps) {
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
   return (
     <div className="flex-1 flex flex-col bg-[#0a0e17] overflow-y-auto">
