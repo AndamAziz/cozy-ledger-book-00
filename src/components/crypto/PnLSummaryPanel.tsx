@@ -13,7 +13,8 @@ const fmtMoney = (n: number) => {
 };
 
 export function PnLSummaryPanel({ realizedPnl, unrealizedPnl, language }: PnLSummaryPanelProps) {
-  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
+  const bi = (ku: string, en: string, tr?: string) =>
+    language === 'tr' ? (tr ?? en) : language === 'en' ? en : ku;
   const net = realizedPnl + unrealizedPnl;
   const up = (n: number) => n >= 0;
 
