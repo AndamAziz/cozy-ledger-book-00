@@ -374,7 +374,7 @@ export function TradeControls({
           onClick={onSell}
           disabled={depleted || !!otherPositionLabel}
           className={`relative flex-1 flex flex-col justify-center text-left px-3 py-2 transition-all active:opacity-90 disabled:opacity-40 disabled:pointer-events-none bg-[#f6465d] ${
-            sellLeg && sellLeg.qty > 0 ? 'ring-2 ring-inset ring-white/70' : ''
+            sellLeg && sellLeg.qty > 0 ? 'brightness-110 after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-white after:content-[""]' : ''
           }`}
         >
           {flash && (
