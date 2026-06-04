@@ -194,11 +194,11 @@ export function TradeControls({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-[10px] sm:text-xs">
             <span className="font-bold" style={{ color: accent }}>
-              {isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}
+              {isBuy ? bi('کڕین', 'Buy', 'Al') : bi('فرۆشتن', 'Sell', 'Sat')}
             </span>
-            <span className="text-[#848e9c]">{bi('ناوەند', 'Avg')}</span>
+            <span className="text-[#848e9c]">{bi('ناوەند', 'Avg', 'Ort.')}</span>
             <span className="text-white font-bold tabular-nums">{fmtMoney(leg.entryPrice)}</span>
-            <span className="text-[#848e9c]">· {bi('بڕ', 'Size')}</span>
+            <span className="text-[#848e9c]">· {bi('بڕ', 'Size', 'Miktar')}</span>
             <span className="text-white font-bold tabular-nums">{fmtQty(leg.qty)}</span>
           </div>
           {pnl && (
@@ -221,7 +221,7 @@ export function TradeControls({
               >
                 <span className="flex items-center gap-1.5 font-bold text-[#848e9c]">
                   <Target className="h-3.5 w-3.5 text-[#0ecb81]" />
-                  {bi('قازانج و زیان', 'TP & SL')}
+                  {bi('قازانج و زیان', 'TP & SL', 'TP & SL')}
                 </span>
                 <span className="flex items-center gap-1.5">
                   {hasTpSl && !open && (
@@ -245,7 +245,7 @@ export function TradeControls({
                         inputMode="decimal"
                         value={leg.takeProfit ?? ''}
                         onChange={(e) => onSetTpSl(side, parseNum(e.target.value), leg.stopLoss)}
-                        placeholder={bi('قازانج', 'Take Profit')}
+                        placeholder={bi('قازانج', 'Take Profit', 'Kâr Al')}
                         className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-[#0ecb81] placeholder:text-[#0ecb81]/40 outline-none tabular-nums"
                       />
                     </label>
@@ -256,7 +256,7 @@ export function TradeControls({
                         inputMode="decimal"
                         value={leg.stopLoss ?? ''}
                         onChange={(e) => onSetTpSl(side, leg.takeProfit, parseNum(e.target.value))}
-                        placeholder={bi('زیان', 'Stop Loss')}
+                        placeholder={bi('زیان', 'Stop Loss', 'Zarar Durdur')}
                         className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-[#f6465d] placeholder:text-[#f6465d]/40 outline-none tabular-nums"
                       />
                     </label>
@@ -264,7 +264,7 @@ export function TradeControls({
 
                   {/* Quick presets + clear */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] sm:text-[10px] text-[#848e9c]">{bi('خێرا', 'Quick')}</span>
+                    <span className="text-[9px] sm:text-[10px] text-[#848e9c]">{bi('خێرا', 'Quick', 'Hızlı')}</span>
                     {[0.5, 1, 2].map((p) => {
                       const [tp, sl] = presetTpSl(side, leg.entryPrice, p);
                       return (
@@ -282,7 +282,7 @@ export function TradeControls({
                         onClick={() => onSetTpSl(side, null, null)}
                         className="text-[9px] sm:text-[10px] font-bold text-[#848e9c] hover:text-white transition-colors"
                       >
-                        {bi('سڕینەوە', 'Clear')}
+                        {bi('سڕینەوە', 'Clear', 'Temizle')}
                       </button>
                     )}
                   </div>
@@ -298,7 +298,7 @@ export function TradeControls({
           className="w-full flex items-center justify-center gap-2 py-2 rounded-md text-[11px] sm:text-xs font-bold bg-[#1a1e2e] text-white border border-white/10 hover:bg-[#252a3a] active:scale-95 transition-colors"
         >
           <X className="h-3.5 w-3.5 opacity-70" />
-          <span>{isBuy ? bi('داخستنی کڕین', 'Close Buy') : bi('داخستنی فرۆشتن', 'Close Sell')}</span>
+          <span>{isBuy ? bi('داخستنی کڕین', 'Close Buy', 'Alışı Kapat') : bi('داخستنی فرۆشتن', 'Close Sell', 'Satışı Kapat')}</span>
           {pnl && (
             <span
               className="px-1.5 py-0.5 rounded tabular-nums"
@@ -335,7 +335,7 @@ export function TradeControls({
       {/* Demo account balance + combined live profit/loss */}
       <div className="flex items-center justify-between mb-2 gap-2">
         <div className="text-[10px] sm:text-xs">
-          <span className="text-[#848e9c]">{bi('باڵانسی دیمۆ', 'Demo Balance')}: </span>
+          <span className="text-[#848e9c]">{bi('باڵانسی دیمۆ', 'Demo Balance', 'Demo Bakiye')}: </span>
           <span className={`font-bold tabular-nums ${depleted ? 'text-[#f6465d]' : 'text-white'}`}>${fmtMoney(balance)}</span>
           {hasAny && (
             <span className={`ms-2 font-bold tabular-nums ${totalPnl >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
@@ -348,7 +348,7 @@ export function TradeControls({
             onClick={onRenew}
             className="px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md bg-[#f0b90b] text-black hover:bg-[#f0b90b]/90 active:scale-95 transition-colors"
           >
-            {bi('نوێکردنەوەی $200', 'Renew $200')}
+            {bi('نوێکردنەوەی $200', 'Renew $200', '$200 Yenile')}
           </button>
         )}
       </div>
@@ -358,9 +358,9 @@ export function TradeControls({
         <div className="mb-2 flex items-center gap-2 rounded-md bg-[#f0b90b]/10 border border-[#f0b90b]/30 px-2.5 py-1.5 text-[10px] sm:text-xs text-[#f0b90b]">
           <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
           <span>
-            {bi('پۆزیشنێکی کراوەت هەیە لەسەر', 'You have an open position on')}{' '}
+            {bi('پۆزیشنێکی کراوەت هەیە لەسەر', 'You have an open position on', 'Açık pozisyonunuz var:')}{' '}
             <span className="font-bold">{otherPositionLabel}</span>{' '}
-            {bi('— سەرەتا دایبخە', '— close it first')}
+            {bi('— سەرەتا دایبخە', '— close it first', '— önce kapatın')}
           </span>
         </div>
       )}
@@ -385,7 +385,7 @@ export function TradeControls({
             />
           )}
           <span className="relative text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
-            {bi('فرۆشتن', 'Sell')}{sellLeg && sellLeg.qty > 0 ? ' +' : ''}
+            {bi('فرۆشتن', 'Sell', 'Sat')}{sellLeg && sellLeg.qty > 0 ? ' +' : ''}
           </span>
           {renderMtPrice(currentPrice, '#ffffff')}
         </button>
@@ -437,7 +437,7 @@ export function TradeControls({
             />
           )}
           <span className="relative text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
-            {bi('کڕین', 'Buy')}{buyLeg && buyLeg.qty > 0 ? ' +' : ''}
+            {bi('کڕین', 'Buy', 'Al')}{buyLeg && buyLeg.qty > 0 ? ' +' : ''}
           </span>
           {renderMtPrice(currentPrice, '#ffffff')}
         </button>
@@ -485,7 +485,7 @@ export function TradeControls({
               disabled={!hasProfit}
               className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-bold border bg-[#0ecb81]/10 text-[#0ecb81] border-[#0ecb81]/40 hover:bg-[#0ecb81]/20 active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
             >
-              <span>{bi('داخستنی قازانج', 'Close Profit')}</span>
+              <span>{bi('داخستنی قازانج', 'Close Profit', 'Kârı Kapat')}</span>
               <span className="tabular-nums text-[#0ecb81]">+${fmtMoney(Math.abs(profitSum))}</span>
             </button>
             <button
@@ -493,7 +493,7 @@ export function TradeControls({
               disabled={!hasLoss}
               className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-bold border bg-[#f6465d]/10 text-[#f6465d] border-[#f6465d]/40 hover:bg-[#f6465d]/20 active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
             >
-              <span>{bi('داخستنی زیان', 'Close Loss')}</span>
+              <span>{bi('داخستنی زیان', 'Close Loss', 'Zararı Kapat')}</span>
               <span className="tabular-nums text-[#f6465d]">−${fmtMoney(Math.abs(lossSum))}</span>
             </button>
             <button
@@ -501,7 +501,7 @@ export function TradeControls({
               disabled={!hasAny}
               className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] sm:text-[11px] font-bold border bg-[#1a1e2e] text-white border-white/10 hover:bg-[#252a3a] active:scale-95 transition-colors disabled:opacity-30 disabled:pointer-events-none"
             >
-              <span>{bi('داخستنی هەموو', 'Close All')}</span>
+              <span>{bi('داخستنی هەموو', 'Close All', 'Tümünü Kapat')}</span>
               <span className="tabular-nums" style={{ color: totalPnl >= 0 ? '#0ecb81' : '#f6465d' }}>
                 {totalPnl >= 0 ? '+' : '−'}${fmtMoney(Math.abs(totalPnl))}
               </span>
@@ -532,7 +532,7 @@ export function TradeControls({
               }`}>
                 <Clock className="h-3.5 w-3.5 shrink-0" />
                 <span>
-                  {hold.side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}{' '}
+                  {hold.side === 'buy' ? bi('کڕین', 'Buy', 'Al') : bi('فرۆشتن', 'Sell', 'Sat')}{' '}
                   {bi('هۆڵدی بکە بۆ نزیکەی', 'hold for ~')}{' '}
                   <span className="tabular-nums">{fmtDuration(hold.minutes)}</span>
                 </span>
@@ -551,7 +551,7 @@ export function TradeControls({
                 }`}
               >
                 {recIsBuy ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-                {bi('پێشنیار', 'Recommended')}: {recIsBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')}
+                {bi('پێشنیار', 'Recommended', 'Önerilen')}: {recIsBuy ? bi('کڕین', 'Buy', 'Al') : bi('فرۆشتن', 'Sell', 'Sat')}
                 <span className="opacity-80">({Math.max(pct.buyPct, pct.sellPct)}%)</span>
               </button>
             )}
