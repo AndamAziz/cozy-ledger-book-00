@@ -20,6 +20,7 @@ const languages: LanguageOption[] = [
   { code: 'en', label: 'English', flag: '🇬🇧' },
   { code: 'ar', label: 'العربية', flag: '🇸🇦' },
   { code: 'fa', label: 'فارسی', flag: '🇮🇷' },
+  { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
 ];
 
 export function LanguageSwitcher() {
