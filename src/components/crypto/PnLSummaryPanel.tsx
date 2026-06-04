@@ -66,7 +66,7 @@ export function PnLSummaryPanel({ realizedPnl, unrealizedPnl, language }: PnLSum
         <div className="flex items-center gap-1.5">
           <Activity className="h-3.5 w-3.5 shrink-0" style={{ color: color(net) }} />
           <span className="text-[10px] font-bold text-white uppercase tracking-wide">
-            {bi('کۆی P/L', 'Total P/L')}
+            {bi('کۆی P/L', 'Total P/L', 'Toplam K/Z')}
           </span>
         </div>
         <div className="flex items-center gap-1">
