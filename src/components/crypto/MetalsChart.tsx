@@ -203,7 +203,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
 
   // Bilingual helper
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
   // Professional candlestick palette (Binance-style)
   const UP_COLOR = '#0ecb81';

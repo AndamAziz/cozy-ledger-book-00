@@ -21,7 +21,7 @@ interface MetalsDetailProps {
 
 export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'market' }: MetalsDetailProps) {
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const [chartRange, setChartRange] = useState('1d');
   const [view, setView] = useState<'market' | 'analysis'>(initialView);
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;

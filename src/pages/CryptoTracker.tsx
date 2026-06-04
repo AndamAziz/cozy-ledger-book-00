@@ -29,7 +29,7 @@ type CryptoView = 'overview' | 'chart' | 'analysis';
 export default function CryptoTracker() {
   const navigate = useNavigate();
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const [activeTab, setActiveTab] = useState<TrackerTab>('metals');
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');

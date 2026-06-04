@@ -13,7 +13,7 @@ interface ForexListProps {
 
 export function ForexList({ currencies, selectedCode, onSelectCurrency, isLoading }: ForexListProps) {
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const [search, setSearch] = useState('');
   const prevRatesRef = useRef<Map<string, number>>(new Map());
   const [flashMap, setFlashMap] = useState<Map<string, 'up' | 'down'>>(new Map());

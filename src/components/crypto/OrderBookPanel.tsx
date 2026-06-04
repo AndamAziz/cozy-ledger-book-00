@@ -25,7 +25,7 @@ const LEVELS = 7;
  */
 export function OrderBookPanel({ symbol, currentPrice, onClose }: OrderBookPanelProps) {
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
   // Re-roll the simulated volumes periodically for a live ladder feel.
   const [tick, setTick] = useState(0);

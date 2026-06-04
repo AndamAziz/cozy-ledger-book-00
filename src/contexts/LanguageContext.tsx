@@ -19,7 +19,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      if (stored === 'en' || stored === 'ku' || stored === 'ar' || stored === 'fa') {
+      if (stored === 'en' || stored === 'ku' || stored === 'ar' || stored === 'fa' || stored === 'tr') {
         return stored;
       }
     }
@@ -40,11 +40,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       en: 'en',
       ar: 'ar',
       fa: 'fa',
+      tr: 'tr',
     }[language];
     document.documentElement.lang = langAttr;
     
     // Update font family based on language
-    if (language === 'en') {
+    if (language === 'en' || language === 'tr') {
       document.body.style.fontFamily = "'Inter', 'Segoe UI', sans-serif";
     } else {
       document.body.style.fontFamily = "'Noto Sans Arabic', sans-serif";

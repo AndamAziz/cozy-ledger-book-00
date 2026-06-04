@@ -32,7 +32,7 @@ const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigit
  */
 export function TradeJournalModal({ open, onClose }: TradeJournalModalProps) {
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const { journal, clearJournal } = useDemoAccount();
 
   const stats = useMemo(() => {

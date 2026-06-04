@@ -13,7 +13,8 @@ const fmtMoney = (n: number) => {
 };
 
 export function PnLSummaryPanel({ realizedPnl, unrealizedPnl, language }: PnLSummaryPanelProps) {
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string, tr?: string) =>
+    language === 'tr' ? (tr ?? en) : language === 'en' ? en : ku;
   const net = realizedPnl + unrealizedPnl;
   const up = (n: number) => n >= 0;
 
@@ -65,7 +66,7 @@ export function PnLSummaryPanel({ realizedPnl, unrealizedPnl, language }: PnLSum
         <div className="flex items-center gap-1.5">
           <Activity className="h-3.5 w-3.5 shrink-0" style={{ color: color(net) }} />
           <span className="text-[10px] font-bold text-white uppercase tracking-wide">
-            {bi('کۆی P/L', 'Total P/L')}
+            {bi('کۆی P/L', 'Total P/L', 'Toplam K/Z')}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -84,8 +85,8 @@ export function PnLSummaryPanel({ realizedPnl, unrealizedPnl, language }: PnLSum
       </div>
 
       <div className="space-y-1.5">
-        <Row icon={Wallet} label={bi('قازانجی ڕەنگین', 'Realized')} value={realizedPnl} accent={color(realizedPnl)} />
-        <Row icon={Eye} label={bi('قازانجی ناڕەنگین', 'Unrealized')} value={unrealizedPnl} accent={color(unrealizedPnl)} />
+        <Row icon={Wallet} label={bi('قازانجی ڕەنگین', 'Realized', 'Gerçekleşen')} value={realizedPnl} accent={color(realizedPnl)} />
+        <Row icon={Eye} label={bi('قازانجی ناڕەنگین', 'Unrealized', 'Gerçekleşmemiş')} value={unrealizedPnl} accent={color(unrealizedPnl)} />
       </div>
     </div>
   );

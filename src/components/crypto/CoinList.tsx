@@ -28,7 +28,7 @@ interface CoinListProps {
 
 export function CoinList({ coins, selectedPair, onSelectPair, isLoading }: CoinListProps) {
   const { language } = useLanguage();
-  const bi = (ku: string, en: string) => (language === 'en' ? en : ku);
+  const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<Set<string>>(loadFavorites);
 
