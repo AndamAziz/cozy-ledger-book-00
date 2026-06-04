@@ -85,8 +85,8 @@ export function PnLSummaryPanel({ realizedPnl, unrealizedPnl, language }: PnLSum
       </div>
 
       <div className="space-y-1.5">
-        <Row icon={Wallet} label={bi('قازانجی ڕەنگین', 'Realized')} value={realizedPnl} accent={color(realizedPnl)} />
-        <Row icon={Eye} label={bi('قازانجی ناڕەنگین', 'Unrealized')} value={unrealizedPnl} accent={color(unrealizedPnl)} />
+        <Row icon={Wallet} label={bi('قازانجی ڕەنگین', 'Realized', 'Gerçekleşen')} value={realizedPnl} accent={color(realizedPnl)} />
+        <Row icon={Eye} label={bi('قازانجی ناڕەنگین', 'Unrealized', 'Gerçekleşmemiş')} value={unrealizedPnl} accent={color(unrealizedPnl)} />>
       </div>
     </div>
   );
