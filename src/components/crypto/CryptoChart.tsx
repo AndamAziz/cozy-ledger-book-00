@@ -419,7 +419,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         const pnl = currentPrice > 0
           ? `${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : '';
-        const sideLabel = isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell');
+        const sideLabel = isBuy ? (language === 'tr' ? 'Al' : bi('کڕین', 'Buy')) : (language === 'tr' ? 'Sat' : bi('فرۆشتن', 'Sell'));
         const tag = fills.length > 1 ? ` #${i + 1}` : '';
         let title = pnl || sideLabel;
         if (showTradeDetails) {
