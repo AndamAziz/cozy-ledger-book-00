@@ -567,7 +567,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         const pnl = lp > 0
           ? `${inProfit ? '+' : '−'}$${Math.abs(pnlVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : '';
-        const sideLabel = isBuy ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell');
+        const sideLabel = isBuy ? (language === 'tr' ? 'Al' : bi('کڕین', 'Buy')) : (language === 'tr' ? 'Sat' : bi('فرۆشتن', 'Sell'));
         const tag = fills.length > 1 ? ` #${i + 1}` : '';
         let title = pnl || sideLabel;
         if (showTradeDetails) {
