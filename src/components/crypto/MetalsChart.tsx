@@ -637,27 +637,42 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       }
       return nearest;
     };
-    // Aggregate fills per candle+side so markers never collide on one bar.
-    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number }>();
+    // Aggregate fills per candle+side so markers never collide on one bar, and
+    // carry the volume-weighted entry price so each marker shows EXACTLY at
+    // which price the Buy / Sell happened, directly on the chart.
+    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number; cost: number }>();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const collect = (side: 'buy' | 'sell', leg: any) => {
       for (const f of legFills(leg)) {
         const t = snap(f.entryTime) as number;
         const key = `${side}-${t}`;
         const prev = markerAgg.get(key);
-        if (prev) prev.qty = +(prev.qty + f.qty).toFixed(6);
-        else markerAgg.set(key, { time: t, side, qty: f.qty });
+        if (prev) {
+          prev.qty = +(prev.qty + f.qty).toFixed(6);
+          prev.cost += f.entryPrice * f.qty;
+        } else {
+          markerAgg.set(key, { time: t, side, qty: f.qty, cost: f.entryPrice * f.qty });
+        }
       }
     };
     if (buyLeg) collect('buy', buyLeg);
     if (sellLeg) collect('sell', sellLeg);
-    const markers: any[] = Array.from(markerAgg.values()).map((m) => ({
-      time: m.time as Time,
-      position: m.side === 'buy' ? 'belowBar' : 'aboveBar',
-      color: m.side === 'buy' ? '#0ecb81' : '#f6465d',
-      shape: m.side === 'buy' ? 'arrowUp' : 'arrowDown',
-      text: `${m.side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(m.qty)}`,
-    }));
+    const fmtMarkerPrice = (n: number) =>
+      n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const sideText = (side: 'buy' | 'sell') =>
+      side === 'buy'
+        ? (language === 'tr' ? 'Al' : bi('کڕین', 'Buy'))
+        : (language === 'tr' ? 'Sat' : bi('فرۆشتن', 'Sell'));
+    const markers: any[] = Array.from(markerAgg.values()).map((m) => {
+      const avgPrice = m.qty > 0 ? m.cost / m.qty : 0;
+      return {
+        time: m.time as Time,
+        position: m.side === 'buy' ? 'belowBar' : 'aboveBar',
+        color: m.side === 'buy' ? '#0ecb81' : '#f6465d',
+        shape: m.side === 'buy' ? 'arrowUp' : 'arrowDown',
+        text: `${sideText(m.side)} ${fmtQty(m.qty)} @ $${fmtMarkerPrice(avgPrice)}`,
+      };
+    });
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails]);
