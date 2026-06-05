@@ -493,26 +493,41 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       return nearest;
     };
     // Aggregate fills landing on the same candle (per side) so markers never
-    // collide on a single bar but still reflect each trade's total size.
-    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number }>();
+    // collide on a single bar but still reflect each trade's total size AND the
+    // volume-weighted entry price, shown on the marker so the user can read
+    // EXACTLY at which price each Buy / Sell happened, right on the chart.
+    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number; cost: number }>();
     const collect = (side: 'buy' | 'sell', leg: any) => {
       for (const f of legFills(leg)) {
         const t = snap(f.entryTime) as number;
         const key = `${side}-${t}`;
         const prev = markerAgg.get(key);
-        if (prev) prev.qty = +(prev.qty + f.qty).toFixed(6);
-        else markerAgg.set(key, { time: t, side, qty: f.qty });
+        if (prev) {
+          prev.qty = +(prev.qty + f.qty).toFixed(6);
+          prev.cost += f.entryPrice * f.qty;
+        } else {
+          markerAgg.set(key, { time: t, side, qty: f.qty, cost: f.entryPrice * f.qty });
+        }
       }
     };
     if (buyLeg) collect('buy', buyLeg);
     if (sellLeg) collect('sell', sellLeg);
-    const markers: any[] = Array.from(markerAgg.values()).map((m) => ({
-      time: m.time as Time,
-      position: m.side === 'buy' ? 'belowBar' : 'aboveBar',
-      color: m.side === 'buy' ? '#0ecb81' : '#f6465d',
-      shape: m.side === 'buy' ? 'arrowUp' : 'arrowDown',
-      text: `${m.side === 'buy' ? bi('کڕین', 'Buy') : bi('فرۆشتن', 'Sell')} ${fmtQty(m.qty)}`,
-    }));
+    const fmtMarkerPrice = (n: number) =>
+      n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: n >= 1 ? 2 : 6 });
+    const sideText = (side: 'buy' | 'sell') =>
+      side === 'buy'
+        ? (language === 'tr' ? 'Al' : bi('کڕین', 'Buy'))
+        : (language === 'tr' ? 'Sat' : bi('فرۆشتن', 'Sell'));
+    const markers: any[] = Array.from(markerAgg.values()).map((m) => {
+      const avgPrice = m.qty > 0 ? m.cost / m.qty : 0;
+      return {
+        time: m.time as Time,
+        position: m.side === 'buy' ? 'belowBar' : 'aboveBar',
+        color: m.side === 'buy' ? '#0ecb81' : '#f6465d',
+        shape: m.side === 'buy' ? 'arrowUp' : 'arrowDown',
+        text: `${sideText(m.side)} ${fmtQty(m.qty)} @ $${fmtMarkerPrice(avgPrice)}`,
+      };
+    });
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails]);
