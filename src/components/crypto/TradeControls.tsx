@@ -169,6 +169,16 @@ export function TradeControls({
   const decVolume = () => onAmountChange(Math.max(0.01, +(amount - 0.01).toFixed(2)));
   const incVolume = () => onAmountChange(+(amount + 0.01).toFixed(2));
 
+  // Manual volume entry: tap the number to type any custom lot size.
+  // The +/- steppers keep the standard increments untouched.
+  const [amtText, setAmtText] = useState<string | null>(null);
+  const commitAmt = () => {
+    if (amtText == null) return;
+    const n = parseNum(amtText);
+    if (n != null) onAmountChange(+Math.max(0.01, n).toFixed(2));
+    setAmtText(null);
+  };
+
   // Render a price MT5-style: smaller leading digits, larger last two ("big figure").
   const renderMtPrice = (value: number, color: string) => {
     if (!value || value <= 0) return <span className="text-base font-bold" style={{ color }}>--</span>;
