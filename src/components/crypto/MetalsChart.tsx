@@ -90,7 +90,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const macdSignalRef = useRef<any>(null);
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, renew, getPosition, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,12 +124,11 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     : (candles.length ? candles[candles.length - 1].close : 0));
 
   // The position only counts for THIS chart when it belongs to this metal.
-  const myPos = position && position.symbol === mySymbol ? position : null;
+  const myPos = getPosition(mySymbol);
   const buyLeg = myPos?.buy && myPos.buy.qty > 0 ? myPos.buy : null;
   const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
-  const otherHasLegs = position && position.symbol !== mySymbol &&
-    ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
-  const otherPositionLabel = otherHasLegs ? position!.label : null;
+  // Trading is now free across assets — no single-asset lock.
+  const otherPositionLabel = null;
 
   // Keep a fresh snapshot of the legs for the TP/SL drag helper.
   legsRef.current = { buy: buyLeg, sell: sellLeg };
@@ -172,7 +171,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   };
 
   // Close one leg and realise its P/L (handled in context).
-  const handleClose = (side: 'buy' | 'sell') => closePosition(side);
+  const handleClose = (side: 'buy' | 'sell') => closePosition(mySymbol, side);
 
 
   // Reset only the analysis percentages when switching metals; the open
@@ -694,9 +693,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       getLegs: () => legsRef.current,
       lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
       dragRef,
-      onCommit: (side, tp, sl) => setTpSl(side, tp, sl),
+      onCommit: (side, tp, sl) => setTpSl(mySymbol, side, tp, sl),
     });
-  }, [seriesVersion, setTpSl]);
+  }, [seriesVersion, setTpSl, mySymbol]);
 
 
 
@@ -981,7 +980,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
-        onSetTpSl={setTpSl}
+        onSetTpSl={(side, tp, sl) => setTpSl(mySymbol, side, tp, sl)}
       />
 
       {/* Chart — grows to fill the screen in landscape (MT5-style) */}

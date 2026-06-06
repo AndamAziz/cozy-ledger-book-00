@@ -169,6 +169,16 @@ export function TradeControls({
   const decVolume = () => onAmountChange(Math.max(0.01, +(amount - 0.01).toFixed(2)));
   const incVolume = () => onAmountChange(+(amount + 0.01).toFixed(2));
 
+  // Manual volume entry: tap the number to type any custom lot size.
+  // The +/- steppers keep the standard increments untouched.
+  const [amtText, setAmtText] = useState<string | null>(null);
+  const commitAmt = () => {
+    if (amtText == null) return;
+    const n = parseNum(amtText);
+    if (n != null) onAmountChange(+Math.max(0.01, n).toFixed(2));
+    setAmtText(null);
+  };
+
   // Render a price MT5-style: smaller leading digits, larger last two ("big figure").
   const renderMtPrice = (value: number, color: string) => {
     if (!value || value <= 0) return <span className="text-base font-bold" style={{ color }}>--</span>;
@@ -400,7 +410,17 @@ export function TradeControls({
             >
               <ChevronDown className="h-4 w-4" />
             </button>
-            <span className="text-sm sm:text-base font-bold text-white tabular-nums w-9 text-center">{amount.toFixed(2)}</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              aria-label={bi('بڕی مانواڵ', 'Manual volume', 'Manuel hacim')}
+              value={amtText ?? amount.toFixed(2)}
+              onFocus={(e) => { setAmtText(String(amount)); e.currentTarget.select(); }}
+              onChange={(e) => setAmtText(e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
+              onBlur={commitAmt}
+              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+              className="text-sm sm:text-base font-bold text-white tabular-nums w-11 text-center bg-transparent rounded outline-none focus:bg-white/10 focus:ring-1 focus:ring-[#f0b90b]/60"
+            />
             <button
               onClick={incVolume}
               aria-label={bi('زیادکردن', 'Increase')}

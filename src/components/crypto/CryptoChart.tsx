@@ -80,19 +80,18 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   });
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, renew, getPosition, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   const [tradeAmount, setTradeAmount] = useState(0.01);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
 
   // The position only counts for THIS chart when it belongs to this pair.
-  const myPos = position && position.symbol === pair ? position : null;
+  const myPos = getPosition(pair);
   const buyLeg = myPos?.buy && myPos.buy.qty > 0 ? myPos.buy : null;
   const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
-  const otherHasLegs = position && position.symbol !== pair &&
-    ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
-  const otherPositionLabel = otherHasLegs ? position!.label : null;
+  // Trading is now free across assets — no single-asset lock.
+  const otherPositionLabel = null;
 
   // Keep a fresh snapshot of the legs for the TP/SL drag helper.
   legsRef.current = { buy: buyLeg, sell: sellLeg };
@@ -131,7 +130,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   };
 
   // Close one leg and realise its P/L (handled in context).
-  const handleClose = (side: 'buy' | 'sell') => closePosition(side);
+  const handleClose = (side: 'buy' | 'sell') => closePosition(pair, side);
 
 
 
@@ -549,9 +548,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       getLegs: () => legsRef.current,
       lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
       dragRef,
-      onCommit: (side, tp, sl) => setTpSl(side, tp, sl),
+      onCommit: (side, tp, sl) => setTpSl(pair, side, tp, sl),
     });
-  }, [seriesVersion, setTpSl]);
+  }, [seriesVersion, setTpSl, pair]);
 
 
 
@@ -832,7 +831,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
-        onSetTpSl={setTpSl}
+        onSetTpSl={(side, tp, sl) => setTpSl(pair, side, tp, sl)}
       />
 
       {/* Chart */}
