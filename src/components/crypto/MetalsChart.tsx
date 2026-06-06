@@ -171,7 +171,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   };
 
   // Close one leg and realise its P/L (handled in context).
-  const handleClose = (side: 'buy' | 'sell') => closePosition(side);
+  const handleClose = (side: 'buy' | 'sell') => closePosition(mySymbol, side);
 
 
   // Reset only the analysis percentages when switching metals; the open
