@@ -90,7 +90,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const macdSignalRef = useRef<any>(null);
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, getPosition, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,11 +124,12 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     : (candles.length ? candles[candles.length - 1].close : 0));
 
   // The position only counts for THIS chart when it belongs to this metal.
-  const myPos = getPosition(mySymbol);
+  const myPos = position && position.symbol === mySymbol ? position : null;
   const buyLeg = myPos?.buy && myPos.buy.qty > 0 ? myPos.buy : null;
   const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
-  // Trading is now free across assets — no single-asset lock.
-  const otherPositionLabel = null;
+  const otherHasLegs = position && position.symbol !== mySymbol &&
+    ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
+  const otherPositionLabel = otherHasLegs ? position!.label : null;
 
   // Keep a fresh snapshot of the legs for the TP/SL drag helper.
   legsRef.current = { buy: buyLeg, sell: sellLeg };
@@ -171,7 +172,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   };
 
   // Close one leg and realise its P/L (handled in context).
-  const handleClose = (side: 'buy' | 'sell') => closePosition(mySymbol, side);
+  const handleClose = (side: 'buy' | 'sell') => closePosition(side);
 
 
   // Reset only the analysis percentages when switching metals; the open
@@ -636,12 +637,10 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       }
       return nearest;
     };
-    // Aggregate fills per candle+side into ONE marker so labels never overlap on
-    // a single bar. Each merged marker carries the total size, the volume-
-    // weighted entry price AND how many fills it represents (×N), so multiple
-    // trades on one candle stay readable. Buy sits belowBar / Sell aboveBar, so
-    // a Buy + Sell on the same candle land on opposite sides and never collide.
-    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number; cost: number; count: number }>();
+    // Aggregate fills per candle+side so markers never collide on one bar, and
+    // carry the volume-weighted entry price so each marker shows EXACTLY at
+    // which price the Buy / Sell happened, directly on the chart.
+    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number; cost: number }>();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const collect = (side: 'buy' | 'sell', leg: any) => {
       for (const f of legFills(leg)) {
@@ -651,9 +650,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         if (prev) {
           prev.qty = +(prev.qty + f.qty).toFixed(6);
           prev.cost += f.entryPrice * f.qty;
-          prev.count += 1;
         } else {
-          markerAgg.set(key, { time: t, side, qty: f.qty, cost: f.entryPrice * f.qty, count: 1 });
+          markerAgg.set(key, { time: t, side, qty: f.qty, cost: f.entryPrice * f.qty });
         }
       }
     };
@@ -667,13 +665,12 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         : (language === 'tr' ? 'Sat' : bi('فرۆشتن', 'Sell'));
     const markers: any[] = Array.from(markerAgg.values()).map((m) => {
       const avgPrice = m.qty > 0 ? m.cost / m.qty : 0;
-      const countTag = m.count > 1 ? ` ×${m.count}` : '';
       return {
         time: m.time as Time,
         position: m.side === 'buy' ? 'belowBar' : 'aboveBar',
         color: m.side === 'buy' ? '#0ecb81' : '#f6465d',
         shape: m.side === 'buy' ? 'arrowUp' : 'arrowDown',
-        text: `${sideText(m.side)}${countTag} ${fmtQty(m.qty)} @ $${fmtMarkerPrice(avgPrice)}`,
+        text: `${sideText(m.side)} ${fmtQty(m.qty)} @ $${fmtMarkerPrice(avgPrice)}`,
       };
     });
     markers.sort((a, b) => (a.time as number) - (b.time as number));
@@ -693,9 +690,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       getLegs: () => legsRef.current,
       lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
       dragRef,
-      onCommit: (side, tp, sl) => setTpSl(mySymbol, side, tp, sl),
+      onCommit: (side, tp, sl) => setTpSl(side, tp, sl),
     });
-  }, [seriesVersion, setTpSl, mySymbol]);
+  }, [seriesVersion, setTpSl]);
 
 
 
@@ -980,7 +977,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
-        onSetTpSl={(side, tp, sl) => setTpSl(mySymbol, side, tp, sl)}
+        onSetTpSl={setTpSl}
       />
 
       {/* Chart — grows to fill the screen in landscape (MT5-style) */}
