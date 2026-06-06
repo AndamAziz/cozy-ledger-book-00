@@ -87,12 +87,11 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [seriesVersion, setSeriesVersion] = useState(0);
 
   // The position only counts for THIS chart when it belongs to this pair.
-  const myPos = position && position.symbol === pair ? position : null;
+  const myPos = getPosition(pair);
   const buyLeg = myPos?.buy && myPos.buy.qty > 0 ? myPos.buy : null;
   const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
-  const otherHasLegs = position && position.symbol !== pair &&
-    ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
-  const otherPositionLabel = otherHasLegs ? position!.label : null;
+  // Trading is now free across assets — no single-asset lock.
+  const otherPositionLabel = null;
 
   // Keep a fresh snapshot of the legs for the TP/SL drag helper.
   legsRef.current = { buy: buyLeg, sell: sellLeg };
