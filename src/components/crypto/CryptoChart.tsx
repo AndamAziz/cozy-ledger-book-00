@@ -831,7 +831,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
-        onSetTpSl={setTpSl}
+        onSetTpSl={(side, tp, sl) => setTpSl(pair, side, tp, sl)}
       />
 
       {/* Chart */}
