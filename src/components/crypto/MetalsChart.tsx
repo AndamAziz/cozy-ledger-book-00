@@ -124,12 +124,11 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     : (candles.length ? candles[candles.length - 1].close : 0));
 
   // The position only counts for THIS chart when it belongs to this metal.
-  const myPos = position && position.symbol === mySymbol ? position : null;
+  const myPos = getPosition(mySymbol);
   const buyLeg = myPos?.buy && myPos.buy.qty > 0 ? myPos.buy : null;
   const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
-  const otherHasLegs = position && position.symbol !== mySymbol &&
-    ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
-  const otherPositionLabel = otherHasLegs ? position!.label : null;
+  // Trading is now free across assets — no single-asset lock.
+  const otherPositionLabel = null;
 
   // Keep a fresh snapshot of the legs for the TP/SL drag helper.
   legsRef.current = { buy: buyLeg, sell: sellLeg };
