@@ -127,16 +127,15 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const { language } = useLanguage();
 
   // Demo-account trading directly from the analysis recommendation.
-  const { balance, position, openOrAdd } = useDemoAccount();
+  const { balance, getPosition, openOrAdd } = useDemoAccount();
   const [tradeAmount, setTradeAmount] = useState(0.01);
   const TRADE_AMOUNTS = [0.01, 0.05, 0.1];
   const posKey = tradeSymbol ?? symbol;
-  const myPos = position && position.symbol === posKey ? position : null;
-  const otherOpen = position && position.symbol !== posKey &&
-    ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0)
-    ? position.label : null;
+  const myPos = getPosition(posKey);
+  // Trading is free across assets — no single-asset lock.
+  const otherOpen: string | null = null;
   const doTrade = (side: 'buy' | 'sell') => {
-    if (balance <= 0 || currentPrice <= 0 || otherOpen) return;
+    if (balance <= 0 || currentPrice <= 0) return;
     openOrAdd({ symbol: posKey, label: tradeLabel ?? `${symbol}/USD`, side, price: currentPrice, amount: tradeAmount });
     toast({ title: side === 'buy' ? biLabel('کڕین کرا ✅', 'Buy placed ✅') : biLabel('فرۆشتن کرا ✅', 'Sell placed ✅') });
   };
