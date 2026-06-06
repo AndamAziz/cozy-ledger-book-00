@@ -693,9 +693,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
       getLegs: () => legsRef.current,
       lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
       dragRef,
-      onCommit: (side, tp, sl) => setTpSl(side, tp, sl),
+      onCommit: (side, tp, sl) => setTpSl(mySymbol, side, tp, sl),
     });
-  }, [seriesVersion, setTpSl]);
+  }, [seriesVersion, setTpSl, mySymbol]);
 
 
 
