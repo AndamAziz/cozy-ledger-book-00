@@ -548,9 +548,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       getLegs: () => legsRef.current,
       lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
       dragRef,
-      onCommit: (side, tp, sl) => setTpSl(side, tp, sl),
+      onCommit: (side, tp, sl) => setTpSl(pair, side, tp, sl),
     });
-  }, [seriesVersion, setTpSl]);
+  }, [seriesVersion, setTpSl, pair]);
 
 
 
