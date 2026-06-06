@@ -7,8 +7,10 @@ export const DEMO_STARTING_BALANCE = 200;
 
 export type PositionSide = 'buy' | 'sell';
 
-/** localStorage key used to persist the open position across refreshes. */
-const POSITION_KEY = 'demo_open_position';
+/** localStorage key used to persist ALL open positions across refreshes. */
+const POSITIONS_KEY = 'demo_open_positions';
+/** Legacy key (single position) kept only for one-time migration. */
+const LEGACY_POSITION_KEY = 'demo_open_position';
 /** localStorage key used to persist the closed-trade journal. */
 const JOURNAL_KEY = 'demo_trade_journal';
 /** Maximum journal entries kept (newest first). */
@@ -89,9 +91,9 @@ const normalizeLeg = (leg: PositionLeg | null): PositionLeg | null => {
 /**
  * The open position for ONE asset. It can hold a buy leg AND a sell leg at the
  * SAME time (hedge mode) so the user may be long and short simultaneously.
- * It lives at the page level so it PERSISTS while the user navigates between
- * Crypto / Forex / Metals tabs — it only closes when the user closes a leg
- * manually or a TP/SL level is hit.
+ * Positions for MANY assets can be open at once — the user is free to trade
+ * crypto and metals together. Each lives until its leg is closed manually or a
+ * TP/SL level is hit.
  */
 export interface OpenPosition {
   /** Unique asset key (crypto pair or metal name) the position belongs to. */
@@ -115,8 +117,10 @@ interface DemoAccountValue {
   loading: boolean;
   /** True when a persisted account is available (user signed in). */
   ready: boolean;
-  /** The open position (may carry both a buy and a sell leg), or null. */
-  position: OpenPosition | null;
+  /** All open positions (one per asset), each may carry a buy and/or sell leg. */
+  positions: OpenPosition[];
+  /** Get the open position for a specific asset, or null. */
+  getPosition: (symbol: string) => OpenPosition | null;
   /** Cumulative realized P/L from all closed trades. */
   realizedPnl: number;
   /** Closed-trade history (newest first), persisted locally. */
@@ -125,12 +129,12 @@ interface DemoAccountValue {
   clearJournal: () => void;
   /** Open a new leg or stack onto an existing one on the same asset+side. */
   openOrAdd: (args: { symbol: string; label: string; side: PositionSide; price: number; amount: number }) => void;
-  /** Update the live price for the asset that owns the position; triggers TP/SL. */
+  /** Update the live price for one asset; triggers TP/SL for that asset. */
   updatePrice: (symbol: string, price: number) => void;
-  /** Set / clear the take-profit and stop-loss levels of one leg. */
-  setTpSl: (side: PositionSide, takeProfit: number | null, stopLoss: number | null) => void;
-  /** Close one leg at the latest price and realise its P/L. */
-  closePosition: (side: PositionSide) => void;
+  /** Set / clear the take-profit and stop-loss levels of one leg of one asset. */
+  setTpSl: (symbol: string, side: PositionSide, takeProfit: number | null, stopLoss: number | null) => void;
+  /** Close one leg of one asset at the latest price and realise its P/L. */
+  closePosition: (symbol: string, side: PositionSide) => void;
   /** Apply a realised profit (positive) or loss (negative) to the balance. */
   applyPnl: (delta: number) => void;
   /** Reset the balance back to the starting amount. */
@@ -141,6 +145,54 @@ const DemoAccountContext = createContext<DemoAccountValue | null>(null);
 
 const fmtUsd = (n: number) =>
   n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Restore + migrate any saved positions into the multi-asset array shape. */
+const loadPositions = (): OpenPosition[] => {
+  try {
+    const rawArr = localStorage.getItem(POSITIONS_KEY);
+    if (rawArr) {
+      const parsed = JSON.parse(rawArr);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((pos: OpenPosition) => ({ ...pos, buy: normalizeLeg(pos.buy), sell: normalizeLeg(pos.sell) }))
+          .filter(hasOpenLeg);
+      }
+    }
+    // One-time migration from the previous single-position key.
+    const rawOld = localStorage.getItem(LEGACY_POSITION_KEY);
+    if (rawOld) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const parsed: any = JSON.parse(rawOld);
+      localStorage.removeItem(LEGACY_POSITION_KEY);
+      if (!parsed) return [];
+      if (parsed.side && !('buy' in parsed)) {
+        const entryTime = parsed.entryTime ?? Math.floor(Date.now() / 1000);
+        const leg: PositionLeg = {
+          entryPrice: parsed.entryPrice ?? 0,
+          qty: parsed.qty ?? 0,
+          takeProfit: parsed.takeProfit ?? null,
+          stopLoss: parsed.stopLoss ?? null,
+          entryTime,
+          fills: [{ id: newFillId(), entryPrice: parsed.entryPrice ?? 0, qty: parsed.qty ?? 0, entryTime }],
+        };
+        const migrated: OpenPosition = {
+          symbol: parsed.symbol,
+          label: parsed.label,
+          currentPrice: parsed.currentPrice ?? leg.entryPrice,
+          buy: parsed.side === 'buy' ? leg : null,
+          sell: parsed.side === 'sell' ? leg : null,
+        };
+        return hasOpenLeg(migrated) ? [migrated] : [];
+      }
+      const pos = parsed as OpenPosition;
+      const migrated = { ...pos, buy: normalizeLeg(pos.buy), sell: normalizeLeg(pos.sell) };
+      return hasOpenLeg(migrated) ? [migrated] : [];
+    }
+  } catch {
+    /* ignore */
+  }
+  return [];
+};
 
 export function DemoAccountProvider({ children }: { children: ReactNode }) {
   const { language } = useLanguage();
@@ -167,51 +219,21 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
   }, [journal]);
 
   const clearJournal = useCallback(() => setJournal([]), []);
-  // Restore any open position saved before the app was refreshed / closed.
-  const [position, setPosition] = useState<OpenPosition | null>(() => {
-    try {
-      const raw = localStorage.getItem(POSITION_KEY);
-      if (!raw) return null;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const parsed: any = JSON.parse(raw);
-      if (!parsed) return null;
-      // Migrate the previous single-leg shape ({ side, entryPrice, qty, ... }).
-      if (parsed.side && !('buy' in parsed)) {
-        const entryTime = parsed.entryTime ?? Math.floor(Date.now() / 1000);
-        const leg: PositionLeg = {
-          entryPrice: parsed.entryPrice ?? 0,
-          qty: parsed.qty ?? 0,
-          takeProfit: parsed.takeProfit ?? null,
-          stopLoss: parsed.stopLoss ?? null,
-          entryTime,
-          fills: [{ id: newFillId(), entryPrice: parsed.entryPrice ?? 0, qty: parsed.qty ?? 0, entryTime }],
-        };
-        return {
-          symbol: parsed.symbol,
-          label: parsed.label,
-          currentPrice: parsed.currentPrice ?? leg.entryPrice,
-          buy: parsed.side === 'buy' ? leg : null,
-          sell: parsed.side === 'sell' ? leg : null,
-        };
-      }
-      // Back-fill the fills array on legs saved before per-fill tracking.
-      const pos = parsed as OpenPosition;
-      return { ...pos, buy: normalizeLeg(pos.buy), sell: normalizeLeg(pos.sell) };
-    } catch {
-      return null;
-    }
-  });
 
-  // Keep the open position in localStorage so it survives a refresh / re-open.
+  // All open positions (one entry per asset), restored from localStorage.
+  const [positions, setPositions] = useState<OpenPosition[]>(loadPositions);
+
+  // Keep open positions in localStorage so they survive a refresh / re-open.
   useEffect(() => {
     try {
-      if (hasOpenLeg(position)) {
-        localStorage.setItem(POSITION_KEY, JSON.stringify(position));
+      const open = positions.filter(hasOpenLeg);
+      if (open.length > 0) {
+        localStorage.setItem(POSITIONS_KEY, JSON.stringify(open));
       } else {
-        localStorage.removeItem(POSITION_KEY);
+        localStorage.removeItem(POSITIONS_KEY);
       }
     } catch { /* ignore storage errors */ }
-  }, [position]);
+  }, [positions]);
 
   // Persist realized PnL to the database whenever it changes.
   useEffect(() => {
@@ -319,46 +341,52 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
     });
   }, [applyPnl, language]);
 
+  const getPosition = useCallback(
+    (symbol: string) => positions.find((p) => p.symbol === symbol) ?? null,
+    [positions],
+  );
+
   const openOrAdd = useCallback(({ symbol, label, side, price, amount }: { symbol: string; label: string; side: PositionSide; price: number; amount: number }) => {
     if (price <= 0 || amount <= 0) return;
-    setPosition((prev) => {
-      // A different asset already holds open legs — keep one asset at a time.
-      if (hasOpenLeg(prev) && prev!.symbol !== symbol) return prev;
-
-      const base: OpenPosition = (prev && prev.symbol === symbol)
-        ? prev
-        : { symbol, label, currentPrice: price, buy: null, sell: null };
+    setPositions((prev) => {
+      const existing = prev.find((p) => p.symbol === symbol) ?? null;
+      const base: OpenPosition = existing ?? { symbol, label, currentPrice: price, buy: null, sell: null };
 
       const now = Math.floor(Date.now() / 1000);
       const fill: Fill = { id: newFillId(), entryPrice: price, qty: amount, entryTime: now };
-      const existing = normalizeLeg(base[side]);
-      const nextLeg: PositionLeg = existing && existing.qty > 0
+      const leg = normalizeLeg(base[side]);
+      const nextLeg: PositionLeg = leg && leg.qty > 0
         ? (() => {
-            const newQty = +(existing.qty + amount).toFixed(6);
-            const newEntry = ((existing.entryPrice * existing.qty) + price * amount) / newQty;
+            const newQty = +(leg.qty + amount).toFixed(6);
+            const newEntry = ((leg.entryPrice * leg.qty) + price * amount) / newQty;
             // Keep the averaged entry for settlement, but record THIS trade
             // as its own fill so the chart shows it separately.
-            return { ...existing, entryPrice: newEntry, qty: newQty, fills: [...existing.fills, fill] };
+            return { ...leg, entryPrice: newEntry, qty: newQty, fills: [...leg.fills, fill] };
           })()
         : { entryPrice: price, qty: amount, takeProfit: null, stopLoss: null, entryTime: now, fills: [fill] };
 
-      return { ...base, label, currentPrice: price, [side]: nextLeg };
+      const updated: OpenPosition = { ...base, label, currentPrice: price, [side]: nextLeg };
+      return existing
+        ? prev.map((p) => (p.symbol === symbol ? updated : p))
+        : [...prev, updated];
     });
   }, []);
 
   const updatePrice = useCallback((symbol: string, price: number) => {
     if (!price || price <= 0) return;
-    setPosition((prev) => {
-      if (!prev || prev.symbol !== symbol) return prev;
+    setPositions((prev) => {
+      const idx = prev.findIndex((p) => p.symbol === symbol);
+      if (idx === -1) return prev;
+      const cur = prev[idx];
 
-      let buy = prev.buy;
-      let sell = prev.sell;
+      let buy = cur.buy;
+      let sell = cur.sell;
 
       if (buy && buy.qty > 0) {
         const hitTp = buy.takeProfit != null && price >= buy.takeProfit;
         const hitSl = buy.stopLoss != null && price <= buy.stopLoss;
         if (hitTp || hitSl) {
-          settle('buy', buy.entryPrice, buy.qty, hitTp ? buy.takeProfit! : buy.stopLoss!, hitTp ? 'tp' : 'sl', { symbol: prev.symbol, label: prev.label, openedAt: buy.entryTime });
+          settle('buy', buy.entryPrice, buy.qty, hitTp ? buy.takeProfit! : buy.stopLoss!, hitTp ? 'tp' : 'sl', { symbol: cur.symbol, label: cur.label, openedAt: buy.entryTime });
           buy = null;
         }
       }
@@ -366,38 +394,41 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
         const hitTp = sell.takeProfit != null && price <= sell.takeProfit;
         const hitSl = sell.stopLoss != null && price >= sell.stopLoss;
         if (hitTp || hitSl) {
-          settle('sell', sell.entryPrice, sell.qty, hitTp ? sell.takeProfit! : sell.stopLoss!, hitTp ? 'tp' : 'sl', { symbol: prev.symbol, label: prev.label, openedAt: sell.entryTime });
+          settle('sell', sell.entryPrice, sell.qty, hitTp ? sell.takeProfit! : sell.stopLoss!, hitTp ? 'tp' : 'sl', { symbol: cur.symbol, label: cur.label, openedAt: sell.entryTime });
           sell = null;
         }
       }
 
-      const next = { ...prev, buy, sell, currentPrice: price };
-      if (!hasOpenLeg(next)) return null;
-      if (buy === prev.buy && sell === prev.sell && prev.currentPrice === price) return prev;
-      return next;
+      const nextPos = { ...cur, buy, sell, currentPrice: price };
+      if (buy === cur.buy && sell === cur.sell && cur.currentPrice === price) return prev;
+      if (!hasOpenLeg(nextPos)) return prev.filter((p) => p.symbol !== symbol);
+      return prev.map((p) => (p.symbol === symbol ? nextPos : p));
     });
   }, [settle]);
 
-  const setTpSl = useCallback((side: PositionSide, takeProfit: number | null, stopLoss: number | null) => {
-    setPosition((prev) => {
-      if (!prev || !prev[side]) return prev;
-      return { ...prev, [side]: { ...prev[side]!, takeProfit, stopLoss } };
-    });
+  const setTpSl = useCallback((symbol: string, side: PositionSide, takeProfit: number | null, stopLoss: number | null) => {
+    setPositions((prev) => prev.map((p) => {
+      if (p.symbol !== symbol || !p[side]) return p;
+      return { ...p, [side]: { ...p[side]!, takeProfit, stopLoss } };
+    }));
   }, []);
 
-  const closePosition = useCallback((side: PositionSide) => {
-    setPosition((prev) => {
-      if (!prev || !prev[side] || prev[side]!.qty <= 0) return prev;
-      const leg = prev[side]!;
-      const exit = prev.currentPrice > 0 ? prev.currentPrice : leg.entryPrice;
-      settle(side, leg.entryPrice, leg.qty, exit, 'manual', { symbol: prev.symbol, label: prev.label, openedAt: leg.entryTime });
-      const next = { ...prev, [side]: null };
-      return hasOpenLeg(next) ? next : null;
+  const closePosition = useCallback((symbol: string, side: PositionSide) => {
+    setPositions((prev) => {
+      const cur = prev.find((p) => p.symbol === symbol);
+      if (!cur || !cur[side] || cur[side]!.qty <= 0) return prev;
+      const leg = cur[side]!;
+      const exit = cur.currentPrice > 0 ? cur.currentPrice : leg.entryPrice;
+      settle(side, leg.entryPrice, leg.qty, exit, 'manual', { symbol: cur.symbol, label: cur.label, openedAt: leg.entryTime });
+      const nextPos = { ...cur, [side]: null };
+      return hasOpenLeg(nextPos)
+        ? prev.map((p) => (p.symbol === symbol ? nextPos : p))
+        : prev.filter((p) => p.symbol !== symbol);
     });
   }, [settle]);
 
   return (
-    <DemoAccountContext.Provider value={{ balance, loading, ready: !!userId, position, realizedPnl, journal, clearJournal, openOrAdd, updatePrice, setTpSl, closePosition, applyPnl, renew }}>
+    <DemoAccountContext.Provider value={{ balance, loading, ready: !!userId, positions, getPosition, realizedPnl, journal, clearJournal, openOrAdd, updatePrice, setTpSl, closePosition, applyPnl, renew }}>
       {children}
     </DemoAccountContext.Provider>
   );
@@ -411,7 +442,8 @@ export function useDemoAccount(): DemoAccountValue {
       balance: DEMO_STARTING_BALANCE,
       loading: false,
       ready: false,
-      position: null,
+      positions: [],
+      getPosition: () => null,
       realizedPnl: 0,
       journal: [],
       clearJournal: () => {},
