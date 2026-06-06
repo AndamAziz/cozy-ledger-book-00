@@ -80,19 +80,18 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   });
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, position, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, renew, getPosition, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   const [tradeAmount, setTradeAmount] = useState(0.01);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
 
   // The position only counts for THIS chart when it belongs to this pair.
-  const myPos = position && position.symbol === pair ? position : null;
+  const myPos = getPosition(pair);
   const buyLeg = myPos?.buy && myPos.buy.qty > 0 ? myPos.buy : null;
   const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
-  const otherHasLegs = position && position.symbol !== pair &&
-    ((position.buy?.qty ?? 0) > 0 || (position.sell?.qty ?? 0) > 0);
-  const otherPositionLabel = otherHasLegs ? position!.label : null;
+  // Trading is now free across assets — no single-asset lock.
+  const otherPositionLabel = null;
 
   // Keep a fresh snapshot of the legs for the TP/SL drag helper.
   legsRef.current = { buy: buyLeg, sell: sellLeg };
@@ -131,7 +130,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   };
 
   // Close one leg and realise its P/L (handled in context).
-  const handleClose = (side: 'buy' | 'sell') => closePosition(side);
+  const handleClose = (side: 'buy' | 'sell') => closePosition(pair, side);
 
 
 
@@ -492,11 +491,13 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       }
       return nearest;
     };
-    // Aggregate fills landing on the same candle (per side) so markers never
-    // collide on a single bar but still reflect each trade's total size AND the
-    // volume-weighted entry price, shown on the marker so the user can read
-    // EXACTLY at which price each Buy / Sell happened, right on the chart.
-    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number; cost: number }>();
+    // Aggregate fills landing on the same candle (per side) into ONE marker so
+    // labels never overlap on a single bar. Each merged marker still reflects
+    // the total size, the volume-weighted entry price AND how many individual
+    // fills it represents (×N), so multiple trades on one candle stay readable.
+    // Buy markers sit belowBar and Sell aboveBar, so a Buy + Sell on the same
+    // candle land on opposite sides and never collide either.
+    const markerAgg = new Map<string, { time: number; side: 'buy' | 'sell'; qty: number; cost: number; count: number }>();
     const collect = (side: 'buy' | 'sell', leg: any) => {
       for (const f of legFills(leg)) {
         const t = snap(f.entryTime) as number;
@@ -505,8 +506,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         if (prev) {
           prev.qty = +(prev.qty + f.qty).toFixed(6);
           prev.cost += f.entryPrice * f.qty;
+          prev.count += 1;
         } else {
-          markerAgg.set(key, { time: t, side, qty: f.qty, cost: f.entryPrice * f.qty });
+          markerAgg.set(key, { time: t, side, qty: f.qty, cost: f.entryPrice * f.qty, count: 1 });
         }
       }
     };
@@ -520,12 +522,13 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         : (language === 'tr' ? 'Sat' : bi('فرۆشتن', 'Sell'));
     const markers: any[] = Array.from(markerAgg.values()).map((m) => {
       const avgPrice = m.qty > 0 ? m.cost / m.qty : 0;
+      const countTag = m.count > 1 ? ` ×${m.count}` : '';
       return {
         time: m.time as Time,
         position: m.side === 'buy' ? 'belowBar' : 'aboveBar',
         color: m.side === 'buy' ? '#0ecb81' : '#f6465d',
         shape: m.side === 'buy' ? 'arrowUp' : 'arrowDown',
-        text: `${sideText(m.side)} ${fmtQty(m.qty)} @ $${fmtMarkerPrice(avgPrice)}`,
+        text: `${sideText(m.side)}${countTag} ${fmtQty(m.qty)} @ $${fmtMarkerPrice(avgPrice)}`,
       };
     });
     markers.sort((a, b) => (a.time as number) - (b.time as number));
@@ -545,9 +548,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       getLegs: () => legsRef.current,
       lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
       dragRef,
-      onCommit: (side, tp, sl) => setTpSl(side, tp, sl),
+      onCommit: (side, tp, sl) => setTpSl(pair, side, tp, sl),
     });
-  }, [seriesVersion, setTpSl]);
+  }, [seriesVersion, setTpSl, pair]);
 
 
 
@@ -828,7 +831,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
-        onSetTpSl={setTpSl}
+        onSetTpSl={(side, tp, sl) => setTpSl(pair, side, tp, sl)}
       />
 
       {/* Chart */}
