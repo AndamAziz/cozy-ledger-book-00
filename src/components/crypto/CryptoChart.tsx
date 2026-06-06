@@ -130,7 +130,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   };
 
   // Close one leg and realise its P/L (handled in context).
-  const handleClose = (side: 'buy' | 'sell') => closePosition(side);
+  const handleClose = (side: 'buy' | 'sell') => closePosition(pair, side);
 
 
 
