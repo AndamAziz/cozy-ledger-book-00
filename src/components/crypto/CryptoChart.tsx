@@ -660,7 +660,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
+
 
 
       {/* Header */}
