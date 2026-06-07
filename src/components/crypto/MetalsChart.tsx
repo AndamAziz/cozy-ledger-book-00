@@ -268,10 +268,23 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         minBarSpacing: preset.minBarSpacing,
         ticksVisible: true,
       },
-      // One-finger VERTICAL swipes are released to the page so the user can
-      // scroll up/down; only horizontal pan + pinch-zoom stay on the chart.
+      // Touch-friendly gestures: one-finger HORIZONTAL swipe pans the chart,
+      // vertical swipes are released to the page for scrolling, and two-finger
+      // pinch zooms the time axis. Kinetic scroll gives momentum on flick.
       handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
         vertTouchDrag: false,
+      },
+      handleScale: {
+        axisPressedMouseMove: true,
+        mouseWheel: true,
+        pinch: true,
+      },
+      kineticScroll: {
+        touch: true,
+        mouse: false,
       },
       width: rect.width || 600,
       height: rect.height || 300,
