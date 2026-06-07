@@ -361,7 +361,7 @@ export default function CryptoTracker() {
                   }}
                 />
               ) : cryptoView === 'chart' ? (
-                <>
+                <div className="flex-1 overflow-y-auto">
                   <CryptoChart
                     pair={selectedPair}
                     candles={candles}
@@ -371,14 +371,14 @@ export default function CryptoTracker() {
                     onIntervalChange={setInterval}
                   />
                   {currentCoin && currentCoin.price > 0 && (
-                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 sm:gap-x-6 gap-y-1 px-3 py-2 border-t border-[#1a1e2e] text-[10px] sm:text-xs text-[#848e9c] shrink-0">
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 sm:gap-x-6 gap-y-1 px-3 py-2 border-t border-[#1a1e2e] text-[10px] sm:text-xs text-[#848e9c]">
                       <span>{bi('بەرزی ٢٤ک', '24h High')}: <span className="text-white">${currentCoin.high24h.toLocaleString()}</span></span>
                       <span>{bi('نزمی ٢٤ک', '24h Low')}: <span className="text-white">${currentCoin.low24h.toLocaleString()}</span></span>
                       <span>{bi('قەبارەی ٢٤ک', '24h Vol')}: <span className="text-white">{currentCoin.volume24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span></span>
                       <span>{bi('گۆڕانی ٢٤ک', '24h Change')}: <span className={currentCoin.change24h >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>{currentCoin.change24h >= 0 ? '+' : ''}{currentCoin.change24h.toFixed(2)}%</span></span>
                     </div>
                   )}
-                </>
+                </div>
               ) : (
                 <CryptoAnalysis
                   symbol={getDisplaySymbol(getSymbolFromPair(selectedPair))}
