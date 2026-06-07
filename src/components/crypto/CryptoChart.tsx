@@ -835,8 +835,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         onSetTpSl={(side, tp, sl) => setTpSl(pair, side, tp, sl)}
       />
 
-      {/* Chart */}
-      <div className="flex-1 relative min-h-[72vh] md:min-h-[500px] landscape:min-h-[88vh]">
+      {/* Chart — sized so trade controls (above) and 24h stats (below) stay reachable on mobile without awkward scrolling */}
+      <div className="relative h-[46vh] sm:h-[360px] md:h-[500px] landscape:h-[86vh] landscape:max-h-none">
         <div ref={chartContainerRef} className="absolute inset-0" />
 
 
