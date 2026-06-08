@@ -29,6 +29,15 @@ const TWELVE_DATA_SYMBOLS: Record<string, string> = {
   XPD: "XPD/USD",
 };
 
+// Yahoo real SPOT (currency-style) symbols — these are true spot quotes, NOT futures,
+// so they can be used as a reliable, key-free fallback for precious metals.
+const YAHOO_SPOT_SYMBOLS: Record<string, string> = {
+  XAU: "XAUUSD=X",
+  XAG: "XAGUSD=X",
+  XPT: "XPTUSD=X",
+  XPD: "XPDUSD=X",
+};
+
 const yahooHeaders = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
   "Accept": "application/json,text/plain,*/*",
