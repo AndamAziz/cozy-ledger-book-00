@@ -84,6 +84,32 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
 
           <AlertBox lowStockItems={lowStockItems} />
 
+          {/* External link buttons */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
+            <a
+              href="https://insta.kurdcloud.xyz/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 hover:border-primary/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3"
+            >
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">ALL IN ONE</span>
+            </a>
+            <a
+              href="https://famelack.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3"
+            >
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-md shadow-info/30 flex-shrink-0">
+                <Tv className="h-4 w-4 sm:h-5 sm:w-5 text-info-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">TV</span>
+            </a>
+          </div>
+
           {/* Tab Navigation */}
           <div className="relative mb-3 sm:mb-5 md:mb-7 no-print">
             <div className="grid grid-cols-4 gap-1 sm:gap-1.5 md:gap-2.5 p-1.5 sm:p-2 md:p-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 shadow-xl shadow-black/10">
