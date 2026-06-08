@@ -123,9 +123,35 @@ async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sour
 
   // Use Stooq + GoldAPI for live spot prices. TwelveData has only 8 credits/min on the
   // free tier, so we reserve it exclusively for spot history candles (handleHistory).
-  const [stooq, goldApi] = await Promise.all([
+async function fetchYahooSpotMetals(): Promise<Record<string, number>> {
+  try {
+    const results = await Promise.all(
+      Object.entries(YAHOO_SPOT_SYMBOLS).map(async ([code, symbol]) => {
+        const p = await fetchYahooPrice(symbol);
+        return [code, Number.isFinite(p) && (p as number) > 0 ? Number((p as number).toFixed(4)) : null] as const;
+      }),
+    );
+    const prices: Record<string, number> = {};
+    for (const [code, p] of results) if (p != null) prices[code] = p;
+    return prices;
+  } catch (e) {
+    console.error("Yahoo spot metals fetch error:", e);
+    return {};
+  }
+}
+
+async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sources: string[] }> {
+  if (metalsSpotCache && Date.now() - metalsSpotCacheTs < METALS_SPOT_CACHE_TTL) {
+    return { prices: metalsSpotCache, sources: ["spot-cache"] };
+  }
+
+  // Use Stooq + GoldAPI for live spot prices, with Yahoo spot (=X) as a key-free fallback.
+  // TwelveData has only 8 credits/min on the free tier, so we reserve it exclusively for
+  // spot history candles (handleHistory).
+  const [stooq, goldApi, yahooSpot] = await Promise.all([
     fetchStooqSpotMetals(),
     fetchGoldApiMetals(),
+    fetchYahooSpotMetals(),
   ]);
 
   const prices: Record<string, number> = {};
@@ -137,6 +163,9 @@ async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sour
     } else if (goldApi[code]) {
       prices[code] = goldApi[code];
       if (!sources.includes("goldapi-spot")) sources.push("goldapi-spot");
+    } else if (yahooSpot[code]) {
+      prices[code] = yahooSpot[code];
+      if (!sources.includes("yahoo-spot")) sources.push("yahoo-spot");
     }
   }
 
