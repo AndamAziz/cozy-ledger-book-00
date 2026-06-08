@@ -116,13 +116,6 @@ async function fetchTwelveDataMetals(): Promise<Record<string, number>> {
   }
 }
 
-async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sources: string[] }> {
-  if (metalsSpotCache && Date.now() - metalsSpotCacheTs < METALS_SPOT_CACHE_TTL) {
-    return { prices: metalsSpotCache, sources: ["spot-cache"] };
-  }
-
-  // Use Stooq + GoldAPI for live spot prices. TwelveData has only 8 credits/min on the
-  // free tier, so we reserve it exclusively for spot history candles (handleHistory).
 async function fetchYahooSpotMetals(): Promise<Record<string, number>> {
   try {
     const results = await Promise.all(
