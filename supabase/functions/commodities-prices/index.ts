@@ -29,6 +29,8 @@ const TWELVE_DATA_SYMBOLS: Record<string, string> = {
   XPD: "XPD/USD",
 };
 
+
+
 const yahooHeaders = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
   "Accept": "application/json,text/plain,*/*",
@@ -84,25 +86,55 @@ async function fetchTwelveDataMetals(): Promise<Record<string, number>> {
   const key = Deno.env.get("TWELVE_DATA_API_KEY");
   if (!key) return {};
 
+  // Single batched request for all metals (saves API credits vs. one call per symbol).
+  const symbols = Object.values(TWELVE_DATA_SYMBOLS).join(",");
+  const codeBySymbol = Object.fromEntries(
+    Object.entries(TWELVE_DATA_SYMBOLS).map(([code, sym]) => [sym, code]),
+  );
+
+  try {
+    const url = `https://api.twelvedata.com/price?symbol=${encodeURIComponent(symbols)}&apikey=${encodeURIComponent(key)}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) { await res.text(); return {}; }
+    const data = await res.json();
+    if (data?.status === "error") return {};
+
+    const prices: Record<string, number> = {};
+    // Batch response is keyed by symbol: { "XAU/USD": { price: "..." }, ... }.
+    // A single-symbol response is a bare { price: "..." } object.
+    const entries: [string, unknown][] = data?.price !== undefined && !data?.[symbols.split(",")[0]]
+      ? [[symbols.split(",")[0], data]]
+      : Object.entries(data);
+    for (const [sym, val] of entries) {
+      const code = codeBySymbol[sym];
+      if (!code) continue;
+      const p = Number((val as { price?: unknown })?.price);
+      if (Number.isFinite(p) && p > 0) prices[code] = Number(p.toFixed(4));
+    }
+    return prices;
+  } catch (e) {
+    console.error("Twelve Data metals fetch error:", e);
+    return {};
+  }
+}
+
+// Last-resort metals fallback: Yahoo futures (GC=F/SI=F/PL=F/PA=F). These trade slightly
+// above broker spot but are free and almost always reachable, so they keep a price on
+// screen when the true spot sources (GoldAPI / TwelveData) are exhausted or unreachable.
+async function fetchYahooFuturesMetals(): Promise<Record<string, number>> {
   try {
     const results = await Promise.all(
-      Object.entries(TWELVE_DATA_SYMBOLS).map(async ([code, symbol]) => {
-        try {
-          const url = `https://api.twelvedata.com/price?symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(key)}`;
-          const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-          if (!res.ok) { await res.text(); return [code, null] as const; }
-          const data = await res.json();
-          const p = Number(data?.price);
-          return [code, Number.isFinite(p) && p > 0 ? Number(p.toFixed(4)) : null] as const;
-        } catch { return [code, null] as const; }
+      GOLDAPI_METALS.map(async (code) => {
+        const symbol = YAHOO_SYMBOLS[code];
+        const p = symbol ? await fetchYahooPrice(symbol) : null;
+        return [code, Number.isFinite(p) && (p as number) > 0 ? Number((p as number).toFixed(4)) : null] as const;
       }),
     );
-
     const prices: Record<string, number> = {};
     for (const [code, p] of results) if (p != null) prices[code] = p;
     return prices;
   } catch (e) {
-    console.error("Twelve Data metals fetch error:", e);
+    console.error("Yahoo futures metals fetch error:", e);
     return {};
   }
 }
@@ -112,22 +144,26 @@ async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sour
     return { prices: metalsSpotCache, sources: ["spot-cache"] };
   }
 
-  // Use Stooq + GoldAPI for live spot prices. TwelveData has only 8 credits/min on the
-  // free tier, so we reserve it exclusively for spot history candles (handleHistory).
-  const [stooq, goldApi] = await Promise.all([
-    fetchStooqSpotMetals(),
+  // Priority: real spot from GoldAPI, then TwelveData (both true spot), then Yahoo futures
+  // as a key-free last resort so a price is always shown.
+  const [goldApi, twelveData, yahooFutures] = await Promise.all([
     fetchGoldApiMetals(),
+    fetchTwelveDataMetals(),
+    fetchYahooFuturesMetals(),
   ]);
 
   const prices: Record<string, number> = {};
   const sources: string[] = [];
   for (const code of GOLDAPI_METALS) {
-    if (stooq[code]) {
-      prices[code] = stooq[code];
-      if (!sources.includes("stooq-spot")) sources.push("stooq-spot");
-    } else if (goldApi[code]) {
+    if (goldApi[code]) {
       prices[code] = goldApi[code];
       if (!sources.includes("goldapi-spot")) sources.push("goldapi-spot");
+    } else if (twelveData[code]) {
+      prices[code] = twelveData[code];
+      if (!sources.includes("twelvedata-spot")) sources.push("twelvedata-spot");
+    } else if (yahooFutures[code]) {
+      prices[code] = yahooFutures[code];
+      if (!sources.includes("yahoo-futures")) sources.push("yahoo-futures");
     }
   }
 
@@ -140,11 +176,8 @@ async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sour
 
 // Fetch accurate SPOT metal prices from GoldAPI (Yahoo GC=F is futures and drifts ~$20+)
 async function fetchGoldApiMetals(): Promise<Record<string, number>> {
-  if (metalsSpotCache && Date.now() - metalsSpotCacheTs < METALS_SPOT_CACHE_TTL) {
-    return metalsSpotCache;
-  }
   const key = Deno.env.get("GOLD_API_KEY");
-  if (!key) return metalsSpotCache || {};
+  if (!key) return {};
 
   try {
     const results = await Promise.all(
@@ -164,16 +197,10 @@ async function fetchGoldApiMetals(): Promise<Record<string, number>> {
 
     const prices: Record<string, number> = {};
     for (const [code, p] of results) if (p != null) prices[code] = p;
-
-    if (Object.keys(prices).length > 0) {
-      metalsSpotCache = prices;
-      metalsSpotCacheTs = Date.now();
-      return prices;
-    }
-    return metalsSpotCache || {};
+    return prices;
   } catch (e) {
     console.error("GoldAPI fetch error:", e);
-    return metalsSpotCache || {};
+    return {};
   }
 }
 
