@@ -183,11 +183,8 @@ async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sour
 
 // Fetch accurate SPOT metal prices from GoldAPI (Yahoo GC=F is futures and drifts ~$20+)
 async function fetchGoldApiMetals(): Promise<Record<string, number>> {
-  if (metalsSpotCache && Date.now() - metalsSpotCacheTs < METALS_SPOT_CACHE_TTL) {
-    return metalsSpotCache;
-  }
   const key = Deno.env.get("GOLD_API_KEY");
-  if (!key) return metalsSpotCache || {};
+  if (!key) return {};
 
   try {
     const results = await Promise.all(
@@ -207,16 +204,10 @@ async function fetchGoldApiMetals(): Promise<Record<string, number>> {
 
     const prices: Record<string, number> = {};
     for (const [code, p] of results) if (p != null) prices[code] = p;
-
-    if (Object.keys(prices).length > 0) {
-      metalsSpotCache = prices;
-      metalsSpotCacheTs = Date.now();
-      return prices;
-    }
-    return metalsSpotCache || {};
+    return prices;
   } catch (e) {
     console.error("GoldAPI fetch error:", e);
-    return metalsSpotCache || {};
+    return {};
   }
 }
 
