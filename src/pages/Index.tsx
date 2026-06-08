@@ -19,7 +19,7 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { SplashScreen } from '@/components/SplashScreen';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
-import { Users } from 'lucide-react';
+import { Users, Sparkles, Tv } from 'lucide-react';
 
 type TabType = 'finance' | 'inventory' | 'sales' | 'reports';
 
