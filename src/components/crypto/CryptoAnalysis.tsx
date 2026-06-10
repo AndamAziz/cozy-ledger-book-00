@@ -887,7 +887,14 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><ShieldAlert className="h-3 w-3" style={{ color: riskColor(tradeSummary.riskLevel) }} />{biLabel('ئاستی مەترسی', 'Risk level')}</div>
                 <div className="text-sm font-bold mt-0.5" style={{ color: riskColor(tradeSummary.riskLevel) }}>{riskLabel(tradeSummary.riskLevel, langMode)}</div>
               </div>
+              {tradeSummary.validForMinutes && tradeSummary.validForMinutes > 0 && (
+                <div className="bg-[#0d1117] px-4 py-2.5 col-span-2 border-t border-[#1a1e2e]">
+                  <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><Clock className="h-3 w-3 text-[#f0b90b]" />{biLabel('متمانە بەم تارگێتە بۆ', 'Target valid for')}</div>
+                  <div className="text-sm font-bold text-[#f0b90b] mt-0.5">{validityText(generatedAt, tradeSummary.validForMinutes)}</div>
+                </div>
+              )}
             </div>
+
 
             {/* When to buy / when to sell timing */}
             {(tradeSummary.entryTiming || tradeSummary.entryTimingEn || tradeSummary.exitTiming || tradeSummary.exitTimingEn) && (
