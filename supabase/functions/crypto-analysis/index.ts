@@ -418,6 +418,21 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                       type: "integer",
                       description: "Estimated trade duration in days.",
                     },
+                    validForMinutes: {
+                      type: "integer",
+                      description:
+                        "How many MINUTES this trade plan and its targets stay valid before they must be re-evaluated, derived from the timeframe.",
+                    },
+                    macroContext: {
+                      type: "string",
+                      description:
+                        "1-3 sentences in Kurdish Sorani on the macro/fundamental drivers (US Dollar/DXY, Fed/rates, CPI/PPI inflation, war/geopolitical safe-haven demand) supporting a rise or fall.",
+                    },
+                    macroContextEn: {
+                      type: "string",
+                      description:
+                        "The SAME macro/fundamental context as macroContext, in clear professional English.",
+                    },
                     riskLevel: {
                       type: "string",
                       enum: ["low", "medium", "high"],
