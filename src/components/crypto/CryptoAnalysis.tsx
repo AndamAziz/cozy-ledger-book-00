@@ -1462,7 +1462,14 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                   ))}
                 </div>
               </div>
+              {imageSummary.validForMinutes && imageSummary.validForMinutes > 0 && (
+                <div className="bg-[#0d1117] px-4 py-2.5 col-span-2 border-t border-[#1a1e2e]">
+                  <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><Clock className="h-3 w-3 text-[#f0b90b]" />{biLabel('متمانە بەم تارگێتە بۆ', 'Target valid for')}</div>
+                  <div className="text-sm font-bold text-[#f0b90b] mt-0.5">{validityText(imageGeneratedAt, imageSummary.validForMinutes)}</div>
+                </div>
+              )}
             </div>
+
 
             {(imageSummary.entryTiming || imageSummary.entryTimingEn || imageSummary.exitTiming || imageSummary.exitTimingEn) && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#1a1e2e] border-t border-[#1a1e2e]">
