@@ -610,6 +610,21 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     ? fmtDate(new Date(new Date(generatedAt).getTime() + tradeSummary.horizonDays * 86400000))
     : null;
 
+  // Human-readable validity window for the trade plan (e.g. "120 min · until 16:42").
+  const validityText = (gen: string | null, mins?: number) => {
+    if (!mins || mins <= 0) return null;
+    const label = mins >= 60 && mins % 60 === 0
+      ? biLabel(`${mins / 60} کاتژمێر`, `${mins / 60}h`)
+      : biLabel(`${mins} خولەک`, `${mins} min`);
+    let until = '';
+    if (gen) {
+      const exp = new Date(new Date(gen).getTime() + mins * 60000);
+      until = ` · ${biLabel('تا', 'until')} ${exp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    return `${label}${until}`;
+  };
+
+
   return (
     <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
       {/* Overall signal */}
