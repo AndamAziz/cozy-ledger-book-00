@@ -952,6 +952,17 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               </div>
             )}
 
+            {/* Macro & news drivers (USD / war / economic data) */}
+            {(tradeSummary.macroContext || tradeSummary.macroContextEn) && (
+              <div className="px-4 py-3 border-t border-[#1a1e2e]">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-1.5">
+                  <Globe className="h-3.5 w-3.5 text-[#3b82f6]" />
+                  {biLabel('هۆکارە ئابووری و هەواڵەکان', 'Macro & news drivers')}
+                </div>
+                <BiText ku={tradeSummary.macroContext} en={tradeSummary.macroContextEn} className="text-xs text-[#d1d5db]" />
+              </div>
+            )}
+
 
             {/* Why this decision */}
             {(tradeSummary.reasoning || tradeSummary.reasoningEn) && (
