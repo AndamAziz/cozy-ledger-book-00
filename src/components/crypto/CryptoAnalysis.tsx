@@ -1488,6 +1488,15 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
               </div>
             )}
 
+            {(imageSummary.macroContext || imageSummary.macroContextEn) && (
+              <div className="px-4 py-3 border-t border-[#1a1e2e]">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-1.5"><Globe className="h-3.5 w-3.5 text-[#3b82f6]" />{biLabel('هۆکارە ئابووری و هەواڵەکان', 'Macro & news drivers')}</div>
+                <BiText ku={imageSummary.macroContext} en={imageSummary.macroContextEn} className="text-xs text-[#d1d5db]" />
+              </div>
+            )}
+
+
+
             {(imageSummary.reasoning || imageSummary.reasoningEn) && (
               <div className="px-4 py-3 border-t border-[#1a1e2e]">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-1.5"><Lightbulb className="h-3.5 w-3.5 text-[#f0b90b]" />{biLabel('بۆچی ئەم بڕیارە؟', 'Why this decision?')}</div>
