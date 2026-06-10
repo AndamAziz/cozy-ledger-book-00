@@ -50,6 +50,9 @@ interface TradeSummary {
   stopLossBasis?: string;
   stopLossBasisEn?: string;
   horizonDays: number;
+  validForMinutes?: number;
+  macroContext?: string;
+  macroContextEn?: string;
   riskLevel: RiskLevel;
   riskNote: string;
   riskNoteEn?: string;
