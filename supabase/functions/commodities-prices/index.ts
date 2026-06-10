@@ -37,6 +37,33 @@ const yahooHeaders = {
   "Referer": "https://finance.yahoo.com/",
 };
 
+// Primary FREE spot source — api.gold-api.com (no key required). Returns true broker
+// spot for XAU/XAG/XPT/XPD, unlike Yahoo GC=F/SI=F futures which trade ~$30-40 higher.
+async function fetchGoldApiComMetals(): Promise<Record<string, number>> {
+  try {
+    const results = await Promise.all(
+      GOLDAPI_METALS.map(async (code) => {
+        try {
+          const res = await fetch(`https://api.gold-api.com/price/${code}`, {
+            headers: { "Accept": "application/json" },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (!res.ok) { await res.text(); return [code, null] as const; }
+          const d = await res.json();
+          const p = Number(d?.price);
+          return [code, Number.isFinite(p) && p > 0 ? Number(p.toFixed(4)) : null] as const;
+        } catch { return [code, null] as const; }
+      }),
+    );
+    const prices: Record<string, number> = {};
+    for (const [code, p] of results) if (p != null) prices[code] = p;
+    return prices;
+  } catch (e) {
+    console.error("gold-api.com fetch error:", e);
+    return {};
+  }
+}
+
 // ─── Live prices cache ───
 const CACHE_TTL = 1000;
 let cachedPrices: Record<string, number> | null = null;
