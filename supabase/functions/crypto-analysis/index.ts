@@ -234,6 +234,8 @@ All price levels (entry, targets, stopLoss) MUST be realistic numbers READ DIREC
 For a BUY: place the stop-loss just BELOW a visible support / recent swing low, and put targets ABOVE toward visible resistance.
 For a SELL: place the stop-loss just ABOVE a visible resistance / recent swing high, and put targets BELOW toward visible support.
 Every Kurdish field MUST be in Kurdish Sorani (کوردیی ناوەندی). Every English field MUST be clear, fluent, professional English (a real translation, never transliterated Kurdish).
+For gold/precious metals also fill macroContext/macroContextEn with the key macro drivers (US Dollar/DXY, Fed & rates, CPI/PPI inflation, war/geopolitical safe-haven demand) that support a rise or fall.
+Set validForMinutes to how many MINUTES the plan/targets stay valid before re-evaluation, based on the chart timeframe, and reflect that discipline in exitTiming.
 This is educational, not financial advice.`;
 
       const userParts: unknown[] = [
