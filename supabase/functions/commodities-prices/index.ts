@@ -171,9 +171,10 @@ async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sour
     return { prices: metalsSpotCache, sources: ["spot-cache"] };
   }
 
-  // Priority: real spot from GoldAPI, then TwelveData (both true spot), then Yahoo futures
-  // as a key-free last resort so a price is always shown.
-  const [goldApi, twelveData, yahooFutures] = await Promise.all([
+  // Priority: gold-api.com (free, accurate spot for all 4 metals), then GoldAPI, then
+  // TwelveData (XAU only on current plan), then Yahoo futures as a key-free last resort.
+  const [goldApiCom, goldApi, twelveData, yahooFutures] = await Promise.all([
+    fetchGoldApiComMetals(),
     fetchGoldApiMetals(),
     fetchTwelveDataMetals(),
     fetchYahooFuturesMetals(),
@@ -182,7 +183,10 @@ async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sour
   const prices: Record<string, number> = {};
   const sources: string[] = [];
   for (const code of GOLDAPI_METALS) {
-    if (goldApi[code]) {
+    if (goldApiCom[code]) {
+      prices[code] = goldApiCom[code];
+      if (!sources.includes("gold-api-com-spot")) sources.push("gold-api-com-spot");
+    } else if (goldApi[code]) {
       prices[code] = goldApi[code];
       if (!sources.includes("goldapi-spot")) sources.push("goldapi-spot");
     } else if (twelveData[code]) {
