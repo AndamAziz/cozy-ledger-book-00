@@ -595,8 +595,10 @@ Cover these sections in order (keep the Kurdish header, and when bilingual add i
 3. **بەرزترین و نزمترین / 24h High & Low** - the 24h high and 24h low and what they mean for range.
 4. **ئاستە گرنگەکان / Key levels** - key support/resistance levels (use the provided numbers).
 5. **کەی بکڕیت و کەی بفرۆشیت / When to buy & sell** - the price area/condition to enter (buy) and the area/condition to take profit (sell).
-6. **ئەگەرەکان / Scenarios** - bullish vs bearish scenarios.
-7. **ئاگاداری / Warning** - one risk-management note.
+6. **هۆکارە ئابووری و سیاسییەکان / Macro & news drivers** - for gold/metals especially, explain how the US Dollar/DXY, Fed & interest rates, CPI/PPI inflation data, and war/geopolitical safe-haven demand currently support a rise or fall. If you lack confirmed live news, state the typical/assumed macro stance clearly.
+7. **ماوەی متمانە / Plan validity** - state in MINUTES how long this plan and its targets stay trustworthy before re-evaluation, derived from the timeframe.
+8. **ئەگەرەکان / Scenarios** - bullish vs bearish scenarios.
+9. **ئاگاداری / Warning** - one risk-management note.
 Never give financial guarantees. Always note this is not financial advice (ئەمە ڕاوێژی دارایی نییە / this is not financial advice).`;
 
     const userPrompt = `${baseContext}\n\nGive a full technical analysis following the language rule above.`;
