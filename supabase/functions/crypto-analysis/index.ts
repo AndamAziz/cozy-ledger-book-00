@@ -32,6 +32,9 @@ const IMAGE_TRADE_TOOL = {
         stopLossBasis: { type: "string", description: "Kurdish Sorani: which visible level the stop is based on and why." },
         stopLossBasisEn: { type: "string", description: "The SAME explanation in clear English." },
         horizonDays: { type: "integer", description: "Estimated trade duration in days based on the timeframe." },
+        validForMinutes: { type: "integer", description: "How many MINUTES this plan/targets stay valid before re-evaluation, based on the chart timeframe." },
+        macroContext: { type: "string", description: "1-3 sentences Kurdish Sorani on macro drivers (USD/DXY, Fed/rates, CPI/PPI, war/geopolitics) for metals." },
+        macroContextEn: { type: "string", description: "The SAME macro context in clear English." },
         riskLevel: { type: "string", enum: ["low", "medium", "high"], description: "Overall risk level." },
         riskNote: { type: "string", description: "One short risk note in Kurdish Sorani." },
         riskNoteEn: { type: "string", description: "The SAME risk note in clear English." },
@@ -231,6 +234,8 @@ All price levels (entry, targets, stopLoss) MUST be realistic numbers READ DIREC
 For a BUY: place the stop-loss just BELOW a visible support / recent swing low, and put targets ABOVE toward visible resistance.
 For a SELL: place the stop-loss just ABOVE a visible resistance / recent swing high, and put targets BELOW toward visible support.
 Every Kurdish field MUST be in Kurdish Sorani (کوردیی ناوەندی). Every English field MUST be clear, fluent, professional English (a real translation, never transliterated Kurdish).
+For gold/precious metals also fill macroContext/macroContextEn with the key macro drivers (US Dollar/DXY, Fed & rates, CPI/PPI inflation, war/geopolitical safe-haven demand) that support a rise or fall.
+Set validForMinutes to how many MINUTES the plan/targets stay valid before re-evaluation, based on the chart timeframe, and reflect that discipline in exitTiming.
 This is educational, not financial advice.`;
 
       const userParts: unknown[] = [
@@ -311,6 +316,9 @@ exitTiming/exitTimingEn must clearly explain WHEN to sell (the price area or con
 The stop-loss MUST be derived from a specific indicator level (e.g. the Bollinger lower/upper band, SMA20/SMA50, a recent swing level, or an RSI-based invalidation), NOT a random round number. Pick the single most relevant indicator for the stop and place the stop just beyond it.
 Always fill stopLossIndicator with the indicator the stop is based on, stopLossIndicatorValue with the EXACT numeric level of that indicator (e.g. "SMA20 = $2,335" or "Bollinger lower band = $2,328"), stopLossBasis with a clear 1-2 sentence Kurdish explanation, and stopLossBasisEn with the SAME explanation in clear English. Both explanations must name the indicator, its exact value, the resulting stop-loss price, and why a break of that level invalidates the trade.
 Estimate a realistic time horizon for the trade in days based on the timeframe.
+MACRO / FUNDAMENTAL AWARENESS: For gold and precious metals (XAU, XAG, XPT, XPD) especially, factor in the key macro drivers that move the price: the US Dollar / DXY strength (a stronger dollar usually pushes gold DOWN, a weaker dollar pushes it UP), US interest-rate and Fed/FOMC expectations, US inflation data (CPI/PPI), and safe-haven demand from geopolitical tension or war. Fill macroContext (Kurdish Sorani) and macroContextEn (clear English) with 1-3 sentences naming which of these forces currently support a rise or a fall and how they shaped this decision. If you do not have confirmed live news, state the typical/assumed macro stance clearly rather than inventing specific headlines.
+TARGET VALIDITY: Set validForMinutes to the number of minutes this trade plan and its targets should be trusted before it must be re-evaluated, derived from the timeframe (e.g. a 1H chart plan is typically valid ~60-240 minutes, a 1D plan longer). The plan expires after that many minutes; mention this discipline inside exitTiming as well.
+Set confidence honestly (0-100) reflecting how strongly the technical + macro picture align.
 Never guarantee outcomes; this is educational, not financial advice.`;
 
       const resp = await fetch(AI_URL, {
@@ -415,6 +423,21 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                       type: "integer",
                       description: "Estimated trade duration in days.",
                     },
+                    validForMinutes: {
+                      type: "integer",
+                      description:
+                        "How many MINUTES this trade plan and its targets stay valid before they must be re-evaluated, derived from the timeframe.",
+                    },
+                    macroContext: {
+                      type: "string",
+                      description:
+                        "1-3 sentences in Kurdish Sorani on the macro/fundamental drivers (US Dollar/DXY, Fed/rates, CPI/PPI inflation, war/geopolitical safe-haven demand) supporting a rise or fall.",
+                    },
+                    macroContextEn: {
+                      type: "string",
+                      description:
+                        "The SAME macro/fundamental context as macroContext, in clear professional English.",
+                    },
                     riskLevel: {
                       type: "string",
                       enum: ["low", "medium", "high"],
@@ -494,6 +517,9 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                     "stopLossBasis",
                     "stopLossBasisEn",
                     "horizonDays",
+                    "validForMinutes",
+                    "macroContext",
+                    "macroContextEn",
                     "riskLevel",
                     "riskNote",
                     "riskNoteEn",
@@ -569,8 +595,10 @@ Cover these sections in order (keep the Kurdish header, and when bilingual add i
 3. **بەرزترین و نزمترین / 24h High & Low** - the 24h high and 24h low and what they mean for range.
 4. **ئاستە گرنگەکان / Key levels** - key support/resistance levels (use the provided numbers).
 5. **کەی بکڕیت و کەی بفرۆشیت / When to buy & sell** - the price area/condition to enter (buy) and the area/condition to take profit (sell).
-6. **ئەگەرەکان / Scenarios** - bullish vs bearish scenarios.
-7. **ئاگاداری / Warning** - one risk-management note.
+6. **هۆکارە ئابووری و سیاسییەکان / Macro & news drivers** - for gold/metals especially, explain how the US Dollar/DXY, Fed & interest rates, CPI/PPI inflation data, and war/geopolitical safe-haven demand currently support a rise or fall. If you lack confirmed live news, state the typical/assumed macro stance clearly.
+7. **ماوەی متمانە / Plan validity** - state in MINUTES how long this plan and its targets stay trustworthy before re-evaluation, derived from the timeframe.
+8. **ئەگەرەکان / Scenarios** - bullish vs bearish scenarios.
+9. **ئاگاداری / Warning** - one risk-management note.
 Never give financial guarantees. Always note this is not financial advice (ئەمە ڕاوێژی دارایی نییە / this is not financial advice).`;
 
     const userPrompt = `${baseContext}\n\nGive a full technical analysis following the language rule above.`;

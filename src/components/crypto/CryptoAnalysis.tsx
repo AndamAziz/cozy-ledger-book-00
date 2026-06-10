@@ -4,7 +4,7 @@ import { computeIndicators, summarizeSignals, computeBuySellPct, SignalType } fr
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft, Copy, Check, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft, Copy, Check, Eye, EyeOff, Clock, Globe } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 
@@ -50,6 +50,9 @@ interface TradeSummary {
   stopLossBasis?: string;
   stopLossBasisEn?: string;
   horizonDays: number;
+  validForMinutes?: number;
+  macroContext?: string;
+  macroContextEn?: string;
   riskLevel: RiskLevel;
   riskNote: string;
   riskNoteEn?: string;
@@ -607,6 +610,21 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     ? fmtDate(new Date(new Date(generatedAt).getTime() + tradeSummary.horizonDays * 86400000))
     : null;
 
+  // Human-readable validity window for the trade plan (e.g. "120 min · until 16:42").
+  const validityText = (gen: string | null, mins?: number) => {
+    if (!mins || mins <= 0) return null;
+    const label = mins >= 60 && mins % 60 === 0
+      ? biLabel(`${mins / 60} کاتژمێر`, `${mins / 60}h`)
+      : biLabel(`${mins} خولەک`, `${mins} min`);
+    let until = '';
+    if (gen) {
+      const exp = new Date(new Date(gen).getTime() + mins * 60000);
+      until = ` · ${biLabel('تا', 'until')} ${exp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    return `${label}${until}`;
+  };
+
+
   return (
     <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
       {/* Overall signal */}
@@ -869,7 +887,14 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><ShieldAlert className="h-3 w-3" style={{ color: riskColor(tradeSummary.riskLevel) }} />{biLabel('ئاستی مەترسی', 'Risk level')}</div>
                 <div className="text-sm font-bold mt-0.5" style={{ color: riskColor(tradeSummary.riskLevel) }}>{riskLabel(tradeSummary.riskLevel, langMode)}</div>
               </div>
+              {tradeSummary.validForMinutes && tradeSummary.validForMinutes > 0 && (
+                <div className="bg-[#0d1117] px-4 py-2.5 col-span-2 border-t border-[#1a1e2e]">
+                  <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><Clock className="h-3 w-3 text-[#f0b90b]" />{biLabel('متمانە بەم تارگێتە بۆ', 'Target valid for')}</div>
+                  <div className="text-sm font-bold text-[#f0b90b] mt-0.5">{validityText(generatedAt, tradeSummary.validForMinutes)}</div>
+                </div>
+              )}
             </div>
+
 
             {/* When to buy / when to sell timing */}
             {(tradeSummary.entryTiming || tradeSummary.entryTimingEn || tradeSummary.exitTiming || tradeSummary.exitTimingEn) && (
@@ -924,6 +949,17 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 </div>
 
                 <BiText ku={tradeSummary.stopLossBasis} en={tradeSummary.stopLossBasisEn} className="text-xs text-[#d1d5db]" />
+              </div>
+            )}
+
+            {/* Macro & news drivers (USD / war / economic data) */}
+            {(tradeSummary.macroContext || tradeSummary.macroContextEn) && (
+              <div className="px-4 py-3 border-t border-[#1a1e2e]">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-1.5">
+                  <Globe className="h-3.5 w-3.5 text-[#3b82f6]" />
+                  {biLabel('هۆکارە ئابووری و هەواڵەکان', 'Macro & news drivers')}
+                </div>
+                <BiText ku={tradeSummary.macroContext} en={tradeSummary.macroContextEn} className="text-xs text-[#d1d5db]" />
               </div>
             )}
 
@@ -1426,7 +1462,14 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                   ))}
                 </div>
               </div>
+              {imageSummary.validForMinutes && imageSummary.validForMinutes > 0 && (
+                <div className="bg-[#0d1117] px-4 py-2.5 col-span-2 border-t border-[#1a1e2e]">
+                  <div className="flex items-center gap-1.5 text-[10px] text-[#848e9c]"><Clock className="h-3 w-3 text-[#f0b90b]" />{biLabel('متمانە بەم تارگێتە بۆ', 'Target valid for')}</div>
+                  <div className="text-sm font-bold text-[#f0b90b] mt-0.5">{validityText(imageGeneratedAt, imageSummary.validForMinutes)}</div>
+                </div>
+              )}
             </div>
+
 
             {(imageSummary.entryTiming || imageSummary.entryTimingEn || imageSummary.exitTiming || imageSummary.exitTimingEn) && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#1a1e2e] border-t border-[#1a1e2e]">
@@ -1444,6 +1487,15 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
                 )}
               </div>
             )}
+
+            {(imageSummary.macroContext || imageSummary.macroContextEn) && (
+              <div className="px-4 py-3 border-t border-[#1a1e2e]">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white mb-1.5"><Globe className="h-3.5 w-3.5 text-[#3b82f6]" />{biLabel('هۆکارە ئابووری و هەواڵەکان', 'Macro & news drivers')}</div>
+                <BiText ku={imageSummary.macroContext} en={imageSummary.macroContextEn} className="text-xs text-[#d1d5db]" />
+              </div>
+            )}
+
+
 
             {(imageSummary.reasoning || imageSummary.reasoningEn) && (
               <div className="px-4 py-3 border-t border-[#1a1e2e]">
