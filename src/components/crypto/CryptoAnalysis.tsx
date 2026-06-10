@@ -4,7 +4,7 @@ import { computeIndicators, summarizeSignals, computeBuySellPct, SignalType } fr
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft, Copy, Check, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft, Copy, Check, Eye, EyeOff, Clock, Globe } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 
