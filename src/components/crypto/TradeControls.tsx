@@ -49,6 +49,8 @@ interface TradeControlsProps {
   timeframeMinutes?: number;
   /** Virtual demo account balance ($). */
   balance: number;
+  /** Cumulative realized P/L (shown as Today's P&L). */
+  realizedPnl?: number;
   /** Reset the demo balance back to the starting amount. */
   onRenew: () => void;
   onBuy: () => void;
