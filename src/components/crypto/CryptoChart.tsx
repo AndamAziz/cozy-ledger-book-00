@@ -126,7 +126,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const handleAdd = (side: 'buy' | 'sell') => {
     if (balance <= 0 || currentPrice <= 0) return;
     if (otherPositionLabel) return;
-    openOrAdd({ symbol: pair, label: `${symbol}/USD`, side, price: currentPrice, amount: tradeAmount });
+    // Buy fills at the ask, sell fills at the bid (matches the button prices).
+    const fillPrice = side === 'buy' ? askPrice(currentPrice) : bidPrice(currentPrice);
+    openOrAdd({ symbol: pair, label: `${symbol}/USD`, side, price: fillPrice, amount: tradeAmount });
   };
 
   // Close one leg and realise its P/L (handled in context).
