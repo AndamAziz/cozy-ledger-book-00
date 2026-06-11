@@ -460,9 +460,9 @@ export function TradeControls({
             />
           )}
           <span className="relative text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
-            {bi('فرۆشتن', 'Sell', 'Sat')}{sellLeg && sellLeg.qty > 0 ? ' +' : ''}
+            {bi('فرۆشتن', 'Sell', 'Sat')} · {bi('نرخی کڕیار', 'Bid', 'Alış')}{sellLeg && sellLeg.qty > 0 ? ' +' : ''}
           </span>
-          {renderMtPrice(currentPrice, '#ffffff')}
+          {renderMtPrice(bid, '#ffffff')}
         </button>
 
         {/* Center: volume stepper + live tick dot + refresh */}
