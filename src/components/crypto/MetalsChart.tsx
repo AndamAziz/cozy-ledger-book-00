@@ -90,7 +90,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const macdSignalRef = useRef<any>(null);
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, getPosition, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, realizedPnl, renew, getPosition, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
