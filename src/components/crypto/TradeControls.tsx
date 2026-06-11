@@ -494,6 +494,12 @@ export function TradeControls({
               <ChevronUp className="h-4 w-4" />
             </button>
           </div>
+          {/* Spread indicator (ask − bid) */}
+          {spreadAbs > 0 && (
+            <span className="mt-0.5 text-[8px] sm:text-[9px] font-bold text-[#848e9c] tabular-nums leading-none">
+              {bi('جیاوازی', 'Spread', 'Spread')} {fmtPrice(spreadAbs)}
+            </span>
+          )}
           <div className="mt-1 flex items-center gap-2">
             <span className={`h-1.5 w-1.5 rounded-full transition-colors ${priceUp ? 'bg-[#0ecb81]' : priceDown ? 'bg-[#f6465d]' : 'bg-[#848e9c]'}`} />
             <button
