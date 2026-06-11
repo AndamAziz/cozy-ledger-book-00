@@ -198,9 +198,10 @@ export function TradeControls({
     prevPriceRef.current = currentPrice;
   }, [currentPrice]);
 
-  // MT5 one-click volume stepper (lots), min 0.01, 0.01 increments.
+  // MT5 one-click volume stepper (lots), min 0.01, 0.01 increments. Capped at
+  // the max size the current margin allows so the user can never over-leverage.
   const decVolume = () => onAmountChange(Math.max(0.01, +(amount - 0.01).toFixed(2)));
-  const incVolume = () => onAmountChange(+(amount + 0.01).toFixed(2));
+  const incVolume = () => onAmountChange(capSize(+(amount + 0.01).toFixed(2)));
 
   // Manual volume entry: tap the number to type any custom lot size.
   // The +/- steppers keep the standard increments untouched.
@@ -208,7 +209,7 @@ export function TradeControls({
   const commitAmt = () => {
     if (amtText == null) return;
     const n = parseNum(amtText);
-    if (n != null) onAmountChange(+Math.max(0.01, n).toFixed(2));
+    if (n != null) onAmountChange(+capSize(Math.max(0.01, n)).toFixed(2));
     setAmtText(null);
   };
 
