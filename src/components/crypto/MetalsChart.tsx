@@ -989,6 +989,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         timeframeLabel={RANGES.find(r => r.key === range)?.label}
         timeframeMinutes={RANGE_MINUTES[range] ?? 5}
         balance={balance}
+        realizedPnl={realizedPnl}
         onRenew={renew}
         onBuy={() => handleAdd('buy')}
         onSell={() => handleAdd('sell')}
