@@ -534,6 +534,20 @@ export function TradeControls({
         </button>
       </div>
 
+      {/* Max-size guard: largest volume the current margin allows at leverage */}
+      {maxSize > 0 && (
+        <div className={`mt-1.5 flex items-center justify-center gap-1.5 text-[9px] sm:text-[10px] font-bold rounded-md px-2 py-1 ${
+          overSize ? 'bg-[#f6465d]/10 text-[#f6465d] border border-[#f6465d]/30' : 'text-[#848e9c]'
+        }`}>
+          <Gauge className="h-3 w-3 shrink-0" />
+          <span className="tabular-nums">
+            {bi('زۆرترین بڕ', 'Max size', 'Maks')}: {maxSize.toFixed(2)} {bi('لە', 'at', '@')} {DEMO_LEVERAGE}x
+          </span>
+          {overSize && <span>· {bi('کەمکرایەوە', 'auto-capped', 'sınırlandı')}</span>}
+        </div>
+      )}
+
+
       {/* Open leg panels — buy and/or sell, shown while open */}
       {(buyLeg && buyLeg.qty > 0) || (sellLeg && sellLeg.qty > 0) ? (
         <div className="mt-2 space-y-2">
