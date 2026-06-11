@@ -167,7 +167,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     const price = livePrice();
     if (price <= 0) return;
     if (otherPositionLabel) return;
-    openOrAdd({ symbol: mySymbol, label: name || bi('کانزا', 'Metal'), side, price, amount: tradeAmount });
+    // Buy fills at the ask, sell fills at the bid (matches the button prices).
+    const fillPrice = side === 'buy' ? askPrice(price) : bidPrice(price);
+    openOrAdd({ symbol: mySymbol, label: name || bi('کانزا', 'Metal'), side, price: fillPrice, amount: tradeAmount });
   };
 
   // Close one leg and realise its P/L (handled in context).
