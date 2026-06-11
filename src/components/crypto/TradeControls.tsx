@@ -376,26 +376,57 @@ export function TradeControls({
 
   return (
     <div className="border-b border-white/5 bg-[#090c11] px-3 py-2.5">
-      {/* Demo account balance + combined live profit/loss */}
-      <div className="flex items-center justify-between mb-2 gap-2">
-        <div className="text-[10px] sm:text-xs">
-          <span className="text-[#848e9c]">{bi('باڵانسی دیمۆ', 'Demo Balance', 'Demo Bakiye')}: </span>
-          <span className={`font-bold tabular-nums ${depleted ? 'text-[#f6465d]' : 'text-white'}`}>${fmtMoney(balance)}</span>
-          {hasAny && (
-            <span className={`ms-2 font-bold tabular-nums ${totalPnl >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-              ({totalPnl >= 0 ? '+' : '−'}${fmtMoney(Math.abs(totalPnl))})
+      {/* Demo account summary card: balance · today's P&L · margin · positions */}
+      <div className="mb-2 rounded-lg border border-white/10 bg-[#0d1117] px-2.5 py-2">
+        <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-white/5">
+          <span className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-[#848e9c]">
+            <Wallet className="h-3.5 w-3.5 text-[#f0b90b]" />
+            {bi('باڵانس', 'Balance', 'Bakiye')}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-extrabold tabular-nums ${depleted ? 'text-[#f6465d]' : 'text-white'}`}>
+              ${fmtMoney(balance)}
             </span>
-          )}
+            {depleted && (
+              <button
+                onClick={onRenew}
+                className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#f0b90b] text-black hover:bg-[#f0b90b]/90 active:scale-95 transition-colors"
+              >
+                {bi('نوێکردنەوەی $5,000', 'Renew $5,000', '$5,000 Yenile')}
+              </button>
+            )}
+          </div>
         </div>
-        {depleted && (
-          <button
-            onClick={onRenew}
-            className="px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md bg-[#f0b90b] text-black hover:bg-[#f0b90b]/90 active:scale-95 transition-colors"
-          >
-            {bi('نوێکردنەوەی $200', 'Renew $200', '$200 Yenile')}
-          </button>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] sm:text-[11px]">
+          <div className="flex items-center justify-between">
+            <span className="text-[#848e9c]">{bi('قازانجی ئەمڕۆ', "Today's P&L", 'Bugünkü K/Z')}</span>
+            <span className={`font-bold tabular-nums ${realizedPnl >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+              {realizedPnl >= 0 ? '+' : '−'}${fmtMoney(Math.abs(realizedPnl))}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[#848e9c]">{bi('پۆزیشن', 'Positions', 'Pozisyon')}</span>
+            <span className="font-bold tabular-nums text-white">{openCount}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[#848e9c]">{bi('مارجینی بەکارهاتوو', 'Used Margin', 'Kullanılan')}</span>
+            <span className="font-bold tabular-nums text-white">${fmtMoney(usedMargin)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[#848e9c]">{bi('بەردەست', 'Available', 'Müsait')}</span>
+            <span className="font-bold tabular-nums text-[#0ecb81]">${fmtMoney(available)}</span>
+          </div>
+        </div>
+        {hasAny && (
+          <div className="mt-1.5 pt-1.5 border-t border-white/5 flex items-center justify-between text-[10px] sm:text-[11px]">
+            <span className="text-[#848e9c]">{bi('قازانجی کراوە', 'Open P&L', 'Açık K/Z')}</span>
+            <span className={`font-bold tabular-nums ${totalPnl >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
+              {totalPnl >= 0 ? '+' : '−'}${fmtMoney(Math.abs(totalPnl))}
+            </span>
+          </div>
         )}
       </div>
+
 
       {/* Banner: an open position lives on a different asset */}
       {otherPositionLabel && (
