@@ -108,6 +108,7 @@ export function TradeControls({
   timeframeLabel,
   timeframeMinutes,
   balance,
+  realizedPnl = 0,
   onRenew,
   onBuy,
   onSell,
@@ -129,6 +130,27 @@ export function TradeControls({
   const sellPnl = sellLeg && sellLeg.qty > 0 ? legPnl('sell', sellLeg, currentPrice) : null;
   const totalPnl = (buyPnl?.value ?? 0) + (sellPnl?.value ?? 0);
   const hasAny = !!(buyPnl || sellPnl);
+
+  // ---- Live bid/ask + margin/leverage maths (MT5 style) ----
+  const ask = askPrice(currentPrice);
+  const bid = bidPrice(currentPrice);
+  const spreadAbs = ask > 0 ? ask - bid : 0;
+
+  // Margin locked by open legs, free balance and the largest size you may open.
+  const usedMargin =
+    ((buyLeg && buyLeg.qty > 0 ? buyLeg.entryPrice * buyLeg.qty : 0) +
+      (sellLeg && sellLeg.qty > 0 ? sellLeg.entryPrice * sellLeg.qty : 0)) /
+    DEMO_LEVERAGE;
+  const available = Math.max(0, balance - usedMargin);
+  const maxSize = currentPrice > 0 ? Math.floor(((available * DEMO_LEVERAGE) / currentPrice) * 100) / 100 : 0;
+  const overSize = maxSize > 0 && amount > maxSize;
+  const capSize = (n: number) => (maxSize > 0 ? Math.min(n, maxSize) : n);
+
+  // Auto-cap the requested size so the user can never exceed their margin.
+  useEffect(() => {
+    if (maxSize > 0 && amount > maxSize) onAmountChange(+maxSize.toFixed(2));
+  }, [maxSize, amount, onAmountChange]);
+
 
   // Suggested holding time after analysis (based on conviction + timeframe).
   const hold = pct && pct.hasData && timeframeMinutes
