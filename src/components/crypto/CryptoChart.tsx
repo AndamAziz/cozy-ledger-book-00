@@ -6,7 +6,7 @@ import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { attachTpSlDrag } from '@/lib/tpSlDrag';
-import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
+import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
 
@@ -80,7 +80,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   });
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, getPosition, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, realizedPnl, renew, getPosition, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   const [tradeAmount, setTradeAmount] = useState(0.01);
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
@@ -126,7 +126,9 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const handleAdd = (side: 'buy' | 'sell') => {
     if (balance <= 0 || currentPrice <= 0) return;
     if (otherPositionLabel) return;
-    openOrAdd({ symbol: pair, label: `${symbol}/USD`, side, price: currentPrice, amount: tradeAmount });
+    // Buy fills at the ask, sell fills at the bid (matches the button prices).
+    const fillPrice = side === 'buy' ? askPrice(currentPrice) : bidPrice(currentPrice);
+    openOrAdd({ symbol: pair, label: `${symbol}/USD`, side, price: fillPrice, amount: tradeAmount });
   };
 
   // Close one leg and realise its P/L (handled in context).
@@ -839,6 +841,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         timeframeLabel={TIMEFRAMES.find(t => t.interval === interval)?.label}
         timeframeMinutes={interval}
         balance={balance}
+        realizedPnl={realizedPnl}
         onRenew={renew}
         onBuy={() => handleAdd('buy')}
         onSell={() => handleAdd('sell')}

@@ -3,7 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
 
-export const DEMO_STARTING_BALANCE = 200;
+export const DEMO_STARTING_BALANCE = 5000;
+/** Demo trading leverage (e.g. 100x). Used for margin + max-size guards. */
+export const DEMO_LEVERAGE = 100;
 
 export type PositionSide = 'buy' | 'sell';
 

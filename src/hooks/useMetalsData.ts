@@ -49,8 +49,9 @@ export function useMetalsData() {
     };
 
     load();
-    // Poll API every 10s when market open, 60s when closed
-    const getInterval = () => isCommoditiesMarketOpen() ? 10000 : 60000;
+    // Poll every 1s when market open (hits the cached backend feed, so the
+    // displayed spot price stays fresh without extra upstream cost), 60s closed.
+    const getInterval = () => isCommoditiesMarketOpen() ? 1000 : 60000;
     let timer = window.setInterval(load, getInterval());
 
     const checkTimer = window.setInterval(() => {

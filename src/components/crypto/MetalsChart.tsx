@@ -9,7 +9,7 @@ import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { attachTpSlDrag } from '@/lib/tpSlDrag';
-import { TradeControls, TradeSide, TradePct } from '@/components/crypto/TradeControls';
+import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
 
@@ -90,7 +90,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const macdSignalRef = useRef<any>(null);
 
   // Shared demo account + the single open position (persists across navigation).
-  const { balance, renew, getPosition, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
+  const { balance, realizedPnl, renew, getPosition, openOrAdd, updatePrice, setTpSl, closePosition } = useDemoAccount();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tradeLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -167,7 +167,9 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     const price = livePrice();
     if (price <= 0) return;
     if (otherPositionLabel) return;
-    openOrAdd({ symbol: mySymbol, label: name || bi('کانزا', 'Metal'), side, price, amount: tradeAmount });
+    // Buy fills at the ask, sell fills at the bid (matches the button prices).
+    const fillPrice = side === 'buy' ? askPrice(price) : bidPrice(price);
+    openOrAdd({ symbol: mySymbol, label: name || bi('کانزا', 'Metal'), side, price: fillPrice, amount: tradeAmount });
   };
 
   // Close one leg and realise its P/L (handled in context).
@@ -987,6 +989,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         timeframeLabel={RANGES.find(r => r.key === range)?.label}
         timeframeMinutes={RANGE_MINUTES[range] ?? 5}
         balance={balance}
+        realizedPnl={realizedPnl}
         onRenew={renew}
         onBuy={() => handleAdd('buy')}
         onSell={() => handleAdd('sell')}
