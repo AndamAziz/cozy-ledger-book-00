@@ -1,7 +1,16 @@
-import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown, Layers, TrendingUp, TrendingDown } from 'lucide-react';
+import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown, Layers, TrendingUp, TrendingDown, Wallet, Gauge } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { suggestHoldMinutes, suggestHoldAcrossTimeframes } from '@/lib/indicators';
+import { DEMO_LEVERAGE } from '@/contexts/DemoAccountContext';
+
+/** Total bid/ask spread in basis points (0.02% => 2 bps). */
+export const TRADE_SPREAD_BPS = 2;
+const SPREAD_HALF = TRADE_SPREAD_BPS / 2 / 10000;
+/** Real-time mid price -> the price a BUY (ask) fills at. */
+export const askPrice = (mid: number) => (mid > 0 ? mid * (1 + SPREAD_HALF) : 0);
+/** Real-time mid price -> the price a SELL (bid) fills at. */
+export const bidPrice = (mid: number) => (mid > 0 ? mid * (1 - SPREAD_HALF) : 0);
 
 export type TradeSide = 'buy' | 'sell' | null;
 
