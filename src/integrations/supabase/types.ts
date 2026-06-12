@@ -47,6 +47,173 @@ export type Database = {
         }
         Relationships: []
       }
+      bot_logs: {
+        Row: {
+          bot_id: string
+          created_at: string
+          id: string
+          level: string
+          message: string
+          user_id: string
+        }
+        Insert: {
+          bot_id: string
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          user_id: string
+        }
+        Update: {
+          bot_id?: string
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_logs_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bot_trades: {
+        Row: {
+          amount: number
+          bot_id: string
+          close_reason: Database["public"]["Enums"]["trade_close_reason"] | null
+          closed_at: string | null
+          direction: Database["public"]["Enums"]["trade_direction"]
+          entry_price: number
+          exit_price: number | null
+          id: string
+          opened_at: string
+          pnl: number | null
+          pnl_pct: number | null
+          result: Database["public"]["Enums"]["trade_result"] | null
+          sl_price: number
+          status: Database["public"]["Enums"]["trade_status"]
+          symbol: string
+          tp_price: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bot_id: string
+          close_reason?:
+            | Database["public"]["Enums"]["trade_close_reason"]
+            | null
+          closed_at?: string | null
+          direction: Database["public"]["Enums"]["trade_direction"]
+          entry_price: number
+          exit_price?: number | null
+          id?: string
+          opened_at?: string
+          pnl?: number | null
+          pnl_pct?: number | null
+          result?: Database["public"]["Enums"]["trade_result"] | null
+          sl_price: number
+          status?: Database["public"]["Enums"]["trade_status"]
+          symbol: string
+          tp_price: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bot_id?: string
+          close_reason?:
+            | Database["public"]["Enums"]["trade_close_reason"]
+            | null
+          closed_at?: string | null
+          direction?: Database["public"]["Enums"]["trade_direction"]
+          entry_price?: number
+          exit_price?: number | null
+          id?: string
+          opened_at?: string
+          pnl?: number | null
+          pnl_pct?: number | null
+          result?: Database["public"]["Enums"]["trade_result"] | null
+          sl_price?: number
+          status?: Database["public"]["Enums"]["trade_status"]
+          symbol?: string
+          tp_price?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_trades_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bots: {
+        Row: {
+          amount: number
+          asset_class: string
+          created_at: string
+          id: string
+          last_scan_at: string | null
+          name: string
+          sl_pct: number
+          status: Database["public"]["Enums"]["bot_status"]
+          strategy: Database["public"]["Enums"]["bot_strategy"]
+          symbol: string
+          timeframe: string
+          total_pnl: number
+          tp_pct: number
+          trades_count: number
+          updated_at: string
+          user_id: string
+          wins_count: number
+        }
+        Insert: {
+          amount?: number
+          asset_class: string
+          created_at?: string
+          id?: string
+          last_scan_at?: string | null
+          name: string
+          sl_pct?: number
+          status?: Database["public"]["Enums"]["bot_status"]
+          strategy?: Database["public"]["Enums"]["bot_strategy"]
+          symbol: string
+          timeframe?: string
+          total_pnl?: number
+          tp_pct?: number
+          trades_count?: number
+          updated_at?: string
+          user_id: string
+          wins_count?: number
+        }
+        Update: {
+          amount?: number
+          asset_class?: string
+          created_at?: string
+          id?: string
+          last_scan_at?: string | null
+          name?: string
+          sl_pct?: number
+          status?: Database["public"]["Enums"]["bot_status"]
+          strategy?: Database["public"]["Enums"]["bot_strategy"]
+          symbol?: string
+          timeframe?: string
+          total_pnl?: number
+          tp_pct?: number
+          trades_count?: number
+          updated_at?: string
+          user_id?: string
+          wins_count?: number
+        }
+        Relationships: []
+      }
       cigarettes: {
         Row: {
           alert_level: number
@@ -385,6 +552,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      bot_status: "idle" | "running" | "stopped"
+      bot_strategy: "conservative" | "balanced" | "aggressive"
+      trade_close_reason: "tp" | "sl" | "manual"
+      trade_direction: "buy" | "sell"
+      trade_result: "win" | "loss"
+      trade_status: "open" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -513,6 +686,12 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      bot_status: ["idle", "running", "stopped"],
+      bot_strategy: ["conservative", "balanced", "aggressive"],
+      trade_close_reason: ["tp", "sl", "manual"],
+      trade_direction: ["buy", "sell"],
+      trade_result: ["win", "loss"],
+      trade_status: ["open", "closed"],
     },
   },
 } as const

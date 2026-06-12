@@ -8,6 +8,8 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import Index from "./pages/Index";
 import CryptoTracker from "./pages/CryptoTracker";
 import GestureQA from "./pages/GestureQA";
+import Bots from "./pages/Bots";
+import BotDetail from "./pages/BotDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/crypto" element={<CryptoTracker />} />
               <Route path="/gesture-qa" element={<GestureQA />} />
+              <Route path="/bots" element={<Bots />} />
+              <Route path="/bots/:id" element={<BotDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
