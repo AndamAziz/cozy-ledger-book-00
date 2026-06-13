@@ -47,7 +47,7 @@ export default function CryptoTracker() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedForexCode, setSelectedForexCode] = useState<string | null>(null);
   const [selectedMetalCode, setSelectedMetalCode] = useState<string | null>('XAU');
-  const [metalInitialView, setMetalInitialView] = useState<'market' | 'analysis'>('market');
+  const [metalsView, setMetalsView] = useState<MetalsView>('market');
   const coinsRef = useRef(coinsMap);
   coinsRef.current = coinsMap;
 
