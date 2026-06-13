@@ -50,6 +50,15 @@ const T = {
     aiError: "هەڵەیەک ڕوویدا لە وەرگرتنی زانیاری. تکایە دووبارە هەوڵبدەرەوە.",
     noInfo: "زانیاری بەردەست نییە.",
     close: "✕ داخستن",
+    subs: "📥 سەبتایتل",
+    tabSubs: "📥 سەبتایتل",
+    subsLoading: "گەڕان بۆ سەبتایتل...",
+    subsNone: "هیچ سەبتایتلێک نەدۆزرایەوە بۆ ئەم فیلمە.",
+    subsError: "هەڵەیەک ڕوویدا. تکایە دووبارە هەوڵبدەرەوە.",
+    download: "داگرتن",
+    downloading: "...",
+    subsHint: "زمانەکان: کوردی، ئینگلیزی، عەرەبی و زۆرتر — لە OpenSubtitles بەخۆڕایی",
+    allLangs: "هەموو زمانەکان",
   },
   en: {
     title: "Mov",
@@ -78,6 +87,15 @@ const T = {
     aiError: "Something went wrong fetching info. Please try again.",
     noInfo: "No information available.",
     close: "✕ Close",
+    subs: "📥 Subtitles",
+    tabSubs: "📥 Subtitles",
+    subsLoading: "Searching for subtitles...",
+    subsNone: "No subtitles found for this movie.",
+    subsError: "Something went wrong. Please try again.",
+    download: "Download",
+    downloading: "...",
+    subsHint: "Languages: Kurdish, English, Arabic & more — free from OpenSubtitles",
+    allLangs: "All languages",
   },
 };
 
@@ -651,7 +669,23 @@ function Pagination({
 }
 
 // ====== Modal ======
-type Tab = "info" | "cast" | "ai";
+type Tab = "info" | "cast" | "ai" | "subs";
+
+interface Subtitle {
+  id: string;
+  lang: string;
+  langId: string;
+  iso: string;
+  name: string;
+  format: string;
+  rating: number;
+  downloads: number;
+  release: string;
+  hi: boolean;
+}
+
+const SUPA_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPA_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 function MovieModal({
   movie,
@@ -677,6 +711,10 @@ function MovieModal({
   const [aiInfo, setAiInfo] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>("");
+  const [subs, setSubs] = useState<Subtitle[] | null>(null);
+  const [subsLoading, setSubsLoading] = useState(false);
+  const [subsError, setSubsError] = useState<string>("");
+  const [downloadingId, setDownloadingId] = useState<string>("");
 
   const rating = parseFloat(movie.rating) || 0;
 
@@ -762,11 +800,62 @@ function MovieModal({
     }
   };
 
+  const loadSubs = async () => {
+    setTab("subs");
+    if (subs || subsLoading || !movie.imdb_id) return;
+    setSubsLoading(true);
+    setSubsError("");
+    try {
+      const res = await fetch(
+        `${SUPA_URL}/functions/v1/subtitles?action=search&imdb_id=${encodeURIComponent(
+          movie.imdb_id,
+        )}&langs=kur,ara,eng,all`,
+        { headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` } },
+      );
+      const data = await res.json();
+      setSubs(Array.isArray(data?.subtitles) ? data.subtitles : []);
+    } catch {
+      setSubsError(t.subsError);
+    } finally {
+      setSubsLoading(false);
+    }
+  };
+
+  const downloadSub = async (s: Subtitle) => {
+    setDownloadingId(s.id);
+    try {
+      const res = await fetch(
+        `${SUPA_URL}/functions/v1/subtitles?action=download&id=${encodeURIComponent(
+          s.id,
+        )}&name=${encodeURIComponent(s.name || `${movie.title}.srt`)}`,
+        {
+          headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+        },
+      );
+      if (!res.ok) throw new Error("download failed");
+      const blob = await res.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = s.name || `${movie.title}.srt`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+    } catch {
+      setSubsError(t.subsError);
+    } finally {
+      setDownloadingId("");
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: "info", label: t.tabInfo },
     { key: "cast", label: t.tabCast },
     { key: "ai", label: t.tabAi },
+    { key: "subs", label: t.tabSubs },
   ];
+
 
   return (
     <div
@@ -895,6 +984,8 @@ function MovieModal({
             disabled={trailerLoading || trailer === "none"}
           />
           <ActionBtn label={t.aiInfo} onClick={loadAiInfo} />
+          <ActionBtn label={t.subs} onClick={loadSubs} />
+
         </div>
         {trailer === "none" && (
           <div style={{ padding: "8px 16px 0", fontSize: 12.5, color: C.muted }}>
@@ -1021,6 +1112,104 @@ function MovieModal({
                   }}
                 >
                   {aiInfo}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === "subs" && (
+            <div>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>
+                {t.subsHint}
+              </div>
+              {subsLoading ? (
+                <div style={{ textAlign: "center", padding: "30px 0", color: C.muted }}>
+                  <span
+                    className="mv-spin"
+                    style={{
+                      width: 30,
+                      height: 30,
+                      border: `3px solid ${C.border}`,
+                      borderTopColor: C.gold,
+                      borderRadius: "50%",
+                      display: "inline-block",
+                      marginBottom: 10,
+                    }}
+                  />
+                  <div>{t.subsLoading}</div>
+                </div>
+              ) : subsError ? (
+                <div style={{ color: "#ff6b6b", fontSize: 14 }}>{subsError}</div>
+              ) : subs && subs.length === 0 ? (
+                <div style={{ color: C.muted, fontSize: 14 }}>{t.subsNone}</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {(subs || []).map((s) => (
+                    <div
+                      key={s.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        background: C.panel2,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 12,
+                        padding: "10px 12px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          background: C.gold,
+                          color: "#0A0A0F",
+                          fontWeight: 800,
+                          fontSize: 11,
+                          padding: "3px 8px",
+                          borderRadius: 999,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {s.iso || s.langId}
+                      </span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                          title={s.name}
+                        >
+                          {s.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
+                          {s.lang} · ⬇ {s.downloads.toLocaleString()}
+                          {s.rating > 0 ? ` · ★ ${s.rating.toFixed(1)}` : ""}
+                          {s.hi ? " · HI" : ""}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => downloadSub(s)}
+                        disabled={downloadingId === s.id}
+                        style={{
+                          flexShrink: 0,
+                          background: C.gold,
+                          color: "#0A0A0F",
+                          border: "none",
+                          borderRadius: 10,
+                          padding: "8px 14px",
+                          fontWeight: 800,
+                          fontSize: 12.5,
+                          cursor: downloadingId === s.id ? "wait" : "pointer",
+                          opacity: downloadingId === s.id ? 0.6 : 1,
+                        }}
+                      >
+                        {downloadingId === s.id ? t.downloading : t.download}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
