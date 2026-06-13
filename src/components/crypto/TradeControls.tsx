@@ -536,7 +536,7 @@ export function TradeControls({
 
         {/* BUY block */}
         <button
-          onClick={onBuy}
+          onClick={handleBuy}
           disabled={depleted || !!otherPositionLabel}
           className={`relative flex-1 flex flex-col justify-center items-center overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
             buyLeg && buyLeg.qty > 0
