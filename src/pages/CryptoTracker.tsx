@@ -262,7 +262,13 @@ export default function CryptoTracker() {
             </div>
           )}
           {activeTab === 'forex' && (
-            <span className="shrink-0 text-xs sm:text-[10px] text-[#0ecb81] min-h-[40px] flex items-center">🔴 {bi('ڕاستەوخۆ', 'Live')} • 2s</span>
+            forexMarketOpen ? (
+              <span className="shrink-0 text-xs sm:text-[10px] text-[#0ecb81] min-h-[40px] flex items-center">🟢 {bi('ڕاستەوخۆ', 'Live')} • 2s</span>
+            ) : (
+              <span className="shrink-0 text-xs sm:text-[10px] text-[#f6465d] flex items-center gap-1 min-h-[40px]">
+                🔴 {bi('داخراو', 'Closed')}
+              </span>
+            )
           )}
           {activeTab === 'metals' && (
             metalsMarketOpen ? (
