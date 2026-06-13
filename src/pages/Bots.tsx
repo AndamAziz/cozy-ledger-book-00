@@ -6,6 +6,8 @@ import { useBotPrices } from "@/hooks/useBotPrices";
 import { MarketDropdown } from "@/components/bots/MarketDropdown";
 import { PriceDetailModal } from "@/components/bots/PriceDetailModal";
 import { CreateBotModal } from "@/components/bots/CreateBotModal";
+import { NotificationBell } from "@/components/bots/NotificationBell";
+import { DailySummary } from "@/components/bots/DailySummary";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
