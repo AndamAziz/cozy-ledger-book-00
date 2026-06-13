@@ -19,7 +19,7 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { SplashScreen } from '@/components/SplashScreen';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
-import { Users, Sparkles, Tv, LineChart } from 'lucide-react';
+import { Users, Sparkles, Tv } from 'lucide-react';
 
 type TabType = 'finance' | 'inventory' | 'sales' | 'reports';
 
@@ -110,19 +110,6 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             </a>
           </div>
 
-          {/* Trading Bots entry */}
-          <a
-            href="/bots"
-            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-gold/25 via-gold/10 to-transparent border border-gold/40 hover:border-gold/60 p-2.5 sm:p-3.5 mb-3 sm:mb-5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 no-print"
-          >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-accent flex items-center justify-center shadow-md shadow-gold/30 flex-shrink-0">
-              <LineChart className="h-4 w-4 sm:h-5 sm:w-5 text-gold-foreground" />
-            </div>
-            <div className="min-w-0">
-              <div className="font-bold text-foreground text-xs sm:text-sm">Trading Bots</div>
-              <div className="text-[10px] sm:text-xs text-muted-foreground truncate">AI Gold, Crypto & Forex · Demo balance</div>
-            </div>
-          </a>
 
           {/* Tab Navigation */}
           <div className="relative mb-3 sm:mb-5 md:mb-7 no-print">
