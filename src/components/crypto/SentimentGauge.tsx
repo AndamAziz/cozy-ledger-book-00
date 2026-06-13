@@ -22,7 +22,7 @@ function colorFor(v: number): string {
   return '#0ecb81';                   // extreme greed
 }
 
-export function SentimentGauge({ sentiment, loading }: Props) {
+export function SentimentGauge({ sentiment, loading, asset = 'gold' }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
