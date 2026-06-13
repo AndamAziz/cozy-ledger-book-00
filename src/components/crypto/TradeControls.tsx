@@ -33,7 +33,7 @@ export const TRADE_AMOUNTS = [0.01, 0.05, 0.1];
 /** One-click quick lot sizes (instant size selection). */
 export const QUICK_LOTS = [0.01, 0.05, 0.1, 0.25, 0.5];
 /** Quick TP/SL presets (% of entry) applied automatically on open. */
-export const QUICK_TPSL = [0.5, 1, 1.5];
+export const QUICK_TPSL = [1.5, 1, 0.5];
 
 interface TradeControlsProps {
   amount: number;
@@ -85,14 +85,6 @@ const fmtPrice = (n: number) => {
 
 const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 
-// Symmetric TP/SL preset based on a percentage of the entry price.
-const presetTpSl = (side: 'buy' | 'sell', entry: number, pct: number): [number, number] => {
-  const delta = entry * (pct / 100);
-  const tp = side === 'buy' ? entry + delta : entry - delta;
-  const sl = side === 'buy' ? entry - delta : entry + delta;
-  return [+tp.toFixed(6), +sl.toFixed(6)];
-};
-
 const legPnl = (side: 'buy' | 'sell', leg: LegInfo, price: number) => {
   if (!leg.entryPrice || leg.entryPrice <= 0 || price <= 0) return null;
   const diff = side === 'buy' ? price - leg.entryPrice : leg.entryPrice - price;
@@ -102,7 +94,7 @@ const legPnl = (side: 'buy' | 'sell', leg: LegInfo, price: number) => {
 /**
  * Buy / Refresh / Sell control strip rendered directly above a chart.
  *  - Buy and Sell can BOTH be open at the same time (hedge mode).
- *  - Each side shows its own live P/L, average entry, size, TP/SL and Close.
+ *  - Each side shows its own live P/L, average entry and size.
  *  - The Buy / Sell buttons display the live price with an up/down indicator.
  *  - Positions survive navigation: they only close manually or via TP/SL.
  */
@@ -398,40 +390,38 @@ export function TradeControls({
           </div>
         </div>
 
-        {/* Default TP/SL on open — quick percentage presets instead of typing. */}
-        <div className="flex items-center gap-1">
-          <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-[#848e9c] shrink-0">
+        {/* Single TP/SL preset row. No TP/SL controls are rendered in position cards. */}
+        <div dir="ltr" className="flex items-center gap-1">
+          {QUICK_TPSL.map((p) => {
+            const active = tpSlPct === p;
+            return (
+              <button
+                key={p}
+                onClick={() => handleTpSlPct(p)}
+                className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border tabular-nums transition-colors active:scale-95 ${
+                  active
+                    ? 'bg-[#0ecb81]/15 border-[#0ecb81] text-[#0ecb81]'
+                    : 'bg-[#0d1117] border-white/10 text-[#848e9c] hover:text-white hover:border-white/20'
+                }`}
+              >
+                ±{p}%
+              </button>
+            );
+          })}
+          <button
+            onClick={handleTpSlOff}
+            className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border transition-colors active:scale-95 ${
+              tpSlPct == null
+                ? 'bg-white/10 border-white/40 text-white'
+                : 'bg-[#0d1117] border-white/10 text-[#848e9c] hover:text-white hover:border-white/20'
+            }`}
+          >
+            {bi('ناچالاک', 'Off', 'Kapalı')}
+          </button>
+          <span className="flex flex-1 items-center justify-center gap-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border bg-[#0d1117] border-white/10 text-[#848e9c] whitespace-nowrap">
+            <span>TP/SL</span>
             <Target className="h-3 w-3 text-[#0ecb81]" />
-            {bi('قازانج/زیان', 'TP/SL', 'TP/SL')}
           </span>
-          <div className="flex flex-1 items-center gap-1">
-            <button
-              onClick={handleTpSlOff}
-              className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border transition-colors active:scale-95 ${
-                tpSlPct == null
-                  ? 'bg-white/10 border-white/40 text-white'
-                  : 'bg-[#0d1117] border-white/10 text-[#848e9c] hover:text-white hover:border-white/20'
-              }`}
-            >
-              {bi('ناچالاک', 'Off', 'Kapalı')}
-            </button>
-            {QUICK_TPSL.map((p) => {
-              const active = tpSlPct === p;
-              return (
-                <button
-                  key={p}
-                  onClick={() => handleTpSlPct(p)}
-                  className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border tabular-nums transition-colors active:scale-95 ${
-                    active
-                      ? 'bg-[#0ecb81]/15 border-[#0ecb81] text-[#0ecb81]'
-                      : 'bg-[#0d1117] border-white/10 text-[#848e9c] hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  ±{p}%
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
 
