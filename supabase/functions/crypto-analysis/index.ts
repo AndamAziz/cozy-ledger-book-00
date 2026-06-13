@@ -569,7 +569,7 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                         properties: {
                           indicator: {
                             type: "string",
-                            enum: ["RSI", "MACD", "Bollinger", "SMA", "EMA"],
+                            enum: ["RSI", "MACD", "Bollinger", "EMA"],
                             description: "Indicator name.",
                           },
                           effect: {
