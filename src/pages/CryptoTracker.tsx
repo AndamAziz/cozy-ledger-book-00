@@ -437,11 +437,61 @@ export default function CryptoTracker() {
               )}
             </div>
           ) : activeTab === 'forex' ? (
-            <ForexDetail
-              currencies={forexCurrencies}
-              selectedCode={selectedForexCode}
-              isLoading={forexLoading}
-            />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Overview / Pro sub-toggle */}
+              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar">
+                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
+                  <button
+                    onClick={() => setForexView('overview')}
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
+                      forexView === 'overview' ? 'bg-[#2a2e3e] text-[#2962ff]' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <LayoutGrid className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{bi('پوختە', 'Overview')}</span>
+                  </button>
+                  <button
+                    onClick={() => setForexView('pro')}
+                    className={`flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
+                      forexView === 'pro' ? 'bg-[#2962ff] text-white' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <Crown className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{bi('پرۆ', 'Pro')}</span>
+                  </button>
+                </div>
+                {forexView === 'pro' && (
+                  <span className="ms-2 text-[11px] text-[#848e9c] shrink-0">
+                    {(() => {
+                      const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
+                      return c ? `${c.flag} USD/${c.code}` : '';
+                    })()}
+                  </span>
+                )}
+              </div>
+
+              {forexView === 'pro' ? (
+                (() => {
+                  const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
+                  if (!c) {
+                    return (
+                      <div className="flex-1 flex items-center justify-center text-sm text-[#848e9c]">
+                        {bi('دراوێک هەڵبژێرە', 'Select a currency')}
+                      </div>
+                    );
+                  }
+                  return (
+                    <ForexProPanel key={c.code} code={c.code} name={c.name} flag={c.flag} rate={c.rate} />
+                  );
+                })()
+              ) : (
+                <ForexDetail
+                  currencies={forexCurrencies}
+                  selectedCode={selectedForexCode}
+                  isLoading={forexLoading}
+                />
+              )}
+            </div>
           ) : selectedMetalCode === null ? (
             <AssetOverview
               title={bi('پوختەی کاڵاکان', 'Commodities Overview')}
