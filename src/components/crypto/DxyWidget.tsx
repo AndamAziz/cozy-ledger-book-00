@@ -12,7 +12,7 @@ interface Props {
   goldBias: 'bullish' | 'bearish' | 'neutral';
   loading: boolean;
   /** Which asset the bias text refers to. Default: gold. */
-  asset?: 'gold' | 'crypto';
+  asset?: 'gold' | 'crypto' | 'forex';
 }
 
 const C_UP = '#0ecb81';
