@@ -408,6 +408,12 @@ export default function CryptoTracker() {
                     </div>
                   )}
                 </div>
+              ) : cryptoView === 'pro' ? (
+                <CryptoProPanel
+                  symbol={getDisplaySymbol(getSymbolFromPair(selectedPair))}
+                  candles={candles}
+                  price={currentPrice}
+                />
               ) : (
                 <CryptoAnalysis
                   symbol={getDisplaySymbol(getSymbolFromPair(selectedPair))}
