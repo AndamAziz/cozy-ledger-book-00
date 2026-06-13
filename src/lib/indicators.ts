@@ -22,11 +22,8 @@ export interface SignalSummary {
   neutralCount: number;
 }
 
-function sma(values: number[], period: number): number | null {
-  if (values.length < period) return null;
-  const slice = values.slice(-period);
-  return slice.reduce((a, b) => a + b, 0) / period;
-}
+
+
 
 function emaSeries(values: number[], period: number): number[] {
   if (values.length < period) return [];
