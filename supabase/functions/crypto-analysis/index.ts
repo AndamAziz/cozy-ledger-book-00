@@ -51,6 +51,97 @@ const IMAGE_TRADE_TOOL = {
 };
 
 
+interface FFEvent {
+  title?: string;
+  country?: string;
+  date?: string;
+  impact?: string;
+  forecast?: string;
+  previous?: string;
+  actual?: string;
+}
+
+/**
+ * Fetch the LIVE economic calendar (same data as ForexFactory) so the analysis
+ * is grounded in real high-impact events (CPI, PPI, NFP, FOMC...) rather than
+ * the model's stale training knowledge. Returns a compact, AI-friendly summary
+ * of recent + upcoming high/medium-impact events with a derived USD bias.
+ * Fails soft: returns "" if the feed is unreachable.
+ */
+async function fetchMacroEvents(): Promise<string> {
+  const urls = [
+    "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
+    "https://nfs.faireconomy.media/ff_calendar_nextweek.json",
+  ];
+  try {
+    const results = await Promise.allSettled(
+      urls.map((u) =>
+        fetch(u, { headers: { "User-Agent": "Mozilla/5.0" } }).then((r) =>
+          r.ok ? (r.json() as Promise<FFEvent[]>) : [],
+        ),
+      ),
+    );
+    let events: FFEvent[] = [];
+    for (const r of results) if (r.status === "fulfilled" && Array.isArray(r.value)) events = events.concat(r.value);
+    if (!events.length) return "";
+
+    const now = Date.now();
+    const DAY = 86400000;
+    // Keep High/Medium impact within a -5d..+5d window, prioritising USD.
+    const relevant = events.filter((e) => {
+      const imp = (e.impact || "").toLowerCase();
+      if (imp !== "high" && imp !== "medium") return false;
+      const t = e.date ? Date.parse(e.date) : NaN;
+      if (Number.isNaN(t)) return false;
+      return t >= now - 5 * DAY && t <= now + 5 * DAY;
+    });
+    if (!relevant.length) return "";
+
+    relevant.sort((a, b) => Date.parse(a.date || "") - Date.parse(b.date || ""));
+
+    // Derive a simple USD bias from released vs forecast on inflation/jobs/growth.
+    const num = (s?: string) => {
+      if (!s) return NaN;
+      const m = s.replace(/[,%KMB]/g, "").match(/-?\d+(\.\d+)?/);
+      return m ? parseFloat(m[0]) : NaN;
+    };
+    let usdBeats = 0;
+    let usdMisses = 0;
+    for (const e of relevant) {
+      if ((e.country || "") !== "USD" || !e.actual) continue;
+      const a = num(e.actual);
+      const f = num(e.forecast);
+      if (Number.isNaN(a) || Number.isNaN(f)) continue;
+      // Higher-than-forecast inflation/jobs/growth = USD-positive (hawkish).
+      if (a > f) usdBeats++;
+      else if (a < f) usdMisses++;
+    }
+    const usdBias =
+      usdBeats === usdMisses
+        ? "mixed/neutral"
+        : usdBeats > usdMisses
+        ? "leaning STRONGER (hotter data → hawkish → USD up, gold pressured)"
+        : "leaning WEAKER (softer data → dovish → USD down, gold supported)";
+
+    const fmtLine = (e: FFEvent) => {
+      const d = e.date ? new Date(e.date) : null;
+      const when = d
+        ? d.toLocaleString("en-US", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC", hour12: false }) + " UTC"
+        : "?";
+      const released = e.actual ? `actual ${e.actual}` : "not released yet";
+      return `- [${e.country}|${e.impact}] ${when} ${e.title}: ${released} (forecast ${e.forecast || "—"}, previous ${e.previous || "—"})`;
+    };
+
+    const lines = relevant.slice(0, 24).map(fmtLine).join("\n");
+    return `LIVE ECONOMIC CALENDAR (real high/medium-impact events, ForexFactory feed):
+Derived USD bias from released-vs-forecast: ${usdBias} (beats ${usdBeats}, misses ${usdMisses}).
+${lines}`;
+  } catch (err) {
+    console.error("fetchMacroEvents failed:", err);
+    return "";
+  }
+}
+
 function rateLimitResponse(status: number) {
   const msg =
     status === 429
