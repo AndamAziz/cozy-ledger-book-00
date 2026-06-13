@@ -35,6 +35,7 @@ interface DashboardProps {
 const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEmail }: DashboardProps) => {
   const { logout } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
   const financeData = useFinanceData();
 
