@@ -56,7 +56,7 @@ describe("computeBuySellPct — shared Crypto/Metals 100% Buy/Sell logic", () =>
 
   it("matches the breakdown derived from summarizeSignals output", () => {
     const summary: SignalSummary = summarizeSignals(
-      { rsi: 20, macd: { macd: 1, signal: 0, histogram: 1 }, bollinger: null, sma20: null, sma50: null, ema12: null, ema26: null } as never,
+      { rsi: 20, macd: { macd: 1, signal: 0, histogram: 1 }, bollinger: null, ema9: null, ema21: null, ema50: null } as never,
       100
     );
     const r = computeBuySellPct(summary);
