@@ -28,6 +28,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/crypto" element={<CryptoTracker />} />
+                <Route path="/movies" element={<Movies />} />
                 <Route path="/gesture-qa" element={<GestureQA />} />
                 <Route path="/bots" element={<Bots />} />
                 <Route path="/bots/:id" element={<BotDetail />} />
