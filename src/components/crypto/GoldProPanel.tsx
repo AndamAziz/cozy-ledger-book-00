@@ -194,6 +194,9 @@ export function GoldProPanel({ candles, price }: Props) {
         </p>
       </div>
 
+      <PriceAlerts storeKey="XAUUSD" label="XAU/USD" price={price} decimals={2} />
+      <SignalHistory storeKey="XAUUSD" action={signal.action} confidence={signal.confidence} price={price} decimals={2} />
+
       <DxyWidget dxy={dxy} goldBias={goldBias} loading={loadingMacro} />
       <SentimentGauge sentiment={sentiment} loading={loadingMacro} />
       <TechnicalSignals candles={candles} price={price} />
