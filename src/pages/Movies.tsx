@@ -1116,6 +1116,104 @@ function MovieModal({
               )}
             </div>
           )}
+
+          {tab === "subs" && (
+            <div>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>
+                {t.subsHint}
+              </div>
+              {subsLoading ? (
+                <div style={{ textAlign: "center", padding: "30px 0", color: C.muted }}>
+                  <span
+                    className="mv-spin"
+                    style={{
+                      width: 30,
+                      height: 30,
+                      border: `3px solid ${C.border}`,
+                      borderTopColor: C.gold,
+                      borderRadius: "50%",
+                      display: "inline-block",
+                      marginBottom: 10,
+                    }}
+                  />
+                  <div>{t.subsLoading}</div>
+                </div>
+              ) : subsError ? (
+                <div style={{ color: "#ff6b6b", fontSize: 14 }}>{subsError}</div>
+              ) : subs && subs.length === 0 ? (
+                <div style={{ color: C.muted, fontSize: 14 }}>{t.subsNone}</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {(subs || []).map((s) => (
+                    <div
+                      key={s.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        background: C.panel2,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 12,
+                        padding: "10px 12px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          background: C.gold,
+                          color: "#0A0A0F",
+                          fontWeight: 800,
+                          fontSize: 11,
+                          padding: "3px 8px",
+                          borderRadius: 999,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {s.iso || s.langId}
+                      </span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                          title={s.name}
+                        >
+                          {s.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
+                          {s.lang} · ⬇ {s.downloads.toLocaleString()}
+                          {s.rating > 0 ? ` · ★ ${s.rating.toFixed(1)}` : ""}
+                          {s.hi ? " · HI" : ""}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => downloadSub(s)}
+                        disabled={downloadingId === s.id}
+                        style={{
+                          flexShrink: 0,
+                          background: C.gold,
+                          color: "#0A0A0F",
+                          border: "none",
+                          borderRadius: 10,
+                          padding: "8px 14px",
+                          fontWeight: 800,
+                          fontSize: 12.5,
+                          cursor: downloadingId === s.id ? "wait" : "pointer",
+                          opacity: downloadingId === s.id ? 0.6 : 1,
+                        }}
+                      >
+                        {downloadingId === s.id ? t.downloading : t.download}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
