@@ -125,6 +125,7 @@ export function TradeControls({
   onRefresh,
   onAmountChange,
   onClearTpSl,
+  onApplyTpSl,
 }: TradeControlsProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string, tr?: string) =>
