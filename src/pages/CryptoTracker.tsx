@@ -10,6 +10,7 @@ import { useCryptoOverview } from '@/hooks/useCryptoOverview';
 import { useMetalsOverview } from '@/hooks/useMetalsOverview';
 import { CryptoChart } from '@/components/crypto/CryptoChart';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
+import { CryptoProPanel } from '@/components/crypto/CryptoProPanel';
 import { CoinList } from '@/components/crypto/CoinList';
 import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
@@ -21,11 +22,11 @@ import { METALS_META } from '@/lib/metalsApi';
 import { OverviewEntry } from '@/lib/overview';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DemoAccountProvider } from '@/contexts/DemoAccountContext';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid, LineChart, Newspaper } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid, LineChart, Newspaper, Crown } from 'lucide-react';
 import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
-type CryptoView = 'overview' | 'chart' | 'analysis';
+type CryptoView = 'overview' | 'chart' | 'analysis' | 'pro';
 
 export default function CryptoTracker() {
   const navigate = useNavigate();
@@ -364,8 +365,18 @@ export default function CryptoTracker() {
                     <Activity className="h-3.5 w-3.5" />
                     <span>{bi('شیکاری', 'Analysis')}</span>
                   </button>
+                  <button
+                    onClick={() => setCryptoView('pro')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
+                      cryptoView === 'pro' ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <Crown className="h-3.5 w-3.5" />
+                    <span>{bi('پرۆ', 'Pro')}</span>
+                  </button>
                 </div>
               </div>
+
 
               {cryptoView === 'overview' ? (
                 <AssetOverview
@@ -397,6 +408,12 @@ export default function CryptoTracker() {
                     </div>
                   )}
                 </div>
+              ) : cryptoView === 'pro' ? (
+                <CryptoProPanel
+                  symbol={getDisplaySymbol(getSymbolFromPair(selectedPair))}
+                  candles={candles}
+                  price={currentPrice}
+                />
               ) : (
                 <CryptoAnalysis
                   symbol={getDisplaySymbol(getSymbolFromPair(selectedPair))}

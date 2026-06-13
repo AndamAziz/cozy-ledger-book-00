@@ -1,11 +1,23 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { calculateRisk, RiskSide } from '@/lib/risk';
+import { calculateRisk, RiskSide, GOLD_CONTRACT_SIZE, GOLD_PIP_SIZE } from '@/lib/risk';
 import { Calculator } from 'lucide-react';
 
 interface Props {
-  /** Live gold price used to pre-fill the entry field. */
+  /** Live price used to pre-fill the entry field. */
   defaultEntry: number;
+  /** Units per 1 lot. Gold = 100 oz; crypto = 1 coin. */
+  contractSize?: number;
+  /** Price size of one pip. Gold = 0.1. */
+  pipSize?: number;
+  /** Decimal places for price inputs/results. */
+  priceDecimals?: number;
+  /** Label for the raw units row (e.g. oz / coins). */
+  unitLabel?: { ku: string; en: string };
+  /** Label for the position-size row (lots vs coins). */
+  sizeLabel?: { ku: string; en: string };
+  /** When false, hides the SL-pips stat (not meaningful for crypto). */
+  showPips?: boolean;
 }
 
 const RR_OPTIONS = [1, 1.5, 2, 3];
@@ -13,13 +25,21 @@ const RR_OPTIONS = [1, 1.5, 2, 3];
 const fmt = (n: number, d = 2) =>
   n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 
-export function RiskCalculator({ defaultEntry }: Props) {
+export function RiskCalculator({
+  defaultEntry,
+  contractSize = GOLD_CONTRACT_SIZE,
+  pipSize = GOLD_PIP_SIZE,
+  priceDecimals = 2,
+  unitLabel = { ku: 'قەبارە (ئۆنسی)', en: 'Units (oz)' },
+  sizeLabel = { ku: 'قەبارەی Lot', en: 'Position Size' },
+  showPips = true,
+}: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
   const [balance, setBalance] = useState('5000');
   const [riskPct, setRiskPct] = useState('1');
-  const [entry, setEntry] = useState(defaultEntry ? defaultEntry.toFixed(2) : '');
+  const [entry, setEntry] = useState(defaultEntry ? defaultEntry.toFixed(priceDecimals) : '');
   const [stopLoss, setStopLoss] = useState('');
   const [rr, setRr] = useState(2);
   const [side, setSide] = useState<RiskSide>('buy');
@@ -27,8 +47,8 @@ export function RiskCalculator({ defaultEntry }: Props) {
   // Keep entry synced with the live price until the user edits it.
   const [entryTouched, setEntryTouched] = useState(false);
   useEffect(() => {
-    if (!entryTouched && defaultEntry) setEntry(defaultEntry.toFixed(2));
-  }, [defaultEntry, entryTouched]);
+    if (!entryTouched && defaultEntry) setEntry(defaultEntry.toFixed(priceDecimals));
+  }, [defaultEntry, entryTouched, priceDecimals]);
 
   const result = useMemo(() => {
     const e = parseFloat(entry);
@@ -40,8 +60,10 @@ export function RiskCalculator({ defaultEntry }: Props) {
       stopLoss: Number.isFinite(sl) ? sl : 0,
       rr,
       side,
+      contractSize,
+      pipSize,
     });
-  }, [balance, riskPct, entry, stopLoss, rr, side]);
+  }, [balance, riskPct, entry, stopLoss, rr, side, contractSize, pipSize]);
 
   const hasInputs = parseFloat(entry) > 0 && parseFloat(stopLoss) > 0 && parseFloat(balance) > 0;
 
@@ -121,12 +143,14 @@ export function RiskCalculator({ defaultEntry }: Props) {
         </div>
       ) : hasInputs ? (
         <div className="grid grid-cols-2 gap-2">
-          <Stat label={bi('قەبارەی Lot', 'Position Size')} value={`${fmt(result.lots, 2)} ${bi('لۆت', 'lots')}`} color="#0ecb81" />
+          <Stat label={bi(sizeLabel.ku, sizeLabel.en)} value={`${fmt(result.lots, contractSize === 1 ? 4 : 2)} ${contractSize === 1 ? '' : bi('لۆت', 'lots')}`.trim()} color="#0ecb81" />
           <Stat label={bi('بڕی مەترسی', 'Risk Amount')} value={`$${fmt(result.riskAmount)}`} color="#f6465d" />
-          <Stat label={bi('Take Profit', 'Take Profit')} value={`$${fmt(result.takeProfit)}`} color="#0ecb81" />
+          <Stat label={bi('Take Profit', 'Take Profit')} value={`$${fmt(result.takeProfit, priceDecimals)}`} color="#0ecb81" />
           <Stat label={bi('قازانجی چاوەڕوانکراو', 'Potential Profit')} value={`$${fmt(result.rewardAmount)}`} color="#0ecb81" />
-          <Stat label={bi('دووری SL (پێنت)', 'SL Distance (pips)')} value={fmt(result.slPips, 0)} color="#f0b90b" />
-          <Stat label={bi('قەبارە (ئۆنسی)', 'Units (oz)')} value={fmt(result.units, 2)} color="#d4af37" />
+          {showPips && (
+            <Stat label={bi('دووری SL (پێنت)', 'SL Distance (pips)')} value={fmt(result.slPips, 0)} color="#f0b90b" />
+          )}
+          <Stat label={bi(unitLabel.ku, unitLabel.en)} value={fmt(result.units, contractSize === 1 ? 4 : 2)} color="#d4af37" />
         </div>
       ) : (
         <p className="text-xs text-[#848e9c]">{bi('نرخی داخڵبوون و Stop Loss بنووسە بۆ هەژماردن.', 'Enter entry and stop-loss to calculate.')}</p>

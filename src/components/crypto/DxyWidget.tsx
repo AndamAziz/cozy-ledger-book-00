@@ -11,13 +11,15 @@ interface Props {
   dxy: DxyData;
   goldBias: 'bullish' | 'bearish' | 'neutral';
   loading: boolean;
+  /** Which asset the bias text refers to. Default: gold. */
+  asset?: 'gold' | 'crypto';
 }
 
 const C_UP = '#0ecb81';
 const C_DOWN = '#f6465d';
 const C_FLAT = '#f0b90b';
 
-export function DxyWidget({ dxy, goldBias, loading }: Props) {
+export function DxyWidget({ dxy, goldBias, loading, asset = 'gold' }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
@@ -49,11 +51,19 @@ export function DxyWidget({ dxy, goldBias, loading }: Props) {
             </div>
           </div>
           <div className="mt-3 text-xs font-semibold rounded-lg px-3 py-2" style={{ color: goldColor, backgroundColor: goldColor + '14' }}>
-            {goldBias === 'bullish'
-              ? bi('🟢 دۆلار نزم → زێڕ پاڵپشتی (بەرز دەبێتەوە)', '🟢 USD down → gold supported (likely up)')
-              : goldBias === 'bearish'
-                ? bi('🔴 دۆلار بەرز → فشار لەسەر زێڕ (دادەبەزێت)', '🔴 USD up → pressure on gold (likely down)')
-                : bi('🟠 دۆلار نزیکەی بێگۆڕانە → زێڕ بێ ئاراستە', '🟠 USD roughly flat → gold undecided')}
+            {asset === 'crypto' ? (
+              goldBias === 'bullish'
+                ? bi('🟢 دۆلار نزم → پارەی ئازاد بۆ کریپتۆ (پاڵپشتی)', '🟢 USD down → risk-on, supports crypto')
+                : goldBias === 'bearish'
+                  ? bi('🔴 دۆلار بەرز → فشار لەسەر کریپتۆ (دادەبەزێت)', '🔴 USD up → risk-off, pressure on crypto')
+                  : bi('🟠 دۆلار نزیکەی بێگۆڕانە → کریپتۆ بێ ئاراستە', '🟠 USD roughly flat → crypto undecided')
+            ) : (
+              goldBias === 'bullish'
+                ? bi('🟢 دۆلار نزم → زێڕ پاڵپشتی (بەرز دەبێتەوە)', '🟢 USD down → gold supported (likely up)')
+                : goldBias === 'bearish'
+                  ? bi('🔴 دۆلار بەرز → فشار لەسەر زێڕ (دادەبەزێت)', '🔴 USD up → pressure on gold (likely down)')
+                  : bi('🟠 دۆلار نزیکەی بێگۆڕانە → زێڕ بێ ئاراستە', '🟠 USD roughly flat → gold undecided')
+            )}
           </div>
         </>
       )}
