@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useBots, useDemoBalance } from "@/hooks/useBots";
 import { useBotPrices } from "@/hooks/useBotPrices";
-import { LiveTicker } from "@/components/bots/LiveTicker";
+import { MarketDropdown } from "@/components/bots/MarketDropdown";
 import { PriceDetailModal } from "@/components/bots/PriceDetailModal";
 import { CreateBotModal } from "@/components/bots/CreateBotModal";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
