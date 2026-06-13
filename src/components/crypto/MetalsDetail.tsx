@@ -122,82 +122,84 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
   return (
     <div className="flex-1 flex flex-col bg-[#0a0e17] overflow-y-auto">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-white/5">
+      <div className="px-3 sm:px-4 pt-4 pb-3 border-b border-white/5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold tracking-tight text-white truncate">{meta.symbol}/USD</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">{meta.symbol}</h2>
               <span className="shrink-0 text-[10px] uppercase tracking-widest text-[#848e9c] font-semibold py-0.5 px-1.5 bg-white/5 rounded">
                 {isOil ? bi('نەوت', 'Energy') : bi('کاڵا', 'Commodities')}
               </span>
             </div>
-            <p className="text-xs text-[#848e9c] mt-0.5">{meta.name} {bi('نرخی سپۆت', 'Spot Price')}</p>
+            <p className="text-xs text-[#848e9c] mt-0.5 truncate">{meta.name} {bi('نرخی سپۆت', 'Spot Price')}</p>
           </div>
           <div className="w-11 h-11 shrink-0 rounded-xl bg-[#1a1e2e] border border-white/5 flex items-center justify-center text-2xl">
             {meta.emoji}
           </div>
         </div>
 
-        <div className="mt-4 flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-3xl sm:text-4xl font-bold tracking-tighter tabular-nums truncate" style={{ color: accentColor }}>
-              ${selected.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`flex items-center gap-1 text-sm font-semibold ${
-                isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
-              }`}>
-                {isNeutral ? <Minus className="h-3.5 w-3.5" /> : isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                {isNeutral ? '0.00%' : `${isPositive ? '+' : ''}${selected.change.toFixed(2)}%`}
-              </span>
-              <span className="text-[10px] text-[#848e9c] font-medium">/ {isOil ? bi('بەرمیل', 'barrel') : bi('ئۆنسی ترۆی', 'troy oz')}</span>
-            </div>
+        {/* Price + change */}
+        <div className="mt-3">
+          <div
+            className="font-bold tracking-tight tabular-nums leading-none"
+            style={{ color: accentColor, fontSize: 'clamp(1.75rem, 9vw, 2.5rem)' }}
+          >
+            ${selected.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className={`flex items-center gap-1 text-sm font-semibold ${
+              isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
+            }`}>
+              {isNeutral ? <Minus className="h-3.5 w-3.5" /> : isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+              {isNeutral ? '0.00%' : `${isPositive ? '+' : ''}${selected.change.toFixed(2)}%`}
+            </span>
+            <span className="text-[10px] text-[#848e9c] font-medium">/ {isOil ? bi('بەرمیل', 'barrel') : bi('ئۆنسی ترۆی', 'troy oz')}</span>
+          </div>
+        </div>
 
-          {/* View toggle: Market vs Analysis (segmented) */}
-          <div role="radiogroup" aria-label="View / نمایش" className="shrink-0 flex bg-[#1a1e2e] p-1 rounded-lg">
+        {/* View toggle: Market vs Analysis (segmented) — full width, scrollable on mobile */}
+        <div role="radiogroup" aria-label="View / نمایش" className="mt-3 flex bg-[#1a1e2e] p-1 rounded-lg gap-1 overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={view === 'market'}
+            aria-label="Market view / بازاڕ"
+            onClick={() => setView('market')}
+            className={`flex-1 min-w-[88px] min-h-[44px] flex items-center justify-center gap-1.5 px-3 text-xs font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
+              view === 'market' ? 'bg-[#2d334a] text-white shadow-sm' : 'text-[#848e9c] hover:text-white'
+            }`}
+          >
+            <LineChart className="h-4 w-4 shrink-0" />
+            {language === 'en' ? 'Market' : 'بازاڕ'}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={view === 'analysis'}
+            aria-label="Analysis view / شیکاری"
+            onClick={() => setView('analysis')}
+            className={`flex-1 min-w-[88px] min-h-[44px] flex items-center justify-center gap-1.5 px-3 text-xs font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
+              view === 'analysis' ? 'bg-[#f0b90b] text-black shadow-sm' : 'text-[#848e9c] hover:text-white'
+            }`}
+          >
+            <Sparkles className="h-4 w-4 shrink-0" />
+            {language === 'en' ? 'Analysis' : 'شیکاری'}
+          </button>
+          {!isOil && (
             <button
               type="button"
               role="radio"
-              aria-checked={view === 'market'}
-              aria-label="Market view / بازاڕ"
-              onClick={() => setView('market')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
-                view === 'market' ? 'bg-[#2d334a] text-white shadow-sm' : 'text-[#848e9c] hover:text-white'
+              aria-checked={view === 'pro'}
+              aria-label="Gold Pro view / گۆلد پرۆ"
+              onClick={() => setView('pro')}
+              className={`flex-1 min-w-[88px] min-h-[44px] flex items-center justify-center gap-1.5 px-3 text-xs font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
+                view === 'pro' ? 'bg-[#d4af37] text-black shadow-sm' : 'text-[#848e9c] hover:text-white'
               }`}
             >
-              <LineChart className="h-3.5 w-3.5" />
-              {language === 'en' ? 'Market' : 'بازاڕ'}
+              <Crown className="h-4 w-4 shrink-0" />
+              {language === 'en' ? 'Pro' : 'پرۆ'}
             </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={view === 'analysis'}
-              aria-label="Analysis view / شیکاری"
-              onClick={() => setView('analysis')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
-                view === 'analysis' ? 'bg-[#f0b90b] text-black shadow-sm' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {language === 'en' ? 'Analysis' : 'شیکاری'}
-            </button>
-            {!isOil && (
-              <button
-                type="button"
-                role="radio"
-                aria-checked={view === 'pro'}
-                aria-label="Gold Pro view / گۆلد پرۆ"
-                onClick={() => setView('pro')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
-                  view === 'pro' ? 'bg-[#d4af37] text-black shadow-sm' : 'text-[#848e9c] hover:text-white'
-                }`}
-              >
-                <Crown className="h-3.5 w-3.5" />
-                {language === 'en' ? 'Pro' : 'پرۆ'}
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
