@@ -28,6 +28,7 @@ import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
 type CryptoView = 'overview' | 'chart' | 'analysis' | 'pro';
+type ForexView = 'overview' | 'pro';
 
 export default function CryptoTracker() {
   const navigate = useNavigate();
