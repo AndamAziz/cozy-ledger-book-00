@@ -21,7 +21,8 @@ import { METALS_META } from '@/lib/metalsApi';
 import { OverviewEntry } from '@/lib/overview';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DemoAccountProvider } from '@/contexts/DemoAccountContext';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid, LineChart } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid, LineChart, Newspaper } from 'lucide-react';
+import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals';
 type CryptoView = 'overview' | 'chart' | 'analysis';
