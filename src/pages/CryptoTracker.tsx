@@ -365,8 +365,18 @@ export default function CryptoTracker() {
                     <Activity className="h-3.5 w-3.5" />
                     <span>{bi('شیکاری', 'Analysis')}</span>
                   </button>
+                  <button
+                    onClick={() => setCryptoView('pro')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
+                      cryptoView === 'pro' ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <Crown className="h-3.5 w-3.5" />
+                    <span>{bi('پرۆ', 'Pro')}</span>
+                  </button>
                 </div>
               </div>
+
 
               {cryptoView === 'overview' ? (
                 <AssetOverview
