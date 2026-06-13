@@ -145,6 +145,12 @@ export function TradeControls({
     setTpSlPct(null);
     onClearTpSl();
   };
+  // Selecting a % preset both stores it for future trades AND immediately
+  // applies a symmetric TP/SL to any positions that are already open.
+  const handleTpSlPct = (p: number) => {
+    setTpSlPct(p);
+    onApplyTpSl(p);
+  };
 
   const buyPnl = buyLeg && buyLeg.qty > 0 ? legPnl('buy', buyLeg, currentPrice) : null;
   const sellPnl = sellLeg && sellLeg.qty > 0 ? legPnl('sell', sellLeg, currentPrice) : null;
