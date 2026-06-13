@@ -1,4 +1,4 @@
-import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown, Layers, TrendingUp, TrendingDown, Wallet, Gauge, Zap } from 'lucide-react';
+import { RefreshCw, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown, Layers, TrendingUp, TrendingDown, Wallet, Gauge, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { suggestHoldMinutes, suggestHoldAcrossTimeframes } from '@/lib/indicators';
@@ -352,22 +352,6 @@ export function TradeControls({
           );
         })()}
 
-        {/* Close this leg — shows the live P/L right on the button (green/red) */}
-        <button
-          onClick={() => onClose(side)}
-          className="w-full flex items-center justify-center gap-2 py-2 rounded-md text-[11px] sm:text-xs font-bold bg-[#1a1e2e] text-white border border-white/10 hover:bg-[#252a3a] active:scale-95 transition-colors"
-        >
-          <X className="h-3.5 w-3.5 opacity-70" />
-          <span>{isBuy ? bi('داخستنی کڕین', 'Close Buy', 'Alışı Kapat') : bi('داخستنی فرۆشتن', 'Close Sell', 'Satışı Kapat')}</span>
-          {pnl && (
-            <span
-              className="px-1.5 py-0.5 rounded tabular-nums"
-              style={{ color: pnl.positive ? '#0ecb81' : '#f6465d', background: `${pnl.positive ? '#0ecb81' : '#f6465d'}1f` }}
-            >
-              {pnl.positive ? '+' : '−'}${fmtMoney(Math.abs(pnl.value))}
-            </span>
-          )}
-        </button>
       </div>
     );
   };
