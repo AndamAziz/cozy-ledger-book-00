@@ -491,9 +491,10 @@ serve(async (req) => {
       if (!bot) return new Response(JSON.stringify({ error: "Bot not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       if (action === "start") {
-        await admin.from("bots").update({ status: "running", last_scan_at: null }).eq("id", botId);
+        // Restarting resets the loss streak and clears any auto-pause.
+        await admin.from("bots").update({ status: "running", last_scan_at: null, consecutive_losses: 0, auto_paused: false }).eq("id", botId);
         await log(botId, userId, "info", `[${hhmmss()}] ▶️ Bot started — scanning ${bot.symbol} on ${bot.timeframe}`);
-        await processBot({ ...bot, status: "running", last_scan_at: null });
+        await processBot({ ...bot, status: "running", last_scan_at: null, consecutive_losses: 0, auto_paused: false });
       } else if (action === "stop" || action === "close") {
         const { data: openTrade } = await admin.from("bot_trades").select("*").eq("bot_id", botId).eq("status", "open").maybeSingle();
         if (openTrade) {
