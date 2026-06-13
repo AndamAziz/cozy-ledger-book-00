@@ -82,6 +82,50 @@ export type Database = {
           },
         ]
       }
+      bot_notifications: {
+        Row: {
+          bot_id: string | null
+          created_at: string
+          id: string
+          message: string
+          pnl: number | null
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          bot_id?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          pnl?: number | null
+          read?: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          bot_id?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          pnl?: number | null
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_notifications_bot_id_fkey"
+            columns: ["bot_id"]
+            isOneToOne: false
+            referencedRelation: "bots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bot_trades: {
         Row: {
           amount: number
@@ -158,6 +202,8 @@ export type Database = {
         Row: {
           amount: number
           asset_class: string
+          auto_paused: boolean
+          consecutive_losses: number
           created_at: string
           id: string
           last_scan_at: string | null
@@ -177,6 +223,8 @@ export type Database = {
         Insert: {
           amount?: number
           asset_class: string
+          auto_paused?: boolean
+          consecutive_losses?: number
           created_at?: string
           id?: string
           last_scan_at?: string | null
@@ -196,6 +244,8 @@ export type Database = {
         Update: {
           amount?: number
           asset_class?: string
+          auto_paused?: boolean
+          consecutive_losses?: number
           created_at?: string
           id?: string
           last_scan_at?: string | null
