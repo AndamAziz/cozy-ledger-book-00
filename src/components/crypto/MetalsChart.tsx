@@ -998,8 +998,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         balance={balance}
         realizedPnl={realizedPnl}
         onRenew={renew}
-        onBuy={() => handleAdd('buy')}
-        onSell={() => handleAdd('sell')}
+        onBuy={(tpSlPct) => handleAdd('buy', tpSlPct)}
+        onSell={(tpSlPct) => handleAdd('sell', tpSlPct)}
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
