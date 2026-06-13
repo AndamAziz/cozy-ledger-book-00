@@ -456,6 +456,76 @@ export function TradeControls({
         </div>
       )}
 
+      {/* One-click quick-trade settings: instant lot-size presets + a default
+          TP/SL preset that auto-applies the moment a trade opens. */}
+      <div className="mb-2 space-y-1.5">
+        {/* Instant lot-size presets — one tap sets the volume, then Buy/Sell is
+            a true single-tap trade. */}
+        <div className="flex items-center gap-1">
+          <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-[#f0b90b] shrink-0">
+            <Zap className="h-3 w-3" />
+            {bi('یەک کرتە', '1-Click', 'Tek Tık')}
+          </span>
+          <div className="flex flex-1 items-center gap-1">
+            {QUICK_LOTS.map((lot) => {
+              const active = Math.abs(amount - lot) < 1e-9;
+              const disabled = maxSize > 0 && lot > maxSize;
+              return (
+                <button
+                  key={lot}
+                  onClick={() => onAmountChange(+capSize(lot).toFixed(2))}
+                  disabled={disabled}
+                  className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border tabular-nums transition-colors active:scale-95 disabled:opacity-30 disabled:pointer-events-none ${
+                    active
+                      ? 'bg-[#f0b90b]/15 border-[#f0b90b] text-[#f0b90b]'
+                      : 'bg-[#0d1117] border-white/10 text-[#848e9c] hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  {lot}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Default TP/SL on open — quick percentage presets instead of typing. */}
+        <div className="flex items-center gap-1">
+          <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-[#848e9c] shrink-0">
+            <Target className="h-3 w-3 text-[#0ecb81]" />
+            {bi('قازانج/زیان', 'TP/SL', 'TP/SL')}
+          </span>
+          <div className="flex flex-1 items-center gap-1">
+            <button
+              onClick={() => setTpSlPct(null)}
+              className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border transition-colors active:scale-95 ${
+                tpSlPct == null
+                  ? 'bg-white/10 border-white/40 text-white'
+                  : 'bg-[#0d1117] border-white/10 text-[#848e9c] hover:text-white hover:border-white/20'
+              }`}
+            >
+              {bi('ناچالاک', 'Off', 'Kapalı')}
+            </button>
+            {QUICK_TPSL.map((p) => {
+              const active = tpSlPct === p;
+              return (
+                <button
+                  key={p}
+                  onClick={() => setTpSlPct(p)}
+                  className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border tabular-nums transition-colors active:scale-95 ${
+                    active
+                      ? 'bg-[#0ecb81]/15 border-[#0ecb81] text-[#0ecb81]'
+                      : 'bg-[#0d1117] border-white/10 text-[#848e9c] hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  ±{p}%
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+
       {/* MT5 one-click trade bar: SELL (red, left) · volume stepper · BUY (green,
           right). Forced LTR so the sides stay fixed in both languages.
           Both sides can be open at once (hedge mode). */}
