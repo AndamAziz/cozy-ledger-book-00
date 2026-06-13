@@ -87,6 +87,15 @@ const T = {
     aiError: "Something went wrong fetching info. Please try again.",
     noInfo: "No information available.",
     close: "✕ Close",
+    subs: "📥 Subtitles",
+    tabSubs: "📥 Subtitles",
+    subsLoading: "Searching for subtitles...",
+    subsNone: "No subtitles found for this movie.",
+    subsError: "Something went wrong. Please try again.",
+    download: "Download",
+    downloading: "...",
+    subsHint: "Languages: Kurdish, English, Arabic & more — free from OpenSubtitles",
+    allLangs: "All languages",
   },
 };
 
