@@ -279,6 +279,9 @@ export default function BotDetail() {
           </div>
         )}
 
+        {/* Performance analytics */}
+        <BotPerformanceChart perf={perf} />
+
         {/* Logs */}
         <div className="mt-3 rounded-2xl border border-border bg-card p-3">
           <div className="flex items-center justify-between">
