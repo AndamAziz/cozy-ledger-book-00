@@ -115,7 +115,7 @@ export default function BotDetail() {
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Link to="/crypto" className="rounded-lg p-1.5 hover:bg-secondary"><ArrowLeft className="h-5 w-5 text-foreground" /></Link>
+            <button onClick={() => navigate(-1)} className="rounded-lg p-1.5 hover:bg-secondary"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
             <h1 className="text-lg font-bold text-foreground">{bot.name}</h1>
           </div>
           <div className="rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm font-bold tabular-nums text-gold">
