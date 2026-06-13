@@ -675,7 +675,7 @@ export function TradeControls({
             {/* Recommended action button driven by the prediction */}
             {recommendation && recSide !== 'neutral' && (
               <button
-                onClick={recIsBuy ? onBuy : onSell}
+                onClick={recIsBuy ? handleBuy : handleSell}
                 disabled={depleted || !!otherPositionLabel}
                 className={`mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs sm:text-sm font-bold border transition-colors active:scale-95 disabled:opacity-40 disabled:pointer-events-none ${
                   recIsBuy
