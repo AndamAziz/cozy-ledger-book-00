@@ -272,7 +272,19 @@ export function MarketNewsModal({ open, onClose }: Props) {
                             <span className="text-[11px] font-bold text-[#848e9c]">{ev.country}</span>
                             <span className="text-[10px] text-[#848e9c]">{eventTime(ev.date)}</span>
                           </div>
-                          <div className="text-sm text-white truncate">{ev.title}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm text-white truncate flex-1">{ev.title}</span>
+                            {goldUp === true && (
+                              <span className="inline-flex items-center gap-0.5 shrink-0 text-[9px] font-bold animate-flash-blink" style={{ color: C_UP }}>
+                                <TrendingUp className="h-4 w-4" /> {bi('زێڕ', 'Gold')}
+                              </span>
+                            )}
+                            {goldUp === false && (
+                              <span className="inline-flex items-center gap-0.5 shrink-0 text-[9px] font-bold animate-flash-blink" style={{ color: C_DOWN }}>
+                                <TrendingDown className="h-4 w-4" /> {bi('زێڕ', 'Gold')}
+                              </span>
+                            )}
+                          </div>
                           {isUSD && a.hasResult && (
                             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                               {pctStr && (
