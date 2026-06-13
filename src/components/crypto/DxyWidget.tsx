@@ -11,13 +11,15 @@ interface Props {
   dxy: DxyData;
   goldBias: 'bullish' | 'bearish' | 'neutral';
   loading: boolean;
+  /** Which asset the bias text refers to. Default: gold. */
+  asset?: 'gold' | 'crypto';
 }
 
 const C_UP = '#0ecb81';
 const C_DOWN = '#f6465d';
 const C_FLAT = '#f0b90b';
 
-export function DxyWidget({ dxy, goldBias, loading }: Props) {
+export function DxyWidget({ dxy, goldBias, loading, asset = 'gold' }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
