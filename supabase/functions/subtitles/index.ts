@@ -74,15 +74,15 @@ Deno.serve(async (req) => {
 
     // ---------- DOWNLOAD ----------
     if (action === "download") {
-      const link = url.searchParams.get("url") || "";
+      const id = (url.searchParams.get("id") || "").replace(/\D/g, "");
       const name = (url.searchParams.get("name") || "subtitle.srt").replace(
         /[^\w.\-]/g,
         "_",
       );
-      if (!/^https:\/\/dl\.opensubtitles\.org\//.test(link)) {
-        return json({ error: "invalid url" }, 400);
-      }
+      if (!id) return json({ error: "id required" }, 400);
 
+      // Stable, non IP-bound download endpoint.
+      const link = `https://dl.opensubtitles.org/en/download/file/${id}.gz`;
       const r = await fetch(link, { headers: { "User-Agent": UA } });
       if (!r.ok || !r.body) {
         return json({ error: "download failed", status: r.status }, 502);
@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
         },
       });
     }
+
 
     return json({ error: "unknown action" }, 400);
   } catch (e) {
