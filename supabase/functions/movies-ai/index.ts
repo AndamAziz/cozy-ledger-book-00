@@ -78,17 +78,22 @@ serve(async (req) => {
       const title = (body?.title as string) ?? "";
       const year = (body?.year as string) ?? "";
       const genre = (body?.genre as string) ?? "";
+      const lang = (body?.lang as string) === "en" ? "en" : "ku";
+
+      const system =
+        lang === "en"
+          ? "You are a cinema expert. Write all answers in clear, fluent English. Write in a clean, well-organized way: plot summary, genre, a short note about the director and main actors, and why the movie is worth watching. 3 to 5 paragraphs."
+          : "تۆ شارەزایەکی سینەماییت. هەموو وەڵامەکانت تەنها بە زمانی کوردیی سۆرانی بنووسە. ناوی فیلمەکان بە ئینگلیزی بهێڵەرەوە. بە شێوەیەکی جوان و ڕێکخراو بنووسە: کورتەی چیرۆک، جۆر، باسێکی کورت لەسەر دەرهێنەر و ئەکتەرە سەرەکییەکان، و بۆچی فیلمەکە جێگەی سەیرکردنە. ٣ تا ٥ پەرەگراف.";
+
+      const user =
+        lang === "en"
+          ? `Give me full information about this movie in English: "${title}"${year ? ` (${year})` : ""}${genre ? ` — genre: ${genre}` : ""}.`
+          : `زانیاری تەواوم دەربارەی ئەم فیلمە بدەرێ بە کوردیی سۆرانی: "${title}"${year ? ` (${year})` : ""}${genre ? ` — جۆر: ${genre}` : ""}.`;
+
       const content = await callAI(
         [
-          {
-            role: "system",
-            content:
-              "تۆ شارەزایەکی سینەماییت. هەموو وەڵامەکانت تەنها بە زمانی کوردیی سۆرانی بنووسە. ناوی فیلمەکان بە ئینگلیزی بهێڵەرەوە. بە شێوەیەکی جوان و ڕێکخراو بنووسە: کورتەی چیرۆک، جۆر، باسێکی کورت لەسەر دەرهێنەر و ئەکتەرە سەرەکییەکان، و بۆچی فیلمەکە جێگەی سەیرکردنە. ٣ تا ٥ پەرەگراف.",
-          },
-          {
-            role: "user",
-            content: `زانیاری تەواوم دەربارەی ئەم فیلمە بدەرێ بە کوردیی سۆرانی: "${title}"${year ? ` (${year})` : ""}${genre ? ` — جۆر: ${genre}` : ""}.`,
-          },
+          { role: "system", content: system },
+          { role: "user", content: user },
         ],
         1100,
       );

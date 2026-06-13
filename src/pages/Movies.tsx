@@ -16,23 +16,84 @@ const C = {
 };
 
 const TMDB_KEY = "4e44d9029b1270a757cddc766a1bcb63";
-const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
 const TMDB_BACKDROP = "https://image.tmdb.org/t/p/w1280";
 const TMDB_PROFILE = "https://image.tmdb.org/t/p/w185";
 
-const GENRES = [
-  { key: "all", label: "هەموو" },
-  { key: "Action", label: "ئاکشن" },
-  { key: "Comedy", label: "کۆمیدی" },
-  { key: "Drama", label: "دراما" },
-  { key: "Horror", label: "ترسناک" },
-  { key: "Science Fiction", label: "زانستی خەیاڵی" },
-  { key: "Thriller", label: "هەستبزوێن" },
-  { key: "Romance", label: "ڕۆمانسی" },
-  { key: "Animation", label: "ئەنیمەیشن" },
-  { key: "Adventure", label: "سەرکێشی" },
-  { key: "Crime", label: "تاوان" },
-  { key: "Fantasy", label: "فانتازیا" },
+type Lang = "ku" | "en";
+
+// ====== i18n ======
+const T = {
+  ku: {
+    title: "فیلم",
+    titleSuffix: "ەکان",
+    back: "← گەڕانەوە",
+    searchPlaceholder: "گەڕان بۆ فیلم... (دەتوانیت ناوی ناودار یان وەسف بنووسیت)",
+    smartSearch: "گەڕانی زیرەک",
+    aiFound: "AI ناوی ڕاستەقینەی دۆزییەوە:",
+    noMovies: "هیچ فیلمێک نەدۆزرایەوە",
+    first: "یەکەم",
+    last: "کۆتایی",
+    watch: "▶ سەیرکردن",
+    trailer: "🎬 تریلەر",
+    aiInfo: "🤖 زانیاری AI",
+    noTrailer: "تریلەر بەردەست نییە بۆ ئەم فیلمە.",
+    tabInfo: "زانیاری",
+    tabCast: "ئەکتەرەکان",
+    tabAi: "🤖 AI",
+    director: "دەرهێنەر:",
+    fTitle: "ناونیشان",
+    fYear: "ساڵ",
+    fRating: "هەڵسەنگاندن",
+    fGenre: "جۆر",
+    noCast: "زانیاری ئەکتەران بەردەست نییە.",
+    aiWriting: "AI زانیاری دەنووسێت...",
+    aiError: "هەڵەیەک ڕوویدا لە وەرگرتنی زانیاری. تکایە دووبارە هەوڵبدەرەوە.",
+    noInfo: "زانیاری بەردەست نییە.",
+    close: "✕ داخستن",
+  },
+  en: {
+    title: "Mov",
+    titleSuffix: "ies",
+    back: "← Back",
+    searchPlaceholder: "Search for a movie... (a nickname or a description works too)",
+    smartSearch: "Smart Search",
+    aiFound: "AI found the real title:",
+    noMovies: "No movies found",
+    first: "First",
+    last: "Last",
+    watch: "▶ Watch Now",
+    trailer: "🎬 Trailer",
+    aiInfo: "🤖 AI Info",
+    noTrailer: "No trailer available for this movie.",
+    tabInfo: "Info",
+    tabCast: "Cast",
+    tabAi: "🤖 AI",
+    director: "Director:",
+    fTitle: "Title",
+    fYear: "Year",
+    fRating: "Rating",
+    fGenre: "Genre",
+    noCast: "No cast information available.",
+    aiWriting: "AI is writing...",
+    aiError: "Something went wrong fetching info. Please try again.",
+    noInfo: "No information available.",
+    close: "✕ Close",
+  },
+};
+
+const GENRES: { key: string; ku: string; en: string }[] = [
+  { key: "all", ku: "هەموو", en: "All" },
+  { key: "Action", ku: "ئاکشن", en: "Action" },
+  { key: "Comedy", ku: "کۆمیدی", en: "Comedy" },
+  { key: "Drama", ku: "دراما", en: "Drama" },
+  { key: "Horror", ku: "ترسناک", en: "Horror" },
+  { key: "Science Fiction", ku: "زانستی خەیاڵی", en: "Sci-Fi" },
+  { key: "Thriller", ku: "هەستبزوێن", en: "Thriller" },
+  { key: "Romance", ku: "ڕۆمانسی", en: "Romance" },
+  { key: "Animation", ku: "ئەنیمەیشن", en: "Animation" },
+  { key: "Adventure", ku: "سەرکێشی", en: "Adventure" },
+  { key: "Crime", ku: "تاوان", en: "Crime" },
+  { key: "Fantasy", ku: "فانتازیا", en: "Fantasy" },
 ];
 
 interface Movie {
@@ -78,6 +139,12 @@ const GLOBAL_CSS = `
 
 export default function Movies() {
   const navigate = useNavigate();
+  const [lang, setLang] = useState<Lang>(() =>
+    (localStorage.getItem("moviesLang") as Lang) || "ku",
+  );
+  const t = T[lang];
+  const dir = lang === "ku" ? "rtl" : "ltr";
+
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -88,6 +155,12 @@ export default function Movies() {
   const [aiTitle, setAiTitle] = useState<string | null>(null);
   const [selected, setSelected] = useState<Movie | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const toggleLang = () => {
+    const next: Lang = lang === "ku" ? "en" : "ku";
+    setLang(next);
+    localStorage.setItem("moviesLang", next);
+  };
 
   const fetchMovies = useCallback(async (p: number) => {
     setLoading(true);
@@ -139,7 +212,7 @@ export default function Movies() {
 
   return (
     <div
-      dir="rtl"
+      dir={dir}
       className="mv-page"
       style={{
         minHeight: "100dvh",
@@ -151,8 +224,15 @@ export default function Movies() {
     >
       <style>{GLOBAL_CSS}</style>
       <Helmet>
-        <title>فیلمەکان 🎬 - CITY TAXPERTS</title>
-        <meta name="description" content="تازەترین فیلمەکان بە کوردی — گەڕان و سەیرکردنی فیلم." />
+        <title>{lang === "ku" ? "فیلمەکان 🎬 - CITY TAXPERTS" : "Movies 🎬 - CITY TAXPERTS"}</title>
+        <meta
+          name="description"
+          content={
+            lang === "ku"
+              ? "تازەترین فیلمەکان بە کوردی — گەڕان و سەیرکردنی فیلم."
+              : "Latest movies — search and watch."
+          }
+        />
       </Helmet>
 
       {/* Header */}
@@ -182,7 +262,7 @@ export default function Movies() {
                 fontWeight: 600,
               }}
             >
-              ← گەڕانەوە
+              {t.back}
             </button>
             <h1
               style={{
@@ -192,8 +272,25 @@ export default function Movies() {
                 letterSpacing: ".5px",
               }}
             >
-              <span style={{ color: C.gold }}>فیلم</span>ەکان 🎬
+              <span style={{ color: C.gold }}>{t.title}</span>
+              {t.titleSuffix} 🎬
             </h1>
+            <button
+              onClick={toggleLang}
+              style={{
+                marginInlineStart: "auto",
+                background: C.panel2,
+                color: C.gold,
+                border: `1px solid ${C.gold}`,
+                borderRadius: 999,
+                padding: "7px 16px",
+                cursor: "pointer",
+                fontSize: 13.5,
+                fontWeight: 800,
+              }}
+            >
+              {lang === "ku" ? "English" : "کوردی"}
+            </button>
           </div>
 
           {/* Search */}
@@ -207,13 +304,13 @@ export default function Movies() {
                   setAiTitle(null);
                 }}
                 onKeyDown={(e) => e.key === "Enter" && runAiSearch()}
-                placeholder="گەڕان بۆ فیلم... (دەتوانیت ناوی ناودار یان وەسف بنووسیت)"
+                placeholder={t.searchPlaceholder}
                 style={{
                   width: "100%",
                   background: C.panel,
                   border: `1px solid ${C.border}`,
                   borderRadius: 14,
-                  padding: "12px 44px 12px 16px",
+                  padding: dir === "rtl" ? "12px 44px 12px 16px" : "12px 16px 12px 44px",
                   color: C.text,
                   fontSize: 15,
                   outline: "none",
@@ -223,7 +320,7 @@ export default function Movies() {
               <span
                 style={{
                   position: "absolute",
-                  right: 14,
+                  insetInlineStart: 14,
                   top: "50%",
                   transform: "translateY(-50%)",
                   color: C.muted,
@@ -267,7 +364,7 @@ export default function Movies() {
               ) : (
                 "🤖"
               )}
-              گەڕانی زیرەک
+              {t.smartSearch}
             </button>
           </div>
 
@@ -284,7 +381,7 @@ export default function Movies() {
                 color: C.gold,
               }}
             >
-              🤖 AI ناوی ڕاستەقینەی دۆزییەوە: <b>{aiTitle}</b>
+              🤖 {t.aiFound} <b>{aiTitle}</b>
             </div>
           )}
 
@@ -318,7 +415,7 @@ export default function Movies() {
                     transition: "all .2s",
                   }}
                 >
-                  {g.label}
+                  {lang === "ku" ? g.ku : g.en}
                 </button>
               );
             })}
@@ -346,7 +443,7 @@ export default function Movies() {
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
             <div style={{ fontSize: 48, marginBottom: 10 }}>🎬</div>
-            هیچ فیلمێک نەدۆزرایەوە
+            {t.noMovies}
           </div>
         ) : (
           <Grid>
@@ -358,12 +455,12 @@ export default function Movies() {
 
         {/* Pagination */}
         {!search.trim() && (
-          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />
         )}
       </main>
 
       {selected && (
-        <MovieModal movie={selected} onClose={() => setSelected(null)} />
+        <MovieModal movie={selected} onClose={() => setSelected(null)} lang={lang} t={t} dir={dir} />
       )}
     </div>
   );
@@ -415,7 +512,7 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
             style={{
               position: "absolute",
               top: 8,
-              right: 8,
+              insetInlineEnd: 8,
               background: "rgba(0,0,0,.75)",
               color: C.gold,
               fontSize: 12,
@@ -431,7 +528,7 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
           style={{
             position: "absolute",
             top: 8,
-            left: 8,
+            insetInlineStart: 8,
             background: "rgba(0,0,0,.75)",
             color: C.text,
             fontSize: 11.5,
@@ -501,10 +598,12 @@ function Pagination({
   page,
   totalPages,
   onChange,
+  t,
 }: {
   page: number;
   totalPages: number;
   onChange: (p: number) => void;
+  t: (typeof T)["ku"];
 }) {
   const btn = (label: string, p: number, disabled: boolean, active = false) => (
     <button
@@ -542,11 +641,11 @@ function Pagination({
         flexWrap: "wrap",
       }}
     >
-      {btn("اولین", 1, page === 1)}
+      {btn(t.first, 1, page === 1)}
       {btn("‹", page - 1, page === 1)}
       {pages.map((p) => btn(String(p), p, false, p === page))}
       {btn("›", page + 1, page === totalPages)}
-      {btn("آخرین", totalPages, page === totalPages)}
+      {btn(t.last, totalPages, page === totalPages)}
     </div>
   );
 }
@@ -554,7 +653,19 @@ function Pagination({
 // ====== Modal ======
 type Tab = "info" | "cast" | "ai";
 
-function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
+function MovieModal({
+  movie,
+  onClose,
+  lang,
+  t,
+  dir,
+}: {
+  movie: Movie;
+  onClose: () => void;
+  lang: Lang;
+  t: (typeof T)["ku"];
+  dir: "rtl" | "ltr";
+}) {
   const [tab, setTab] = useState<Tab>("info");
   const [backdrop, setBackdrop] = useState<string | null>(null);
   const [director, setDirector] = useState<string>("");
@@ -587,8 +698,8 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
         const d = await r.json();
         if (!alive) return;
         if (d.backdrop_path) setBackdrop(TMDB_BACKDROP + d.backdrop_path);
-        const dir = d.credits?.crew?.find((c: { job: string }) => c.job === "Director");
-        if (dir) setDirector(dir.name);
+        const dirCrew = d.credits?.crew?.find((c: { job: string }) => c.job === "Director");
+        if (dirCrew) setDirector(dirCrew.name);
         if (Array.isArray(d.credits?.cast)) setCast(d.credits.cast.slice(0, 18));
       } catch {
         /* ignore */
@@ -639,26 +750,27 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
           title: movie.title,
           year: movie.year,
           genre: movie.genre,
+          lang,
         },
       });
       if (error) throw error;
-      setAiInfo(data?.info || "زانیاری بەردەست نییە.");
+      setAiInfo(data?.info || t.noInfo);
     } catch {
-      setAiError("هەڵەیەک ڕوویدا لە وەرگرتنی زانیاری. تکایە دووبارە هەوڵبدەرەوە.");
+      setAiError(t.aiError);
     } finally {
       setAiLoading(false);
     }
   };
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "info", label: "زانیاری" },
-    { key: "cast", label: "ئەکتەرەکان" },
-    { key: "ai", label: "🤖 AI" },
+    { key: "info", label: t.tabInfo },
+    { key: "cast", label: t.tabCast },
+    { key: "ai", label: t.tabAi },
   ];
 
   return (
     <div
-      dir="rtl"
+      dir={dir}
       onClick={onClose}
       style={{
         position: "fixed",
@@ -709,7 +821,7 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
             style={{
               position: "absolute",
               top: 12,
-              left: 12,
+              insetInlineStart: 12,
               width: 38,
               height: 38,
               borderRadius: "50%",
@@ -728,8 +840,8 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
             style={{
               position: "absolute",
               bottom: 14,
-              right: 16,
-              left: 16,
+              insetInlineEnd: 16,
+              insetInlineStart: 16,
               display: "flex",
               gap: 14,
               alignItems: "flex-end",
@@ -767,7 +879,7 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
               </div>
               {director && (
                 <div style={{ fontSize: 12.5, color: C.muted, marginTop: 4 }}>
-                  دەرهێنەر: <span style={{ color: C.text }}>{director}</span>
+                  {t.director} <span style={{ color: C.text }}>{director}</span>
                 </div>
               )}
             </div>
@@ -776,17 +888,17 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
 
         {/* Action buttons */}
         <div style={{ display: "flex", gap: 8, padding: "14px 16px 0" }}>
-          <ActionBtn primary label="▶ سەیرکردن" onClick={() => setWatch(true)} />
+          <ActionBtn primary label={t.watch} onClick={() => setWatch(true)} />
           <ActionBtn
-            label={trailerLoading ? "..." : "🎬 تریلەر"}
+            label={trailerLoading ? "..." : t.trailer}
             onClick={loadTrailer}
             disabled={trailerLoading || trailer === "none"}
           />
-          <ActionBtn label="🤖 زانیاری AI" onClick={loadAiInfo} />
+          <ActionBtn label={t.aiInfo} onClick={loadAiInfo} />
         </div>
         {trailer === "none" && (
           <div style={{ padding: "8px 16px 0", fontSize: 12.5, color: C.muted }}>
-            تریلەر بەردەست نییە بۆ ئەم فیلمە.
+            {t.noTrailer}
           </div>
         )}
 
@@ -799,23 +911,23 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
             borderBottom: `1px solid ${C.border}`,
           }}
         >
-          {tabs.map((t) => (
+          {tabs.map((tb) => (
             <button
-              key={t.key}
-              onClick={() => (t.key === "ai" ? loadAiInfo() : setTab(t.key))}
+              key={tb.key}
+              onClick={() => (tb.key === "ai" ? loadAiInfo() : setTab(tb.key))}
               style={{
                 background: "none",
                 border: "none",
-                color: tab === t.key ? C.gold : C.muted,
+                color: tab === tb.key ? C.gold : C.muted,
                 fontWeight: 800,
                 fontSize: 14,
                 padding: "8px 12px",
                 cursor: "pointer",
-                borderBottom: `2px solid ${tab === t.key ? C.gold : "transparent"}`,
+                borderBottom: `2px solid ${tab === tb.key ? C.gold : "transparent"}`,
                 marginBottom: -1,
               }}
             >
-              {t.label}
+              {tb.label}
             </button>
           ))}
         </div>
@@ -830,10 +942,10 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
                 gap: 10,
               }}
             >
-              <InfoCell label="ناونیشان" value={movie.title} />
-              <InfoCell label="ساڵ" value={movie.year} />
-              <InfoCell label="هەڵسەنگاندن" value={rating > 0 ? `★ ${rating.toFixed(1)}` : "—"} />
-              <InfoCell label="جۆر" value={movie.genre || "—"} />
+              <InfoCell label={t.fTitle} value={movie.title} />
+              <InfoCell label={t.fYear} value={movie.year} />
+              <InfoCell label={t.fRating} value={rating > 0 ? `★ ${rating.toFixed(1)}` : "—"} />
+              <InfoCell label={t.fGenre} value={movie.genre || "—"} />
               <InfoCell label="IMDB ID" value={movie.imdb_id} />
               <InfoCell label="TMDB ID" value={String(movie.tmdb_id)} />
             </div>
@@ -842,7 +954,7 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
           {tab === "cast" && (
             <div>
               {cast.length === 0 ? (
-                <div style={{ color: C.muted, fontSize: 14 }}>زانیاری ئەکتەران بەردەست نییە.</div>
+                <div style={{ color: C.muted, fontSize: 14 }}>{t.noCast}</div>
               ) : (
                 <div
                   style={{
@@ -894,12 +1006,13 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
                       marginBottom: 10,
                     }}
                   />
-                  <div>AI زانیاری دەنووسێت...</div>
+                  <div>{t.aiWriting}</div>
                 </div>
               ) : aiError ? (
                 <div style={{ color: "#ff6b6b", fontSize: 14 }}>{aiError}</div>
               ) : (
                 <div
+                  dir={lang === "ku" ? "rtl" : "ltr"}
                   style={{
                     fontSize: 14.5,
                     lineHeight: 2,
@@ -920,6 +1033,7 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
         <PlayerOverlay
           src={`https://vaplayer.ru/embed/movie/${movie.imdb_id}`}
           onClose={() => setWatch(false)}
+          closeLabel={t.close}
         />
       )}
       {/* Trailer player */}
@@ -927,13 +1041,22 @@ function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
         <PlayerOverlay
           src={`https://www.youtube.com/embed/${trailer}?autoplay=1`}
           onClose={() => setTrailerOpen(false)}
+          closeLabel={t.close}
         />
       )}
     </div>
   );
 }
 
-function PlayerOverlay({ src, onClose }: { src: string; onClose: () => void }) {
+function PlayerOverlay({
+  src,
+  onClose,
+  closeLabel,
+}: {
+  src: string;
+  onClose: () => void;
+  closeLabel: string;
+}) {
   return (
     <div
       onClick={onClose}
@@ -957,7 +1080,7 @@ function PlayerOverlay({ src, onClose }: { src: string; onClose: () => void }) {
           style={{
             position: "absolute",
             top: -44,
-            left: 0,
+            insetInlineStart: 0,
             background: C.panel2,
             color: C.text,
             border: `1px solid ${C.border}`,
@@ -967,7 +1090,7 @@ function PlayerOverlay({ src, onClose }: { src: string; onClose: () => void }) {
             fontWeight: 700,
           }}
         >
-          ✕ داخستن
+          {closeLabel}
         </button>
         <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden" }}>
           <iframe
