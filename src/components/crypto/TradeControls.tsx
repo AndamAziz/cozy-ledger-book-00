@@ -58,8 +58,10 @@ interface TradeControlsProps {
   realizedPnl?: number;
   /** Reset the demo balance back to the starting amount. */
   onRenew: () => void;
-  onBuy: () => void;
-  onSell: () => void;
+  /** Open a BUY leg. Optional tpSlPct auto-applies a symmetric TP/SL on open. */
+  onBuy: (tpSlPct?: number) => void;
+  /** Open a SELL leg. Optional tpSlPct auto-applies a symmetric TP/SL on open. */
+  onSell: (tpSlPct?: number) => void;
   /** Close one leg and realise its profit / loss. */
   onClose: (side: 'buy' | 'sell') => void;
   onRefresh: () => void;
