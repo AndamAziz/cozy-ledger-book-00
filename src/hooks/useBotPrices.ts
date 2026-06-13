@@ -13,8 +13,8 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 /**
- * Polls the bots-prices edge function every 4s (well under the 5s "live"
- * requirement) and keeps a per-symbol price history for sparklines.
+ * Polls the bots-prices edge function every 2s (the required "live" cadence)
+ * and keeps a per-symbol price history for sparklines.
  */
 export function useBotPrices() {
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
@@ -56,7 +56,7 @@ export function useBotPrices() {
 
   useEffect(() => {
     load();
-    const t = window.setInterval(load, 4000);
+    const t = window.setInterval(load, 2000);
     return () => window.clearInterval(t);
   }, [load]);
 

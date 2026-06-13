@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useBots, useDemoBalance } from "@/hooks/useBots";
 import { useBotPrices } from "@/hooks/useBotPrices";
-import { LiveTicker } from "@/components/bots/LiveTicker";
+import { MarketDropdown } from "@/components/bots/MarketDropdown";
 import { PriceDetailModal } from "@/components/bots/PriceDetailModal";
 import { CreateBotModal } from "@/components/bots/CreateBotModal";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
@@ -70,14 +70,12 @@ export default function Bots() {
         </div>
 
         {/* Live markets */}
-        <div className="mt-4 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Live Markets</h2>
-          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" /> Updated {updatedAgo}
-          </span>
-        </div>
-        <div className="mt-2">
-          <LiveTicker quotes={quotes} onSelect={setDetailSymbol} />
+        <div className="mt-4">
+          <MarketDropdown
+            quotes={quotes}
+            updatedLabel={`Updated ${updatedAgo} · every 2s`}
+            onSelect={setDetailSymbol}
+          />
         </div>
 
         {/* Your bots */}
