@@ -162,7 +162,7 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
 
   // Open or ADD to a leg. Buy and Sell can both be open at once (hedge mode).
   // A position on another asset must be closed first.
-  const handleAdd = (side: 'buy' | 'sell') => {
+  const handleAdd = (side: 'buy' | 'sell', tpSlPct?: number) => {
     if (balance <= 0) return;
     const price = livePrice();
     if (price <= 0) return;
@@ -170,6 +170,13 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
     // Buy fills at the ask, sell fills at the bid (matches the button prices).
     const fillPrice = side === 'buy' ? askPrice(price) : bidPrice(price);
     openOrAdd({ symbol: mySymbol, label: name || bi('کانزا', 'Metal'), side, price: fillPrice, amount: tradeAmount });
+    // Auto-apply a symmetric TP/SL preset (% of fill price) when requested.
+    if (tpSlPct != null && tpSlPct > 0) {
+      const delta = fillPrice * (tpSlPct / 100);
+      const tp = side === 'buy' ? fillPrice + delta : fillPrice - delta;
+      const sl = side === 'buy' ? fillPrice - delta : fillPrice + delta;
+      setTpSl(mySymbol, side, +tp.toFixed(6), +sl.toFixed(6));
+    }
   };
 
   // Close one leg and realise its P/L (handled in context).
@@ -991,8 +998,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         balance={balance}
         realizedPnl={realizedPnl}
         onRenew={renew}
-        onBuy={() => handleAdd('buy')}
-        onSell={() => handleAdd('sell')}
+        onBuy={(tpSlPct) => handleAdd('buy', tpSlPct)}
+        onSell={(tpSlPct) => handleAdd('sell', tpSlPct)}
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}

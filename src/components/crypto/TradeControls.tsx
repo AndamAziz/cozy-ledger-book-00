@@ -1,4 +1,4 @@
-import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown, Layers, TrendingUp, TrendingDown, Wallet, Gauge } from 'lucide-react';
+import { RefreshCw, X, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown, Layers, TrendingUp, TrendingDown, Wallet, Gauge, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { suggestHoldMinutes, suggestHoldAcrossTimeframes } from '@/lib/indicators';
@@ -30,6 +30,11 @@ export interface LegInfo {
 
 export const TRADE_AMOUNTS = [0.01, 0.05, 0.1];
 
+/** One-click quick lot sizes (instant size selection). */
+export const QUICK_LOTS = [0.01, 0.05, 0.1, 0.25, 0.5];
+/** Quick TP/SL presets (% of entry) applied automatically on open. */
+export const QUICK_TPSL = [0.5, 1, 1.5];
+
 interface TradeControlsProps {
   amount: number;
   pct: TradePct | null;
@@ -53,8 +58,10 @@ interface TradeControlsProps {
   realizedPnl?: number;
   /** Reset the demo balance back to the starting amount. */
   onRenew: () => void;
-  onBuy: () => void;
-  onSell: () => void;
+  /** Open a BUY leg. Optional tpSlPct auto-applies a symmetric TP/SL on open. */
+  onBuy: (tpSlPct?: number) => void;
+  /** Open a SELL leg. Optional tpSlPct auto-applies a symmetric TP/SL on open. */
+  onSell: (tpSlPct?: number) => void;
   /** Close one leg and realise its profit / loss. */
   onClose: (side: 'buy' | 'sell') => void;
   onRefresh: () => void;
@@ -122,6 +129,15 @@ export function TradeControls({
     language === 'tr' ? (tr ?? en) : language === 'en' ? en : ku;
 
   const depleted = balance <= 0;
+
+  // One-click default TP/SL preset (% of entry) auto-applied when a trade opens.
+  // null = off (no automatic TP/SL).
+  const [tpSlPct, setTpSlPct] = useState<number | null>(null);
+
+  // Wrapped handlers so onClick (which receives a MouseEvent) never leaks into
+  // the optional numeric tpSlPct argument of onBuy / onSell.
+  const handleBuy = () => onBuy(tpSlPct ?? undefined);
+  const handleSell = () => onSell(tpSlPct ?? undefined);
 
   // TP/SL section is collapsed by default (dropdown) so the chart has more room.
   const [tpSlOpen, setTpSlOpen] = useState<{ buy: boolean; sell: boolean }>({ buy: false, sell: false });
@@ -309,7 +325,7 @@ export function TradeControls({
                   {/* Quick presets + clear */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-[9px] sm:text-[10px] text-[#848e9c]">{bi('خێرا', 'Quick', 'Hızlı')}</span>
-                    {[0.5, 1, 2].map((p) => {
+                    {QUICK_TPSL.map((p) => {
                       const [tp, sl] = presetTpSl(side, leg.entryPrice, p);
                       return (
                         <button
@@ -440,13 +456,83 @@ export function TradeControls({
         </div>
       )}
 
+      {/* One-click quick-trade settings: instant lot-size presets + a default
+          TP/SL preset that auto-applies the moment a trade opens. */}
+      <div className="mb-2 space-y-1.5">
+        {/* Instant lot-size presets — one tap sets the volume, then Buy/Sell is
+            a true single-tap trade. */}
+        <div className="flex items-center gap-1">
+          <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-[#f0b90b] shrink-0">
+            <Zap className="h-3 w-3" />
+            {bi('یەک کرتە', '1-Click', 'Tek Tık')}
+          </span>
+          <div className="flex flex-1 items-center gap-1">
+            {QUICK_LOTS.map((lot) => {
+              const active = Math.abs(amount - lot) < 1e-9;
+              const disabled = maxSize > 0 && lot > maxSize;
+              return (
+                <button
+                  key={lot}
+                  onClick={() => onAmountChange(+capSize(lot).toFixed(2))}
+                  disabled={disabled}
+                  className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border tabular-nums transition-colors active:scale-95 disabled:opacity-30 disabled:pointer-events-none ${
+                    active
+                      ? 'bg-[#f0b90b]/15 border-[#f0b90b] text-[#f0b90b]'
+                      : 'bg-[#0d1117] border-white/10 text-[#848e9c] hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  {lot}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Default TP/SL on open — quick percentage presets instead of typing. */}
+        <div className="flex items-center gap-1">
+          <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-[#848e9c] shrink-0">
+            <Target className="h-3 w-3 text-[#0ecb81]" />
+            {bi('قازانج/زیان', 'TP/SL', 'TP/SL')}
+          </span>
+          <div className="flex flex-1 items-center gap-1">
+            <button
+              onClick={() => setTpSlPct(null)}
+              className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border transition-colors active:scale-95 ${
+                tpSlPct == null
+                  ? 'bg-white/10 border-white/40 text-white'
+                  : 'bg-[#0d1117] border-white/10 text-[#848e9c] hover:text-white hover:border-white/20'
+              }`}
+            >
+              {bi('ناچالاک', 'Off', 'Kapalı')}
+            </button>
+            {QUICK_TPSL.map((p) => {
+              const active = tpSlPct === p;
+              return (
+                <button
+                  key={p}
+                  onClick={() => setTpSlPct(p)}
+                  className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border tabular-nums transition-colors active:scale-95 ${
+                    active
+                      ? 'bg-[#0ecb81]/15 border-[#0ecb81] text-[#0ecb81]'
+                      : 'bg-[#0d1117] border-white/10 text-[#848e9c] hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  ±{p}%
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+
       {/* MT5 one-click trade bar: SELL (red, left) · volume stepper · BUY (green,
           right). Forced LTR so the sides stay fixed in both languages.
           Both sides can be open at once (hedge mode). */}
       <div dir="ltr" className="flex items-stretch gap-2">
         {/* SELL block */}
         <button
-          onClick={onSell}
+          onClick={handleSell}
           disabled={depleted || !!otherPositionLabel}
           className={`relative flex-1 flex flex-col justify-center items-center overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
             sellLeg && sellLeg.qty > 0
@@ -469,6 +555,18 @@ export function TradeControls({
           <span className="relative font-bold tabular-nums leading-none" style={{ color: '#f43f5e', fontSize: '17px' }}>
             {bid > 0 ? fmtPrice(bid) : '--'}
           </span>
+          {/* Live open P/L for the SELL leg, right on the button */}
+          {sellPnl && (
+            <span
+              className="relative mt-1 px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold tabular-nums leading-none"
+              style={{
+                color: sellPnl.positive ? '#22c55e' : '#f43f5e',
+                background: `${sellPnl.positive ? '#22c55e' : '#f43f5e'}1f`,
+              }}
+            >
+              {sellPnl.positive ? '+' : '−'}${fmtMoney(Math.abs(sellPnl.value))}
+            </span>
+          )}
         </button>
 
         {/* Center: volume stepper + live tick dot + refresh */}
@@ -520,7 +618,7 @@ export function TradeControls({
 
         {/* BUY block */}
         <button
-          onClick={onBuy}
+          onClick={handleBuy}
           disabled={depleted || !!otherPositionLabel}
           className={`relative flex-1 flex flex-col justify-center items-center overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
             buyLeg && buyLeg.qty > 0
@@ -543,6 +641,18 @@ export function TradeControls({
           <span className="relative font-bold tabular-nums leading-none" style={{ color: '#22c55e', fontSize: '17px' }}>
             {ask > 0 ? fmtPrice(ask) : '--'}
           </span>
+          {/* Live open P/L for the BUY leg, right on the button */}
+          {buyPnl && (
+            <span
+              className="relative mt-1 px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold tabular-nums leading-none"
+              style={{
+                color: buyPnl.positive ? '#22c55e' : '#f43f5e',
+                background: `${buyPnl.positive ? '#22c55e' : '#f43f5e'}1f`,
+              }}
+            >
+              {buyPnl.positive ? '+' : '−'}${fmtMoney(Math.abs(buyPnl.value))}
+            </span>
+          )}
         </button>
       </div>
 
@@ -659,7 +769,7 @@ export function TradeControls({
             {/* Recommended action button driven by the prediction */}
             {recommendation && recSide !== 'neutral' && (
               <button
-                onClick={recIsBuy ? onBuy : onSell}
+                onClick={recIsBuy ? handleBuy : handleSell}
                 disabled={depleted || !!otherPositionLabel}
                 className={`mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs sm:text-sm font-bold border transition-colors active:scale-95 disabled:opacity-40 disabled:pointer-events-none ${
                   recIsBuy
