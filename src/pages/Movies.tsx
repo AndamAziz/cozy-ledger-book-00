@@ -100,6 +100,9 @@ const T = {
     downloading: "...",
     subsHint: "Languages: Kurdish, English, Arabic & more — free from OpenSubtitles",
     allLangs: "All languages",
+    openPlayIMDb: "🌐 Open on PlayIMDb",
+    copyPlayIMDb: "📋 Copy PlayIMDb Link",
+    linkCopied: "Link copied ✓",
   },
 };
 
