@@ -1098,7 +1098,11 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         )}
 
         {aiText ? (
-          <div className="text-sm text-[#d1d5db] whitespace-pre-wrap leading-relaxed">{aiText}</div>
+          <ColorizedAnalysis
+            text={aiText}
+            color={dirColorFor(tradeSummary?.recommendation ?? summary.signal)}
+            className="text-sm text-[#d1d5db]"
+          />
         ) : !aiLoading && !aiError && !tradeSummary ? (
           <div className="text-xs text-[#848e9c]">{biLabel('کلیک لە "شیکاری بکە" بکە بۆ پوختەی کڕین/فرۆشتن، ئاستەکان، کەی بکڕیت و کەی بفرۆشیت.', 'Tap "Analyze" for a buy/sell summary, levels, and when to buy / when to sell.')}</div>
         ) : null}
