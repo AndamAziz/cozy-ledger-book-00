@@ -8,6 +8,8 @@ import { SentimentGauge, SentimentData } from '@/components/crypto/SentimentGaug
 import { TechnicalSignals } from '@/components/crypto/TechnicalSignals';
 import { RiskCalculator } from '@/components/crypto/RiskCalculator';
 import { EventAlertBanner, CalendarEvent } from '@/components/crypto/EventAlertBanner';
+import { PriceAlerts } from '@/components/crypto/PriceAlerts';
+import { SignalHistory } from '@/components/crypto/SignalHistory';
 import { Crown, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
 
 interface Props {
@@ -223,6 +225,9 @@ export function ForexProPanel({ code, name, flag, rate }: Props) {
           {bi('ئەمە یارمەتیدەرە نەک ڕاوێژی دارایی. هەمیشە Stop Loss بەکاربهێنە.', 'This is guidance, not financial advice. Always use a Stop Loss.')}
         </p>
       </div>
+
+      <PriceAlerts storeKey={`USD${code}`} label={`USD/${code}`} price={rate} decimals={dec} />
+      <SignalHistory storeKey={`USD${code}`} action={signal.action} confidence={signal.confidence} price={rate} decimals={dec} />
 
       <DxyWidget dxy={dxy} goldBias={fxBias} loading={loadingMacro} asset="forex" />
       <SentimentGauge sentiment={sentiment} loading={loadingMacro} asset="crypto" />
