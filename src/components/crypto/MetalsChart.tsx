@@ -940,6 +940,16 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
           if (buyLeg) setTpSl(mySymbol, 'buy', null, null);
           if (sellLeg) setTpSl(mySymbol, 'sell', null, null);
         }}
+        onApplyTpSl={(pct) => {
+          if (buyLeg) {
+            const d = buyLeg.entryPrice * (pct / 100);
+            setTpSl(mySymbol, 'buy', +(buyLeg.entryPrice + d).toFixed(6), +(buyLeg.entryPrice - d).toFixed(6));
+          }
+          if (sellLeg) {
+            const d = sellLeg.entryPrice * (pct / 100);
+            setTpSl(mySymbol, 'sell', +(sellLeg.entryPrice - d).toFixed(6), +(sellLeg.entryPrice + d).toFixed(6));
+          }
+        }}
       />
 
       {/* Chart — grows to fill the screen in landscape (MT5-style) */}
