@@ -5,7 +5,6 @@ import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAvera
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
-import { attachTpSlDrag } from '@/lib/tpSlDrag';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
@@ -35,16 +34,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const tradeLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<any>(null);
-  // TP / SL price-line objects per side so they can be dragged live.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tpLineRef = useRef<Record<'buy' | 'sell', any>>({ buy: null, sell: null });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const slLineRef = useRef<Record<'buy' | 'sell', any>>({ buy: null, sell: null });
-  // Active drag override (so live ticks recreating lines keep the dragged price).
-  const dragRef = useRef<{ side: 'buy' | 'sell'; kind: 'tp' | 'sl'; price: number } | null>(null);
-  // Always-fresh snapshot of the open legs for the drag helper.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const legsRef = useRef<{ buy: any; sell: any }>({ buy: null, sell: null });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
   // Indicator pane series (RSI + MACD) drawn in their own panes below price.
@@ -92,9 +81,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
   // Trading is now free across assets — no single-asset lock.
   const otherPositionLabel = null;
-
-  // Keep a fresh snapshot of the legs for the TP/SL drag helper.
-  legsRef.current = { buy: buyLeg, sell: sellLeg };
 
   // (Live per-trade P/L is shown directly on the chart, MT5-style, below.)
 
