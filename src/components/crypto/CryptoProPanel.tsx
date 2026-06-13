@@ -204,6 +204,9 @@ export function CryptoProPanel({ candles, price, symbol }: Props) {
         </p>
       </div>
 
+      <PriceAlerts storeKey={`${symbol}USD`} label={`${symbol}/USD`} price={price} decimals={dec} />
+      <SignalHistory storeKey={`${symbol}USD`} action={signal.action} confidence={signal.confidence} price={price} decimals={dec} />
+
       <SentimentGauge sentiment={sentiment} loading={loadingMacro} asset="crypto" />
       <DxyWidget dxy={dxy} goldBias={cryptoBias} loading={loadingMacro} asset="crypto" />
       <TechnicalSignals candles={candles} price={price} />
