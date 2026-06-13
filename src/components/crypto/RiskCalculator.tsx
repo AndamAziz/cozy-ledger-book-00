@@ -143,12 +143,14 @@ export function RiskCalculator({
         </div>
       ) : hasInputs ? (
         <div className="grid grid-cols-2 gap-2">
-          <Stat label={bi('قەبارەی Lot', 'Position Size')} value={`${fmt(result.lots, 2)} ${bi('لۆت', 'lots')}`} color="#0ecb81" />
+          <Stat label={bi(sizeLabel.ku, sizeLabel.en)} value={`${fmt(result.lots, contractSize === 1 ? 4 : 2)} ${contractSize === 1 ? '' : bi('لۆت', 'lots')}`.trim()} color="#0ecb81" />
           <Stat label={bi('بڕی مەترسی', 'Risk Amount')} value={`$${fmt(result.riskAmount)}`} color="#f6465d" />
-          <Stat label={bi('Take Profit', 'Take Profit')} value={`$${fmt(result.takeProfit)}`} color="#0ecb81" />
+          <Stat label={bi('Take Profit', 'Take Profit')} value={`$${fmt(result.takeProfit, priceDecimals)}`} color="#0ecb81" />
           <Stat label={bi('قازانجی چاوەڕوانکراو', 'Potential Profit')} value={`$${fmt(result.rewardAmount)}`} color="#0ecb81" />
-          <Stat label={bi('دووری SL (پێنت)', 'SL Distance (pips)')} value={fmt(result.slPips, 0)} color="#f0b90b" />
-          <Stat label={bi('قەبارە (ئۆنسی)', 'Units (oz)')} value={fmt(result.units, 2)} color="#d4af37" />
+          {showPips && (
+            <Stat label={bi('دووری SL (پێنت)', 'SL Distance (pips)')} value={fmt(result.slPips, 0)} color="#f0b90b" />
+          )}
+          <Stat label={bi(unitLabel.ku, unitLabel.en)} value={fmt(result.units, contractSize === 1 ? 4 : 2)} color="#d4af37" />
         </div>
       ) : (
         <p className="text-xs text-[#848e9c]">{bi('نرخی داخڵبوون و Stop Loss بنووسە بۆ هەژماردن.', 'Enter entry and stop-loss to calculate.')}</p>
