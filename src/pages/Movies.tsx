@@ -806,13 +806,13 @@ function MovieModal({
     setSubsLoading(true);
     setSubsError("");
     try {
-      const { data, error } = await supabase.functions.invoke(
-        `subtitles?action=search&imdb_id=${encodeURIComponent(
+      const res = await fetch(
+        `${SUPA_URL}/functions/v1/subtitles?action=search&imdb_id=${encodeURIComponent(
           movie.imdb_id,
         )}&langs=kur,ara,eng,all`,
-        { method: "GET" },
+        { headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` } },
       );
-      if (error) throw error;
+      const data = await res.json();
       setSubs(Array.isArray(data?.subtitles) ? data.subtitles : []);
     } catch {
       setSubsError(t.subsError);
