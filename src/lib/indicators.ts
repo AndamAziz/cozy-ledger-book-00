@@ -6,10 +6,12 @@ export interface IndicatorResult {
   rsi: number | null;
   macd: { macd: number; signal: number; histogram: number } | null;
   bollinger: { upper: number; middle: number; lower: number; percentB: number } | null;
-  sma20: number | null;
-  sma50: number | null;
-  ema12: number | null;
-  ema26: number | null;
+  /** Fast EMA (9) for the EMA crossover signal. */
+  ema9: number | null;
+  /** Slow EMA (21) for the EMA crossover signal. */
+  ema21: number | null;
+  /** Trend EMA (50): price above/below = up/down trend. */
+  ema50: number | null;
 }
 
 export interface SignalSummary {
