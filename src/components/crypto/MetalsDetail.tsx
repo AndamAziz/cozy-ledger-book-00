@@ -24,7 +24,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const [chartRange, setChartRange] = useState('1d');
-  const [view, setView] = useState<'market' | 'analysis'>(initialView);
+  const [view, setView] = useState<'market' | 'analysis' | 'pro'>(initialView);
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const livePrice = selected?.price || 0;
   const { candles: historyCandles, isLoading: historyLoading, error: historyError, refetch: refetchHistory } = useMetalsHistory(selectedCode, chartRange, livePrice);
