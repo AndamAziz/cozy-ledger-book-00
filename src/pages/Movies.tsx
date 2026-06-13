@@ -800,11 +800,62 @@ function MovieModal({
     }
   };
 
+  const loadSubs = async () => {
+    setTab("subs");
+    if (subs || subsLoading || !movie.imdb_id) return;
+    setSubsLoading(true);
+    setSubsError("");
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        `subtitles?action=search&imdb_id=${encodeURIComponent(
+          movie.imdb_id,
+        )}&langs=kur,ara,eng,all`,
+        { method: "GET" },
+      );
+      if (error) throw error;
+      setSubs(Array.isArray(data?.subtitles) ? data.subtitles : []);
+    } catch {
+      setSubsError(t.subsError);
+    } finally {
+      setSubsLoading(false);
+    }
+  };
+
+  const downloadSub = async (s: Subtitle) => {
+    setDownloadingId(s.id);
+    try {
+      const res = await fetch(
+        `${SUPA_URL}/functions/v1/subtitles?action=download&id=${encodeURIComponent(
+          s.id,
+        )}&name=${encodeURIComponent(s.name || `${movie.title}.srt`)}`,
+        {
+          headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+        },
+      );
+      if (!res.ok) throw new Error("download failed");
+      const blob = await res.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = s.name || `${movie.title}.srt`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+    } catch {
+      setSubsError(t.subsError);
+    } finally {
+      setDownloadingId("");
+    }
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: "info", label: t.tabInfo },
     { key: "cast", label: t.tabCast },
     { key: "ai", label: t.tabAi },
+    { key: "subs", label: t.tabSubs },
   ];
+
 
   return (
     <div
