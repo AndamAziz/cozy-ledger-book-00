@@ -139,9 +139,6 @@ export function TradeControls({
   const handleBuy = () => onBuy(tpSlPct ?? undefined);
   const handleSell = () => onSell(tpSlPct ?? undefined);
 
-  // TP/SL section is collapsed by default (dropdown) so the chart has more room.
-  const [tpSlOpen, setTpSlOpen] = useState<{ buy: boolean; sell: boolean }>({ buy: false, sell: false });
-
   const buyPnl = buyLeg && buyLeg.qty > 0 ? legPnl('buy', buyLeg, currentPrice) : null;
   const sellPnl = sellLeg && sellLeg.qty > 0 ? legPnl('sell', sellLeg, currentPrice) : null;
   const totalPnl = (buyPnl?.value ?? 0) + (sellPnl?.value ?? 0);
@@ -243,7 +240,7 @@ export function TradeControls({
     );
   };
 
-  // Reusable open-leg panel (avg entry · size · live P/L · TP/SL · close).
+  // Reusable open-leg panel (avg entry · size · live P/L only).
   const LegPanel = ({ side, leg }: { side: 'buy' | 'sell'; leg: LegInfo }) => {
     const isBuy = side === 'buy';
     const accent = isBuy ? '#0ecb81' : '#f6465d';
@@ -267,66 +264,6 @@ export function TradeControls({
             </span>
           )}
         </div>
-
-        {/* TP / SL — collapsible dropdown to keep the chart area roomy */}
-        {(() => {
-          const open = tpSlOpen[side];
-          const hasTpSl = leg.takeProfit != null || leg.stopLoss != null;
-          return (
-            <div className="rounded-md border border-white/10 bg-[#090c11]">
-              <button
-                type="button"
-                onClick={() => setTpSlOpen((s) => ({ ...s, [side]: !s[side] }))}
-                className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] sm:text-xs"
-              >
-                <span className="flex items-center gap-1.5 font-bold text-[#848e9c]">
-                  <Target className="h-3.5 w-3.5 text-[#0ecb81]" />
-                  {bi('قازانج و زیان', 'TP & SL', 'TP & SL')}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  {hasTpSl && !open && (
-                    <span className="tabular-nums text-[9px] sm:text-[10px]">
-                      {leg.takeProfit != null && <span className="text-[#0ecb81]">TP {fmtPrice(leg.takeProfit)}</span>}
-                      {leg.takeProfit != null && leg.stopLoss != null && <span className="text-[#848e9c]"> · </span>}
-                      {leg.stopLoss != null && <span className="text-[#f6465d]">SL {fmtPrice(leg.stopLoss)}</span>}
-                    </span>
-                  )}
-                  {open ? <ChevronUp className="h-4 w-4 text-[#848e9c]" /> : <ChevronDown className="h-4 w-4 text-[#848e9c]" />}
-                </span>
-              </button>
-
-              {open && (
-                <div className="px-2 pb-2 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="flex items-center gap-1.5 rounded-md bg-[#0d1117] border border-[#0ecb81]/30 px-2 py-1.5">
-                      <Target className="h-3.5 w-3.5 text-[#0ecb81] shrink-0" />
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        value={leg.takeProfit ?? ''}
-                        onChange={(e) => onSetTpSl(side, parseNum(e.target.value), leg.stopLoss)}
-                        placeholder={bi('قازانج', 'Take Profit', 'Kâr Al')}
-                        className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-[#0ecb81] placeholder:text-[#0ecb81]/40 outline-none tabular-nums"
-                      />
-                    </label>
-                    <label className="flex items-center gap-1.5 rounded-md bg-[#0d1117] border border-[#f6465d]/30 px-2 py-1.5">
-                      <ShieldAlert className="h-3.5 w-3.5 text-[#f6465d] shrink-0" />
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        value={leg.stopLoss ?? ''}
-                        onChange={(e) => onSetTpSl(side, leg.takeProfit, parseNum(e.target.value))}
-                        placeholder={bi('زیان', 'Stop Loss', 'Zarar Durdur')}
-                        className="w-full bg-transparent text-[11px] sm:text-xs font-bold text-[#f6465d] placeholder:text-[#f6465d]/40 outline-none tabular-nums"
-                      />
-                    </label>
-                  </div>
-
-                </div>
-              )}
-            </div>
-          );
-        })()}
 
       </div>
     );
