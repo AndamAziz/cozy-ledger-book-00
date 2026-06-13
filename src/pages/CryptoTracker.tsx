@@ -456,6 +456,8 @@ export default function CryptoTracker() {
           onClose={() => setShowConverter(false)}
         />
       )}
+
+      <MarketNewsModal open={showNews} onClose={() => setShowNews(false)} />
     </DemoAccountProvider>
 
   );
