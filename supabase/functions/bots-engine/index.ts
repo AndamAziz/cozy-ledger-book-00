@@ -450,6 +450,14 @@ async function processBot(bot: Record<string, unknown>) {
     return;
   }
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Opened ${direction.toUpperCase()} @ $${fmt(entry, symbol)} | SL: $${fmt(slPrice, symbol)} | TP: $${fmt(tpPrice, symbol)}`);
+
+  // 🔔 Notify the user a new trade was opened.
+  const botName = (bot.name as string) || symbol;
+  await notify(
+    userId, botId, "trade_open",
+    `📈 ${botName} — Trade Opened`,
+    `${direction.toUpperCase()} ${symbol} @ $${fmt(entry, symbol)} · SL $${fmt(slPrice, symbol)} · TP $${fmt(tpPrice, symbol)}`,
+  );
 }
 
 // ───────────────────── HTTP ─────────────────────
