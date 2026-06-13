@@ -711,6 +711,10 @@ function MovieModal({
   const [aiInfo, setAiInfo] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>("");
+  const [subs, setSubs] = useState<Subtitle[] | null>(null);
+  const [subsLoading, setSubsLoading] = useState(false);
+  const [subsError, setSubsError] = useState<string>("");
+  const [downloadingId, setDownloadingId] = useState<string>("");
 
   const rating = parseFloat(movie.rating) || 0;
 
