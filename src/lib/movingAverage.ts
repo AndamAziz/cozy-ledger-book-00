@@ -49,6 +49,7 @@ export interface MAConfig {
 }
 
 export const MA_PERIODS: MAConfig[] = [
-  { period: 7, label: '7', color: '#f0b90b' },
-  { period: 25, label: '25', color: '#e040fb' },
+  { period: 9, label: '9', color: '#f0b90b' },
+  { period: 21, label: '21', color: '#e040fb' },
+  { period: 50, label: '50', color: '#3b82f6' },
 ];

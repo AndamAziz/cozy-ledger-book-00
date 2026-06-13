@@ -67,8 +67,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const currentViewKeyRef = useRef<string>('');
   const restoringRef = useRef(false);
   const [chartType, setChartType] = useState<'candlestick' | 'line' | 'area'>('candlestick');
-  const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
-  const [maType, setMaType] = useState<MAType>('MA');
+  const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([9, 21, 50]));
+  const [maType, setMaType] = useState<MAType>('EMA');
   // MT5-style extras: RSI / MACD panes, depth-of-market ladder, trade journal.
   const [showRSI, setShowRSI] = useState(false);
   const [showMACD, setShowMACD] = useState(false);

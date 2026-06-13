@@ -345,6 +345,7 @@ async function processBot(bot: Record<string, unknown>) {
   const volumes = candles.map((c) => c.volume);
   const ema9 = emaLast(closes, 9);
   const ema21 = emaLast(closes, 21);
+  const ema50 = emaLast(closes, 50);
   const rsi = calcRSI(closes, 14);
   const macd = calcMACD(closes);
   const hist = macd?.histogram ?? 0;
@@ -357,6 +358,9 @@ async function processBot(bot: Record<string, unknown>) {
   await log(botId, userId, "info", `[${hhmmss()}] 📊 Analyzing ${symbol} on ${timeframe}...`);
   if (ema9 != null && ema21 != null) {
     await log(botId, userId, "info", `[${hhmmss()}] 📈 EMA9 (${fmt(ema9, symbol)}) ${ema9 > ema21 ? ">" : "<"} EMA21 (${fmt(ema21, symbol)}) → ${ema9 > ema21 ? "Uptrend ✓" : "Downtrend ✓"}`);
+  }
+  if (ema50 != null) {
+    await log(botId, userId, "info", `[${hhmmss()}] 🧭 Trend EMA50 (${fmt(ema50, symbol)}) → Price ${price > ema50 ? "above ✓ (Bullish)" : "below ✓ (Bearish)"}`);
   }
   if (rsi != null) {
     const tag = rsi > 70 ? "Overbought" : rsi < 30 ? "Oversold" : "Neutral";
