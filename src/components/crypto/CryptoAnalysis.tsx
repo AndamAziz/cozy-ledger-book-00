@@ -382,25 +382,18 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       signal: indicators.bollinger.percentB < 0.1 ? 'buy' : indicators.bollinger.percentB > 0.9 ? 'sell' : 'neutral',
     });
   }
-  if (indicators.sma20 != null) {
+  if (indicators.ema50 != null) {
     rows.push({
-      label: 'SMA 20',
-      value: '$' + fmt(indicators.sma20),
-      signal: currentPrice > indicators.sma20 ? 'buy' : currentPrice < indicators.sma20 ? 'sell' : 'neutral',
+      label: 'EMA 50',
+      value: '$' + fmt(indicators.ema50),
+      signal: currentPrice > indicators.ema50 ? 'buy' : currentPrice < indicators.ema50 ? 'sell' : 'neutral',
     });
   }
-  if (indicators.sma50 != null) {
+  if (indicators.ema9 != null && indicators.ema21 != null) {
     rows.push({
-      label: 'SMA 50',
-      value: '$' + fmt(indicators.sma50),
-      signal: currentPrice > indicators.sma50 ? 'buy' : currentPrice < indicators.sma50 ? 'sell' : 'neutral',
-    });
-  }
-  if (indicators.ema12 != null && indicators.ema26 != null) {
-    rows.push({
-      label: 'EMA 12/26',
-      value: indicators.ema12 > indicators.ema26 ? 'Bullish' : 'Bearish',
-      signal: indicators.ema12 > indicators.ema26 ? 'buy' : 'sell',
+      label: 'EMA 9/21',
+      value: indicators.ema9 > indicators.ema21 ? 'Bullish' : 'Bearish',
+      signal: indicators.ema9 > indicators.ema21 ? 'buy' : 'sell',
     });
   }
 
@@ -417,10 +410,9 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       rsi: indicators.rsi,
       macd: indicators.macd,
       bollinger: indicators.bollinger,
-      sma20: indicators.sma20,
-      sma50: indicators.sma50,
-      ema12: indicators.ema12,
-      ema26: indicators.ema26,
+      ema9: indicators.ema9,
+      ema21: indicators.ema21,
+      ema50: indicators.ema50,
     },
   });
 
