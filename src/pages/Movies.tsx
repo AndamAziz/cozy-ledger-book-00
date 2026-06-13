@@ -60,6 +60,9 @@ const T = {
     downloading: "...",
     subsHint: "زمانەکان: کوردی، ئینگلیزی، عەرەبی و زۆرتر — لە OpenSubtitles بەخۆڕایی",
     allLangs: "هەموو زمانەکان",
+    openPlayIMDb: "🌐 کردنەوە لە PlayIMDb",
+    copyPlayIMDb: "📋 کۆپی کردنی لینک",
+    linkCopied: "لینکەکە کۆپی کرا ✓",
   },
   en: {
     title: "Mov",
