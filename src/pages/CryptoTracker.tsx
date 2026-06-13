@@ -51,7 +51,7 @@ export default function CryptoTracker() {
   coinsRef.current = coinsMap;
 
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
-  const { currencies: forexCurrencies, isLoading: forexLoading } = useForexData();
+  const { currencies: forexCurrencies, isLoading: forexLoading, marketOpen: forexMarketOpen } = useForexData();
   const { metals, isLoading: metalsLoading, marketOpen: metalsMarketOpen } = useMetalsData();
   const cryptoOverview = useCryptoOverview(activeTab === 'crypto' && cryptoView === 'overview');
   const metalsOverview = useMetalsOverview(activeTab === 'metals' && selectedMetalCode === null);
