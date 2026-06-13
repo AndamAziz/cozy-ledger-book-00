@@ -4,8 +4,9 @@ import { useMetalsHistory } from '@/hooks/useMetalsHistory';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalsChart } from '@/components/crypto/MetalsChart';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
+import { GoldProPanel } from '@/components/crypto/GoldProPanel';
 import type { OHLCCandle } from '@/lib/krakenApi';
-import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw, LineChart, Sparkles } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw, LineChart, Sparkles, Crown } from 'lucide-react';
 
 const RANGE_LABELS: Record<string, string> = {
   '1min': '1m', '5min': '5m', '15min': '15m',
@@ -23,7 +24,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const [chartRange, setChartRange] = useState('1d');
-  const [view, setView] = useState<'market' | 'analysis'>(initialView);
+  const [view, setView] = useState<'market' | 'analysis' | 'pro'>(initialView);
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const livePrice = selected?.price || 0;
   const { candles: historyCandles, isLoading: historyLoading, error: historyError, refetch: refetchHistory } = useMetalsHistory(selectedCode, chartRange, livePrice);
@@ -181,6 +182,21 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
               <Sparkles className="h-3.5 w-3.5" />
               {language === 'en' ? 'Analysis' : 'شیکاری'}
             </button>
+            {!isOil && (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={view === 'pro'}
+                aria-label="Gold Pro view / گۆلد پرۆ"
+                onClick={() => setView('pro')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
+                  view === 'pro' ? 'bg-[#d4af37] text-black shadow-sm' : 'text-[#848e9c] hover:text-white'
+                }`}
+              >
+                <Crown className="h-3.5 w-3.5" />
+                {language === 'en' ? 'Pro' : 'پرۆ'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -195,6 +211,11 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
           timeframeLabel={RANGE_LABELS[chartRange] ?? chartRange}
           tradeSymbol={`metal:${selected.name}`}
           tradeLabel={selected.name}
+        />
+      ) : view === 'pro' ? (
+        <GoldProPanel
+          candles={ohlcCandles}
+          price={selected.price}
         />
       ) : (
       <>
