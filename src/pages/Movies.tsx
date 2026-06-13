@@ -206,9 +206,52 @@ export default function Movies() {
     fetchMovies(page);
   }, [page, fetchMovies]);
 
+  const searchByImdbId = useCallback(async (imdbId: string) => {
+    try {
+      const r = await fetch(
+        `https://api.themoviedb.org/3/find/${imdbId}?api_key=${TMDB_KEY}&external_source=imdb_id`,
+      );
+      const d = await r.json();
+      const result = d?.movie_results?.[0];
+      if (result) {
+        const movie: Movie = {
+          tmdb_id: result.id,
+          imdb_id: imdbId,
+          title: result.title || result.original_title || imdbId,
+          year: result.release_date ? result.release_date.slice(0, 4) : "",
+          poster_url: result.poster_path
+            ? `https://image.tmdb.org/t/p/w500${result.poster_path}`
+            : "",
+          rating: result.vote_average ? String(result.vote_average) : "",
+          genre: "",
+          popularity: String(result.popularity || ""),
+          type: "movie",
+          embed_url: "",
+        };
+        setSelected(movie);
+        return true;
+      }
+    } catch {
+      /* ignore */
+    }
+    return false;
+  }, []);
+
   const runAiSearch = useCallback(async () => {
     const q = search.trim();
     if (!q) return;
+
+    /* direct IMDB ID search */
+    if (/^tt\d{7,}$/i.test(q)) {
+      setAiSearching(true);
+      const found = await searchByImdbId(q.toLowerCase());
+      setAiSearching(false);
+      if (!found) {
+        setAiTitle(lang === "ku" ? "IMDB ID نەدۆزرایەوە" : "IMDB ID not found");
+      }
+      return;
+    }
+
     setAiSearching(true);
     setAiTitle(null);
     try {
@@ -224,7 +267,7 @@ export default function Movies() {
     } finally {
       setAiSearching(false);
     }
-  }, [search]);
+  }, [search, searchByImdbId, lang]);
 
   const filtered = movies.filter((m) => {
     const okGenre =
