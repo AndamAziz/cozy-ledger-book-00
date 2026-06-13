@@ -66,11 +66,19 @@ export function SentimentGauge({ sentiment, loading, asset = 'gold' }: Props) {
             />
           </div>
           <p className="mt-3 text-[11px] text-[#848e9c] leading-relaxed">
-            {v <= 25
-              ? bi('ترسی زۆر لە بازار — زۆرجار زێڕ وەک پەناگای سەلامەت بەرز دەبێتەوە.', 'Extreme fear — gold often rises as a safe haven.')
-              : v >= 75
-                ? bi('چاوبەستنی زۆر — مەترسی زیادە، وریابە لە گەڕانەوەی بازار.', 'Extreme greed — risk is high, watch for reversals.')
-                : bi('هەستی بازار ناوەندە — ئاراستە ڕوون نییە.', 'Sentiment is mixed — no strong directional edge.')}
+            {asset === 'crypto' ? (
+              v <= 25
+                ? bi('ترسی زۆر — زۆرجار دەرفەتی کڕینی نرخ نزم، بەڵام وریابە.', 'Extreme fear — often a low-price buying zone, but stay cautious.')
+                : v >= 75
+                  ? bi('چاوبەستنی زۆر — بازار گەرمە، مەترسی گەڕانەوە زیادە.', 'Extreme greed — market is hot, reversal risk is high.')
+                  : bi('هەستی بازار ناوەندە — ئاراستە ڕوون نییە.', 'Sentiment is mixed — no strong directional edge.')
+            ) : (
+              v <= 25
+                ? bi('ترسی زۆر لە بازار — زۆرجار زێڕ وەک پەناگای سەلامەت بەرز دەبێتەوە.', 'Extreme fear — gold often rises as a safe haven.')
+                : v >= 75
+                  ? bi('چاوبەستنی زۆر — مەترسی زیادە، وریابە لە گەڕانەوەی بازار.', 'Extreme greed — risk is high, watch for reversals.')
+                  : bi('هەستی بازار ناوەندە — ئاراستە ڕوون نییە.', 'Sentiment is mixed — no strong directional edge.')
+            )}
           </p>
         </>
       )}
