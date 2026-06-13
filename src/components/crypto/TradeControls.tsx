@@ -244,34 +244,8 @@ export function TradeControls({
     );
   };
 
-  // Reusable open-leg panel (avg entry · size · live P/L only).
-  const LegPanel = ({ side, leg }: { side: 'buy' | 'sell'; leg: LegInfo }) => {
-    const isBuy = side === 'buy';
-    const accent = isBuy ? '#0ecb81' : '#f6465d';
-    const pnl = legPnl(side, leg, currentPrice);
-    return (
-      <div className="rounded-lg bg-[#0d1117] border px-2.5 py-2 space-y-2" style={{ borderColor: `${accent}33` }}>
-        {/* Header: side + avg + size + live P/L */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[10px] sm:text-xs">
-            <span className="font-bold" style={{ color: accent }}>
-              {isBuy ? bi('کڕین', 'Buy', 'Al') : bi('فرۆشتن', 'Sell', 'Sat')}
-            </span>
-            <span className="text-[#848e9c]">{bi('ناوەند', 'Avg', 'Ort.')}</span>
-            <span className="text-white font-bold tabular-nums">{fmtMoney(leg.entryPrice)}</span>
-            <span className="text-[#848e9c]">· {bi('بڕ', 'Size', 'Miktar')}</span>
-            <span className="text-white font-bold tabular-nums">{fmtQty(leg.qty)}</span>
-          </div>
-          {pnl && (
-            <span className={`text-[11px] sm:text-xs font-bold tabular-nums ${pnl.positive ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-              {pnl.positive ? '+' : '−'}${fmtMoney(Math.abs(pnl.value))} ({pnl.positive ? '+' : '−'}{Math.abs(pnl.pct).toFixed(2)}%)
-            </span>
-          )}
-        </div>
 
-      </div>
-    );
-  };
+
 
   // Batch close helpers — close legs by profit / loss / all at once.
   const profitSum = (buyPnl?.positive ? buyPnl.value : 0) + (sellPnl?.positive ? sellPnl.value : 0);
