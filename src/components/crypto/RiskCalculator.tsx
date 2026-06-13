@@ -60,8 +60,10 @@ export function RiskCalculator({
       stopLoss: Number.isFinite(sl) ? sl : 0,
       rr,
       side,
+      contractSize,
+      pipSize,
     });
-  }, [balance, riskPct, entry, stopLoss, rr, side]);
+  }, [balance, riskPct, entry, stopLoss, rr, side, contractSize, pipSize]);
 
   const hasInputs = parseFloat(entry) > 0 && parseFloat(stopLoss) > 0 && parseFloat(balance) > 0;
 
