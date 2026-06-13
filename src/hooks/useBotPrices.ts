@@ -56,7 +56,7 @@ export function useBotPrices() {
 
   useEffect(() => {
     load();
-    const t = window.setInterval(load, 4000);
+    const t = window.setInterval(load, 2000);
     return () => window.clearInterval(t);
   }, [load]);
 
