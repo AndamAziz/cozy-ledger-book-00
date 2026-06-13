@@ -123,12 +123,19 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
   // Open or ADD to a leg. Buy and Sell can both be open at once (hedge mode).
   // A position on another asset must be closed first.
-  const handleAdd = (side: 'buy' | 'sell') => {
+  const handleAdd = (side: 'buy' | 'sell', tpSlPct?: number) => {
     if (balance <= 0 || currentPrice <= 0) return;
     if (otherPositionLabel) return;
     // Buy fills at the ask, sell fills at the bid (matches the button prices).
     const fillPrice = side === 'buy' ? askPrice(currentPrice) : bidPrice(currentPrice);
     openOrAdd({ symbol: pair, label: `${symbol}/USD`, side, price: fillPrice, amount: tradeAmount });
+    // Auto-apply a symmetric TP/SL preset (% of fill price) when requested.
+    if (tpSlPct != null && tpSlPct > 0) {
+      const delta = fillPrice * (tpSlPct / 100);
+      const tp = side === 'buy' ? fillPrice + delta : fillPrice - delta;
+      const sl = side === 'buy' ? fillPrice - delta : fillPrice + delta;
+      setTpSl(pair, side, +tp.toFixed(6), +sl.toFixed(6));
+    }
   };
 
   // Close one leg and realise its P/L (handled in context).
