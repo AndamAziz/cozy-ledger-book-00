@@ -30,6 +30,11 @@ export interface LegInfo {
 
 export const TRADE_AMOUNTS = [0.01, 0.05, 0.1];
 
+/** One-click quick lot sizes (instant size selection). */
+export const QUICK_LOTS = [0.01, 0.05, 0.1, 0.25, 0.5];
+/** Quick TP/SL presets (% of entry) applied automatically on open. */
+export const QUICK_TPSL = [0.5, 1, 1.5];
+
 interface TradeControlsProps {
   amount: number;
   pct: TradePct | null;
