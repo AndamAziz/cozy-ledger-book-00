@@ -984,6 +984,8 @@ function MovieModal({
             disabled={trailerLoading || trailer === "none"}
           />
           <ActionBtn label={t.aiInfo} onClick={loadAiInfo} />
+          <ActionBtn label={t.subs} onClick={loadSubs} />
+
         </div>
         {trailer === "none" && (
           <div style={{ padding: "8px 16px 0", fontSize: 12.5, color: C.muted }}>
