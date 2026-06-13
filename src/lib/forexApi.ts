@@ -131,4 +131,41 @@ export async function fetchForexRates(): Promise<ForexResult> {
         change,
       };
     });
+
+  return { currencies, marketOpen: isForexMarketOpen() };
+}
+
+/** Spot forex trades Sun 22:00 UTC → Fri 22:00 UTC. */
+export function isForexMarketOpen(now = new Date()): boolean {
+  const dow = now.getUTCDay();
+  const hour = now.getUTCHours();
+  if (dow === 6) return false;
+  if (dow === 0) return hour >= 22;
+  if (dow === 5) return hour < 22;
+  return true;
+}
+
+export interface ForexCandle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+/** Fetch OHLC candles for USD/<code> (or silver) from the edge function. */
+export async function fetchForexCandles(code: string, range = '1mo'): Promise<ForexCandle[]> {
+  try {
+    const res = await fetch(`${FOREX_FN}?history=${encodeURIComponent(code)}&range=${range}`, { headers: FX_HEADERS });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const candles = Array.isArray(data?.candles) ? data.candles : [];
+    return candles.map((c: { time: number; open: number; high: number; low: number; close: number }) => ({
+      ...c,
+      volume: 0,
+    }));
+  } catch {
+    return [];
+  }
 }
