@@ -119,8 +119,11 @@ export default function BotDetail() {
             <button onClick={() => navigate("/crypto")} className="rounded-lg p-1.5 hover:bg-secondary"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
             <h1 className="text-lg font-bold text-foreground">{bot.name}</h1>
           </div>
-          <div className="rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm font-bold tabular-nums text-gold">
-            💰 ${balance != null ? fmtUsd(balance) : "—"}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <div className="rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm font-bold tabular-nums text-gold">
+              💰 ${balance != null ? fmtUsd(balance) : "—"}
+            </div>
           </div>
         </div>
 
