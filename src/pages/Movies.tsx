@@ -1349,22 +1349,38 @@ function ActionBtn({
   label,
   onClick,
   primary,
+  cyan,
   disabled,
 }: {
   label: string;
   onClick: () => void;
   primary?: boolean;
+  cyan?: boolean;
   disabled?: boolean;
 }) {
+  let bg: string, color: string, border: string;
+  if (cyan) {
+    bg = "#00BCD4";
+    color = "#0A0A0F";
+    border = "#00BCD4";
+  } else if (primary) {
+    bg = C.gold;
+    color = "#0A0A0F";
+    border = C.gold;
+  } else {
+    bg = C.panel2;
+    color = C.text;
+    border = C.border;
+  }
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
         flex: 1,
-        background: primary ? C.gold : C.panel2,
-        color: primary ? "#0A0A0F" : C.text,
-        border: `1px solid ${primary ? C.gold : C.border}`,
+        background: bg,
+        color: color,
+        border: `1px solid ${border}`,
         borderRadius: 12,
         padding: "11px 8px",
         cursor: disabled ? "not-allowed" : "pointer",
