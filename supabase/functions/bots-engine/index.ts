@@ -167,6 +167,19 @@ function hhmmss(): string {
 async function log(botId: string, userId: string, level: string, message: string) {
   await admin.from("bot_logs").insert({ bot_id: botId, user_id: userId, level, message });
 }
+async function notify(
+  userId: string,
+  botId: string | null,
+  type: string,
+  title: string,
+  message: string,
+  pnl?: number,
+) {
+  await admin.from("bot_notifications").insert({
+    user_id: userId, bot_id: botId, type, title, message,
+    pnl: pnl == null ? null : +pnl.toFixed(2),
+  });
+}
 function fmt(n: number, symbol: string): string {
   const dec = symbol === "USD/JPY" ? 3 : 2;
   return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
