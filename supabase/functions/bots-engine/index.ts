@@ -234,7 +234,54 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Balance updated: $${newBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 }
 
+// ───────────────────── live recommendation (hold vs close) ─────────────────────
+// Posts an "advice" log at most once per ~55s so the user can see, in real time,
+// whether the bot suggests holding the position or closing it manually.
+async function maybeLogAdvice(
+  botId: string, userId: string, symbol: string, dir: string,
+  entry: number, price: number, sl: number, tp: number, amount: number,
+) {
+  // Throttle: skip if we logged advice in the last 55 seconds.
+  const { data: last } = await admin
+    .from("bot_logs")
+    .select("created_at")
+    .eq("bot_id", botId)
+    .eq("level", "advice")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (last && last.length) {
+    const age = Date.now() - new Date(last[0].created_at as string).getTime();
+    if (age < 55_000) return;
+  }
+
+  const diffPct = dir === "buy" ? (price - entry) / entry : (entry - price) / entry;
+  const pnl = diffPct * amount;
+  const sign = pnl >= 0 ? "+" : "-";
+
+  // Progress toward TP (positive) vs toward SL (negative), 0..1 each way.
+  const tpDist = Math.abs(tp - entry);
+  const slDist = Math.abs(entry - sl);
+  const moved = dir === "buy" ? price - entry : entry - price;
+  const towardTp = tpDist > 0 ? Math.max(0, moved) / tpDist : 0;
+  const towardSl = slDist > 0 ? Math.max(0, -moved) / slDist : 0;
+
+  let verdict: string;
+  if (towardTp >= 0.6) {
+    verdict = `🟢 HOLD — strong, ${Math.round(towardTp * 100)}% to take-profit. Let it run.`;
+  } else if (towardSl >= 0.6) {
+    verdict = `🔴 CONSIDER CLOSING — ${Math.round(towardSl * 100)}% to stop-loss. You may close manually now.`;
+  } else if (moved >= 0) {
+    verdict = `🟢 HOLD — in profit, trade on track.`;
+  } else {
+    verdict = `🟡 HOLD — slightly against, still within range.`;
+  }
+
+  await log(botId, userId, "advice",
+    `[${hhmmss()}] 🤖 ${dir.toUpperCase()} @ $${fmt(entry, symbol)} → now $${fmt(price, symbol)} | Unrealized: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(diffPct * 100).toFixed(2)}%) | ${verdict}`);
+}
+
 // ───────────────────── process a single bot ─────────────────────
+
 async function processBot(bot: Record<string, unknown>) {
   const botId = bot.id as string;
   const userId = bot.user_id as string;
