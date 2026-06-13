@@ -216,7 +216,6 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
         <GoldProPanel
           candles={ohlcCandles}
           price={selected.price}
-          change24h={selected.change}
         />
       ) : (
       <>
