@@ -294,7 +294,7 @@ export default function BotDetail() {
             ) : (
               logs.map((l) => (
                 <div key={l.id} className={cn(
-                  l.level === "win" ? "text-success" : l.level === "loss" ? "text-destructive" : l.level === "signal" ? "text-gold" : "text-muted-foreground",
+                  l.level === "win" ? "text-success" : l.level === "loss" ? "text-destructive" : l.level === "signal" ? "text-gold" : l.level === "advice" ? "text-foreground" : "text-muted-foreground",
                 )}>
                   {l.message}
                 </div>
