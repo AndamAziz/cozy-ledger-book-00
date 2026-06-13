@@ -69,8 +69,8 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
   const restoringRef = useRef(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [chartType, setChartType] = useState<'candles' | 'area' | 'line'>('candles');
-  const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([7, 25]));
-  const [maType, setMaType] = useState<MAType>('MA');
+  const [activeMAs, setActiveMAs] = useState<Set<number>>(new Set([9, 21, 50]));
+  const [maType, setMaType] = useState<MAType>('EMA');
   // MT5-style extras: RSI / MACD panes, depth-of-market ladder, trade journal.
   const [showRSI, setShowRSI] = useState(false);
   const [showMACD, setShowMACD] = useState(false);
