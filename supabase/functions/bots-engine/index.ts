@@ -392,11 +392,18 @@ async function processBot(bot: Record<string, unknown>) {
   const tpPrice = direction === "buy" ? entry * (1 + tpPct) : entry * (1 - tpPct);
 
   await log(botId, userId, "signal", `[${hhmmss()}] ✅ Signal: ${direction.toUpperCase()} (score ${score}/4) — Opening trade`);
-  await admin.from("bot_trades").insert({
+  const { error: insErr } = await admin.from("bot_trades").insert({
     bot_id: botId, user_id: userId, symbol, direction,
     entry_price: +entry.toFixed(4), sl_price: +slPrice.toFixed(4), tp_price: +tpPrice.toFixed(4),
     amount: Number(bot.amount), status: "open",
   });
+  if (insErr) {
+    // Unique index (one open trade per bot) — another concurrent run already
+    // opened the position. Skip silently to avoid stacking trades.
+    if (insErr.code === "23505") return;
+    await log(botId, userId, "info", `[${hhmmss()}] ⚠️ Could not open trade: ${insErr.message}`);
+    return;
+  }
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Opened ${direction.toUpperCase()} @ $${fmt(entry, symbol)} | SL: $${fmt(slPrice, symbol)} | TP: $${fmt(tpPrice, symbol)}`);
 }
 
