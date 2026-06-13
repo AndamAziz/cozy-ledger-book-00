@@ -15,7 +15,36 @@ interface SentimentSnapshot {
   available: boolean;
 }
 
-async function fetchDxy(): Promise<DxySnapshot> {
+async function fetchDxyYahoo(): Promise<DxySnapshot> {
+  try {
+    const r = await fetch(
+      "https://query1.finance.yahoo.com/v8/finance/chart/DX-Y.NYB?interval=1d&range=5d",
+      { headers: { "User-Agent": "Mozilla/5.0" } },
+    );
+    if (!r.ok) return { price: null, changePct: null, available: false };
+    const j = await r.json();
+    const meta = j?.chart?.result?.[0]?.meta;
+    if (!meta) return { price: null, changePct: null, available: false };
+    const price = typeof meta.regularMarketPrice === "number" ? meta.regularMarketPrice : null;
+    const prev =
+      typeof meta.chartPreviousClose === "number"
+        ? meta.chartPreviousClose
+        : typeof meta.previousClose === "number"
+          ? meta.previousClose
+          : null;
+    let changePct: number | null = null;
+    if (price !== null && prev) changePct = ((price - prev) / prev) * 100;
+    return {
+      price,
+      changePct: Number.isFinite(changePct as number) ? changePct : null,
+      available: price !== null,
+    };
+  } catch {
+    return { price: null, changePct: null, available: false };
+  }
+}
+
+async function fetchDxyTwelve(): Promise<DxySnapshot> {
   const key = Deno.env.get("TWELVE_DATA_API_KEY");
   if (!key) return { price: null, changePct: null, available: false };
   try {
@@ -42,6 +71,12 @@ async function fetchDxy(): Promise<DxySnapshot> {
   } catch {
     return { price: null, changePct: null, available: false };
   }
+}
+
+async function fetchDxy(): Promise<DxySnapshot> {
+  const yahoo = await fetchDxyYahoo();
+  if (yahoo.available) return yahoo;
+  return fetchDxyTwelve();
 }
 
 async function fetchFearGreed(): Promise<SentimentSnapshot> {
