@@ -29,6 +29,7 @@ export default function BotDetail() {
   const { bot, openTrade, lastClosed, logs, loading } = useBotDetail(id);
   const { balance } = useDemoBalance();
   const { quotes } = useBotPrices();
+  const { perf } = useBotPerformance(id);
   const [busy, setBusy] = useState(false);
   const [, force] = useState(0);
 
