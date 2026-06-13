@@ -268,10 +268,16 @@ export function MarketNewsModal({ open, onClose }: Props) {
                                 </span>
                               )}
                               <span
-                                className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                                className="text-[9px] font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1"
                                 style={{ color: col, backgroundColor: col + '1a' }}
                               >
                                 {a.usdUp === true ? bi('دۆلار ↑', 'USD ↑') : a.usdUp === false ? bi('دۆلار ↓', 'USD ↓') : bi('دۆلار ⟷', 'USD ⟷')} · {goldNote}
+                                {a.usdUp === false && (
+                                  <TrendingUp className="h-3.5 w-3.5 animate-flash-blink" style={{ color: C_UP }} />
+                                )}
+                                {a.usdUp === true && (
+                                  <TrendingDown className="h-3.5 w-3.5 animate-flash-blink" style={{ color: C_DOWN }} />
+                                )}
                               </span>
                             </div>
                           )}
