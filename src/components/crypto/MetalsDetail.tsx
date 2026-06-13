@@ -212,6 +212,12 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
           tradeSymbol={`metal:${selected.name}`}
           tradeLabel={selected.name}
         />
+      ) : view === 'pro' ? (
+        <GoldProPanel
+          candles={ohlcCandles}
+          price={selected.price}
+          change24h={selected.change}
+        />
       ) : (
       <>
       {/* Price History Chart */}
