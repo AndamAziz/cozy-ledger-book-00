@@ -1035,8 +1035,30 @@ function MovieModal({
           />
           <ActionBtn label={t.aiInfo} onClick={loadAiInfo} />
           <ActionBtn label={t.subs} onClick={loadSubs} />
-
         </div>
+
+        {/* PlayIMDb buttons */}
+        {movie.imdb_id && (
+          <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
+            <ActionBtn
+              cyan
+              label={t.openPlayIMDb}
+              onClick={() => window.open(`https://www.playimdb.com/title/${movie.imdb_id}/`, "_blank")}
+            />
+            <ActionBtn
+              label={t.copyPlayIMDb}
+              onClick={async () => {
+                const url = `https://www.playimdb.com/title/${movie.imdb_id}/`;
+                try {
+                  await navigator.clipboard.writeText(url);
+                  toast.success(t.linkCopied);
+                } catch {
+                  toast.error(lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed");
+                }
+              }}
+            />
+          </div>
+        )}
         {trailer === "none" && (
           <div style={{ padding: "8px 16px 0", fontSize: 12.5, color: C.muted }}>
             {t.noTrailer}
