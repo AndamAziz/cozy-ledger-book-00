@@ -1,0 +1,1034 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Helmet } from "react-helmet-async";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+
+// ====== Theme ======
+const C = {
+  bg: "#0A0A0F",
+  panel: "#13131c",
+  panel2: "#1b1b27",
+  gold: "#F5C518",
+  goldDim: "rgba(245,197,24,0.15)",
+  text: "#f5f5f7",
+  muted: "#9a9aae",
+  border: "rgba(255,255,255,0.08)",
+};
+
+const TMDB_KEY = "4e44d9029b1270a757cddc766a1bcb63";
+const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
+const TMDB_BACKDROP = "https://image.tmdb.org/t/p/w1280";
+const TMDB_PROFILE = "https://image.tmdb.org/t/p/w185";
+
+const GENRES = [
+  { key: "all", label: "هەموو" },
+  { key: "Action", label: "ئاکشن" },
+  { key: "Comedy", label: "کۆمیدی" },
+  { key: "Drama", label: "دراما" },
+  { key: "Horror", label: "ترسناک" },
+  { key: "Science Fiction", label: "زانستی خەیاڵی" },
+  { key: "Thriller", label: "هەستبزوێن" },
+  { key: "Romance", label: "ڕۆمانسی" },
+  { key: "Animation", label: "ئەنیمەیشن" },
+  { key: "Adventure", label: "سەرکێشی" },
+  { key: "Crime", label: "تاوان" },
+  { key: "Fantasy", label: "فانتازیا" },
+];
+
+interface Movie {
+  tmdb_id: number;
+  imdb_id: string;
+  title: string;
+  year: string;
+  poster_url: string;
+  rating: string;
+  genre: string;
+  popularity: string;
+  type: string;
+  embed_url: string;
+}
+
+interface CastMember {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string | null;
+}
+
+// ====== Global CSS (animations / scrollbar / skeleton) ======
+const GLOBAL_CSS = `
+.mv-scroll::-webkit-scrollbar { height: 6px; width: 8px; }
+.mv-scroll::-webkit-scrollbar-track { background: transparent; }
+.mv-scroll::-webkit-scrollbar-thumb { background: ${C.gold}; border-radius: 8px; opacity:.6; }
+.mv-page { scrollbar-color: ${C.gold} transparent; scrollbar-width: thin; }
+.mv-card { transition: transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s; }
+.mv-card:hover { transform: translateY(-8px) scale(1.035); box-shadow: 0 18px 40px rgba(0,0,0,.6); z-index:2; }
+.mv-card:hover .mv-play { opacity:1; transform: scale(1); }
+.mv-card:hover .mv-poster-img { transform: scale(1.08); filter: brightness(.55); }
+.mv-play { opacity:0; transform: scale(.6); transition: all .28s; }
+.mv-poster-img { transition: transform .5s, filter .35s; }
+@keyframes mvShimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+.mv-skel { background:linear-gradient(90deg,#16161f 25%,#22222e 50%,#16161f 75%); background-size:800px 100%; animation: mvShimmer 1.3s infinite linear; }
+@keyframes mvFade { from{opacity:0; transform: translateY(12px)} to{opacity:1; transform:none} }
+.mv-fade { animation: mvFade .35s ease both; }
+@keyframes mvSpin { to { transform: rotate(360deg) } }
+.mv-spin { animation: mvSpin .8s linear infinite; }
+.mv-genre::-webkit-scrollbar { height:0; }
+`;
+
+export default function Movies() {
+  const navigate = useNavigate();
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [genre, setGenre] = useState("all");
+  const [search, setSearch] = useState("");
+  const [aiSearching, setAiSearching] = useState(false);
+  const [aiTitle, setAiTitle] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Movie | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const fetchMovies = useCallback(async (p: number) => {
+    setLoading(true);
+    try {
+      const r = await fetch(`https://vidapi.ru/movies/latest/page-${p}.json`);
+      const data = await r.json();
+      setMovies(Array.isArray(data.items) ? data.items : []);
+      setTotalPages(Math.min(data.total_pages || 1, 200));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      setMovies([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMovies(page);
+  }, [page, fetchMovies]);
+
+  const runAiSearch = useCallback(async () => {
+    const q = search.trim();
+    if (!q) return;
+    setAiSearching(true);
+    setAiTitle(null);
+    try {
+      const { data } = await supabase.functions.invoke("movies-ai", {
+        body: { action: "resolve-title", query: q },
+      });
+      if (data?.corrected && data?.title) {
+        setAiTitle(data.title);
+        setSearch(data.title);
+      }
+    } catch {
+      /* ignore — keep original search */
+    } finally {
+      setAiSearching(false);
+    }
+  }, [search]);
+
+  const filtered = movies.filter((m) => {
+    const okGenre =
+      genre === "all" || (m.genre || "").toLowerCase().includes(genre.toLowerCase());
+    const okSearch =
+      !search.trim() ||
+      (m.title || "").toLowerCase().includes(search.trim().toLowerCase());
+    return okGenre && okSearch;
+  });
+
+  return (
+    <div
+      dir="rtl"
+      className="mv-page"
+      style={{
+        minHeight: "100dvh",
+        background: C.bg,
+        color: C.text,
+        fontFamily:
+          "'Segoe UI', system-ui, 'Noto Sans Arabic', Tahoma, sans-serif",
+      }}
+    >
+      <style>{GLOBAL_CSS}</style>
+      <Helmet>
+        <title>فیلمەکان 🎬 - CITY TAXPERTS</title>
+        <meta name="description" content="تازەترین فیلمەکان بە کوردی — گەڕان و سەیرکردنی فیلم." />
+      </Helmet>
+
+      {/* Header */}
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 20,
+          background: "rgba(10,10,15,0.85)",
+          backdropFilter: "blur(14px)",
+          borderBottom: `1px solid ${C.border}`,
+          padding: "14px 16px",
+        }}
+      >
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+            <button
+              onClick={() => navigate("/")}
+              style={{
+                background: C.panel2,
+                color: C.text,
+                border: `1px solid ${C.border}`,
+                borderRadius: 12,
+                padding: "8px 14px",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              ← گەڕانەوە
+            </button>
+            <h1
+              style={{
+                fontSize: 26,
+                fontWeight: 800,
+                margin: 0,
+                letterSpacing: ".5px",
+              }}
+            >
+              <span style={{ color: C.gold }}>فیلم</span>ەکان 🎬
+            </h1>
+          </div>
+
+          {/* Search */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ position: "relative", flex: 1 }}>
+              <input
+                ref={inputRef}
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setAiTitle(null);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && runAiSearch()}
+                placeholder="گەڕان بۆ فیلم... (دەتوانیت ناوی ناودار یان وەسف بنووسیت)"
+                style={{
+                  width: "100%",
+                  background: C.panel,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 14,
+                  padding: "12px 44px 12px 16px",
+                  color: C.text,
+                  fontSize: 15,
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  right: 14,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: C.muted,
+                  fontSize: 16,
+                }}
+              >
+                🔍
+              </span>
+            </div>
+            <button
+              onClick={runAiSearch}
+              disabled={aiSearching || !search.trim()}
+              style={{
+                background: C.gold,
+                color: "#0A0A0F",
+                border: "none",
+                borderRadius: 14,
+                padding: "0 18px",
+                cursor: aiSearching ? "wait" : "pointer",
+                fontWeight: 800,
+                fontSize: 14,
+                whiteSpace: "nowrap",
+                opacity: !search.trim() ? 0.5 : 1,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              {aiSearching ? (
+                <span
+                  className="mv-spin"
+                  style={{
+                    width: 16,
+                    height: 16,
+                    border: "2px solid rgba(0,0,0,.3)",
+                    borderTopColor: "#0A0A0F",
+                    borderRadius: "50%",
+                    display: "inline-block",
+                  }}
+                />
+              ) : (
+                "🤖"
+              )}
+              گەڕانی زیرەک
+            </button>
+          </div>
+
+          {aiTitle && (
+            <div
+              className="mv-fade"
+              style={{
+                marginTop: 10,
+                background: C.goldDim,
+                border: `1px solid ${C.gold}`,
+                borderRadius: 12,
+                padding: "8px 14px",
+                fontSize: 13.5,
+                color: C.gold,
+              }}
+            >
+              🤖 AI ناوی ڕاستەقینەی دۆزییەوە: <b>{aiTitle}</b>
+            </div>
+          )}
+
+          {/* Genre pills */}
+          <div
+            className="mv-genre mv-scroll"
+            style={{
+              display: "flex",
+              gap: 8,
+              overflowX: "auto",
+              marginTop: 14,
+              paddingBottom: 2,
+            }}
+          >
+            {GENRES.map((g) => {
+              const active = genre === g.key;
+              return (
+                <button
+                  key={g.key}
+                  onClick={() => setGenre(g.key)}
+                  style={{
+                    flexShrink: 0,
+                    background: active ? C.gold : C.panel,
+                    color: active ? "#0A0A0F" : C.muted,
+                    border: `1px solid ${active ? C.gold : C.border}`,
+                    borderRadius: 999,
+                    padding: "7px 16px",
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all .2s",
+                  }}
+                >
+                  {g.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </header>
+
+      {/* Grid */}
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 16px 40px" }}>
+        {loading ? (
+          <Grid>
+            {Array.from({ length: 18 }).map((_, i) => (
+              <div key={i}>
+                <div
+                  className="mv-skel"
+                  style={{ width: "100%", aspectRatio: "2/3", borderRadius: 14 }}
+                />
+                <div
+                  className="mv-skel"
+                  style={{ height: 12, borderRadius: 6, marginTop: 8, width: "80%" }}
+                />
+              </div>
+            ))}
+          </Grid>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
+            <div style={{ fontSize: 48, marginBottom: 10 }}>🎬</div>
+            هیچ فیلمێک نەدۆزرایەوە
+          </div>
+        ) : (
+          <Grid>
+            {filtered.map((m, i) => (
+              <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} onClick={() => setSelected(m)} />
+            ))}
+          </Grid>
+        )}
+
+        {/* Pagination */}
+        {!search.trim() && (
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        )}
+      </main>
+
+      {selected && (
+        <MovieModal movie={selected} onClose={() => setSelected(null)} />
+      )}
+    </div>
+  );
+}
+
+function Grid({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+        gap: 16,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
+  const rating = parseFloat(movie.rating) || 0;
+  return (
+    <div className="mv-card mv-fade" onClick={onClick} style={{ cursor: "pointer" }}>
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          aspectRatio: "2/3",
+          borderRadius: 14,
+          overflow: "hidden",
+          background: C.panel,
+          border: `1px solid ${C.border}`,
+        }}
+      >
+        <img
+          className="mv-poster-img"
+          src={movie.poster_url}
+          alt={movie.title}
+          loading="lazy"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src =
+              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='300'%3E%3Crect width='100%25' height='100%25' fill='%2313131c'/%3E%3C/svg%3E";
+          }}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+        {/* badges */}
+        {rating > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              background: "rgba(0,0,0,.75)",
+              color: C.gold,
+              fontSize: 12,
+              fontWeight: 800,
+              padding: "3px 8px",
+              borderRadius: 8,
+            }}
+          >
+            ★ {rating.toFixed(1)}
+          </div>
+        )}
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            background: "rgba(0,0,0,.75)",
+            color: C.text,
+            fontSize: 11.5,
+            fontWeight: 700,
+            padding: "3px 8px",
+            borderRadius: 8,
+          }}
+        >
+          {movie.year}
+        </div>
+        {/* play overlay */}
+        <div
+          className="mv-play"
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: "50%",
+              background: C.gold,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 6px 20px rgba(245,197,24,.5)",
+            }}
+          >
+            <span style={{ color: "#0A0A0F", fontSize: 22, marginRight: -3 }}>▶</span>
+          </div>
+        </div>
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <div
+          style={{
+            fontSize: 13.5,
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {movie.title}
+        </div>
+        <div
+          style={{
+            fontSize: 11.5,
+            color: C.muted,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {(movie.genre || "").split(",")[0]}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Pagination({
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (p: number) => void;
+}) {
+  const btn = (label: string, p: number, disabled: boolean, active = false) => (
+    <button
+      onClick={() => !disabled && onChange(p)}
+      disabled={disabled}
+      style={{
+        background: active ? C.gold : C.panel,
+        color: active ? "#0A0A0F" : disabled ? "#55556a" : C.text,
+        border: `1px solid ${active ? C.gold : C.border}`,
+        borderRadius: 10,
+        padding: "8px 14px",
+        minWidth: 42,
+        cursor: disabled ? "not-allowed" : "pointer",
+        fontWeight: 700,
+        fontSize: 14,
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  const pages: number[] = [];
+  const start = Math.max(1, page - 2);
+  const end = Math.min(totalPages, start + 4);
+  for (let i = start; i <= end; i++) pages.push(i);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 30,
+        flexWrap: "wrap",
+      }}
+    >
+      {btn("اولین", 1, page === 1)}
+      {btn("‹", page - 1, page === 1)}
+      {pages.map((p) => btn(String(p), p, false, p === page))}
+      {btn("›", page + 1, page === totalPages)}
+      {btn("آخرین", totalPages, page === totalPages)}
+    </div>
+  );
+}
+
+// ====== Modal ======
+type Tab = "info" | "cast" | "ai";
+
+function MovieModal({ movie, onClose }: { movie: Movie; onClose: () => void }) {
+  const [tab, setTab] = useState<Tab>("info");
+  const [backdrop, setBackdrop] = useState<string | null>(null);
+  const [director, setDirector] = useState<string>("");
+  const [cast, setCast] = useState<CastMember[]>([]);
+  const [watch, setWatch] = useState(false);
+  const [trailer, setTrailer] = useState<string | null>(null);
+  const [trailerLoading, setTrailerLoading] = useState(false);
+  const [trailerOpen, setTrailerOpen] = useState(false);
+  const [aiInfo, setAiInfo] = useState<string>("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string>("");
+
+  const rating = parseFloat(movie.rating) || 0;
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  // fetch TMDB details + credits
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/movie/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits`,
+        );
+        const d = await r.json();
+        if (!alive) return;
+        if (d.backdrop_path) setBackdrop(TMDB_BACKDROP + d.backdrop_path);
+        const dir = d.credits?.crew?.find((c: { job: string }) => c.job === "Director");
+        if (dir) setDirector(dir.name);
+        if (Array.isArray(d.credits?.cast)) setCast(d.credits.cast.slice(0, 18));
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [movie.tmdb_id]);
+
+  const loadTrailer = async () => {
+    if (trailer) {
+      setTrailerOpen(true);
+      return;
+    }
+    setTrailerLoading(true);
+    try {
+      const r = await fetch(
+        `https://api.themoviedb.org/3/movie/${movie.tmdb_id}/videos?api_key=${TMDB_KEY}`,
+      );
+      const d = await r.json();
+      const yt = (d.results || []).find(
+        (v: { site: string; type: string }) =>
+          v.site === "YouTube" && v.type === "Trailer",
+      ) || (d.results || []).find((v: { site: string }) => v.site === "YouTube");
+      if (yt) {
+        setTrailer(yt.key);
+        setTrailerOpen(true);
+      } else {
+        setTrailer("none");
+      }
+    } catch {
+      setTrailer("none");
+    } finally {
+      setTrailerLoading(false);
+    }
+  };
+
+  const loadAiInfo = async () => {
+    setTab("ai");
+    if (aiInfo || aiLoading) return;
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const { data, error } = await supabase.functions.invoke("movies-ai", {
+        body: {
+          action: "info",
+          title: movie.title,
+          year: movie.year,
+          genre: movie.genre,
+        },
+      });
+      if (error) throw error;
+      setAiInfo(data?.info || "زانیاری بەردەست نییە.");
+    } catch {
+      setAiError("هەڵەیەک ڕوویدا لە وەرگرتنی زانیاری. تکایە دووبارە هەوڵبدەرەوە.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "info", label: "زانیاری" },
+    { key: "cast", label: "ئەکتەرەکان" },
+    { key: "ai", label: "🤖 AI" },
+  ];
+
+  return (
+    <div
+      dir="rtl"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 100,
+        background: "rgba(0,0,0,.8)",
+        backdropFilter: "blur(8px)",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        overflowY: "auto",
+        padding: "20px 12px",
+      }}
+    >
+      <div
+        className="mv-fade mv-scroll"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: 760,
+          background: C.panel,
+          borderRadius: 20,
+          overflow: "hidden",
+          border: `1px solid ${C.border}`,
+          boxShadow: "0 30px 80px rgba(0,0,0,.7)",
+        }}
+      >
+        {/* Backdrop header */}
+        <div style={{ position: "relative", width: "100%", aspectRatio: "16/8" }}>
+          {backdrop ? (
+            <img
+              src={backdrop}
+              alt={movie.title}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div className="mv-skel" style={{ width: "100%", height: "100%" }} />
+          )}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `linear-gradient(to top, ${C.panel} 5%, rgba(19,19,28,.4) 60%, rgba(19,19,28,.1) 100%)`,
+            }}
+          />
+          <button
+            onClick={onClose}
+            style={{
+              position: "absolute",
+              top: 12,
+              left: 12,
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: "rgba(0,0,0,.6)",
+              color: C.text,
+              border: "none",
+              cursor: "pointer",
+              fontSize: 18,
+            }}
+          >
+            ✕
+          </button>
+
+          {/* poster + title */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 14,
+              right: 16,
+              left: 16,
+              display: "flex",
+              gap: 14,
+              alignItems: "flex-end",
+            }}
+          >
+            <img
+              src={movie.poster_url}
+              alt={movie.title}
+              style={{
+                width: 90,
+                borderRadius: 10,
+                border: `2px solid ${C.border}`,
+                flexShrink: 0,
+                boxShadow: "0 8px 20px rgba(0,0,0,.5)",
+              }}
+            />
+            <div style={{ paddingBottom: 4 }}>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{movie.title}</h2>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  marginTop: 6,
+                  fontSize: 13,
+                  color: C.muted,
+                  alignItems: "center",
+                }}
+              >
+                <span>{movie.year}</span>
+                {rating > 0 && (
+                  <span style={{ color: C.gold, fontWeight: 800 }}>★ {rating.toFixed(1)}</span>
+                )}
+                <span>{(movie.genre || "").split(",").slice(0, 2).join("، ")}</span>
+              </div>
+              {director && (
+                <div style={{ fontSize: 12.5, color: C.muted, marginTop: 4 }}>
+                  دەرهێنەر: <span style={{ color: C.text }}>{director}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div style={{ display: "flex", gap: 8, padding: "14px 16px 0" }}>
+          <ActionBtn primary label="▶ سەیرکردن" onClick={() => setWatch(true)} />
+          <ActionBtn
+            label={trailerLoading ? "..." : "🎬 تریلەر"}
+            onClick={loadTrailer}
+            disabled={trailerLoading || trailer === "none"}
+          />
+          <ActionBtn label="🤖 زانیاری AI" onClick={loadAiInfo} />
+        </div>
+        {trailer === "none" && (
+          <div style={{ padding: "8px 16px 0", fontSize: 12.5, color: C.muted }}>
+            تریلەر بەردەست نییە بۆ ئەم فیلمە.
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div
+          style={{
+            display: "flex",
+            gap: 4,
+            padding: "14px 16px 0",
+            borderBottom: `1px solid ${C.border}`,
+          }}
+        >
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => (t.key === "ai" ? loadAiInfo() : setTab(t.key))}
+              style={{
+                background: "none",
+                border: "none",
+                color: tab === t.key ? C.gold : C.muted,
+                fontWeight: 800,
+                fontSize: 14,
+                padding: "8px 12px",
+                cursor: "pointer",
+                borderBottom: `2px solid ${tab === t.key ? C.gold : "transparent"}`,
+                marginBottom: -1,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div style={{ padding: 16, minHeight: 160 }}>
+          {tab === "info" && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px,1fr))",
+                gap: 10,
+              }}
+            >
+              <InfoCell label="ناونیشان" value={movie.title} />
+              <InfoCell label="ساڵ" value={movie.year} />
+              <InfoCell label="هەڵسەنگاندن" value={rating > 0 ? `★ ${rating.toFixed(1)}` : "—"} />
+              <InfoCell label="جۆر" value={movie.genre || "—"} />
+              <InfoCell label="IMDB ID" value={movie.imdb_id} />
+              <InfoCell label="TMDB ID" value={String(movie.tmdb_id)} />
+            </div>
+          )}
+
+          {tab === "cast" && (
+            <div>
+              {cast.length === 0 ? (
+                <div style={{ color: C.muted, fontSize: 14 }}>زانیاری ئەکتەران بەردەست نییە.</div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(90px,1fr))",
+                    gap: 12,
+                  }}
+                >
+                  {cast.map((c) => (
+                    <div key={c.id} style={{ textAlign: "center" }}>
+                      <img
+                        src={
+                          c.profile_path
+                            ? TMDB_PROFILE + c.profile_path
+                            : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='150'%3E%3Crect width='100%25' height='100%25' fill='%231b1b27'/%3E%3Ctext x='50%25' y='50%25' font-size='40' fill='%239a9aae' text-anchor='middle' dy='.35em'%3E%3F%3C/text%3E%3C/svg%3E"
+                        }
+                        alt={c.name}
+                        loading="lazy"
+                        style={{
+                          width: "100%",
+                          aspectRatio: "2/3",
+                          objectFit: "cover",
+                          borderRadius: 10,
+                          border: `1px solid ${C.border}`,
+                        }}
+                      />
+                      <div style={{ fontSize: 12, fontWeight: 700, marginTop: 5 }}>{c.name}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{c.character}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === "ai" && (
+            <div>
+              {aiLoading ? (
+                <div style={{ textAlign: "center", padding: "30px 0", color: C.muted }}>
+                  <span
+                    className="mv-spin"
+                    style={{
+                      width: 30,
+                      height: 30,
+                      border: `3px solid ${C.border}`,
+                      borderTopColor: C.gold,
+                      borderRadius: "50%",
+                      display: "inline-block",
+                      marginBottom: 10,
+                    }}
+                  />
+                  <div>AI زانیاری دەنووسێت...</div>
+                </div>
+              ) : aiError ? (
+                <div style={{ color: "#ff6b6b", fontSize: 14 }}>{aiError}</div>
+              ) : (
+                <div
+                  style={{
+                    fontSize: 14.5,
+                    lineHeight: 2,
+                    color: C.text,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {aiInfo}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Watch player */}
+      {watch && (
+        <PlayerOverlay
+          src={`https://vaplayer.ru/embed/movie/${movie.imdb_id}`}
+          onClose={() => setWatch(false)}
+        />
+      )}
+      {/* Trailer player */}
+      {trailerOpen && trailer && trailer !== "none" && (
+        <PlayerOverlay
+          src={`https://www.youtube.com/embed/${trailer}?autoplay=1`}
+          onClose={() => setTrailerOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PlayerOverlay({ src, onClose }: { src: string; onClose: () => void }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 200,
+        background: "rgba(0,0,0,.92)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 12,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 980, position: "relative" }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: -44,
+            left: 0,
+            background: C.panel2,
+            color: C.text,
+            border: `1px solid ${C.border}`,
+            borderRadius: 10,
+            padding: "8px 16px",
+            cursor: "pointer",
+            fontWeight: 700,
+          }}
+        >
+          ✕ داخستن
+        </button>
+        <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden" }}>
+          <iframe
+            src={src}
+            title="player"
+            allowFullScreen
+            allow="autoplay; encrypted-media; fullscreen"
+            style={{ width: "100%", height: "100%", border: "none" }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActionBtn({
+  label,
+  onClick,
+  primary,
+  disabled,
+}: {
+  label: string;
+  onClick: () => void;
+  primary?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        flex: 1,
+        background: primary ? C.gold : C.panel2,
+        color: primary ? "#0A0A0F" : C.text,
+        border: `1px solid ${primary ? C.gold : C.border}`,
+        borderRadius: 12,
+        padding: "11px 8px",
+        cursor: disabled ? "not-allowed" : "pointer",
+        fontWeight: 800,
+        fontSize: 13.5,
+        opacity: disabled ? 0.5 : 1,
+        transition: "transform .15s",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function InfoCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        background: C.panel2,
+        borderRadius: 12,
+        padding: "10px 12px",
+        border: `1px solid ${C.border}`,
+      }}
+    >
+      <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 3 }}>{label}</div>
+      <div style={{ fontSize: 13.5, fontWeight: 700, wordBreak: "break-word" }}>{value}</div>
+    </div>
+  );
+}
