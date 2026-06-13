@@ -10,6 +10,7 @@ import { useCryptoOverview } from '@/hooks/useCryptoOverview';
 import { useMetalsOverview } from '@/hooks/useMetalsOverview';
 import { CryptoChart } from '@/components/crypto/CryptoChart';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
+import { CryptoProPanel } from '@/components/crypto/CryptoProPanel';
 import { CoinList } from '@/components/crypto/CoinList';
 import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
