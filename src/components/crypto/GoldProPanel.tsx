@@ -29,7 +29,7 @@ function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
 }
 
-export function GoldProPanel({ candles, price, change24h }: Props) {
+export function GoldProPanel({ candles, price }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
