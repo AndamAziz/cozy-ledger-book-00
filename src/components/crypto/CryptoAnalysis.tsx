@@ -120,6 +120,46 @@ function fmt(n: number | null, digits = 2): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
+// Market-direction colors used to tint the important analysis text + numbers.
+const DIR_UP = '#0ecb81';     // market rising → green
+const DIR_DOWN = '#f6465d';   // market falling → red
+const DIR_FLAT = '#f0b90b';   // undecided → orange
+
+// Map a recommendation/signal to its direction color.
+const dirColorFor = (rec?: Recommendation | SignalType | null): string =>
+  rec === 'buy' ? DIR_UP : rec === 'sell' ? DIR_DOWN : DIR_FLAT;
+
+// Highlight standalone numbers (prices, percentages) in the direction color.
+const NUM_TEST = /^\$?-?\d[\d,]*\.?\d*%?$/;
+function highlightNumbers(text: string, color: string): React.ReactNode[] {
+  return text.split(/(\$?-?\d[\d,]*\.?\d*%?)/g).map((p, i) =>
+    p && NUM_TEST.test(p) ? (
+      <span key={i} className="font-bold" style={{ color }}>{p}</span>
+    ) : (
+      <span key={i}>{p}</span>
+    ),
+  );
+}
+
+/**
+ * Render AI analysis text where the IMPORTANT parts (markdown **bold** segments)
+ * and all numbers are tinted by the current market direction:
+ * green = rising, red = falling, orange = undecided.
+ */
+function ColorizedAnalysis({ text, color, className = '' }: { text: string; color: string; className?: string }) {
+  const nodes = text.split(/(\*\*[^*\n]+\*\*)/g).map((part, i) => {
+    if (/^\*\*[^*\n]+\*\*$/.test(part)) {
+      return (
+        <strong key={i} style={{ color }}>{highlightNumbers(part.slice(2, -2), color)}</strong>
+      );
+    }
+    return <span key={i}>{highlightNumbers(part, color)}</span>;
+  });
+  return <div className={`whitespace-pre-wrap leading-relaxed ${className}`}>{nodes}</div>;
+}
+
+
+
 export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, interval, timeframeLabel, tradeSymbol, tradeLabel }: CryptoAnalysisProps) {
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -1058,7 +1098,11 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         )}
 
         {aiText ? (
-          <div className="text-sm text-[#d1d5db] whitespace-pre-wrap leading-relaxed">{aiText}</div>
+          <ColorizedAnalysis
+            text={aiText}
+            color={dirColorFor(tradeSummary?.recommendation ?? summary.signal)}
+            className="text-sm text-[#d1d5db]"
+          />
         ) : !aiLoading && !aiError && !tradeSummary ? (
           <div className="text-xs text-[#848e9c]">{biLabel('کلیک لە "شیکاری بکە" بکە بۆ پوختەی کڕین/فرۆشتن، ئاستەکان، کەی بکڕیت و کەی بفرۆشیت.', 'Tap "Analyze" for a buy/sell summary, levels, and when to buy / when to sell.')}</div>
         ) : null}
@@ -1553,7 +1597,11 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
 
         {imageText ? (
-          <div className="text-sm text-[#d1d5db] whitespace-pre-wrap leading-relaxed">{imageText}</div>
+          <ColorizedAnalysis
+            text={imageText}
+            color={dirColorFor(imageSummary?.recommendation)}
+            className="text-sm text-[#d1d5db]"
+          />
         ) : imageLoading ? (
           <div className="flex items-center gap-2 text-xs text-[#848e9c]">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
