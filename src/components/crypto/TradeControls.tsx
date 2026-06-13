@@ -440,40 +440,46 @@ export function TradeControls({
         </div>
       )}
 
-      {/* MT5 one-click trade bar: SELL (red, left) · volume stepper · BUY (blue,
+      {/* MT5 one-click trade bar: SELL (red, left) · volume stepper · BUY (green,
           right). Forced LTR so the sides stay fixed in both languages.
           Both sides can be open at once (hedge mode). */}
-      <div dir="ltr" className="flex items-stretch rounded-lg overflow-hidden border border-white/10">
+      <div dir="ltr" className="flex items-stretch gap-2">
         {/* SELL block */}
         <button
           onClick={onSell}
           disabled={depleted || !!otherPositionLabel}
-          className={`relative flex-1 flex flex-col justify-center text-left px-3 py-2 transition-all active:opacity-90 disabled:opacity-40 disabled:pointer-events-none bg-[#f6465d] ${
-            sellLeg && sellLeg.qty > 0 ? 'brightness-110 after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-white after:content-[""]' : ''
-          }`}
+          className={`relative flex-1 flex flex-col justify-center text-left overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
+            sellLeg && sellLeg.qty > 0
+              ? 'bg-[#f43f5e]/10 border-[#f43f5e] after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-white after:content-[""]'
+              : 'bg-transparent border-[#f43f5e]/50'
+          } hover:bg-[#f43f5e]/5 hover:border-[#f43f5e] active:scale-[0.97]`}
         >
+          {/* Subtle gradient overlay */}
+          <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#f43f5e]/8 to-transparent group-hover:from-[#f43f5e]/15 transition-all duration-300" />
           {flash && (
             <span
               key={flash.id}
               className="pointer-events-none absolute inset-0 animate-price-flash"
-              style={{ backgroundColor: flash.up ? '#0ecb81' : '#f6465d' }}
+              style={{ backgroundColor: flash.up ? '#22c55e' : '#f43f5e' }}
             />
           )}
-          <span className="relative text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
+          <span className="relative text-[10px] font-bold uppercase tracking-wide leading-none mb-1" style={{ color: '#f43f5e' }}>
             {bi('فرۆشتن', 'Sell', 'Sat')} · {bi('نرخی کڕیار', 'Bid', 'Alış')}{sellLeg && sellLeg.qty > 0 ? ' +' : ''}
           </span>
-          {renderMtPrice(bid, '#ffffff')}
+          <span className="relative font-bold tabular-nums leading-none" style={{ color: '#f43f5e', fontSize: '17px' }}>
+            {bid > 0 ? fmtPrice(bid) : '--'}
+          </span>
         </button>
 
         {/* Center: volume stepper + live tick dot + refresh */}
-        <div className="flex flex-col items-center justify-center bg-[#0d1117] px-2 min-w-[78px] sm:min-w-[92px]">
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-col items-center justify-center bg-[#0d1117] rounded-lg px-1.5 min-w-[68px] sm:min-w-[80px] border border-white/5">
+          <div className="flex items-center gap-1">
             <button
               onClick={decVolume}
               aria-label={bi('کەمکردنەوە', 'Decrease')}
-              className="w-6 h-6 flex items-center justify-center rounded text-[#848e9c] hover:text-white hover:bg-white/5 active:scale-90 transition-colors"
+              className="w-5 h-5 flex items-center justify-center rounded text-[#848e9c] hover:text-white hover:bg-white/5 active:scale-90 transition-colors"
             >
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-3.5 w-3.5" />
             </button>
             <input
               type="text"
@@ -484,14 +490,14 @@ export function TradeControls({
               onChange={(e) => setAmtText(e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
               onBlur={commitAmt}
               onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-              className="text-sm sm:text-base font-bold text-white tabular-nums w-11 text-center bg-transparent rounded outline-none focus:bg-white/10 focus:ring-1 focus:ring-[#f0b90b]/60"
+              className="text-xs sm:text-sm font-bold text-white tabular-nums w-9 text-center bg-transparent rounded outline-none focus:bg-white/10 focus:ring-1 focus:ring-[#f0b90b]/60"
             />
             <button
               onClick={incVolume}
               aria-label={bi('زیادکردن', 'Increase')}
-              className="w-6 h-6 flex items-center justify-center rounded text-[#848e9c] hover:text-white hover:bg-white/5 active:scale-90 transition-colors"
+              className="w-5 h-5 flex items-center justify-center rounded text-[#848e9c] hover:text-white hover:bg-white/5 active:scale-90 transition-colors"
             >
-              <ChevronUp className="h-4 w-4" />
+              <ChevronUp className="h-3.5 w-3.5" />
             </button>
           </div>
           {/* Spread indicator (ask − bid) */}
@@ -501,13 +507,13 @@ export function TradeControls({
             </span>
           )}
           <div className="mt-1 flex items-center gap-2">
-            <span className={`h-1.5 w-1.5 rounded-full transition-colors ${priceUp ? 'bg-[#0ecb81]' : priceDown ? 'bg-[#f6465d]' : 'bg-[#848e9c]'}`} />
+            <span className={`h-1.5 w-1.5 rounded-full transition-colors ${priceUp ? 'bg-[#22c55e]' : priceDown ? 'bg-[#f43f5e]' : 'bg-[#848e9c]'}`} />
             <button
               onClick={onRefresh}
               aria-label={bi('نوێکردنەوە', 'Refresh')}
               className="flex items-center justify-center text-[#848e9c] hover:text-[#f0b90b] active:scale-90 transition-colors"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className="h-3 w-3" />
             </button>
           </div>
         </div>
@@ -516,21 +522,27 @@ export function TradeControls({
         <button
           onClick={onBuy}
           disabled={depleted || !!otherPositionLabel}
-          className={`relative flex-1 flex flex-col justify-center items-end text-right px-3 py-2 transition-all active:opacity-90 disabled:opacity-40 disabled:pointer-events-none bg-[#2962ff] ${
-            buyLeg && buyLeg.qty > 0 ? 'brightness-110 after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-white after:content-[""]' : ''
-          }`}
+          className={`relative flex-1 flex flex-col justify-center items-end text-right overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
+            buyLeg && buyLeg.qty > 0
+              ? 'bg-[#22c55e]/10 border-[#22c55e] after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-white after:content-[""]'
+              : 'bg-transparent border-[#22c55e]/50'
+          } hover:bg-[#22c55e]/5 hover:border-[#22c55e] active:scale-[0.97]`}
         >
+          {/* Subtle gradient overlay */}
+          <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#22c55e]/8 to-transparent group-hover:from-[#22c55e]/15 transition-all duration-300" />
           {flash && (
             <span
               key={flash.id}
               className="pointer-events-none absolute inset-0 animate-price-flash"
-              style={{ backgroundColor: flash.up ? '#0ecb81' : '#f6465d' }}
+              style={{ backgroundColor: flash.up ? '#22c55e' : '#f43f5e' }}
             />
           )}
-          <span className="relative text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-white/85 leading-none mb-0.5">
+          <span className="relative text-[10px] font-bold uppercase tracking-wide leading-none mb-1" style={{ color: '#22c55e' }}>
             {bi('کڕین', 'Buy', 'Al')} · {bi('نرخی فرۆشیار', 'Ask', 'Satış')}{buyLeg && buyLeg.qty > 0 ? ' +' : ''}
           </span>
-          {renderMtPrice(ask, '#ffffff')}
+          <span className="relative font-bold tabular-nums leading-none" style={{ color: '#22c55e', fontSize: '17px' }}>
+            {ask > 0 ? fmtPrice(ask) : '--'}
+          </span>
         </button>
       </div>
 
