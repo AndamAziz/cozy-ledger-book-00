@@ -8,6 +8,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { BotNotificationsProvider } from "@/contexts/BotNotificationsContext";
 import Index from "./pages/Index";
 import CryptoTracker from "./pages/CryptoTracker";
+import Movies from "./pages/Movies";
 import GestureQA from "./pages/GestureQA";
 import Bots from "./pages/Bots";
 import BotDetail from "./pages/BotDetail";
