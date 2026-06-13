@@ -245,6 +245,19 @@ export function MarketNewsModal({ open, onClose }: Props) {
                       const isUSD = ev.country === 'USD';
                       const col = dirColor(a.usdUp);
                       const pctStr = a.pct === null ? null : `${a.pct >= 0 ? '+' : ''}${a.pct.toFixed(1)}%`;
+                      // Gold direction: use actual result if published, otherwise the forecast vs previous expectation.
+                      let goldUp: boolean | null = null;
+                      if (a.usdUp !== null) {
+                        goldUp = !a.usdUp; // weaker USD => gold up
+                      } else {
+                        const f = parseNum(ev.forecast);
+                        const p = parseNum(ev.previous);
+                        if (f !== null && p !== null && p !== 0 && f !== p) {
+                          const inv = INVERSE_KEYWORDS.some((k) => ev.title.toLowerCase().includes(k));
+                          const usdUp = inv ? f < p : f > p;
+                          goldUp = !usdUp;
+                        }
+                      }
                       const goldNote = a.usdUp === true
                         ? bi('زێڕ ↓ دادەبەزێت', 'Gold ↓ down')
                         : a.usdUp === false
