@@ -936,7 +936,6 @@ export function MetalsChart({ candles, isLoading, error, onRetry, accentColor, r
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
-        onSetTpSl={(side, tp, sl) => setTpSl(mySymbol, side, tp, sl)}
       />
 
       {/* Chart — grows to fill the screen in landscape (MT5-style) */}
