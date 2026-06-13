@@ -14,6 +14,7 @@ import { CryptoProPanel } from '@/components/crypto/CryptoProPanel';
 import { CoinList } from '@/components/crypto/CoinList';
 import { ForexList } from '@/components/crypto/ForexList';
 import { ForexDetail } from '@/components/crypto/ForexDetail';
+import { ForexProPanel } from '@/components/crypto/ForexProPanel';
 import { MetalsList } from '@/components/crypto/MetalsList';
 import { MetalsDetail } from '@/components/crypto/MetalsDetail';
 import { AssetOverview } from '@/components/crypto/AssetOverview';
