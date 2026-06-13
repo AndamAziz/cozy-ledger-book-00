@@ -66,6 +66,7 @@ interface TradeControlsProps {
   onClose: (side: 'buy' | 'sell') => void;
   onRefresh: () => void;
   onAmountChange: (amount: number) => void;
+  onClearTpSl: () => void;
 }
 
 const fmtMoney = (n: number) => {
@@ -120,6 +121,7 @@ export function TradeControls({
   onClose,
   onRefresh,
   onAmountChange,
+  onClearTpSl,
 }: TradeControlsProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string, tr?: string) =>
@@ -135,6 +137,10 @@ export function TradeControls({
   // the optional numeric tpSlPct argument of onBuy / onSell.
   const handleBuy = () => onBuy(tpSlPct ?? undefined);
   const handleSell = () => onSell(tpSlPct ?? undefined);
+  const handleTpSlOff = () => {
+    setTpSlPct(null);
+    onClearTpSl();
+  };
 
   const buyPnl = buyLeg && buyLeg.qty > 0 ? legPnl('buy', buyLeg, currentPrice) : null;
   const sellPnl = sellLeg && sellLeg.qty > 0 ? legPnl('sell', sellLeg, currentPrice) : null;
@@ -390,7 +396,7 @@ export function TradeControls({
           </span>
           <div className="flex flex-1 items-center gap-1">
             <button
-              onClick={() => setTpSlPct(null)}
+              onClick={handleTpSlOff}
               className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border transition-colors active:scale-95 ${
                 tpSlPct == null
                   ? 'bg-white/10 border-white/40 text-white'
