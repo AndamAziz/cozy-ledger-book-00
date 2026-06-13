@@ -57,38 +57,56 @@ interface ERApiResponse {
   rates: Record<string, number>;
 }
 
-// Fetch latest rates from open.er-api.com (free, no key) + XAG from Yahoo
-export async function fetchForexRates(): Promise<ForexCurrency[]> {
-  const [latestRes] = await Promise.all([
-    fetch('https://open.er-api.com/v6/latest/USD'),
-  ]);
+interface LiveRate {
+  price: number;
+  prev: number;
+  change: number;
+  high: number;
+  low: number;
+}
 
+export interface ForexResult {
+  currencies: ForexCurrency[];
+  marketOpen: boolean;
+}
+
+const FOREX_FN = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forex-prices`;
+const FX_HEADERS = {
+  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+};
+
+/** Fetch live (Yahoo-backed) forex rates from the edge function, with er-api fallback. */
+export async function fetchForexRates(): Promise<ForexResult> {
+  // Primary: real-time edge function (Yahoo spot, refreshes every ~2s server-side)
+  try {
+    const res = await fetch(FOREX_FN, { headers: FX_HEADERS });
+    if (res.ok) {
+      const data = await res.json();
+      const rates: Record<string, LiveRate> = data?.rates ?? {};
+      const currencies = CURRENCIES.filter(c => rates[c.code]?.price > 0).map(c => {
+        const r = rates[c.code];
+        return {
+          ...c,
+          rate: r.price,
+          prevRate: r.prev,
+          change: r.change,
+        } as ForexCurrency;
+      });
+      if (currencies.length > 0) {
+        return { currencies, marketOpen: !!data?.marketOpen };
+      }
+    }
+  } catch { /* fall through to er-api */ }
+
+  // Fallback: open.er-api.com daily snapshot (no key)
+  const latestRes = await fetch('https://open.er-api.com/v6/latest/USD');
   if (!latestRes.ok) throw new Error('Failed to fetch forex rates');
   const latest: ERApiResponse = await latestRes.json();
 
-  // Fetch XAG (silver) price from commodities edge function
-  try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    const commoditiesRes = await fetch(
-      `${supabaseUrl}/functions/v1/commodities-prices`,
-      { headers: { apikey: supabaseKey, authorization: `Bearer ${supabaseKey}` } }
-    );
-    if (commoditiesRes.ok) {
-      const data = await commoditiesRes.json();
-      const silverPrice = data?.prices?.XAG;
-      if (silverPrice && silverPrice > 0) {
-        // XAG: 1 USD = 1/price troy oz
-        latest.rates['XAG'] = 1 / silverPrice;
-      }
-    }
-  } catch {}
-
-  // Try to get previous rates from localStorage for change calculation
   const prevKey = 'forex-prev-rates';
   const prevStored = localStorage.getItem(prevKey);
   let prevRates: Record<string, number> = {};
-  
   try {
     if (prevStored) {
       const parsed = JSON.parse(prevStored);
@@ -98,13 +116,9 @@ export async function fetchForexRates(): Promise<ForexCurrency[]> {
     }
   } catch {}
 
-  // Store current rates for next comparison
-  localStorage.setItem(prevKey, JSON.stringify({
-    timestamp: Date.now(),
-    rates: latest.rates,
-  }));
+  localStorage.setItem(prevKey, JSON.stringify({ timestamp: Date.now(), rates: latest.rates }));
 
-  return CURRENCIES
+  const currencies = CURRENCIES
     .filter(c => latest.rates[c.code] != null)
     .map(c => {
       const rate = latest.rates[c.code];
@@ -117,4 +131,41 @@ export async function fetchForexRates(): Promise<ForexCurrency[]> {
         change,
       };
     });
+
+  return { currencies, marketOpen: isForexMarketOpen() };
+}
+
+/** Spot forex trades Sun 22:00 UTC → Fri 22:00 UTC. */
+export function isForexMarketOpen(now = new Date()): boolean {
+  const dow = now.getUTCDay();
+  const hour = now.getUTCHours();
+  if (dow === 6) return false;
+  if (dow === 0) return hour >= 22;
+  if (dow === 5) return hour < 22;
+  return true;
+}
+
+export interface ForexCandle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+/** Fetch OHLC candles for USD/<code> (or silver) from the edge function. */
+export async function fetchForexCandles(code: string, range = '1mo'): Promise<ForexCandle[]> {
+  try {
+    const res = await fetch(`${FOREX_FN}?history=${encodeURIComponent(code)}&range=${range}`, { headers: FX_HEADERS });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const candles = Array.isArray(data?.candles) ? data.candles : [];
+    return candles.map((c: { time: number; open: number; high: number; low: number; close: number }) => ({
+      ...c,
+      volume: 0,
+    }));
+  } catch {
+    return [];
+  }
 }
