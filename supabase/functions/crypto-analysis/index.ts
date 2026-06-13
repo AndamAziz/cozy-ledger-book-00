@@ -499,13 +499,13 @@ Never guarantee outcomes; this is educational, not financial advice.`;
                     },
                     stopLossIndicator: {
                       type: "string",
-                      enum: ["RSI", "MACD", "Bollinger", "SMA", "EMA", "Swing"],
+                      enum: ["RSI", "MACD", "Bollinger", "EMA", "Swing"],
                       description: "The indicator/level the stop-loss is based on.",
                     },
                     stopLossIndicatorValue: {
                       type: "string",
                       description:
-                        "The EXACT numeric level of the indicator the stop is based on, formatted with the indicator name, e.g. \"SMA20 = $2,335\" or \"Bollinger lower band = $2,328\".",
+                        "The EXACT numeric level of the indicator the stop is based on, formatted with the indicator name, e.g. \"EMA50 = $2,335\" or \"Bollinger lower band = $2,328\".",
                     },
                     stopLossBasis: {
                       type: "string",
