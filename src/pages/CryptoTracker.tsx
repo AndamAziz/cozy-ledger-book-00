@@ -175,44 +175,45 @@ export default function CryptoTracker() {
 
       <div className="h-[100dvh] flex flex-col bg-[#0a0e17] text-white overflow-hidden">
         {/* Top bar */}
-        <header className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 border-b border-[#1a1e2e] bg-[#0d1117] shrink-0">
+        {/* Mobile: horizontal scrollable top bar with larger touch targets */}
+        <header className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 border-b border-[#1a1e2e] bg-[#0d1117] shrink-0 overflow-x-auto no-scrollbar">
           {/* Back button */}
           <button
             onClick={() => navigate('/')}
-            className="p-1.5 sm:p-2 rounded-lg hover:bg-[#1a1e2e] active:bg-[#252a3a] transition-colors"
+            className="shrink-0 p-2 sm:p-2 rounded-lg hover:bg-[#1a1e2e] active:bg-[#252a3a] transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
             aria-label={bi('گەڕانەوە بۆ ژمێرکار', 'Back to calculator')}
           >
-            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+            <ArrowLeft className="h-5 w-5 sm:h-5 sm:w-5" />
           </button>
 
           {/* Tab switcher */}
-          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
             <button
               onClick={() => setActiveTab('crypto')}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold transition-colors active:scale-95 ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-xs font-bold transition-colors active:scale-95 min-h-[40px] ${
                 activeTab === 'crypto' ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c] hover:text-white'
               }`}
             >
-              <Bitcoin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span>{bi('کریپتۆ', 'Crypto')}</span>
+              <Bitcoin className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden sm:inline">{bi('کریپتۆ', 'Crypto')}</span>
             </button>
             <button
               onClick={() => setActiveTab('forex')}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold transition-colors active:scale-95 ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-xs font-bold transition-colors active:scale-95 min-h-[40px] ${
                 activeTab === 'forex' ? 'bg-[#2962ff] text-white' : 'text-[#848e9c] hover:text-white'
               }`}
             >
-              <DollarSign className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span>{bi('دراو', 'Forex')}</span>
+              <DollarSign className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden sm:inline">{bi('دراو', 'Forex')}</span>
             </button>
             <button
               onClick={() => setActiveTab('metals')}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold transition-colors active:scale-95 ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-xs font-bold transition-colors active:scale-95 min-h-[40px] ${
                 activeTab === 'metals' ? 'bg-[#d4af37] text-black' : 'text-[#848e9c] hover:text-white'
               }`}
             >
-              <CircleDot className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span>{bi('کانزا', 'Metals')}</span>
+              <CircleDot className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden sm:inline">{bi('کانزا', 'Metals')}</span>
             </button>
           </div>
 
@@ -220,51 +221,51 @@ export default function CryptoTracker() {
 
           <button
             onClick={() => setShowNews(true)}
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold bg-gradient-to-r from-[#f6465d]/20 to-[#f6465d]/5 border border-[#f6465d]/40 hover:border-[#f6465d]/70 rounded-lg transition-colors text-[#f6465d]"
+            className="shrink-0 flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-2.5 py-2 sm:py-1.5 text-xs sm:text-xs font-bold bg-gradient-to-r from-[#f6465d]/20 to-[#f6465d]/5 border border-[#f6465d]/40 hover:border-[#f6465d]/70 rounded-lg transition-colors text-[#f6465d] min-h-[40px] min-w-[40px]"
           >
-            <Newspaper className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <Newspaper className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
             <span className="hidden sm:inline">{bi('هەواڵ', 'News')}</span>
           </button>
 
           <button
             onClick={() => navigate('/bots')}
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold bg-gradient-to-r from-[#d4af37]/20 to-[#d4af37]/5 border border-[#d4af37]/40 hover:border-[#d4af37]/70 rounded-lg transition-colors text-[#d4af37]"
+            className="shrink-0 flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-2.5 py-2 sm:py-1.5 text-xs sm:text-xs font-bold bg-gradient-to-r from-[#d4af37]/20 to-[#d4af37]/5 border border-[#d4af37]/40 hover:border-[#d4af37]/70 rounded-lg transition-colors text-[#d4af37] min-h-[40px] min-w-[40px]"
           >
-            <LineChart className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <LineChart className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
             <span className="hidden sm:inline">{bi('بوتەکان', 'Bots')}</span>
           </button>
 
           <button
             onClick={() => setShowConverter(true)}
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold bg-[#1a1e2e] hover:bg-[#252a3a] active:bg-[#303548] rounded-lg transition-colors text-[#f0b90b]"
+            className="shrink-0 flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-2.5 py-2 sm:py-1.5 text-xs sm:text-xs font-bold bg-[#1a1e2e] hover:bg-[#252a3a] active:bg-[#303548] rounded-lg transition-colors text-[#f0b90b] min-h-[40px] min-w-[40px]"
           >
-            <ArrowRightLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <ArrowRightLeft className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
             <span className="hidden sm:inline">{bi('گۆڕین', 'Convert')}</span>
           </button>
           
           {activeTab === 'crypto' && (
-            <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs">
+            <div className="shrink-0 flex items-center gap-1 sm:gap-1.5 text-xs sm:text-xs min-h-[40px]">
               {isConnected ? (
                 <>
-                  <Wifi className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#0ecb81]" />
+                  <Wifi className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-[#0ecb81]" />
                   <span className="text-[#0ecb81] hidden sm:inline">{bi('ڕاستەوخۆ', 'Live')}</span>
                 </>
               ) : (
                 <>
-                  <WifiOff className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#f6465d]" />
+                  <WifiOff className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-[#f6465d]" />
                   <span className="text-[#f6465d] hidden sm:inline">{bi('پەیوەندیکردنەوە...', 'Reconnecting...')}</span>
                 </>
               )}
             </div>
           )}
           {activeTab === 'forex' && (
-            <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🔴 {bi('ڕاستەوخۆ', 'Live')} • 2s</span>
+            <span className="shrink-0 text-xs sm:text-[10px] text-[#0ecb81] min-h-[40px] flex items-center">🔴 {bi('ڕاستەوخۆ', 'Live')} • 2s</span>
           )}
           {activeTab === 'metals' && (
             metalsMarketOpen ? (
-              <span className="text-[9px] sm:text-[10px] text-[#0ecb81]">🟢 {bi('ڕاستەوخۆ', 'Live')} • 1s</span>
+              <span className="shrink-0 text-xs sm:text-[10px] text-[#0ecb81] min-h-[40px] flex items-center">🟢 {bi('ڕاستەوخۆ', 'Live')} • 1s</span>
             ) : (
-              <span className="text-[9px] sm:text-[10px] text-[#f6465d] flex items-center gap-1">
+              <span className="shrink-0 text-xs sm:text-[10px] text-[#f6465d] flex items-center gap-1 min-h-[40px]">
                 🔴 {bi('داخراو', 'Closed')}
               </span>
             )
