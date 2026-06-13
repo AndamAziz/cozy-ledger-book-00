@@ -850,8 +850,8 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         balance={balance}
         realizedPnl={realizedPnl}
         onRenew={renew}
-        onBuy={() => handleAdd('buy')}
-        onSell={() => handleAdd('sell')}
+        onBuy={(tpSlPct) => handleAdd('buy', tpSlPct)}
+        onSell={(tpSlPct) => handleAdd('sell', tpSlPct)}
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
