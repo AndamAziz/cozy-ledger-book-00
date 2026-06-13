@@ -682,10 +682,10 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       {/* Header */}
       <div className="border-b border-white/5">
         {/* Symbol + price */}
-        <div className="flex items-baseline gap-2 px-3 pt-3 pb-2">
+        <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1 px-3 pt-3 pb-2">
           <span className="text-lg sm:text-xl font-bold tracking-tight text-white">{symbol}/USD</span>
           {currentPrice > 0 && (
-            <span className="text-lg sm:text-xl font-bold text-[#f0b90b] tracking-tight truncate">
+            <span className="text-lg sm:text-xl font-bold text-[#f0b90b] tracking-tight tabular-nums">
               ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: currentPrice < 1 ? 6 : 2 })}
             </span>
           )}
