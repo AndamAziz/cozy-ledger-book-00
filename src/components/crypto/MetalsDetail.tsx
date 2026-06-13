@@ -6,7 +6,7 @@ import { MetalsChart } from '@/components/crypto/MetalsChart';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { GoldProPanel } from '@/components/crypto/GoldProPanel';
 import type { OHLCCandle } from '@/lib/krakenApi';
-import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw, LineChart, Sparkles, Crown } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
 
 const RANGE_LABELS: Record<string, string> = {
   '1min': '1m', '5min': '5m', '15min': '15m',
@@ -17,14 +17,13 @@ interface MetalsDetailProps {
   metals: Metal[];
   selectedCode: string | null;
   isLoading: boolean;
-  initialView?: 'market' | 'analysis';
+  view: 'market' | 'analysis' | 'pro';
 }
 
-export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'market' }: MetalsDetailProps) {
+export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDetailProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const [chartRange, setChartRange] = useState('1d');
-  const [view, setView] = useState<'market' | 'analysis' | 'pro'>(initialView);
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const livePrice = selected?.price || 0;
   const { candles: historyCandles, isLoading: historyLoading, error: historyError, refetch: refetchHistory } = useMetalsHistory(selectedCode, chartRange, livePrice);
@@ -157,50 +156,6 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
           </div>
         </div>
 
-        {/* View toggle: Market vs Analysis (segmented) — full width, scrollable on mobile */}
-        <div role="radiogroup" aria-label="View / نمایش" className="mt-3 flex bg-[#1a1e2e] p-1 rounded-lg gap-1 overflow-x-auto no-scrollbar">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={view === 'market'}
-            aria-label="Market view / بازاڕ"
-            onClick={() => setView('market')}
-            className={`flex-1 min-w-[88px] min-h-[44px] flex items-center justify-center gap-1.5 px-3 text-xs font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
-              view === 'market' ? 'bg-[#2d334a] text-white shadow-sm' : 'text-[#848e9c] hover:text-white'
-            }`}
-          >
-            <LineChart className="h-4 w-4 shrink-0" />
-            {language === 'en' ? 'Market' : 'بازاڕ'}
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={view === 'analysis'}
-            aria-label="Analysis view / شیکاری"
-            onClick={() => setView('analysis')}
-            className={`flex-1 min-w-[88px] min-h-[44px] flex items-center justify-center gap-1.5 px-3 text-xs font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
-              view === 'analysis' ? 'bg-[#f0b90b] text-black shadow-sm' : 'text-[#848e9c] hover:text-white'
-            }`}
-          >
-            <Sparkles className="h-4 w-4 shrink-0" />
-            {language === 'en' ? 'Analysis' : 'شیکاری'}
-          </button>
-          {!isOil && (
-            <button
-              type="button"
-              role="radio"
-              aria-checked={view === 'pro'}
-              aria-label="Gold Pro view / گۆلد پرۆ"
-              onClick={() => setView('pro')}
-              className={`flex-1 min-w-[88px] min-h-[44px] flex items-center justify-center gap-1.5 px-3 text-xs font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
-                view === 'pro' ? 'bg-[#d4af37] text-black shadow-sm' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              <Crown className="h-4 w-4 shrink-0" />
-              {language === 'en' ? 'Pro' : 'پرۆ'}
-            </button>
-          )}
-        </div>
       </div>
 
 

@@ -29,6 +29,7 @@ import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
 type TrackerTab = 'crypto' | 'forex' | 'metals';
 type CryptoView = 'overview' | 'chart' | 'analysis' | 'pro';
 type ForexView = 'overview' | 'pro';
+type MetalsView = 'overview' | 'market' | 'analysis' | 'pro';
 
 export default function CryptoTracker() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ export default function CryptoTracker() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedForexCode, setSelectedForexCode] = useState<string | null>(null);
   const [selectedMetalCode, setSelectedMetalCode] = useState<string | null>('XAU');
-  const [metalInitialView, setMetalInitialView] = useState<'market' | 'analysis'>('market');
+  const [metalsView, setMetalsView] = useState<MetalsView>('market');
   const coinsRef = useRef(coinsMap);
   coinsRef.current = coinsMap;
 
@@ -492,35 +493,69 @@ export default function CryptoTracker() {
                 />
               )}
             </div>
-          ) : selectedMetalCode === null ? (
-            <AssetOverview
-              title={bi('پوختەی کاڵاکان', 'Commodities Overview')}
-              subtitle={bi('نرخ، گۆڕان و سیگناڵی کڕین/فرۆشتن', 'Price, change & Buy/Sell signals')}
-              entries={metalsEntries}
-              isLoading={metalsOverview.isLoading}
-              onOpen={(code, mode) => {
-                setMetalInitialView(mode === 'analysis' ? 'analysis' : 'market');
-                setSelectedMetalCode(code);
-              }}
-            />
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
-                <button
-                  onClick={() => setSelectedMetalCode(null)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-[#848e9c] hover:text-white active:scale-95 transition-colors"
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  <span>{bi('پوختە', 'Overview')}</span>
-                </button>
+              {/* Overview / Market / Analysis / Pro sub-toggle — mobile-friendly */}
+              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar">
+                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
+                  <button
+                    onClick={() => { setSelectedMetalCode(null); setMetalsView('overview'); }}
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
+                      selectedMetalCode === null && metalsView === 'overview' ? 'bg-[#2a2e3e] text-[#d4af37]' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <LayoutGrid className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{bi('پوختە', 'Overview')}</span>
+                  </button>
+                  <button
+                    onClick={() => { if (!selectedMetalCode) setSelectedMetalCode('XAU'); setMetalsView('market'); }}
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
+                      selectedMetalCode !== null && metalsView === 'market' ? 'bg-[#2a2e3e] text-[#d4af37]' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <CandlestickChart className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{bi('بازاڕ', 'Market')}</span>
+                  </button>
+                  <button
+                    onClick={() => { if (!selectedMetalCode) setSelectedMetalCode('XAU'); setMetalsView('analysis'); }}
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
+                      selectedMetalCode !== null && metalsView === 'analysis' ? 'bg-[#2a2e3e] text-[#d4af37]' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <Activity className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{bi('شیکاری', 'Analysis')}</span>
+                  </button>
+                  <button
+                    onClick={() => { if (!selectedMetalCode) setSelectedMetalCode('XAU'); setMetalsView('pro'); }}
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
+                      selectedMetalCode !== null && metalsView === 'pro' ? 'bg-[#d4af37] text-black' : 'text-[#848e9c] hover:text-white'
+                    }`}
+                  >
+                    <Crown className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{bi('پرۆ', 'Pro')}</span>
+                  </button>
+                </div>
               </div>
-              <MetalsDetail
-                key={`${selectedMetalCode}-${metalInitialView}`}
-                metals={metals}
-                selectedCode={selectedMetalCode}
-                isLoading={metalsLoading}
-                initialView={metalInitialView}
-              />
+
+              {selectedMetalCode === null ? (
+                <AssetOverview
+                  title={bi('پوختەی کاڵاکان', 'Commodities Overview')}
+                  subtitle={bi('نرخ، گۆڕان و سیگناڵی کڕین/فرۆشتن', 'Price, change & Buy/Sell signals')}
+                  entries={metalsEntries}
+                  isLoading={metalsOverview.isLoading}
+                  onOpen={(code, mode) => {
+                    setMetalsView(mode === 'analysis' ? 'analysis' : 'market');
+                    setSelectedMetalCode(code);
+                  }}
+                />
+              ) : (
+                <MetalsDetail
+                  metals={metals}
+                  selectedCode={selectedMetalCode}
+                  isLoading={metalsLoading}
+                  view={metalsView === 'overview' ? 'market' : metalsView}
+                />
+              )}
             </div>
           )}
         </div>
