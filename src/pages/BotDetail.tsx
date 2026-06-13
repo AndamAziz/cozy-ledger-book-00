@@ -202,8 +202,16 @@ export default function BotDetail() {
               <div className="text-[11px] uppercase text-muted-foreground">P/L</div>
               <div className={cn("font-bold tabular-nums", Number(bot.total_pnl) >= 0 ? "text-success" : "text-destructive")}>
                 {Number(bot.total_pnl) >= 0 ? "+" : "-"}${fmtUsd(Math.abs(Number(bot.total_pnl)))}
-              </div>
-            </div>
+          </div>
+        </div>
+
+        {/* Auto-pause warning */}
+        {bot.auto_paused && (
+          <div className="mt-3 rounded-2xl border border-destructive/50 bg-destructive/10 p-3 text-sm">
+            <div className="font-semibold text-destructive">⏸ Auto-paused after {bot.consecutive_losses} losing trades in a row</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">The bot stopped itself for safety. Starting it again resets the loss streak.</div>
+          </div>
+        )}
           </div>
         </div>
 
