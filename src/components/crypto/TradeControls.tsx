@@ -448,9 +448,9 @@ export function TradeControls({
         <button
           onClick={onSell}
           disabled={depleted || !!otherPositionLabel}
-          className={`relative flex-1 flex flex-col justify-center text-left overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
+          className={`relative flex-1 flex flex-col justify-center items-center overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
             sellLeg && sellLeg.qty > 0
-              ? 'bg-[#f43f5e]/10 border-[#f43f5e] after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-white after:content-[""]'
+              ? 'bg-[#f43f5e]/10 border-[#f43f5e] after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-[#f43f5e] after:content-[""]'
               : 'bg-transparent border-[#f43f5e]/50'
           } hover:bg-[#f43f5e]/5 hover:border-[#f43f5e] active:scale-[0.97]`}
         >
@@ -522,9 +522,9 @@ export function TradeControls({
         <button
           onClick={onBuy}
           disabled={depleted || !!otherPositionLabel}
-          className={`relative flex-1 flex flex-col justify-center items-end text-right overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
+          className={`relative flex-1 flex flex-col justify-center items-center overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
             buyLeg && buyLeg.qty > 0
-              ? 'bg-[#22c55e]/10 border-[#22c55e] after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-white after:content-[""]'
+              ? 'bg-[#22c55e]/10 border-[#22c55e] after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-[#22c55e] after:content-[""]'
               : 'bg-transparent border-[#22c55e]/50'
           } hover:bg-[#22c55e]/5 hover:border-[#22c55e] active:scale-[0.97]`}
         >
