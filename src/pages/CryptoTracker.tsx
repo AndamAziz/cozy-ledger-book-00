@@ -216,6 +216,14 @@ export default function CryptoTracker() {
           <div className="flex-1" />
 
           <button
+            onClick={() => setShowNews(true)}
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold bg-gradient-to-r from-[#f6465d]/20 to-[#f6465d]/5 border border-[#f6465d]/40 hover:border-[#f6465d]/70 rounded-lg transition-colors text-[#f6465d]"
+          >
+            <Newspaper className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">{bi('هەواڵ', 'News')}</span>
+          </button>
+
+          <button
             onClick={() => navigate('/bots')}
             className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold bg-gradient-to-r from-[#d4af37]/20 to-[#d4af37]/5 border border-[#d4af37]/40 hover:border-[#d4af37]/70 rounded-lg transition-colors text-[#d4af37]"
           >
