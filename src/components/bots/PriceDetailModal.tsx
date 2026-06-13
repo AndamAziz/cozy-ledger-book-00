@@ -32,7 +32,7 @@ export function PriceDetailModal({ symbol, quotes, history, onClose }: PriceDeta
 
         <div className="space-y-4">
           <div>
-            <div className="text-3xl font-bold tabular-nums text-foreground">
+            <div className="text-xl font-bold tabular-nums text-foreground">
               {q ? `$${fmtPrice(q.price, symbol)}` : "—"}
             </div>
             <div
@@ -48,9 +48,7 @@ export function PriceDetailModal({ symbol, quotes, history, onClose }: PriceDeta
 
           <div className="rounded-xl border border-border bg-card p-2">
             <Sparkline data={series} color={up ? "#22c55e" : "#ef4444"} height={64} />
-            <div className="mt-1 text-center text-[11px] text-muted-foreground">
-              Last {series.length} live prices
-            </div>
+            <div className="mt-1 text-center text-[11px] text-muted-foreground">Last {series.length} live prices</div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
