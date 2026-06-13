@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { BotNotificationsProvider } from "@/contexts/BotNotificationsContext";
 import Index from "./pages/Index";
 import CryptoTracker from "./pages/CryptoTracker";
 import GestureQA from "./pages/GestureQA";
