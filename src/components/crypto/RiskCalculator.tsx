@@ -1,11 +1,23 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { calculateRisk, RiskSide } from '@/lib/risk';
+import { calculateRisk, RiskSide, GOLD_CONTRACT_SIZE, GOLD_PIP_SIZE } from '@/lib/risk';
 import { Calculator } from 'lucide-react';
 
 interface Props {
-  /** Live gold price used to pre-fill the entry field. */
+  /** Live price used to pre-fill the entry field. */
   defaultEntry: number;
+  /** Units per 1 lot. Gold = 100 oz; crypto = 1 coin. */
+  contractSize?: number;
+  /** Price size of one pip. Gold = 0.1. */
+  pipSize?: number;
+  /** Decimal places for price inputs/results. */
+  priceDecimals?: number;
+  /** Label for the raw units row (e.g. oz / coins). */
+  unitLabel?: { ku: string; en: string };
+  /** Label for the position-size row (lots vs coins). */
+  sizeLabel?: { ku: string; en: string };
+  /** When false, hides the SL-pips stat (not meaningful for crypto). */
+  showPips?: boolean;
 }
 
 const RR_OPTIONS = [1, 1.5, 2, 3];
@@ -13,13 +25,21 @@ const RR_OPTIONS = [1, 1.5, 2, 3];
 const fmt = (n: number, d = 2) =>
   n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 
-export function RiskCalculator({ defaultEntry }: Props) {
+export function RiskCalculator({
+  defaultEntry,
+  contractSize = GOLD_CONTRACT_SIZE,
+  pipSize = GOLD_PIP_SIZE,
+  priceDecimals = 2,
+  unitLabel = { ku: 'قەبارە (ئۆنسی)', en: 'Units (oz)' },
+  sizeLabel = { ku: 'قەبارەی Lot', en: 'Position Size' },
+  showPips = true,
+}: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
   const [balance, setBalance] = useState('5000');
   const [riskPct, setRiskPct] = useState('1');
-  const [entry, setEntry] = useState(defaultEntry ? defaultEntry.toFixed(2) : '');
+  const [entry, setEntry] = useState(defaultEntry ? defaultEntry.toFixed(priceDecimals) : '');
   const [stopLoss, setStopLoss] = useState('');
   const [rr, setRr] = useState(2);
   const [side, setSide] = useState<RiskSide>('buy');
@@ -27,8 +47,8 @@ export function RiskCalculator({ defaultEntry }: Props) {
   // Keep entry synced with the live price until the user edits it.
   const [entryTouched, setEntryTouched] = useState(false);
   useEffect(() => {
-    if (!entryTouched && defaultEntry) setEntry(defaultEntry.toFixed(2));
-  }, [defaultEntry, entryTouched]);
+    if (!entryTouched && defaultEntry) setEntry(defaultEntry.toFixed(priceDecimals));
+  }, [defaultEntry, entryTouched, priceDecimals]);
 
   const result = useMemo(() => {
     const e = parseFloat(entry);
