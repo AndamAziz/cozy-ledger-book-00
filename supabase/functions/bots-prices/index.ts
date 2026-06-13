@@ -28,8 +28,8 @@ const METALS: Record<string, string> = {
   "XAG/USD": "XAG",
 };
 
-// Short cache so client polling (~4s) gets fresh data without hammering upstreams.
-const CACHE_TTL = 3000;
+// Short cache so client polling (~2s) gets fresh data without hammering upstreams.
+const CACHE_TTL = 1500;
 let cache: { ts: number; quotes: Record<string, Quote> } | null = null;
 
 // In-memory daily open + high/low tracking for metals & forex (no free history API).
