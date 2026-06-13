@@ -59,7 +59,7 @@ export function SentimentGauge({ sentiment, loading }: Props) {
           </div>
           <div className="mt-3 h-2.5 rounded-full bg-gradient-to-r from-[#f6465d] via-[#f0b90b] to-[#0ecb81] relative">
             <div
-              className="absolute -top-1 w-1.5 h-4.5 bg-white rounded-full shadow"
+              className="absolute -top-1 w-1.5 bg-white rounded-full shadow"
               style={{ left: `calc(${Math.min(100, Math.max(0, v))}% - 3px)`, height: '18px' }}
             />
           </div>
