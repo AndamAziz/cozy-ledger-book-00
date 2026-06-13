@@ -51,11 +51,19 @@ export function DxyWidget({ dxy, goldBias, loading, asset = 'gold' }: Props) {
             </div>
           </div>
           <div className="mt-3 text-xs font-semibold rounded-lg px-3 py-2" style={{ color: goldColor, backgroundColor: goldColor + '14' }}>
-            {goldBias === 'bullish'
-              ? bi('🟢 دۆلار نزم → زێڕ پاڵپشتی (بەرز دەبێتەوە)', '🟢 USD down → gold supported (likely up)')
-              : goldBias === 'bearish'
-                ? bi('🔴 دۆلار بەرز → فشار لەسەر زێڕ (دادەبەزێت)', '🔴 USD up → pressure on gold (likely down)')
-                : bi('🟠 دۆلار نزیکەی بێگۆڕانە → زێڕ بێ ئاراستە', '🟠 USD roughly flat → gold undecided')}
+            {asset === 'crypto' ? (
+              goldBias === 'bullish'
+                ? bi('🟢 دۆلار نزم → پارەی ئازاد بۆ کریپتۆ (پاڵپشتی)', '🟢 USD down → risk-on, supports crypto')
+                : goldBias === 'bearish'
+                  ? bi('🔴 دۆلار بەرز → فشار لەسەر کریپتۆ (دادەبەزێت)', '🔴 USD up → risk-off, pressure on crypto')
+                  : bi('🟠 دۆلار نزیکەی بێگۆڕانە → کریپتۆ بێ ئاراستە', '🟠 USD roughly flat → crypto undecided')
+            ) : (
+              goldBias === 'bullish'
+                ? bi('🟢 دۆلار نزم → زێڕ پاڵپشتی (بەرز دەبێتەوە)', '🟢 USD down → gold supported (likely up)')
+                : goldBias === 'bearish'
+                  ? bi('🔴 دۆلار بەرز → فشار لەسەر زێڕ (دادەبەزێت)', '🔴 USD up → pressure on gold (likely down)')
+                  : bi('🟠 دۆلار نزیکەی بێگۆڕانە → زێڕ بێ ئاراستە', '🟠 USD roughly flat → gold undecided')
+            )}
           </div>
         </>
       )}
