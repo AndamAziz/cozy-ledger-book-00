@@ -322,30 +322,6 @@ export function TradeControls({
                     </label>
                   </div>
 
-                  {/* Quick presets + clear */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] sm:text-[10px] text-[#848e9c]">{bi('خێرا', 'Quick', 'Hızlı')}</span>
-                    {QUICK_TPSL.map((p) => {
-                      const [tp, sl] = presetTpSl(side, leg.entryPrice, p);
-                      return (
-                        <button
-                          key={p}
-                          onClick={() => onSetTpSl(side, tp, sl)}
-                          className="px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded border border-white/10 text-[#848e9c] hover:text-white hover:bg-white/5 active:scale-95 transition-colors tabular-nums"
-                        >
-                          ±{p}%
-                        </button>
-                      );
-                    })}
-                    {hasTpSl && (
-                      <button
-                        onClick={() => onSetTpSl(side, null, null)}
-                        className="text-[9px] sm:text-[10px] font-bold text-[#848e9c] hover:text-white transition-colors"
-                      >
-                        {bi('سڕینەوە', 'Clear', 'Temizle')}
-                      </button>
-                    )}
-                  </div>
                 </div>
               )}
             </div>
