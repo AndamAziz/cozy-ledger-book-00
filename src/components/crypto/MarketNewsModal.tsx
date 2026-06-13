@@ -233,7 +233,17 @@ export function MarketNewsModal({ open, onClose }: Props) {
                 <div key={g.label}>
                   <div className="text-xs font-bold text-[#f0b90b] mb-2 px-1">{g.label}</div>
                   <div className="space-y-1.5">
-                    {g.items.map((ev, i) => (
+                    {g.items.map((ev, i) => {
+                      const a = analyzeEvent(ev);
+                      const isUSD = ev.country === 'USD';
+                      const col = dirColor(a.usdUp);
+                      const pctStr = a.pct === null ? null : `${a.pct >= 0 ? '+' : ''}${a.pct.toFixed(1)}%`;
+                      const goldNote = a.usdUp === true
+                        ? bi('زێڕ ↓ دادەبەزێت', 'Gold ↓ down')
+                        : a.usdUp === false
+                          ? bi('زێڕ ↑ بەرز دەبێتەوە', 'Gold ↑ up')
+                          : bi('زێڕ ⟷ چاوەڕوان', 'Gold ⟷ wait');
+                      return (
                       <div key={`${ev.title}-${i}`} className="flex items-center gap-2 bg-[#0d1117] border border-[#1a1e2e] rounded-lg px-3 py-2">
                         <span className="text-lg shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
                         <div className="min-w-0 flex-1">
@@ -243,14 +253,30 @@ export function MarketNewsModal({ open, onClose }: Props) {
                             <span className="text-[10px] text-[#848e9c]">{eventTime(ev.date)}</span>
                           </div>
                           <div className="text-sm text-white truncate">{ev.title}</div>
+                          {isUSD && a.hasResult && (
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              {pctStr && (
+                                <span className="text-[10px] font-bold" style={{ color: col }}>
+                                  {bi('گۆڕان', 'Δ')}: {pctStr}
+                                </span>
+                              )}
+                              <span
+                                className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                                style={{ color: col, backgroundColor: col + '1a' }}
+                              >
+                                {a.usdUp === true ? bi('دۆلار ↑', 'USD ↑') : a.usdUp === false ? bi('دۆلار ↓', 'USD ↓') : bi('دۆلار ⟷', 'USD ⟷')} · {goldNote}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <div className="text-right shrink-0 text-[10px] leading-tight">
-                          {ev.actual && <div className="font-bold text-white">{bi('ئەنجام', 'Act')}: {ev.actual}</div>}
+                          {ev.actual && <div className="font-bold" style={{ color: isUSD ? col : '#ffffff' }}>{bi('ئەنجام', 'Act')}: {ev.actual}</div>}
                           {ev.forecast && <div className="text-[#848e9c]">{bi('پێشبینی', 'Fcst')}: {ev.forecast}</div>}
                           {ev.previous && <div className="text-[#848e9c]">{bi('پێشتر', 'Prev')}: {ev.previous}</div>}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
