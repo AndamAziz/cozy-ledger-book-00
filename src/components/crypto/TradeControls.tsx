@@ -569,9 +569,6 @@ export function TradeControls({
       {/* Open leg panels — buy and/or sell, shown while open */}
       {(buyLeg && buyLeg.qty > 0) || (sellLeg && sellLeg.qty > 0) ? (
         <div className="mt-2 space-y-2">
-          {buyLeg && buyLeg.qty > 0 && <LegPanel side="buy" leg={buyLeg} />}
-          {sellLeg && sellLeg.qty > 0 && <LegPanel side="sell" leg={sellLeg} />}
-
           {/* Batch close: Close Profit / Close Loss / Close All (MT5 style) */}
           <div className="grid grid-cols-3 gap-2">
             <button
