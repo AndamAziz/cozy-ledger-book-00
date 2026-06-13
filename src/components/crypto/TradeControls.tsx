@@ -1,4 +1,4 @@
-import { RefreshCw, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown, Layers, TrendingUp, TrendingDown, Wallet, Gauge, Zap } from 'lucide-react';
+import { RefreshCw, Target, ShieldAlert, ArrowUp, ArrowDown, Clock, ChevronUp, ChevronDown, Wallet, Gauge, Zap } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { suggestHoldMinutes, suggestHoldAcrossTimeframes } from '@/lib/indicators';
@@ -106,7 +106,6 @@ export function TradeControls({
   buyLeg,
   sellLeg,
   otherPositionLabel,
-  timeframeLabel,
   timeframeMinutes,
   balance,
   realizedPnl = 0,
@@ -282,9 +281,6 @@ export function TradeControls({
 
   // Position counts for the overview header.
   const openCount = (buyLeg && buyLeg.qty > 0 ? 1 : 0) + (sellLeg && sellLeg.qty > 0 ? 1 : 0);
-  const profitCount = (buyPnl?.positive ? 1 : 0) + (sellPnl?.positive ? 1 : 0);
-  const lossCount = (buyPnl && !buyPnl.positive ? 1 : 0) + (sellPnl && !sellPnl.positive ? 1 : 0);
-
   const closeBatch = (mode: 'profit' | 'loss' | 'all') => {
     const wantBuy = mode === 'all' ? !!(buyLeg && buyLeg.qty > 0) : buyPnl ? (mode === 'profit' ? buyPnl.positive : !buyPnl.positive) : false;
     const wantSell = mode === 'all' ? !!(sellLeg && sellLeg.qty > 0) : sellPnl ? (mode === 'profit' ? sellPnl.positive : !sellPnl.positive) : false;
@@ -573,35 +569,6 @@ export function TradeControls({
       {/* Open leg panels — buy and/or sell, shown while open */}
       {(buyLeg && buyLeg.qty > 0) || (sellLeg && sellLeg.qty > 0) ? (
         <div className="mt-2 space-y-2">
-          {/* Positions overview: how many open / in profit / in loss + net P/L */}
-          <div className="rounded-lg border border-white/10 bg-[#0d1117] px-2.5 py-2">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-[#848e9c]">
-                <Layers className="h-3.5 w-3.5 text-[#f0b90b]" />
-                {bi('پۆزیشنەکان', 'Positions', 'Pozisyonlar')}
-                <span className="text-white tabular-nums">{openCount}</span>
-              </span>
-              <span className={`text-[11px] sm:text-xs font-extrabold tabular-nums ${totalPnl >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-                {bi('کۆ', 'Net', 'Net')} {totalPnl >= 0 ? '+' : '−'}${fmtMoney(Math.abs(totalPnl))}
-              </span>
-            </div>
-            <div className="mt-1.5 flex items-center gap-2">
-              <span className="flex-1 flex items-center justify-center gap-1 rounded-md bg-[#0ecb81]/10 border border-[#0ecb81]/30 px-2 py-1 text-[10px] sm:text-[11px] font-bold text-[#0ecb81]">
-                <TrendingUp className="h-3.5 w-3.5" />
-                <span className="tabular-nums">{profitCount}</span>
-                {bi('لە قازانج', 'in profit', 'kârda')}
-              </span>
-              <span className="flex-1 flex items-center justify-center gap-1 rounded-md bg-[#f6465d]/10 border border-[#f6465d]/30 px-2 py-1 text-[10px] sm:text-[11px] font-bold text-[#f6465d]">
-                <TrendingDown className="h-3.5 w-3.5" />
-                <span className="tabular-nums">{lossCount}</span>
-                {bi('لە زیان', 'in loss', 'zararda')}
-              </span>
-            </div>
-          </div>
-
-          {timeframeLabel && (
-            <p className="text-[9px] sm:text-[10px] text-[#848e9c] text-center">{bi('کاتبەندی', 'Timeframe', 'Zaman Dilimi')}: {timeframeLabel}</p>
-          )}
           {buyLeg && buyLeg.qty > 0 && <LegPanel side="buy" leg={buyLeg} />}
           {sellLeg && sellLeg.qty > 0 && <LegPanel side="sell" leg={sellLeg} />}
 
