@@ -147,7 +147,13 @@ export function GoldProPanel({ candles, price }: Props) {
       <div className="rounded-xl p-4 border" style={{ borderColor: actColor + '55', backgroundColor: actColor + '12' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ActIcon className="h-7 w-7" style={{ color: actColor }} />
+            <ActIcon className={`h-7 w-7 ${signal.action !== 'wait' ? 'animate-flash-blink' : ''}`} style={{ color: actColor }} />
+            {signal.action === 'buy' && (
+              <span className="text-[10px] font-bold animate-flash-blink" style={{ color: C_BUY }}>{bi('زێڕ ↑', 'Gold ↑')}</span>
+            )}
+            {signal.action === 'sell' && (
+              <span className="text-[10px] font-bold animate-flash-blink" style={{ color: C_SELL }}>{bi('زێڕ ↓', 'Gold ↓')}</span>
+            )}
             <div>
               <div className="text-xl font-extrabold" style={{ color: actColor }}>{actLabel}</div>
               <div className="text-[11px] text-[#848e9c]">{bi('سیگناڵی تێکەڵی زێڕ (XAU/USD)', 'Combined Gold Signal (XAU/USD)')}</div>
