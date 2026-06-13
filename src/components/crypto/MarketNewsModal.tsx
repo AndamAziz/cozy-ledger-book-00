@@ -40,6 +40,56 @@ const CAT_LABEL: Record<string, { ku: string; en: string; color: string }> = {
   markets: { ku: 'بازاڕ', en: 'Markets', color: '#a78bfa' },
 };
 
+// Direction colors
+const C_UP = '#0ecb81';   // stronger USD => green
+const C_DOWN = '#f6465d';  // weaker USD => red
+const C_FLAT = '#f0b90b';  // undecided => orange
+
+// Indicators where a HIGHER value means a WEAKER economy/USD (inverse logic)
+const INVERSE_KEYWORDS = ['unemployment', 'jobless', 'claims', 'misery', 'deficit', 'inventories'];
+
+function parseNum(s: string): number | null {
+  if (!s) return null;
+  const cleaned = s.replace(/,/g, '').replace(/[^0-9.\-]/g, '');
+  if (cleaned === '' || cleaned === '-' || cleaned === '.') return null;
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+interface EventAnalysis {
+  pct: number | null;       // % change of actual vs previous
+  usdUp: boolean | null;    // true = stronger USD, false = weaker, null = undecided
+  hasResult: boolean;       // actual figure is published
+}
+
+function analyzeEvent(ev: CalendarEvent): EventAnalysis {
+  const actual = parseNum(ev.actual);
+  const prev = parseNum(ev.previous);
+  const fcst = parseNum(ev.forecast);
+
+  let pct: number | null = null;
+  if (actual !== null && prev !== null && prev !== 0) {
+    pct = ((actual - prev) / Math.abs(prev)) * 100;
+  }
+
+  const ref = fcst !== null ? fcst : prev;
+  let usdUp: boolean | null = null;
+  if (actual !== null && ref !== null) {
+    if (actual === ref) usdUp = null;
+    else {
+      const hotter = actual > ref;
+      const inverse = INVERSE_KEYWORDS.some((k) => ev.title.toLowerCase().includes(k));
+      usdUp = inverse ? !hotter : hotter;
+    }
+  }
+
+  return { pct, usdUp, hasResult: actual !== null };
+}
+
+function dirColor(usdUp: boolean | null): string {
+  return usdUp === true ? C_UP : usdUp === false ? C_DOWN : C_FLAT;
+}
+
 export function MarketNewsModal({ open, onClose }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
