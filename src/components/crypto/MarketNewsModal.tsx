@@ -227,6 +227,13 @@ export function MarketNewsModal({ open, onClose }: Props) {
                 {bi('ڕووداوە گرنگەکانی ئابووری (سەرچاوە: ForexFactory). کاریگەری زۆر = ', 'High-impact economic events (source: ForexFactory). High impact = ')}
                 <span className="text-[#f6465d] font-bold">🔴</span>
               </p>
+              <p className="text-[10px] px-1 leading-relaxed">
+                <span style={{ color: C_UP }} className="font-bold">{bi('سەوز = دۆلار بەرز (زێڕ دادەبەزێت)', 'Green = USD up (gold down)')}</span>
+                {' · '}
+                <span style={{ color: C_DOWN }} className="font-bold">{bi('سور = دۆلار نزم (زێڕ بەرز)', 'Red = USD down (gold up)')}</span>
+                {' · '}
+                <span style={{ color: C_FLAT }} className="font-bold">{bi('پرتەقاڵی = نادیار', 'Orange = undecided')}</span>
+              </p>
               {grouped.length === 0 ? (
                 <div className="text-center text-sm text-[#848e9c] py-10">{bi('هیچ ڕووداوێک نییە.', 'No events.')}</div>
               ) : grouped.map((g) => (
