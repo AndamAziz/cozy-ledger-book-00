@@ -66,7 +66,10 @@ interface TradeControlsProps {
   onClose: (side: 'buy' | 'sell') => void;
   onRefresh: () => void;
   onAmountChange: (amount: number) => void;
+  /** Clear TP/SL on all open legs (TP/SL set to Off). */
   onClearTpSl: () => void;
+  /** Apply a symmetric TP/SL (% of entry) to all currently open legs. */
+  onApplyTpSl: (pct: number) => void;
 }
 
 const fmtMoney = (n: number) => {
