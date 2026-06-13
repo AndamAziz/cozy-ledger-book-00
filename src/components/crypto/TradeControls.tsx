@@ -130,6 +130,15 @@ export function TradeControls({
 
   const depleted = balance <= 0;
 
+  // One-click default TP/SL preset (% of entry) auto-applied when a trade opens.
+  // null = off (no automatic TP/SL).
+  const [tpSlPct, setTpSlPct] = useState<number | null>(null);
+
+  // Wrapped handlers so onClick (which receives a MouseEvent) never leaks into
+  // the optional numeric tpSlPct argument of onBuy / onSell.
+  const handleBuy = () => onBuy(tpSlPct ?? undefined);
+  const handleSell = () => onSell(tpSlPct ?? undefined);
+
   // TP/SL section is collapsed by default (dropdown) so the chart has more room.
   const [tpSlOpen, setTpSlOpen] = useState<{ buy: boolean; sell: boolean }>({ buy: false, sell: false });
 
