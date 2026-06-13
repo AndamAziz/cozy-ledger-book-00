@@ -23,15 +23,17 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/crypto" element={<CryptoTracker />} />
-              <Route path="/gesture-qa" element={<GestureQA />} />
-              <Route path="/bots" element={<Bots />} />
-              <Route path="/bots/:id" element={<BotDetail />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <BotNotificationsProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/crypto" element={<CryptoTracker />} />
+                <Route path="/gesture-qa" element={<GestureQA />} />
+                <Route path="/bots" element={<Bots />} />
+                <Route path="/bots/:id" element={<BotDetail />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BotNotificationsProvider>
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
