@@ -117,23 +117,22 @@ export function computeIndicators(candles: OHLCCandle[]): IndicatorResult {
     rsi: calculateRSI(closes),
     macd: calculateMACD(closes),
     bollinger: calculateBollinger(closes),
-    sma20: sma(closes, 20),
-    sma50: sma(closes, 50),
-    ema12: emaLast(closes, 12),
-    ema26: emaLast(closes, 26),
+    ema9: emaLast(closes, 9),
+    ema21: emaLast(closes, 21),
+    ema50: emaLast(closes, 50),
   };
 }
 
 export function summarizeSignals(ind: IndicatorResult, price: number): SignalSummary {
   const signals: SignalType[] = [];
 
-  // RSI
+  // RSI (14): oversold < 30 → buy, overbought > 70 → sell
   if (ind.rsi != null) {
     if (ind.rsi < 30) signals.push('buy');
     else if (ind.rsi > 70) signals.push('sell');
     else signals.push('neutral');
   }
-  // MACD
+  // MACD (12/26/9)
   if (ind.macd) {
     if (ind.macd.histogram > 0) signals.push('buy');
     else if (ind.macd.histogram < 0) signals.push('sell');
@@ -145,22 +144,16 @@ export function summarizeSignals(ind: IndicatorResult, price: number): SignalSum
     else if (ind.bollinger.percentB > 0.9) signals.push('sell');
     else signals.push('neutral');
   }
-  // Price vs SMA20
-  if (ind.sma20 != null && price > 0) {
-    if (price > ind.sma20) signals.push('buy');
-    else if (price < ind.sma20) signals.push('sell');
+  // Price vs EMA50 (trend filter)
+  if (ind.ema50 != null && price > 0) {
+    if (price > ind.ema50) signals.push('buy');
+    else if (price < ind.ema50) signals.push('sell');
     else signals.push('neutral');
   }
-  // Price vs SMA50
-  if (ind.sma50 != null && price > 0) {
-    if (price > ind.sma50) signals.push('buy');
-    else if (price < ind.sma50) signals.push('sell');
-    else signals.push('neutral');
-  }
-  // EMA12 vs EMA26
-  if (ind.ema12 != null && ind.ema26 != null) {
-    if (ind.ema12 > ind.ema26) signals.push('buy');
-    else if (ind.ema12 < ind.ema26) signals.push('sell');
+  // EMA9 vs EMA21 (fast/slow crossover)
+  if (ind.ema9 != null && ind.ema21 != null) {
+    if (ind.ema9 > ind.ema21) signals.push('buy');
+    else if (ind.ema9 < ind.ema21) signals.push('sell');
     else signals.push('neutral');
   }
 
