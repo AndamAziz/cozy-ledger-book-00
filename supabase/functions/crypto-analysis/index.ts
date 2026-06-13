@@ -51,6 +51,97 @@ const IMAGE_TRADE_TOOL = {
 };
 
 
+interface FFEvent {
+  title?: string;
+  country?: string;
+  date?: string;
+  impact?: string;
+  forecast?: string;
+  previous?: string;
+  actual?: string;
+}
+
+/**
+ * Fetch the LIVE economic calendar (same data as ForexFactory) so the analysis
+ * is grounded in real high-impact events (CPI, PPI, NFP, FOMC...) rather than
+ * the model's stale training knowledge. Returns a compact, AI-friendly summary
+ * of recent + upcoming high/medium-impact events with a derived USD bias.
+ * Fails soft: returns "" if the feed is unreachable.
+ */
+async function fetchMacroEvents(): Promise<string> {
+  const urls = [
+    "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
+    "https://nfs.faireconomy.media/ff_calendar_nextweek.json",
+  ];
+  try {
+    const results = await Promise.allSettled(
+      urls.map((u) =>
+        fetch(u, { headers: { "User-Agent": "Mozilla/5.0" } }).then((r) =>
+          r.ok ? (r.json() as Promise<FFEvent[]>) : [],
+        ),
+      ),
+    );
+    let events: FFEvent[] = [];
+    for (const r of results) if (r.status === "fulfilled" && Array.isArray(r.value)) events = events.concat(r.value);
+    if (!events.length) return "";
+
+    const now = Date.now();
+    const DAY = 86400000;
+    // Keep High/Medium impact within a -5d..+5d window, prioritising USD.
+    const relevant = events.filter((e) => {
+      const imp = (e.impact || "").toLowerCase();
+      if (imp !== "high" && imp !== "medium") return false;
+      const t = e.date ? Date.parse(e.date) : NaN;
+      if (Number.isNaN(t)) return false;
+      return t >= now - 5 * DAY && t <= now + 5 * DAY;
+    });
+    if (!relevant.length) return "";
+
+    relevant.sort((a, b) => Date.parse(a.date || "") - Date.parse(b.date || ""));
+
+    // Derive a simple USD bias from released vs forecast on inflation/jobs/growth.
+    const num = (s?: string) => {
+      if (!s) return NaN;
+      const m = s.replace(/[,%KMB]/g, "").match(/-?\d+(\.\d+)?/);
+      return m ? parseFloat(m[0]) : NaN;
+    };
+    let usdBeats = 0;
+    let usdMisses = 0;
+    for (const e of relevant) {
+      if ((e.country || "") !== "USD" || !e.actual) continue;
+      const a = num(e.actual);
+      const f = num(e.forecast);
+      if (Number.isNaN(a) || Number.isNaN(f)) continue;
+      // Higher-than-forecast inflation/jobs/growth = USD-positive (hawkish).
+      if (a > f) usdBeats++;
+      else if (a < f) usdMisses++;
+    }
+    const usdBias =
+      usdBeats === usdMisses
+        ? "mixed/neutral"
+        : usdBeats > usdMisses
+        ? "leaning STRONGER (hotter data → hawkish → USD up, gold pressured)"
+        : "leaning WEAKER (softer data → dovish → USD down, gold supported)";
+
+    const fmtLine = (e: FFEvent) => {
+      const d = e.date ? new Date(e.date) : null;
+      const when = d
+        ? d.toLocaleString("en-US", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC", hour12: false }) + " UTC"
+        : "?";
+      const released = e.actual ? `actual ${e.actual}` : "not released yet";
+      return `- [${e.country}|${e.impact}] ${when} ${e.title}: ${released} (forecast ${e.forecast || "—"}, previous ${e.previous || "—"})`;
+    };
+
+    const lines = relevant.slice(0, 24).map(fmtLine).join("\n");
+    return `LIVE ECONOMIC CALENDAR (real high/medium-impact events, ForexFactory feed):
+Derived USD bias from released-vs-forecast: ${usdBias} (beats ${usdBeats}, misses ${usdMisses}).
+${lines}`;
+  } catch (err) {
+    console.error("fetchMacroEvents failed:", err);
+    return "";
+  }
+}
+
 function rateLimitResponse(status: number) {
   const msg =
     status === 429
@@ -88,13 +179,19 @@ serve(async (req) => {
         ? `\n24h high: $${dayHigh}\n24h low: $${dayLow}`
         : "";
 
+    // Live macro/news context (real economic calendar). Only needed for the
+    // text/structured analysis modes, so skip the network call for pure image modes.
+    const needsMacro = mode !== "image";
+    const macroEvents = needsMacro ? await fetchMacroEvents() : "";
+    const macroBlock = macroEvents ? `\n\n${macroEvents}` : "";
+
     const baseContext = `Asset: ${symbol}/USD
 Timeframe: ${timeframe}
 Current price: $${price}
 24h change: ${change24h}%${hiLo}
 Technical signal summary: ${JSON.stringify(summary)}
 
-Indicators: ${JSON.stringify(indicators)}`;
+Indicators: ${JSON.stringify(indicators)}${macroBlock}`;
 
     // ----- Chart image analysis mode (read candles from one or more uploaded screenshots) -----
     if (mode === "image") {
@@ -317,6 +414,7 @@ The stop-loss MUST be derived from a specific indicator level (e.g. the Bollinge
 Always fill stopLossIndicator with the indicator the stop is based on, stopLossIndicatorValue with the EXACT numeric level of that indicator (e.g. "SMA20 = $2,335" or "Bollinger lower band = $2,328"), stopLossBasis with a clear 1-2 sentence Kurdish explanation, and stopLossBasisEn with the SAME explanation in clear English. Both explanations must name the indicator, its exact value, the resulting stop-loss price, and why a break of that level invalidates the trade.
 Estimate a realistic time horizon for the trade in days based on the timeframe.
 MACRO / FUNDAMENTAL AWARENESS: For gold and precious metals (XAU, XAG, XPT, XPD) especially, factor in the key macro drivers that move the price: the US Dollar / DXY strength (a stronger dollar usually pushes gold DOWN, a weaker dollar pushes it UP), US interest-rate and Fed/FOMC expectations, the latest monthly economic reports (NFP jobs report, CPI/PPI inflation, GDP, central-bank monthly statements), trade/tariff and war/geopolitical safe-haven demand. Fill macroContext (Kurdish Sorani) and macroContextEn (clear English) with 1-3 sentences naming which of these forces currently support a rise or a fall, referencing the most recent known monthly releases and whether they leaned hawkish/dovish, and how they shaped this decision. If you do not have confirmed live news, state the typical/assumed macro stance and the next major scheduled report clearly rather than inventing specific headlines.
+LIVE DATA PRIORITY: If a "LIVE ECONOMIC CALENDAR" block is provided in the user message, you MUST base the macro/USD judgement on THOSE real events (actual vs forecast vs previous) and the derived USD bias, NOT on memory. Explicitly weigh whether each released USD figure (CPI/PPI/NFP/GDP) came in hotter (USD-stronger, bearish for gold) or softer (USD-weaker, bullish for gold) than forecast, and let high-impact releases or war/geopolitical risk shift the recommendation and confidence accordingly. Name the specific event(s) and numbers that drove the up/down decision in macroContext/macroContextEn.
 TARGET VALIDITY: Set validForMinutes to the number of minutes this trade plan and its targets should be trusted before it must be re-evaluated, derived from the timeframe (e.g. a 1H chart plan is typically valid ~60-240 minutes, a 1D plan longer). The plan expires after that many minutes; mention this discipline inside exitTiming as well.
 Set confidence honestly (0-100) reflecting how strongly the technical + macro picture align.
 Never guarantee outcomes; this is educational, not financial advice.`;
@@ -595,7 +693,7 @@ Cover these sections in order (keep the Kurdish header, and when bilingual add i
 3. **بەرزترین و نزمترین / 24h High & Low** - the 24h high and 24h low and what they mean for range.
 4. **ئاستە گرنگەکان / Key levels** - key support/resistance levels (use the provided numbers).
 5. **کەی بکڕیت و کەی بفرۆشیت / When to buy & sell** - the price area/condition to enter (buy) and the area/condition to take profit (sell).
-6. **هۆکارە ئابووری و سیاسییەکان / Macro & news drivers** - for gold/metals especially, explain how the US Dollar/DXY, Fed & interest rates, the latest monthly economic reports (NFP jobs, CPI/PPI inflation, FOMC/central-bank decisions, GDP), trade & tariff news, and war/geopolitical safe-haven demand currently support a rise or fall. Cite the most recent known scheduled releases and whether they leaned hawkish/dovish or risk-on/risk-off. If you lack confirmed live news, state the typical/assumed macro stance and the next major scheduled report clearly.
+6. **هۆکارە ئابووری و سیاسییەکان / Macro & news drivers** - for gold/metals especially, explain how the US Dollar/DXY, Fed & interest rates, the latest monthly economic reports (NFP jobs, CPI/PPI inflation, FOMC/central-bank decisions, GDP), trade & tariff news, and war/geopolitical safe-haven demand currently support a rise or fall. If a "LIVE ECONOMIC CALENDAR" block is given in the user message, you MUST use those REAL events (actual vs forecast vs previous) and the derived USD bias as the basis — quote the specific figures, judge whether each USD release came in hotter (USD-stronger → gold down) or softer (USD-weaker → gold up) than forecast, flag any war/geopolitical risk, and conclude clearly whether the market leans UP or DOWN. Only fall back to typical/assumed stance and the next scheduled report if no live block is present.
 7. **ماوەی متمانە / Plan validity** - state in MINUTES how long this plan and its targets stay trustworthy before re-evaluation, derived from the timeframe.
 8. **ئەگەرەکان / Scenarios** - bullish vs bearish scenarios.
 9. **ئاگاداری / Warning** - one risk-management note.
