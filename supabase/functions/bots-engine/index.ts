@@ -247,16 +247,22 @@ async function processBot(bot: Record<string, unknown>) {
     return;
   }
 
-  // 1) If a trade is open → monitor TP/SL.
-  const { data: openTrade } = await admin
+  // 1) If a trade is open → monitor TP/SL and post a hold/close recommendation.
+  // Fetch as a list (never .maybeSingle, which errors if duplicates ever exist)
+  // and take the oldest open trade.
+  const { data: openRows } = await admin
     .from("bot_trades")
     .select("*")
     .eq("bot_id", botId)
     .eq("status", "open")
-    .maybeSingle();
+    .order("opened_at", { ascending: true })
+    .limit(1);
+  const openTrade = openRows && openRows.length ? openRows[0] : null;
 
   if (openTrade) {
     const dir = openTrade.direction as string;
+    const entry = Number(openTrade.entry_price);
+    const amount = Number(openTrade.amount);
     const tp = Number(openTrade.tp_price);
     const sl = Number(openTrade.sl_price);
     let hit: "tp" | "sl" | null = null;
@@ -270,8 +276,13 @@ async function processBot(bot: Record<string, unknown>) {
     }
     if (hit) {
       await closeTrade(bot, openTrade, exit, hit);
+      return;
     }
-    return; // while a trade is open the bot does not scan
+
+    // Not closed yet → emit a recommendation so the user can decide whether to
+    // keep holding or close manually. Throttled to ~once per minute (no spam).
+    await maybeLogAdvice(botId, userId, symbol, dir, entry, price, sl, tp, amount);
+    return; // while a trade is open the bot does not scan for new entries
   }
 
   // 2) No open trade. Only running bots scan.
