@@ -142,3 +142,85 @@ export function useDemoBalance() {
 
   return { balance, refresh: load };
 }
+
+export interface PerfPoint {
+  index: number;          // trade number (1-based)
+  time: string;           // closed_at ISO
+  pnl: number;            // this trade's P/L
+  cumulative: number;     // running cumulative P/L
+  winRate: number;        // rolling win rate (%) up to this trade
+}
+
+export interface BotPerformance {
+  points: PerfPoint[];
+  totalTrades: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  totalPnl: number;
+  bestTrade: number;
+  worstTrade: number;
+  avgPnl: number;
+}
+
+/** Per-bot performance history: cumulative P/L and win rate over time. */
+export function useBotPerformance(botId: string | undefined) {
+  const [perf, setPerf] = useState<BotPerformance | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    if (!botId) return;
+    const { data } = await supabase
+      .from("bot_trades")
+      .select("pnl, result, closed_at")
+      .eq("bot_id", botId)
+      .eq("status", "closed")
+      .order("closed_at", { ascending: true });
+
+    const rows = (data as { pnl: number | null; result: string | null; closed_at: string | null }[]) ?? [];
+    let cumulative = 0;
+    let wins = 0;
+    let best = -Infinity;
+    let worst = Infinity;
+    const points: PerfPoint[] = rows.map((r, i) => {
+      const pnl = Number(r.pnl ?? 0);
+      cumulative += pnl;
+      if (r.result === "win") wins++;
+      best = Math.max(best, pnl);
+      worst = Math.min(worst, pnl);
+      return {
+        index: i + 1,
+        time: r.closed_at ?? "",
+        pnl,
+        cumulative: +cumulative.toFixed(2),
+        winRate: +(((wins / (i + 1)) * 100)).toFixed(1),
+      };
+    });
+
+    const totalTrades = rows.length;
+    setPerf({
+      points,
+      totalTrades,
+      wins,
+      losses: totalTrades - wins,
+      winRate: totalTrades ? +((wins / totalTrades) * 100).toFixed(1) : 0,
+      totalPnl: +cumulative.toFixed(2),
+      bestTrade: totalTrades ? +best.toFixed(2) : 0,
+      worstTrade: totalTrades ? +worst.toFixed(2) : 0,
+      avgPnl: totalTrades ? +(cumulative / totalTrades).toFixed(2) : 0,
+    });
+    setLoading(false);
+  }, [botId]);
+
+  useEffect(() => {
+    load();
+    if (!botId) return;
+    const ch = supabase
+      .channel(`bot-perf-${botId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bot_trades", filter: `bot_id=eq.${botId}` }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [botId, load]);
+
+  return { perf, loading, refresh: load };
+}
