@@ -555,6 +555,18 @@ export function TradeControls({
           <span className="relative font-bold tabular-nums leading-none" style={{ color: '#f43f5e', fontSize: '17px' }}>
             {bid > 0 ? fmtPrice(bid) : '--'}
           </span>
+          {/* Live open P/L for the SELL leg, right on the button */}
+          {sellPnl && (
+            <span
+              className="relative mt-1 px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold tabular-nums leading-none"
+              style={{
+                color: sellPnl.positive ? '#22c55e' : '#f43f5e',
+                background: `${sellPnl.positive ? '#22c55e' : '#f43f5e'}1f`,
+              }}
+            >
+              {sellPnl.positive ? '+' : '−'}${fmtMoney(Math.abs(sellPnl.value))}
+            </span>
+          )}
         </button>
 
         {/* Center: volume stepper + live tick dot + refresh */}
