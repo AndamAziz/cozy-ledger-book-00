@@ -1597,7 +1597,11 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
 
         {imageText ? (
-          <div className="text-sm text-[#d1d5db] whitespace-pre-wrap leading-relaxed">{imageText}</div>
+          <ColorizedAnalysis
+            text={imageText}
+            color={dirColorFor(imageSummary?.recommendation)}
+            className="text-sm text-[#d1d5db]"
+          />
         ) : imageLoading ? (
           <div className="flex items-center gap-2 text-xs text-[#848e9c]">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
