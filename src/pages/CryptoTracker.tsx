@@ -553,7 +553,7 @@ export default function CryptoTracker() {
                   metals={metals}
                   selectedCode={selectedMetalCode}
                   isLoading={metalsLoading}
-                  view={metalsView}
+                  view={metalsView === 'overview' ? 'market' : metalsView}
                 />
               )}
             </div>
