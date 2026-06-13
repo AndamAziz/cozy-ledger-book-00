@@ -345,6 +345,7 @@ async function processBot(bot: Record<string, unknown>) {
   const volumes = candles.map((c) => c.volume);
   const ema9 = emaLast(closes, 9);
   const ema21 = emaLast(closes, 21);
+  const ema50 = emaLast(closes, 50);
   const rsi = calcRSI(closes, 14);
   const macd = calcMACD(closes);
   const hist = macd?.histogram ?? 0;
