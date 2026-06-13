@@ -56,25 +56,18 @@ export function TechnicalSignals({ candles, price }: Props) {
       sig: ind.bollinger.percentB < 0.1 ? 'buy' : ind.bollinger.percentB > 0.9 ? 'sell' : 'neutral',
     });
   }
-  if (ind.sma20 != null) {
+  if (ind.ema9 != null && ind.ema21 != null) {
     rows.push({
-      label: bi('نرخ بەرامبەر SMA20', 'Price vs SMA20'),
-      value: ind.sma20.toFixed(2),
-      sig: price > ind.sma20 ? 'buy' : price < ind.sma20 ? 'sell' : 'neutral',
+      label: 'EMA 9/21',
+      value: (ind.ema9 - ind.ema21).toFixed(2),
+      sig: ind.ema9 > ind.ema21 ? 'buy' : ind.ema9 < ind.ema21 ? 'sell' : 'neutral',
     });
   }
-  if (ind.sma50 != null) {
+  if (ind.ema50 != null) {
     rows.push({
-      label: bi('نرخ بەرامبەر SMA50', 'Price vs SMA50'),
-      value: ind.sma50.toFixed(2),
-      sig: price > ind.sma50 ? 'buy' : price < ind.sma50 ? 'sell' : 'neutral',
-    });
-  }
-  if (ind.ema12 != null && ind.ema26 != null) {
-    rows.push({
-      label: 'EMA 12/26',
-      value: (ind.ema12 - ind.ema26).toFixed(2),
-      sig: ind.ema12 > ind.ema26 ? 'buy' : ind.ema12 < ind.ema26 ? 'sell' : 'neutral',
+      label: bi('نرخ بەرامبەر EMA50', 'Price vs EMA50'),
+      value: ind.ema50.toFixed(2),
+      sig: price > ind.ema50 ? 'buy' : price < ind.ema50 ? 'sell' : 'neutral',
     });
   }
 
