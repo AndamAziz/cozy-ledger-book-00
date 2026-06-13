@@ -278,7 +278,19 @@ export function MarketNewsModal({ open, onClose }: Props) {
                         </div>
                         <div className="text-right shrink-0 text-[10px] leading-tight">
                           {ev.actual && <div className="font-bold" style={{ color: isUSD ? col : '#ffffff' }}>{bi('ئەنجام', 'Act')}: {ev.actual}</div>}
-                          {ev.forecast && <div className="text-[#848e9c]">{bi('پێشبینی', 'Fcst')}: {ev.forecast}</div>}
+                          {ev.forecast && (
+                            <div style={{ color: (() => {
+                              const f = parseNum(ev.forecast);
+                              const p = parseNum(ev.previous);
+                              if (f === null || p === null || p === 0) return '#848e9c';
+                              const up = f > p;
+                              const inv = INVERSE_KEYWORDS.some((k) => ev.title.toLowerCase().includes(k));
+                              const usdUp = inv ? !up : up;
+                              return usdUp === true ? C_UP : usdUp === false ? C_DOWN : C_FLAT;
+                            })() }}>
+                              {bi('پێشبینی', 'Fcst')}: {ev.forecast}
+                            </div>
+                          )}
                           {ev.previous && <div className="text-[#848e9c]">{bi('پێشتر', 'Prev')}: {ev.previous}</div>}
                         </div>
                       </div>
