@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { useBotDetail, useDemoBalance } from "@/hooks/useBots";
+import { useBotDetail, useDemoBalance, useBotPerformance } from "@/hooks/useBots";
+import { BotPerformanceChart } from "@/components/bots/BotPerformanceChart";
 import { useBotPrices, callEngine } from "@/hooks/useBotPrices";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +29,7 @@ export default function BotDetail() {
   const { bot, openTrade, lastClosed, logs, loading } = useBotDetail(id);
   const { balance } = useDemoBalance();
   const { quotes } = useBotPrices();
+  const { perf } = useBotPerformance(id);
   const [busy, setBusy] = useState(false);
   const [, force] = useState(0);
 
@@ -277,6 +279,9 @@ export default function BotDetail() {
           </div>
         )}
 
+        {/* Performance analytics */}
+        <BotPerformanceChart perf={perf} />
+
         {/* Logs */}
         <div className="mt-3 rounded-2xl border border-border bg-card p-3">
           <div className="flex items-center justify-between">
@@ -289,7 +294,7 @@ export default function BotDetail() {
             ) : (
               logs.map((l) => (
                 <div key={l.id} className={cn(
-                  l.level === "win" ? "text-success" : l.level === "loss" ? "text-destructive" : l.level === "signal" ? "text-gold" : "text-muted-foreground",
+                  l.level === "win" ? "text-success" : l.level === "loss" ? "text-destructive" : l.level === "signal" ? "text-gold" : l.level === "advice" ? "text-foreground" : "text-muted-foreground",
                 )}>
                   {l.message}
                 </div>

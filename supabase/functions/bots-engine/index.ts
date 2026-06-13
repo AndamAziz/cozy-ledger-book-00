@@ -234,7 +234,54 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Balance updated: $${newBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 }
 
+// ───────────────────── live recommendation (hold vs close) ─────────────────────
+// Posts an "advice" log at most once per ~55s so the user can see, in real time,
+// whether the bot suggests holding the position or closing it manually.
+async function maybeLogAdvice(
+  botId: string, userId: string, symbol: string, dir: string,
+  entry: number, price: number, sl: number, tp: number, amount: number,
+) {
+  // Throttle: skip if we logged advice in the last 55 seconds.
+  const { data: last } = await admin
+    .from("bot_logs")
+    .select("created_at")
+    .eq("bot_id", botId)
+    .eq("level", "advice")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (last && last.length) {
+    const age = Date.now() - new Date(last[0].created_at as string).getTime();
+    if (age < 55_000) return;
+  }
+
+  const diffPct = dir === "buy" ? (price - entry) / entry : (entry - price) / entry;
+  const pnl = diffPct * amount;
+  const sign = pnl >= 0 ? "+" : "-";
+
+  // Progress toward TP (positive) vs toward SL (negative), 0..1 each way.
+  const tpDist = Math.abs(tp - entry);
+  const slDist = Math.abs(entry - sl);
+  const moved = dir === "buy" ? price - entry : entry - price;
+  const towardTp = tpDist > 0 ? Math.max(0, moved) / tpDist : 0;
+  const towardSl = slDist > 0 ? Math.max(0, -moved) / slDist : 0;
+
+  let verdict: string;
+  if (towardTp >= 0.6) {
+    verdict = `🟢 HOLD — strong, ${Math.round(towardTp * 100)}% to take-profit. Let it run.`;
+  } else if (towardSl >= 0.6) {
+    verdict = `🔴 CONSIDER CLOSING — ${Math.round(towardSl * 100)}% to stop-loss. You may close manually now.`;
+  } else if (moved >= 0) {
+    verdict = `🟢 HOLD — in profit, trade on track.`;
+  } else {
+    verdict = `🟡 HOLD — slightly against, still within range.`;
+  }
+
+  await log(botId, userId, "advice",
+    `[${hhmmss()}] 🤖 ${dir.toUpperCase()} @ $${fmt(entry, symbol)} → now $${fmt(price, symbol)} | Unrealized: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(diffPct * 100).toFixed(2)}%) | ${verdict}`);
+}
+
 // ───────────────────── process a single bot ─────────────────────
+
 async function processBot(bot: Record<string, unknown>) {
   const botId = bot.id as string;
   const userId = bot.user_id as string;
@@ -247,16 +294,22 @@ async function processBot(bot: Record<string, unknown>) {
     return;
   }
 
-  // 1) If a trade is open → monitor TP/SL.
-  const { data: openTrade } = await admin
+  // 1) If a trade is open → monitor TP/SL and post a hold/close recommendation.
+  // Fetch as a list (never .maybeSingle, which errors if duplicates ever exist)
+  // and take the oldest open trade.
+  const { data: openRows } = await admin
     .from("bot_trades")
     .select("*")
     .eq("bot_id", botId)
     .eq("status", "open")
-    .maybeSingle();
+    .order("opened_at", { ascending: true })
+    .limit(1);
+  const openTrade = openRows && openRows.length ? openRows[0] : null;
 
   if (openTrade) {
     const dir = openTrade.direction as string;
+    const entry = Number(openTrade.entry_price);
+    const amount = Number(openTrade.amount);
     const tp = Number(openTrade.tp_price);
     const sl = Number(openTrade.sl_price);
     let hit: "tp" | "sl" | null = null;
@@ -270,8 +323,13 @@ async function processBot(bot: Record<string, unknown>) {
     }
     if (hit) {
       await closeTrade(bot, openTrade, exit, hit);
+      return;
     }
-    return; // while a trade is open the bot does not scan
+
+    // Not closed yet → emit a recommendation so the user can decide whether to
+    // keep holding or close manually. Throttled to ~once per minute (no spam).
+    await maybeLogAdvice(botId, userId, symbol, dir, entry, price, sl, tp, amount);
+    return; // while a trade is open the bot does not scan for new entries
   }
 
   // 2) No open trade. Only running bots scan.
@@ -334,11 +392,18 @@ async function processBot(bot: Record<string, unknown>) {
   const tpPrice = direction === "buy" ? entry * (1 + tpPct) : entry * (1 - tpPct);
 
   await log(botId, userId, "signal", `[${hhmmss()}] ✅ Signal: ${direction.toUpperCase()} (score ${score}/4) — Opening trade`);
-  await admin.from("bot_trades").insert({
+  const { error: insErr } = await admin.from("bot_trades").insert({
     bot_id: botId, user_id: userId, symbol, direction,
     entry_price: +entry.toFixed(4), sl_price: +slPrice.toFixed(4), tp_price: +tpPrice.toFixed(4),
     amount: Number(bot.amount), status: "open",
   });
+  if (insErr) {
+    // Unique index (one open trade per bot) — another concurrent run already
+    // opened the position. Skip silently to avoid stacking trades.
+    if (insErr.code === "23505") return;
+    await log(botId, userId, "info", `[${hhmmss()}] ⚠️ Could not open trade: ${insErr.message}`);
+    return;
+  }
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Opened ${direction.toUpperCase()} @ $${fmt(entry, symbol)} | SL: $${fmt(slPrice, symbol)} | TP: $${fmt(tpPrice, symbol)}`);
 }
 
