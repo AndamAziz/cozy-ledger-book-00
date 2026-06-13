@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useBotDetail, useDemoBalance, useBotPerformance } from "@/hooks/useBots";
 import { BotPerformanceChart } from "@/components/bots/BotPerformanceChart";
+import { NotificationBell } from "@/components/bots/NotificationBell";
 import { useBotPrices, callEngine } from "@/hooks/useBotPrices";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
