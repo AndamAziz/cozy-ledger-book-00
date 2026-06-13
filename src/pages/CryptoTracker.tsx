@@ -36,6 +36,7 @@ export default function CryptoTracker() {
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
   const [activeTab, setActiveTab] = useState<TrackerTab>('metals');
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
+  const [forexView, setForexView] = useState<ForexView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(60);
   const [showSidebar, setShowSidebar] = useState(false);
