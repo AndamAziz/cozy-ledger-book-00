@@ -444,38 +444,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           title,
         }));
       });
-      // TP / SL apply to the whole leg — drawn as bold lines on the chart so
-      // the user clearly sees WHERE profit (green) and loss (deep crimson) sit.
-      // They are DRAGGABLE: a live drag override keeps the price while ticks redraw.
-      const drag = dragRef.current;
-      const tpPrice = drag && drag.side === side && drag.kind === 'tp' ? drag.price : leg.takeProfit;
-      const slPrice = drag && drag.side === side && drag.kind === 'sl' ? drag.price : leg.stopLoss;
-      tpLineRef.current[side] = null;
-      slLineRef.current[side] = null;
-      if (tpPrice && tpPrice > 0) {
-        const line = seriesRef.current.createPriceLine({
-          price: tpPrice,
-          color: '#0ecb81',
-          lineWidth: 2,
-          lineStyle: 2,
-          axisLabelVisible: true,
-          title: `${isBuy ? 'B' : 'S'} ${bi('قازانج', 'TP')} ▲`,
-        });
-        tradeLineRef.current.push(line);
-        tpLineRef.current[side] = line;
-      }
-      if (slPrice && slPrice > 0) {
-        const line = seriesRef.current.createPriceLine({
-          price: slPrice,
-          color: '#8b0a1a',
-          lineWidth: 2,
-          lineStyle: 2,
-          axisLabelVisible: true,
-          title: `${isBuy ? 'B' : 'S'} ${bi('زیان', 'SL')} ▼`,
-        });
-        tradeLineRef.current.push(line);
-        slLineRef.current[side] = line;
-      }
     };
 
     drawLeg('buy', buyLeg);
@@ -542,25 +510,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails]);
-
-  // Enable dragging the TP / SL lines directly on the chart. Releasing the line
-  // commits the new level automatically (no extra data entry needed).
-  useEffect(() => {
-    const chart = chartRef.current;
-    const container = chartContainerRef.current;
-    if (!chart || !container || !seriesRef.current) return;
-    return attachTpSlDrag({
-      container,
-      chart,
-      getSeries: () => seriesRef.current,
-      getLegs: () => legsRef.current,
-      lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
-      dragRef,
-      onCommit: (side, tp, sl) => setTpSl(pair, side, tp, sl),
-    });
-  }, [seriesVersion, setTpSl, pair]);
-
-
 
   // Create / remove the RSI and MACD panes (and their data) when toggled or
   // when the chart is recreated. Each indicator gets its own pane below price.
