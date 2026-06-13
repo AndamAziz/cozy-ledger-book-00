@@ -66,8 +66,6 @@ interface TradeControlsProps {
   onClose: (side: 'buy' | 'sell') => void;
   onRefresh: () => void;
   onAmountChange: (amount: number) => void;
-  /** Set / clear the take-profit and stop-loss levels of one leg. */
-  onSetTpSl: (side: 'buy' | 'sell', takeProfit: number | null, stopLoss: number | null) => void;
 }
 
 const fmtMoney = (n: number) => {
@@ -122,7 +120,6 @@ export function TradeControls({
   onClose,
   onRefresh,
   onAmountChange,
-  onSetTpSl,
 }: TradeControlsProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string, tr?: string) =>

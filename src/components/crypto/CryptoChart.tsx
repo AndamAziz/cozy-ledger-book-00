@@ -5,7 +5,6 @@ import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAvera
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
-import { attachTpSlDrag } from '@/lib/tpSlDrag';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
@@ -35,16 +34,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const tradeLineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<any>(null);
-  // TP / SL price-line objects per side so they can be dragged live.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tpLineRef = useRef<Record<'buy' | 'sell', any>>({ buy: null, sell: null });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const slLineRef = useRef<Record<'buy' | 'sell', any>>({ buy: null, sell: null });
-  // Active drag override (so live ticks recreating lines keep the dragged price).
-  const dragRef = useRef<{ side: 'buy' | 'sell'; kind: 'tp' | 'sl'; price: number } | null>(null);
-  // Always-fresh snapshot of the open legs for the drag helper.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const legsRef = useRef<{ buy: any; sell: any }>({ buy: null, sell: null });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const maSeriesRefs = useRef<Record<number, any>>({});
   // Indicator pane series (RSI + MACD) drawn in their own panes below price.
@@ -92,9 +81,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const sellLeg = myPos?.sell && myPos.sell.qty > 0 ? myPos.sell : null;
   // Trading is now free across assets — no single-asset lock.
   const otherPositionLabel = null;
-
-  // Keep a fresh snapshot of the legs for the TP/SL drag helper.
-  legsRef.current = { buy: buyLeg, sell: sellLeg };
 
   // (Live per-trade P/L is shown directly on the chart, MT5-style, below.)
 
@@ -458,38 +444,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           title,
         }));
       });
-      // TP / SL apply to the whole leg — drawn as bold lines on the chart so
-      // the user clearly sees WHERE profit (green) and loss (deep crimson) sit.
-      // They are DRAGGABLE: a live drag override keeps the price while ticks redraw.
-      const drag = dragRef.current;
-      const tpPrice = drag && drag.side === side && drag.kind === 'tp' ? drag.price : leg.takeProfit;
-      const slPrice = drag && drag.side === side && drag.kind === 'sl' ? drag.price : leg.stopLoss;
-      tpLineRef.current[side] = null;
-      slLineRef.current[side] = null;
-      if (tpPrice && tpPrice > 0) {
-        const line = seriesRef.current.createPriceLine({
-          price: tpPrice,
-          color: '#0ecb81',
-          lineWidth: 2,
-          lineStyle: 2,
-          axisLabelVisible: true,
-          title: `${isBuy ? 'B' : 'S'} ${bi('قازانج', 'TP')} ▲`,
-        });
-        tradeLineRef.current.push(line);
-        tpLineRef.current[side] = line;
-      }
-      if (slPrice && slPrice > 0) {
-        const line = seriesRef.current.createPriceLine({
-          price: slPrice,
-          color: '#8b0a1a',
-          lineWidth: 2,
-          lineStyle: 2,
-          axisLabelVisible: true,
-          title: `${isBuy ? 'B' : 'S'} ${bi('زیان', 'SL')} ▼`,
-        });
-        tradeLineRef.current.push(line);
-        slLineRef.current[side] = line;
-      }
     };
 
     drawLeg('buy', buyLeg);
@@ -556,25 +510,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails]);
-
-  // Enable dragging the TP / SL lines directly on the chart. Releasing the line
-  // commits the new level automatically (no extra data entry needed).
-  useEffect(() => {
-    const chart = chartRef.current;
-    const container = chartContainerRef.current;
-    if (!chart || !container || !seriesRef.current) return;
-    return attachTpSlDrag({
-      container,
-      chart,
-      getSeries: () => seriesRef.current,
-      getLegs: () => legsRef.current,
-      lineRefs: { tp: tpLineRef.current, sl: slLineRef.current },
-      dragRef,
-      onCommit: (side, tp, sl) => setTpSl(pair, side, tp, sl),
-    });
-  }, [seriesVersion, setTpSl, pair]);
-
-
 
   // Create / remove the RSI and MACD panes (and their data) when toggled or
   // when the chart is recreated. Each indicator gets its own pane below price.
@@ -855,7 +790,6 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
-        onSetTpSl={(side, tp, sl) => setTpSl(pair, side, tp, sl)}
       />
 
       {/* Chart — sized so trade controls (above) and 24h stats (below) stay reachable on mobile without awkward scrolling */}
