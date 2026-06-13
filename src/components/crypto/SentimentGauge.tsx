@@ -10,6 +10,8 @@ export interface SentimentData {
 interface Props {
   sentiment: SentimentData;
   loading: boolean;
+  /** Which asset the helper text refers to. Default: gold. */
+  asset?: 'gold' | 'crypto';
 }
 
 function colorFor(v: number): string {
