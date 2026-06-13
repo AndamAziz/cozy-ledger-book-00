@@ -794,6 +794,16 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           if (buyLeg) setTpSl(pair, 'buy', null, null);
           if (sellLeg) setTpSl(pair, 'sell', null, null);
         }}
+        onApplyTpSl={(pct) => {
+          if (buyLeg) {
+            const d = buyLeg.entryPrice * (pct / 100);
+            setTpSl(pair, 'buy', +(buyLeg.entryPrice + d).toFixed(6), +(buyLeg.entryPrice - d).toFixed(6));
+          }
+          if (sellLeg) {
+            const d = sellLeg.entryPrice * (pct / 100);
+            setTpSl(pair, 'sell', +(sellLeg.entryPrice - d).toFixed(6), +(sellLeg.entryPrice + d).toFixed(6));
+          }
+        }}
       />
 
       {/* Chart — sized so trade controls (above) and 24h stats (below) stay reachable on mobile without awkward scrolling */}

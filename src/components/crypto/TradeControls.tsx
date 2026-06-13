@@ -66,7 +66,10 @@ interface TradeControlsProps {
   onClose: (side: 'buy' | 'sell') => void;
   onRefresh: () => void;
   onAmountChange: (amount: number) => void;
+  /** Clear TP/SL on all open legs (TP/SL set to Off). */
   onClearTpSl: () => void;
+  /** Apply a symmetric TP/SL (% of entry) to all currently open legs. */
+  onApplyTpSl: (pct: number) => void;
 }
 
 const fmtMoney = (n: number) => {
@@ -122,6 +125,7 @@ export function TradeControls({
   onRefresh,
   onAmountChange,
   onClearTpSl,
+  onApplyTpSl,
 }: TradeControlsProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string, tr?: string) =>
@@ -140,6 +144,12 @@ export function TradeControls({
   const handleTpSlOff = () => {
     setTpSlPct(null);
     onClearTpSl();
+  };
+  // Selecting a % preset both stores it for future trades AND immediately
+  // applies a symmetric TP/SL to any positions that are already open.
+  const handleTpSlPct = (p: number) => {
+    setTpSlPct(p);
+    onApplyTpSl(p);
   };
 
   const buyPnl = buyLeg && buyLeg.qty > 0 ? legPnl('buy', buyLeg, currentPrice) : null;
@@ -410,7 +420,7 @@ export function TradeControls({
               return (
                 <button
                   key={p}
-                  onClick={() => setTpSlPct(p)}
+                  onClick={() => handleTpSlPct(p)}
                   className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border tabular-nums transition-colors active:scale-95 ${
                     active
                       ? 'bg-[#0ecb81]/15 border-[#0ecb81] text-[#0ecb81]'
