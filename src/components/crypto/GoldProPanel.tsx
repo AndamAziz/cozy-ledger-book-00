@@ -13,7 +13,6 @@ import { Crown, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react'
 interface Props {
   candles: OHLCCandle[];
   price: number;
-  change24h: number;
 }
 
 type GoldBias = 'bullish' | 'bearish' | 'neutral';
