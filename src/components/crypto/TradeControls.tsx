@@ -420,7 +420,7 @@ export function TradeControls({
               return (
                 <button
                   key={p}
-                  onClick={() => setTpSlPct(p)}
+                  onClick={() => handleTpSlPct(p)}
                   className={`flex-1 px-1 py-1 text-[10px] sm:text-[11px] font-bold rounded-md border tabular-nums transition-colors active:scale-95 ${
                     active
                       ? 'bg-[#0ecb81]/15 border-[#0ecb81] text-[#0ecb81]'
