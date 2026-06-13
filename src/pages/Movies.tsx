@@ -669,7 +669,23 @@ function Pagination({
 }
 
 // ====== Modal ======
-type Tab = "info" | "cast" | "ai";
+type Tab = "info" | "cast" | "ai" | "subs";
+
+interface Subtitle {
+  id: string;
+  lang: string;
+  langId: string;
+  iso: string;
+  name: string;
+  format: string;
+  rating: number;
+  downloads: number;
+  release: string;
+  hi: boolean;
+}
+
+const SUPA_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPA_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 function MovieModal({
   movie,
