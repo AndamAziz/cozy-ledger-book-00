@@ -227,11 +227,18 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
 
   const newBalance = await applyBalance(userId, pnl);
 
+  // Track consecutive losses → auto-pause after 3 in a row.
+  const prevStreak = Number(bot.consecutive_losses) || 0;
+  const streak = win ? 0 : prevStreak + 1;
+  const autoPause = streak >= 3;
+
   await admin.from("bots").update({
     status: "stopped",
     trades_count: (Number(bot.trades_count) || 0) + 1,
     wins_count: (Number(bot.wins_count) || 0) + (win ? 1 : 0),
     total_pnl: +((Number(bot.total_pnl) || 0) + pnl).toFixed(2),
+    consecutive_losses: streak,
+    auto_paused: autoPause,
     last_scan_at: new Date().toISOString(),
   }).eq("id", botId);
 
@@ -245,6 +252,27 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   }
   await log(botId, userId, "info", `[${hhmmss()}] 🤖 Bot auto-stopped after trade close`);
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Balance updated: $${newBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+  // 🔔 Notify the user the trade was closed (with result).
+  const botName = (bot.name as string) || symbol;
+  await notify(
+    userId, botId, win ? "trade_win" : "trade_loss",
+    win ? `🏆 ${botName} — Trade Won` : `💔 ${botName} — Trade Lost`,
+    `${dir.toUpperCase()} ${symbol} closed @ $${fmt(exitPrice, symbol)}${reason === "tp" ? " (TP hit)" : reason === "sl" ? " (SL hit)" : ""} · P/L ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%)`,
+    pnl,
+  );
+
+  // ⏸ Auto-pause after 3 consecutive losses.
+  if (autoPause) {
+    await log(botId, userId, "info", `[${hhmmss()}] ⏸ AUTO-PAUSED — ${streak} losses in a row. Bot paused for safety.`);
+    await notify(
+      userId, botId, "auto_pause",
+      `⏸ ${botName} Auto-Paused`,
+      `Bot paused after ${streak} losing trades in a row. Review your settings before restarting.`,
+    );
+  } else if (!win) {
+    await log(botId, userId, "info", `[${hhmmss()}] ⚠️ Loss streak: ${streak}/3 before auto-pause.`);
+  }
 }
 
 // ───────────────────── live recommendation (hold vs close) ─────────────────────
