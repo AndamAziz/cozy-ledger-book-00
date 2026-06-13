@@ -66,10 +66,16 @@ export default function Bots() {
               </div>
             </div>
           </div>
-          <div className="rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm font-bold tabular-nums text-gold">
-            💰 ${balance != null ? fmtUsd(balance) : "—"}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <div className="rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm font-bold tabular-nums text-gold">
+              💰 ${balance != null ? fmtUsd(balance) : "—"}
+            </div>
           </div>
         </div>
+
+        {/* Daily summary */}
+        <DailySummary />
 
         {/* Live markets */}
         <div className="mt-4">
