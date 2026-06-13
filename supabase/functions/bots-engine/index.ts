@@ -508,6 +508,42 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // daily-summary: build today's totals and store ONE notification (idempotent per day).
+    if (action === "daily-summary") {
+      if (!userId) return new Response(JSON.stringify({ error: "Auth required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+      const { data: existing } = await admin
+        .from("bot_notifications")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("type", "daily_summary")
+        .gte("created_at", startOfDay.toISOString())
+        .limit(1);
+      if (existing && existing.length) {
+        return new Response(JSON.stringify({ ok: true, skipped: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: trades } = await admin
+        .from("bot_trades")
+        .select("pnl, result")
+        .eq("user_id", userId)
+        .eq("status", "closed")
+        .gte("closed_at", startOfDay.toISOString());
+      const rows = trades ?? [];
+      const total = rows.length;
+      const wins = rows.filter((t) => t.result === "win").length;
+      const pnl = rows.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+      const winRate = total ? Math.round((wins / total) * 100) : 0;
+      if (total > 0) {
+        const sign = pnl >= 0 ? "+" : "-";
+        await notify(
+          userId, null, "daily_summary", "📅 Daily Summary",
+          `${total} trades · ${winRate}% win rate · P/L ${sign}$${Math.abs(pnl).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          pnl,
+        );
+      }
+      return new Response(JSON.stringify({ ok: true, total, wins, winRate, pnl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // tick: process a single bot (fast, client-triggered) or sweep all active bots (cron).
     if (action === "tick" && botId) {
       const { data: bot } = await admin.from("bots").select("*").eq("id", botId).maybeSingle();
