@@ -790,6 +790,10 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         onClose={handleClose}
         onRefresh={handleRefreshTrade}
         onAmountChange={setTradeAmount}
+        onClearTpSl={() => {
+          if (buyLeg) setTpSl(pair, 'buy', null, null);
+          if (sellLeg) setTpSl(pair, 'sell', null, null);
+        }}
       />
 
       {/* Chart — sized so trade controls (above) and 24h stats (below) stay reachable on mobile without awkward scrolling */}
