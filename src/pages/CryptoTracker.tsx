@@ -216,6 +216,14 @@ export default function CryptoTracker() {
           <div className="flex-1" />
 
           <button
+            onClick={() => navigate('/bots')}
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold bg-gradient-to-r from-[#d4af37]/20 to-[#d4af37]/5 border border-[#d4af37]/40 hover:border-[#d4af37]/70 rounded-lg transition-colors text-[#d4af37]"
+          >
+            <LineChart className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">{bi('بوتەکان', 'Bots')}</span>
+          </button>
+
+          <button
             onClick={() => setShowConverter(true)}
             className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-[10px] sm:text-xs font-bold bg-[#1a1e2e] hover:bg-[#252a3a] active:bg-[#303548] rounded-lg transition-colors text-[#f0b90b]"
           >
