@@ -15,5 +15,8 @@ verify_jwt = false
 [functions.crypto-analysis]
 verify_jwt = false
 
+[functions.movies-ai]
+verify_jwt = false
+
 [functions.send-telegram-signal]
 verify_jwt = false

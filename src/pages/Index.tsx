@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useFinanceData } from '@/hooks/useFinanceData';
@@ -19,7 +20,7 @@ import { ReportsTab } from '@/components/ReportsTab';
 import { SplashScreen } from '@/components/SplashScreen';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
-import { Users, Sparkles, Tv } from 'lucide-react';
+import { Users, Sparkles, Tv, Film } from 'lucide-react';
 
 type TabType = 'finance' | 'inventory' | 'sales' | 'reports';
 
@@ -34,6 +35,7 @@ interface DashboardProps {
 const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEmail }: DashboardProps) => {
   const { logout } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
   const financeData = useFinanceData();
 
@@ -109,6 +111,21 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <span className="font-bold text-foreground text-xs sm:text-sm truncate">TV</span>
             </a>
           </div>
+
+          {/* Movies button */}
+          <button
+            onClick={() => navigate('/movies')}
+            className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-accent/20 via-accent/10 to-transparent border border-accent/30 hover:border-accent/50 p-2.5 sm:p-3.5 w-full mb-3 sm:mb-5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 no-print"
+          >
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-accent to-amber-400 flex items-center justify-center shadow-md shadow-accent/30 flex-shrink-0">
+              <Film className="h-4 w-4 sm:h-5 sm:w-5 text-accent-foreground" />
+            </div>
+            <span className="font-bold text-foreground text-xs sm:text-sm truncate">Movies 🎬</span>
+          </button>
+
+
+
+
 
 
           {/* Tab Navigation */}
