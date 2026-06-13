@@ -106,7 +106,6 @@ export function TradeControls({
   buyLeg,
   sellLeg,
   otherPositionLabel,
-  timeframeLabel,
   timeframeMinutes,
   balance,
   realizedPnl = 0,
@@ -282,9 +281,6 @@ export function TradeControls({
 
   // Position counts for the overview header.
   const openCount = (buyLeg && buyLeg.qty > 0 ? 1 : 0) + (sellLeg && sellLeg.qty > 0 ? 1 : 0);
-  const profitCount = (buyPnl?.positive ? 1 : 0) + (sellPnl?.positive ? 1 : 0);
-  const lossCount = (buyPnl && !buyPnl.positive ? 1 : 0) + (sellPnl && !sellPnl.positive ? 1 : 0);
-
   const closeBatch = (mode: 'profit' | 'loss' | 'all') => {
     const wantBuy = mode === 'all' ? !!(buyLeg && buyLeg.qty > 0) : buyPnl ? (mode === 'profit' ? buyPnl.positive : !buyPnl.positive) : false;
     const wantSell = mode === 'all' ? !!(sellLeg && sellLeg.qty > 0) : sellPnl ? (mode === 'profit' ? sellPnl.positive : !sellPnl.positive) : false;
