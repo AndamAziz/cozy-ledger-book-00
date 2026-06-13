@@ -336,44 +336,44 @@ export default function CryptoTracker() {
           {/* Main content */}
           {activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Overview / Chart / Analysis sub-toggle */}
-              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
-                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+              {/* Overview / Chart / Analysis sub-toggle — mobile-friendly */}
+              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar">
+                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
                   <button
                     onClick={() => setCryptoView('overview')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
                       cryptoView === 'overview' ? 'bg-[#2a2e3e] text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'
                     }`}
                   >
-                    <LayoutGrid className="h-3.5 w-3.5" />
-                    <span>{bi('پوختە', 'Overview')}</span>
+                    <LayoutGrid className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{bi('پوختە', 'Overview')}</span>
                   </button>
                   <button
                     onClick={() => setCryptoView('chart')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
                       cryptoView === 'chart' ? 'bg-[#2a2e3e] text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'
                     }`}
                   >
-                    <CandlestickChart className="h-3.5 w-3.5" />
-                    <span>{bi('چارت', 'Chart')}</span>
+                    <CandlestickChart className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{bi('چارت', 'Chart')}</span>
                   </button>
                   <button
                     onClick={() => setCryptoView('analysis')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
                       cryptoView === 'analysis' ? 'bg-[#2a2e3e] text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'
                     }`}
                   >
-                    <Activity className="h-3.5 w-3.5" />
-                    <span>{bi('شیکاری', 'Analysis')}</span>
+                    <Activity className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{bi('شیکاری', 'Analysis')}</span>
                   </button>
                   <button
                     onClick={() => setCryptoView('pro')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors active:scale-95 ${
+                    className={`flex items-center justify-center gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
                       cryptoView === 'pro' ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c] hover:text-white'
                     }`}
                   >
-                    <Crown className="h-3.5 w-3.5" />
-                    <span>{bi('پرۆ', 'Pro')}</span>
+                    <Crown className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                    <span className="hidden sm:inline">{bi('پرۆ', 'Pro')}</span>
                   </button>
                 </div>
               </div>
