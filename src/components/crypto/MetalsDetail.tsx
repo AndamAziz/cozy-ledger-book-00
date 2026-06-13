@@ -182,6 +182,21 @@ export function MetalsDetail({ metals, selectedCode, isLoading, initialView = 'm
               <Sparkles className="h-3.5 w-3.5" />
               {language === 'en' ? 'Analysis' : 'شیکاری'}
             </button>
+            {!isOil && (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={view === 'pro'}
+                aria-label="Gold Pro view / گۆلد پرۆ"
+                onClick={() => setView('pro')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-md transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6] ${
+                  view === 'pro' ? 'bg-[#d4af37] text-black shadow-sm' : 'text-[#848e9c] hover:text-white'
+                }`}
+              >
+                <Crown className="h-3.5 w-3.5" />
+                {language === 'en' ? 'Pro' : 'پرۆ'}
+              </button>
+            )}
           </div>
         </div>
       </div>
