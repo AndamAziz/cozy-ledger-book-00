@@ -325,7 +325,7 @@ export function TradeControls({
                   {/* Quick presets + clear */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-[9px] sm:text-[10px] text-[#848e9c]">{bi('خێرا', 'Quick', 'Hızlı')}</span>
-                    {[0.5, 1, 2].map((p) => {
+                    {QUICK_TPSL.map((p) => {
                       const [tp, sl] = presetTpSl(side, leg.entryPrice, p);
                       return (
                         <button
