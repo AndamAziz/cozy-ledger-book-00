@@ -107,6 +107,9 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-md shadow-info/30 flex-shrink-0">
                 <Tv className="h-4 w-4 sm:h-5 sm:w-5 text-info-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">TV</span>
+            </a>
           </div>
 
           {/* Movies button */}
@@ -119,6 +122,8 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             </div>
             <span className="font-bold text-foreground text-xs sm:text-sm truncate">Movies 🎬</span>
           </button>
+
+
 
 
 
