@@ -6,6 +6,8 @@ import { useBotPrices } from "@/hooks/useBotPrices";
 import { MarketDropdown } from "@/components/bots/MarketDropdown";
 import { PriceDetailModal } from "@/components/bots/PriceDetailModal";
 import { CreateBotModal } from "@/components/bots/CreateBotModal";
+import { NotificationBell } from "@/components/bots/NotificationBell";
+import { DailySummary } from "@/components/bots/DailySummary";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -64,10 +66,16 @@ export default function Bots() {
               </div>
             </div>
           </div>
-          <div className="rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm font-bold tabular-nums text-gold">
-            💰 ${balance != null ? fmtUsd(balance) : "—"}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <div className="rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm font-bold tabular-nums text-gold">
+              💰 ${balance != null ? fmtUsd(balance) : "—"}
+            </div>
           </div>
         </div>
+
+        {/* Daily summary */}
+        <DailySummary />
 
         {/* Live markets */}
         <div className="mt-4">
@@ -123,7 +131,12 @@ export default function Bots() {
                     {a.emoji}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-semibold text-foreground">{bot.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-semibold text-foreground">{bot.name}</span>
+                      {bot.auto_paused && (
+                        <span className="shrink-0 rounded-full bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">⏸ Paused</span>
+                      )}
+                    </div>
                     <div className="truncate text-xs text-muted-foreground">
                       {bot.symbol} · {bot.timeframe} · ${fmtUsd(Number(bot.amount))}
                     </div>

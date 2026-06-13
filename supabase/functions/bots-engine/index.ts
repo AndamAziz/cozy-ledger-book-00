@@ -167,6 +167,19 @@ function hhmmss(): string {
 async function log(botId: string, userId: string, level: string, message: string) {
   await admin.from("bot_logs").insert({ bot_id: botId, user_id: userId, level, message });
 }
+async function notify(
+  userId: string,
+  botId: string | null,
+  type: string,
+  title: string,
+  message: string,
+  pnl?: number,
+) {
+  await admin.from("bot_notifications").insert({
+    user_id: userId, bot_id: botId, type, title, message,
+    pnl: pnl == null ? null : +pnl.toFixed(2),
+  });
+}
 function fmt(n: number, symbol: string): string {
   const dec = symbol === "USD/JPY" ? 3 : 2;
   return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -214,11 +227,18 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
 
   const newBalance = await applyBalance(userId, pnl);
 
+  // Track consecutive losses → auto-pause after 3 in a row.
+  const prevStreak = Number(bot.consecutive_losses) || 0;
+  const streak = win ? 0 : prevStreak + 1;
+  const autoPause = streak >= 3;
+
   await admin.from("bots").update({
     status: "stopped",
     trades_count: (Number(bot.trades_count) || 0) + 1,
     wins_count: (Number(bot.wins_count) || 0) + (win ? 1 : 0),
     total_pnl: +((Number(bot.total_pnl) || 0) + pnl).toFixed(2),
+    consecutive_losses: streak,
+    auto_paused: autoPause,
     last_scan_at: new Date().toISOString(),
   }).eq("id", botId);
 
@@ -232,6 +252,27 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   }
   await log(botId, userId, "info", `[${hhmmss()}] 🤖 Bot auto-stopped after trade close`);
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Balance updated: $${newBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+  // 🔔 Notify the user the trade was closed (with result).
+  const botName = (bot.name as string) || symbol;
+  await notify(
+    userId, botId, win ? "trade_win" : "trade_loss",
+    win ? `🏆 ${botName} — Trade Won` : `💔 ${botName} — Trade Lost`,
+    `${dir.toUpperCase()} ${symbol} closed @ $${fmt(exitPrice, symbol)}${reason === "tp" ? " (TP hit)" : reason === "sl" ? " (SL hit)" : ""} · P/L ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%)`,
+    pnl,
+  );
+
+  // ⏸ Auto-pause after 3 consecutive losses.
+  if (autoPause) {
+    await log(botId, userId, "info", `[${hhmmss()}] ⏸ AUTO-PAUSED — ${streak} losses in a row. Bot paused for safety.`);
+    await notify(
+      userId, botId, "auto_pause",
+      `⏸ ${botName} Auto-Paused`,
+      `Bot paused after ${streak} losing trades in a row. Review your settings before restarting.`,
+    );
+  } else if (!win) {
+    await log(botId, userId, "info", `[${hhmmss()}] ⚠️ Loss streak: ${streak}/3 before auto-pause.`);
+  }
 }
 
 // ───────────────────── live recommendation (hold vs close) ─────────────────────
@@ -409,6 +450,14 @@ async function processBot(bot: Record<string, unknown>) {
     return;
   }
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Opened ${direction.toUpperCase()} @ $${fmt(entry, symbol)} | SL: $${fmt(slPrice, symbol)} | TP: $${fmt(tpPrice, symbol)}`);
+
+  // 🔔 Notify the user a new trade was opened.
+  const botName = (bot.name as string) || symbol;
+  await notify(
+    userId, botId, "trade_open",
+    `📈 ${botName} — Trade Opened`,
+    `${direction.toUpperCase()} ${symbol} @ $${fmt(entry, symbol)} · SL $${fmt(slPrice, symbol)} · TP $${fmt(tpPrice, symbol)}`,
+  );
 }
 
 // ───────────────────── HTTP ─────────────────────
@@ -442,9 +491,10 @@ serve(async (req) => {
       if (!bot) return new Response(JSON.stringify({ error: "Bot not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       if (action === "start") {
-        await admin.from("bots").update({ status: "running", last_scan_at: null }).eq("id", botId);
+        // Restarting resets the loss streak and clears any auto-pause.
+        await admin.from("bots").update({ status: "running", last_scan_at: null, consecutive_losses: 0, auto_paused: false }).eq("id", botId);
         await log(botId, userId, "info", `[${hhmmss()}] ▶️ Bot started — scanning ${bot.symbol} on ${bot.timeframe}`);
-        await processBot({ ...bot, status: "running", last_scan_at: null });
+        await processBot({ ...bot, status: "running", last_scan_at: null, consecutive_losses: 0, auto_paused: false });
       } else if (action === "stop" || action === "close") {
         const { data: openTrade } = await admin.from("bot_trades").select("*").eq("bot_id", botId).eq("status", "open").maybeSingle();
         if (openTrade) {
@@ -456,6 +506,42 @@ serve(async (req) => {
         }
       }
       return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // daily-summary: build today's totals and store ONE notification (idempotent per day).
+    if (action === "daily-summary") {
+      if (!userId) return new Response(JSON.stringify({ error: "Auth required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+      const { data: existing } = await admin
+        .from("bot_notifications")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("type", "daily_summary")
+        .gte("created_at", startOfDay.toISOString())
+        .limit(1);
+      if (existing && existing.length) {
+        return new Response(JSON.stringify({ ok: true, skipped: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: trades } = await admin
+        .from("bot_trades")
+        .select("pnl, result")
+        .eq("user_id", userId)
+        .eq("status", "closed")
+        .gte("closed_at", startOfDay.toISOString());
+      const rows = trades ?? [];
+      const total = rows.length;
+      const wins = rows.filter((t) => t.result === "win").length;
+      const pnl = rows.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+      const winRate = total ? Math.round((wins / total) * 100) : 0;
+      if (total > 0) {
+        const sign = pnl >= 0 ? "+" : "-";
+        await notify(
+          userId, null, "daily_summary", "📅 Daily Summary",
+          `${total} trades · ${winRate}% win rate · P/L ${sign}$${Math.abs(pnl).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          pnl,
+        );
+      }
+      return new Response(JSON.stringify({ ok: true, total, wins, winRate, pnl }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // tick: process a single bot (fast, client-triggered) or sweep all active bots (cron).

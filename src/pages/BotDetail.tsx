@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useBotDetail, useDemoBalance, useBotPerformance } from "@/hooks/useBots";
 import { BotPerformanceChart } from "@/components/bots/BotPerformanceChart";
+import { NotificationBell } from "@/components/bots/NotificationBell";
 import { useBotPrices, callEngine } from "@/hooks/useBotPrices";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
@@ -118,8 +119,11 @@ export default function BotDetail() {
             <button onClick={() => navigate("/crypto")} className="rounded-lg p-1.5 hover:bg-secondary"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
             <h1 className="text-lg font-bold text-foreground">{bot.name}</h1>
           </div>
-          <div className="rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm font-bold tabular-nums text-gold">
-            💰 ${balance != null ? fmtUsd(balance) : "—"}
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <div className="rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm font-bold tabular-nums text-gold">
+              💰 ${balance != null ? fmtUsd(balance) : "—"}
+            </div>
           </div>
         </div>
 
@@ -198,8 +202,16 @@ export default function BotDetail() {
               <div className="text-[11px] uppercase text-muted-foreground">P/L</div>
               <div className={cn("font-bold tabular-nums", Number(bot.total_pnl) >= 0 ? "text-success" : "text-destructive")}>
                 {Number(bot.total_pnl) >= 0 ? "+" : "-"}${fmtUsd(Math.abs(Number(bot.total_pnl)))}
-              </div>
-            </div>
+          </div>
+        </div>
+
+        {/* Auto-pause warning */}
+        {bot.auto_paused && (
+          <div className="mt-3 rounded-2xl border border-destructive/50 bg-destructive/10 p-3 text-sm">
+            <div className="font-semibold text-destructive">⏸ Auto-paused after {bot.consecutive_losses} losing trades in a row</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">The bot stopped itself for safety. Starting it again resets the loss streak.</div>
+          </div>
+        )}
           </div>
         </div>
 
