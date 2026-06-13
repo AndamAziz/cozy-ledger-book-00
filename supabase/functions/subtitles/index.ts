@@ -21,21 +21,36 @@ Deno.serve(async (req) => {
     // ---------- SEARCH ----------
     if (action === "search") {
       const imdb = (url.searchParams.get("imdb_id") || "").replace(/\D/g, "");
-      const langs = (url.searchParams.get("langs") || "").trim(); // e.g. "eng,ara,kur" or "all"
+      const langsRaw = (url.searchParams.get("langs") || "").trim(); // e.g. "eng,ara,kur" or "all"
       if (!imdb) return json({ error: "imdb_id required" }, 400);
 
-      let api = `https://rest.opensubtitles.org/search/imdbid-${imdb}`;
-      if (langs && langs.toLowerCase() !== "all") {
-        api += `/sublanguageid-${encodeURIComponent(langs)}`;
-      }
+      const base = `https://rest.opensubtitles.org/search/imdbid-${imdb}`;
+      // The legacy endpoint accepts only ONE language per request, so query each separately.
+      const langList =
+        !langsRaw || langsRaw.toLowerCase() === "all"
+          ? [""]
+          : langsRaw
+              .split(",")
+              .map((l) => l.trim())
+              .filter(Boolean);
 
-      const r = await fetch(api, {
-        headers: { "User-Agent": UA, "X-User-Agent": UA },
-      });
-      if (!r.ok) return json({ error: "search failed", status: r.status }, 502);
+      const results = await Promise.all(
+        langList.map(async (l) => {
+          const api = l ? `${base}/sublanguageid-${encodeURIComponent(l)}` : base;
+          try {
+            const r = await fetch(api, {
+              headers: { "User-Agent": UA, "X-User-Agent": UA },
+            });
+            if (!r.ok) return [];
+            const d = await r.json().catch(() => []);
+            return Array.isArray(d) ? d : [];
+          } catch {
+            return [];
+          }
+        }),
+      );
 
-      const data = await r.json().catch(() => []);
-      const list = Array.isArray(data) ? data : [];
+      const list = results.flat();
       const subs = list
         .map((s: Record<string, string>) => ({
           id: s.IDSubtitleFile,
