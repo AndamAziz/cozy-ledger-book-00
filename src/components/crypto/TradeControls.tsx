@@ -641,6 +641,18 @@ export function TradeControls({
           <span className="relative font-bold tabular-nums leading-none" style={{ color: '#22c55e', fontSize: '17px' }}>
             {ask > 0 ? fmtPrice(ask) : '--'}
           </span>
+          {/* Live open P/L for the BUY leg, right on the button */}
+          {buyPnl && (
+            <span
+              className="relative mt-1 px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold tabular-nums leading-none"
+              style={{
+                color: buyPnl.positive ? '#22c55e' : '#f43f5e',
+                background: `${buyPnl.positive ? '#22c55e' : '#f43f5e'}1f`,
+              }}
+            >
+              {buyPnl.positive ? '+' : '−'}${fmtMoney(Math.abs(buyPnl.value))}
+            </span>
+          )}
         </button>
       </div>
 
