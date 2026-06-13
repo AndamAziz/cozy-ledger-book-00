@@ -51,7 +51,13 @@ export function DxyWidget({ dxy, goldBias, loading, asset = 'gold' }: Props) {
             </div>
           </div>
           <div className="mt-3 text-xs font-semibold rounded-lg px-3 py-2" style={{ color: goldColor, backgroundColor: goldColor + '14' }}>
-            {asset === 'crypto' ? (
+            {asset === 'forex' ? (
+              goldBias === 'bullish'
+                ? bi('🟢 دۆلار بەهێز → USD/جووت بەرز دەبێت', '🟢 USD strong → USD pairs likely up')
+                : goldBias === 'bearish'
+                  ? bi('🔴 دۆلار لاواز → USD/جووت دادەبەزێت', '🔴 USD weak → USD pairs likely down')
+                  : bi('🟠 دۆلار نزیکەی بێگۆڕانە → بێ ئاراستە', '🟠 USD roughly flat → no clear edge')
+            ) : asset === 'crypto' ? (
               goldBias === 'bullish'
                 ? bi('🟢 دۆلار نزم → پارەی ئازاد بۆ کریپتۆ (پاڵپشتی)', '🟢 USD down → risk-on, supports crypto')
                 : goldBias === 'bearish'
