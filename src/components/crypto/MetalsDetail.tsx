@@ -6,7 +6,7 @@ import { MetalsChart } from '@/components/crypto/MetalsChart';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { GoldProPanel } from '@/components/crypto/GoldProPanel';
 import type { OHLCCandle } from '@/lib/krakenApi';
-import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw, LineChart, Sparkles, Crown } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
 
 const RANGE_LABELS: Record<string, string> = {
   '1min': '1m', '5min': '5m', '15min': '15m',
