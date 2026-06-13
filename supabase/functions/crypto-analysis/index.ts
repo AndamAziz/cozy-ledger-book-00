@@ -179,13 +179,19 @@ serve(async (req) => {
         ? `\n24h high: $${dayHigh}\n24h low: $${dayLow}`
         : "";
 
+    // Live macro/news context (real economic calendar). Only needed for the
+    // text/structured analysis modes, so skip the network call for pure image modes.
+    const needsMacro = mode !== "image";
+    const macroEvents = needsMacro ? await fetchMacroEvents() : "";
+    const macroBlock = macroEvents ? `\n\n${macroEvents}` : "";
+
     const baseContext = `Asset: ${symbol}/USD
 Timeframe: ${timeframe}
 Current price: $${price}
 24h change: ${change24h}%${hiLo}
 Technical signal summary: ${JSON.stringify(summary)}
 
-Indicators: ${JSON.stringify(indicators)}`;
+Indicators: ${JSON.stringify(indicators)}${macroBlock}`;
 
     // ----- Chart image analysis mode (read candles from one or more uploaded screenshots) -----
     if (mode === "image") {
