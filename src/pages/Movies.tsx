@@ -736,6 +736,275 @@ function Grid({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ====== Featured Hero Carousel ======
+interface HeroItem extends Movie {
+  backdrop: string;
+  overview: string;
+}
+
+function Hero({
+  lang,
+  t,
+  dir,
+  onSelect,
+}: {
+  lang: Lang;
+  t: (typeof T)["ku"];
+  dir: "rtl" | "ltr";
+  onSelect: (m: Movie) => void;
+}) {
+  const [items, setItems] = useState<HeroItem[]>([]);
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/trending/all/week?api_key=${TMDB_KEY}&language=en-US`,
+        );
+        const d = await r.json();
+        if (!alive) return;
+        const list: HeroItem[] = (Array.isArray(d.results) ? d.results : [])
+          .filter(
+            (x: TmdbSearchResult & { backdrop_path?: string; overview?: string }) =>
+              x.backdrop_path && (x.media_type === "movie" || x.media_type === "tv"),
+          )
+          .slice(0, 6)
+          .map((x: TmdbSearchResult & { backdrop_path?: string; overview?: string }) => ({
+            ...mapTmdbResult(x),
+            backdrop: TMDB_BACKDROP + x.backdrop_path,
+            overview: x.overview || "",
+          }));
+        setItems(list);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (items.length < 2) return;
+    const id = setInterval(() => setIdx((i) => (i + 1) % items.length), 5500);
+    return () => clearInterval(id);
+  }, [items.length]);
+
+  if (items.length === 0) {
+    return (
+      <div
+        className="mv-skel"
+        style={{ width: "100%", aspectRatio: "16/8", borderRadius: 20, marginBottom: 22 }}
+      />
+    );
+  }
+
+  const cur = items[idx];
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: "16/9",
+        maxHeight: 460,
+        borderRadius: 20,
+        overflow: "hidden",
+        marginBottom: 22,
+        background: C.panel,
+        border: `1px solid ${C.border}`,
+      }}
+    >
+      {items.map((it, i) => (
+        <img
+          key={it.tmdb_id}
+          src={it.backdrop}
+          alt={it.title}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: i === idx ? 1 : 0,
+            transition: "opacity .8s ease",
+          }}
+        />
+      ))}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            dir === "rtl"
+              ? `linear-gradient(to left, ${C.bg} 6%, rgba(10,10,15,.55) 45%, rgba(10,10,15,.15) 100%)`
+              : `linear-gradient(to right, ${C.bg} 6%, rgba(10,10,15,.55) 45%, rgba(10,10,15,.15) 100%)`,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `linear-gradient(to top, ${C.bg} 2%, transparent 55%)`,
+        }}
+      />
+
+      <div
+        className="mv-fade"
+        key={cur.tmdb_id}
+        style={{
+          position: "absolute",
+          bottom: 0,
+          insetInlineStart: 0,
+          padding: "0 22px 22px",
+          maxWidth: 560,
+        }}
+      >
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: C.gold,
+            color: "#0A0A0F",
+            fontSize: 11,
+            fontWeight: 900,
+            padding: "4px 10px",
+            borderRadius: 999,
+            marginBottom: 12,
+            letterSpacing: ".5px",
+          }}
+        >
+          🔥 {t.featured}
+        </div>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: "clamp(24px, 6vw, 44px)",
+            fontWeight: 900,
+            lineHeight: 1.05,
+            textShadow: "0 4px 24px rgba(0,0,0,.7)",
+          }}
+        >
+          {cur.title}
+        </h2>
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+            marginTop: 10,
+            fontSize: 14,
+            color: C.text,
+            flexWrap: "wrap",
+          }}
+        >
+          {cur.media === "tv" && (
+            <span
+              style={{
+                background: "#2563eb",
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 800,
+                padding: "2px 8px",
+                borderRadius: 6,
+              }}
+            >
+              📺 {t.tvTag}
+            </span>
+          )}
+          {parseFloat(cur.rating) > 0 && (
+            <span style={{ color: C.gold, fontWeight: 800 }}>★ {parseFloat(cur.rating).toFixed(1)}</span>
+          )}
+          {cur.year && <span style={{ color: C.muted }}>{cur.year}</span>}
+          {cur.genre && <span style={{ color: C.muted }}>{cur.genre.split(",")[0]}</span>}
+        </div>
+        {cur.overview && (
+          <p
+            style={{
+              margin: "12px 0 0",
+              fontSize: 13.5,
+              lineHeight: 1.6,
+              color: C.muted,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {cur.overview}
+          </p>
+        )}
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <button
+            onClick={() => onSelect(cur)}
+            style={{
+              background: C.gold,
+              color: "#0A0A0F",
+              border: "none",
+              borderRadius: 12,
+              padding: "11px 24px",
+              fontWeight: 900,
+              fontSize: 14.5,
+              cursor: "pointer",
+            }}
+          >
+            {t.play}
+          </button>
+          <button
+            onClick={() => onSelect(cur)}
+            style={{
+              background: "rgba(255,255,255,0.12)",
+              color: C.text,
+              border: `1px solid ${C.border}`,
+              borderRadius: 12,
+              padding: "11px 22px",
+              fontWeight: 800,
+              fontSize: 14.5,
+              cursor: "pointer",
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            ⓘ {t.details}
+          </button>
+        </div>
+      </div>
+
+      {/* dots */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 18,
+          insetInlineEnd: 22,
+          display: "flex",
+          gap: 6,
+        }}
+      >
+        {items.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setIdx(i)}
+            aria-label={`slide ${i + 1}`}
+            style={{
+              width: i === idx ? 22 : 8,
+              height: 8,
+              borderRadius: 999,
+              border: "none",
+              background: i === idx ? C.gold : "rgba(255,255,255,.4)",
+              cursor: "pointer",
+              transition: "all .3s",
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+
 function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
   const rating = parseFloat(movie.rating) || 0;
   return (
