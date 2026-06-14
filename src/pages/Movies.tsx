@@ -1907,18 +1907,16 @@ function MovieModal({
           servers={
             isTv
               ? [
-                  { name: "Server 1 ⚡", url: `https://vidsrc.xyz/embed/tv/${imdbId || movie.tmdb_id}/${season}/${episode}` },
-                  { name: "Server 2", url: `https://vidsrc.cc/v2/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
-                  { name: "Server 3", url: `https://www.2embed.cc/embedtv/${movie.tmdb_id}&s=${season}&e=${episode}` },
-                  ...(imdbId ? [{ name: "Server 4", url: `https://multiembed.mov/?video_id=${imdbId}&s=${season}&e=${episode}` }] : []),
-                  { name: "Server 5", url: `https://vaplayer.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 1 ⚡", url: `https://vidlink.pro/tv/${movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 2", url: `https://vidfast.pro/tv/${movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 3", url: `https://vidsrc.to/embed/tv/${imdbId || movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 4", url: `https://player.videasy.net/tv/${movie.tmdb_id}/${season}/${episode}` },
                 ]
               : [
-                  { name: "Server 1 ⚡", url: `https://vidsrc.xyz/embed/movie/${imdbId || movie.tmdb_id}` },
-                  { name: "Server 2", url: `https://vidsrc.cc/v2/embed/movie/${movie.tmdb_id}` },
-                  { name: "Server 3", url: `https://www.2embed.cc/embed/${movie.tmdb_id}` },
-                  ...(imdbId ? [{ name: "Server 4", url: `https://multiembed.mov/?video_id=${imdbId}` }] : []),
-                  { name: "Server 5", url: `https://vaplayer.ru/embed/movie/${imdbId || movie.tmdb_id}` },
+                  { name: "Server 1 ⚡", url: `https://vidlink.pro/movie/${movie.tmdb_id}` },
+                  { name: "Server 2", url: `https://vidfast.pro/movie/${movie.tmdb_id}` },
+                  { name: "Server 3", url: `https://vidsrc.to/embed/movie/${imdbId || movie.tmdb_id}` },
+                  { name: "Server 4", url: `https://player.videasy.net/movie/${movie.tmdb_id}` },
                 ]
           }
           onClose={() => setWatch(false)}
