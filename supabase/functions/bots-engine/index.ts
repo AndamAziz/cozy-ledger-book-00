@@ -21,6 +21,17 @@ const TIMEFRAME_SECONDS: Record<string, number> = {
   "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400,
 };
 
+// ───────────────────── scalping config ─────────────────────
+// Timeframes under/at 15m run in fast "scalp" mode: exit the moment a trade is
+// green, take a half-target on reversals, and never let a winner turn to loss.
+const SCALP_TIMEFRAMES = new Set(["1m", "5m", "15m"]);
+const isScalp = (tf: string) => SCALP_TIMEFRAMES.has(tf);
+// Minimum profit (as a %) at which a scalp trade is closed immediately.
+const MIN_SCALP_PROFIT_PCT = 0.1;
+// Once a scalp trade has been this far in profit (% of full TP) we protect the
+// gain: if price reverses back toward break-even we close in the green.
+const SCALP_LOCK_FRACTION = 0.5;
+
 const CRYPTO_BINANCE: Record<string, string> = {
   "BTC/USD": "BTCUSDT", "ETH/USD": "ETHUSDT", "BNB/USD": "BNBUSDT",
   "SOL/USD": "SOLUSDT", "XRP/USD": "XRPUSDT",
