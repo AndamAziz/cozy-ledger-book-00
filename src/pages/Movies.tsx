@@ -217,6 +217,20 @@ const TMDB_GENRES: Record<number, string> = {
   10763: "News", 10762: "Family", 10766: "Drama", 10767: "Talk",
 };
 
+// Genre key → TMDB genre id, per media type (used for server-side discover filtering)
+const MOVIE_GENRE_IDS: Record<string, number> = {
+  Action: 28, Comedy: 35, Drama: 18, Horror: 27,
+  "Science Fiction": 878, Thriller: 53, Romance: 10749,
+  Animation: 16, Adventure: 12, Crime: 80, Fantasy: 14,
+};
+const TV_GENRE_IDS: Record<string, number> = {
+  Action: 10759, Comedy: 35, Drama: 18, Horror: 9648,
+  "Science Fiction": 10765, Thriller: 9648, Romance: 10766,
+  Animation: 16, Adventure: 10759, Crime: 80, Fantasy: 10765,
+};
+
+
+
 
 
 
