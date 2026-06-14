@@ -893,6 +893,7 @@ function MovieModal({
   const [subsLoading, setSubsLoading] = useState(false);
   const [subsError, setSubsError] = useState<string>("");
   const [downloadingId, setDownloadingId] = useState<string>("");
+  const [imdbId, setImdbId] = useState<string>(movie.imdb_id || "");
 
   const rating = parseFloat(movie.rating) || 0;
 
