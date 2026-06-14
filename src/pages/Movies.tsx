@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 // ====== Theme ======
@@ -59,6 +60,9 @@ const T = {
     downloading: "...",
     subsHint: "زمانەکان: کوردی، ئینگلیزی، عەرەبی و زۆرتر — لە OpenSubtitles بەخۆڕایی",
     allLangs: "هەموو زمانەکان",
+    openPlayIMDb: "🌐 کردنەوە لە PlayIMDb",
+    copyPlayIMDb: "📋 کۆپی کردنی لینک",
+    linkCopied: "لینکەکە کۆپی کرا ✓",
   },
   en: {
     title: "Mov",
@@ -96,6 +100,9 @@ const T = {
     downloading: "...",
     subsHint: "Languages: Kurdish, English, Arabic & more — free from OpenSubtitles",
     allLangs: "All languages",
+    openPlayIMDb: "🌐 Open on PlayIMDb",
+    copyPlayIMDb: "📋 Copy PlayIMDb Link",
+    linkCopied: "Link copied ✓",
   },
 };
 
@@ -199,9 +206,52 @@ export default function Movies() {
     fetchMovies(page);
   }, [page, fetchMovies]);
 
+  const searchByImdbId = useCallback(async (imdbId: string) => {
+    try {
+      const r = await fetch(
+        `https://api.themoviedb.org/3/find/${imdbId}?api_key=${TMDB_KEY}&external_source=imdb_id`,
+      );
+      const d = await r.json();
+      const result = d?.movie_results?.[0];
+      if (result) {
+        const movie: Movie = {
+          tmdb_id: result.id,
+          imdb_id: imdbId,
+          title: result.title || result.original_title || imdbId,
+          year: result.release_date ? result.release_date.slice(0, 4) : "",
+          poster_url: result.poster_path
+            ? `https://image.tmdb.org/t/p/w500${result.poster_path}`
+            : "",
+          rating: result.vote_average ? String(result.vote_average) : "",
+          genre: "",
+          popularity: String(result.popularity || ""),
+          type: "movie",
+          embed_url: "",
+        };
+        setSelected(movie);
+        return true;
+      }
+    } catch {
+      /* ignore */
+    }
+    return false;
+  }, []);
+
   const runAiSearch = useCallback(async () => {
     const q = search.trim();
     if (!q) return;
+
+    /* direct IMDB ID search */
+    if (/^tt\d{7,}$/i.test(q)) {
+      setAiSearching(true);
+      const found = await searchByImdbId(q.toLowerCase());
+      setAiSearching(false);
+      if (!found) {
+        setAiTitle(lang === "ku" ? "IMDB ID نەدۆزرایەوە" : "IMDB ID not found");
+      }
+      return;
+    }
+
     setAiSearching(true);
     setAiTitle(null);
     try {
@@ -217,7 +267,7 @@ export default function Movies() {
     } finally {
       setAiSearching(false);
     }
-  }, [search]);
+  }, [search, searchByImdbId, lang]);
 
   const filtered = movies.filter((m) => {
     const okGenre =
@@ -985,8 +1035,30 @@ function MovieModal({
           />
           <ActionBtn label={t.aiInfo} onClick={loadAiInfo} />
           <ActionBtn label={t.subs} onClick={loadSubs} />
-
         </div>
+
+        {/* PlayIMDb buttons */}
+        {movie.imdb_id && (
+          <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
+            <ActionBtn
+              cyan
+              label={t.openPlayIMDb}
+              onClick={() => window.open(`https://www.playimdb.com/title/${movie.imdb_id}/`, "_blank")}
+            />
+            <ActionBtn
+              label={t.copyPlayIMDb}
+              onClick={async () => {
+                const url = `https://www.playimdb.com/title/${movie.imdb_id}/`;
+                try {
+                  await navigator.clipboard.writeText(url);
+                  toast.success(t.linkCopied);
+                } catch {
+                  toast.error(lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed");
+                }
+              }}
+            />
+          </div>
+        )}
         {trailer === "none" && (
           <div style={{ padding: "8px 16px 0", fontSize: 12.5, color: C.muted }}>
             {t.noTrailer}
@@ -1299,22 +1371,38 @@ function ActionBtn({
   label,
   onClick,
   primary,
+  cyan,
   disabled,
 }: {
   label: string;
   onClick: () => void;
   primary?: boolean;
+  cyan?: boolean;
   disabled?: boolean;
 }) {
+  let bg: string, color: string, border: string;
+  if (cyan) {
+    bg = "#00BCD4";
+    color = "#0A0A0F";
+    border = "#00BCD4";
+  } else if (primary) {
+    bg = C.gold;
+    color = "#0A0A0F";
+    border = C.gold;
+  } else {
+    bg = C.panel2;
+    color = C.text;
+    border = C.border;
+  }
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
         flex: 1,
-        background: primary ? C.gold : C.panel2,
-        color: primary ? "#0A0A0F" : C.text,
-        border: `1px solid ${primary ? C.gold : C.border}`,
+        background: bg,
+        color: color,
+        border: `1px solid ${border}`,
         borderRadius: 12,
         padding: "11px 8px",
         cursor: disabled ? "not-allowed" : "pointer",
