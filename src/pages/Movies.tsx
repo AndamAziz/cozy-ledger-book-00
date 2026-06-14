@@ -865,12 +865,10 @@ function Grid({ children }: { children: React.ReactNode }) {
 function TrendingRow({
   lang,
   t,
-  dir,
   onSelect,
 }: {
   lang: Lang;
   t: (typeof T)["ku"];
-  dir: "rtl" | "ltr";
   onSelect: (m: Movie) => void;
 }) {
   const [items, setItems] = useState<Movie[]>([]);
