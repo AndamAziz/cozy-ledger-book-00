@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 // ====== Theme ======
@@ -550,38 +551,61 @@ export default function Movies() {
             <button
               onClick={runAiSearch}
               disabled={aiSearching || !search.trim()}
+              title={t.smartSearch}
               style={{
-                background: C.gold,
-                color: "#0A0A0F",
+                background: !search.trim()
+                  ? "#1b1b27"
+                  : "linear-gradient(135deg, #00E5FF 0%, #00BCD4 50%, #2979FF 100%)",
+                color: !search.trim() ? "#5a5a6e" : "#fff",
                 border: "none",
                 borderRadius: 14,
-                padding: "0 18px",
+                padding: "0 16px",
                 cursor: aiSearching ? "wait" : "pointer",
                 fontWeight: 800,
                 fontSize: 14,
                 whiteSpace: "nowrap",
-                opacity: !search.trim() ? 0.5 : 1,
+                opacity: 1,
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
+                gap: 8,
+                boxShadow: !search.trim()
+                  ? "none"
+                  : "0 0 16px rgba(0, 188, 212, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25)",
+                transition: "all .25s ease",
+                position: "relative",
+                overflow: "hidden",
+              }}
+              onMouseEnter={(e) => {
+                if (search.trim()) {
+                  e.currentTarget.style.transform = "scale(1.04)";
+                  e.currentTarget.style.boxShadow =
+                    "0 0 24px rgba(0, 188, 212, 0.5), 0 6px 18px rgba(0, 0, 0, 0.3)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                if (search.trim()) {
+                  e.currentTarget.style.boxShadow =
+                    "0 0 16px rgba(0, 188, 212, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25)";
+                }
               }}
             >
               {aiSearching ? (
                 <span
                   className="mv-spin"
                   style={{
-                    width: 16,
-                    height: 16,
-                    border: "2px solid rgba(0,0,0,.3)",
-                    borderTopColor: "#0A0A0F",
+                    width: 18,
+                    height: 18,
+                    border: "2.5px solid rgba(255,255,255,.3)",
+                    borderTopColor: "#fff",
                     borderRadius: "50%",
                     display: "inline-block",
                   }}
                 />
               ) : (
-                "🤖"
+                <Bot size={20} strokeWidth={2.2} />
               )}
-              {t.smartSearch}
+              <span style={{ position: "relative", zIndex: 2 }}>{t.smartSearch}</span>
             </button>
           </div>
 
