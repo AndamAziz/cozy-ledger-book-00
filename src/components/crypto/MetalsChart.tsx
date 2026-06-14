@@ -19,6 +19,7 @@ interface MetalsChartProps {
   candles: MetalCandle[];
   isLoading: boolean;
   error?: string | null;
+  lastUpdated?: number | null;
   onRetry?: () => void;
   accentColor: string;
   range: string;
