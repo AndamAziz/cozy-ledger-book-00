@@ -2310,7 +2310,35 @@ function PlayerOverlay({
   hint?: string;
 }) {
   const [active, setActive] = useState(0);
-  const currentSrc = servers && servers.length > 0 ? servers[active].url : src || "";
+  const [loaded, setLoaded] = useState(false);
+  const [autoTrying, setAutoTrying] = useState(false);
+  const list = servers && servers.length > 0 ? servers : [];
+  const currentSrc = list.length > 0 ? list[active].url : src || "";
+
+  // Automatic fallback: if the active domain doesn't load within a few
+  // seconds (blocked / X-Frame-Options / network error), try the next one.
+  useEffect(() => {
+    if (list.length <= 1) return;
+    setLoaded(false);
+    const timer = setTimeout(() => {
+      setLoaded((isLoaded) => {
+        if (!isLoaded && active < list.length - 1) {
+          setAutoTrying(true);
+          setActive((i) => Math.min(i + 1, list.length - 1));
+        }
+        return isLoaded;
+      });
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, [active, currentSrc, list.length]);
+
+  const goNext = () => {
+    if (active < list.length - 1) {
+      setAutoTrying(true);
+      setActive((i) => i + 1);
+    }
+  };
+
   return (
     <div
       onClick={onClose}
