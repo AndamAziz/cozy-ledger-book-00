@@ -1555,7 +1555,11 @@ function MovieModal({
       {/* Watch player */}
       {watch && (
         <PlayerOverlay
-          src={`https://vaplayer.ru/embed/movie/${imdbId || movie.tmdb_id}`}
+          src={
+            isTv
+              ? `https://vaplayer.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
+              : `https://vaplayer.ru/embed/movie/${imdbId || movie.tmdb_id}`
+          }
           onClose={() => setWatch(false)}
           closeLabel={t.close}
         />
