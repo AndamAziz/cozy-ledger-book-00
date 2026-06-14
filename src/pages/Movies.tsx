@@ -284,6 +284,7 @@ export default function Movies() {
   const [aiTitle, setAiTitle] = useState<string | null>(null);
   const [selected, setSelected] = useState<Movie | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
+  const [mediaTab, setMediaTab] = useState<"movie" | "tv">("movie");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const toggleLang = () => {
@@ -292,16 +293,28 @@ export default function Movies() {
     localStorage.setItem("moviesLang", next);
   };
 
-  const fetchMovies = useCallback(async (p: number) => {
+  const fetchMovies = useCallback(async (p: number, media: "movie" | "tv") => {
     setLoading(true);
     try {
-      const r = await fetch(`https://vidapi.ru/movies/latest/page-${p}.json`);
-      const data = await r.json();
-      const items: Movie[] = (Array.isArray(data.items) ? data.items : []).map(
-        (m: Movie) => ({ ...m, media: m.media || "movie" }),
-      );
-      setMovies(items);
-      setTotalPages(Math.min(data.total_pages || 1, 200));
+      if (media === "tv") {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/tv/popular?api_key=${TMDB_KEY}&language=en-US&page=${p}`,
+        );
+        const data = await r.json();
+        const items: Movie[] = (Array.isArray(data.results) ? data.results : [])
+          .filter((x: TmdbSearchResult) => x.poster_path)
+          .map((x: TmdbSearchResult) => mapTmdbResult({ ...x, media_type: "tv" }));
+        setMovies(items);
+        setTotalPages(Math.min(data.total_pages || 1, 200));
+      } else {
+        const r = await fetch(`https://vidapi.ru/movies/latest/page-${p}.json`);
+        const data = await r.json();
+        const items: Movie[] = (Array.isArray(data.items) ? data.items : []).map(
+          (m: Movie) => ({ ...m, media: m.media || "movie" }),
+        );
+        setMovies(items);
+        setTotalPages(Math.min(data.total_pages || 1, 200));
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setMovies([]);
@@ -311,8 +324,14 @@ export default function Movies() {
   }, []);
 
   useEffect(() => {
-    fetchMovies(page);
-  }, [page, fetchMovies]);
+    fetchMovies(page, mediaTab);
+  }, [page, mediaTab, fetchMovies]);
+
+  /* reset to first page when switching media tab */
+  useEffect(() => {
+    setPage(1);
+  }, [mediaTab]);
+
 
   const searchByImdbId = useCallback(async (imdbId: string) => {
     try {
