@@ -181,6 +181,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
         candles={historyCandles}
         isLoading={historyLoading}
         error={historyError}
+        lastUpdated={historyLastUpdated}
         onRetry={refetchHistory}
         accentColor={accentColor}
         range={chartRange}
