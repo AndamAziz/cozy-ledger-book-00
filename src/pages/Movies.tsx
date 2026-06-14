@@ -93,6 +93,12 @@ const T = {
     movieTag: "فیلم",
     tvTag: "زنجیرە",
     latest: "نوێترین",
+    trendingToday: "ترێندی ئەمڕۆ",
+    top10: "تۆپ ١٠",
+    tabMovies: "فیلمەکان",
+    tabSeries: "زنجیرەکان",
+    seeAll: "هەموو ببینە",
+    rankToday: "ئەمڕۆ",
   },
   en: {
     title: "Mov",
