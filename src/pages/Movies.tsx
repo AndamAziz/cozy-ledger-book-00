@@ -218,14 +218,49 @@ const TMDB_GENRES: Record<number, string> = {
 };
 
 // ====== Streaming servers (More tab) ======
+type ServerFeed =
+  | "popular"
+  | "top_rated"
+  | "trending_day"
+  | "trending_week"
+  | "now_playing"
+  | "upcoming";
+
 type StreamServer = {
   id: string;
   provider: string;
   tag: string;
   color: string;
+  feed: ServerFeed;
   movie: (id: string | number) => string;
   tv: (id: string | number, s: number, e: number) => string;
 };
+
+// Build a distinct TMDB catalog endpoint for each server feed,
+// so every server shows its own set of titles.
+function feedUrl(feed: ServerFeed, media: "movie" | "tv", page = 1): string {
+  const base = "https://api.themoviedb.org/3";
+  const common = `api_key=${TMDB_KEY}&language=en-US&page=${page}`;
+  switch (feed) {
+    case "trending_day":
+      return `${base}/trending/${media}/day?${common}`;
+    case "trending_week":
+      return `${base}/trending/${media}/week?${common}`;
+    case "top_rated":
+      return `${base}/${media}/top_rated?${common}`;
+    case "now_playing":
+      return media === "tv"
+        ? `${base}/tv/on_the_air?${common}`
+        : `${base}/movie/now_playing?${common}`;
+    case "upcoming":
+      return media === "tv"
+        ? `${base}/tv/airing_today?${common}`
+        : `${base}/movie/upcoming?${common}`;
+    case "popular":
+    default:
+      return `${base}/${media}/popular?${common}`;
+  }
+}
 
 const STREAM_SERVERS: StreamServer[] = [
   {
@@ -233,6 +268,7 @@ const STREAM_SERVERS: StreamServer[] = [
     provider: "vidlink.pro",
     tag: "⚡",
     color: "#7C4DFF",
+    feed: "trending_day",
     movie: (id) => `https://vidlink.pro/movie/${id}?autoplay=true`,
     tv: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=true`,
   },
@@ -241,6 +277,7 @@ const STREAM_SERVERS: StreamServer[] = [
     provider: "vidfast.pro",
     tag: "🚀",
     color: "#00BCD4",
+    feed: "popular",
     movie: (id) => `https://vidfast.pro/movie/${id}?autoPlay=true`,
     tv: (id, s, e) => `https://vidfast.pro/tv/${id}/${s}/${e}?autoPlay=true`,
   },
@@ -249,6 +286,7 @@ const STREAM_SERVERS: StreamServer[] = [
     provider: "embed.su",
     tag: "🎯",
     color: "#FF5252",
+    feed: "top_rated",
     movie: (id) => `https://vsembed.su/embed/movie/${id}`,
     tv: (id, s, e) => `https://vsembed.su/embed/tv/${id}/${s}/${e}`,
   },
@@ -257,6 +295,7 @@ const STREAM_SERVERS: StreamServer[] = [
     provider: "vidsrc.cc",
     tag: "🎬",
     color: "#FF9800",
+    feed: "now_playing",
     movie: (id) => `https://vidsrc.to/embed/movie/${id}`,
     tv: (id, s, e) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}`,
   },
@@ -265,6 +304,7 @@ const STREAM_SERVERS: StreamServer[] = [
     provider: "vidsrc.xyz",
     tag: "📽️",
     color: "#4CAF50",
+    feed: "upcoming",
     movie: (id) => `https://vidsrc.pm/embed/movie/${id}`,
     tv: (id, s, e) => `https://vidsrc.pm/embed/tv/${id}/${s}/${e}`,
   },
@@ -273,6 +313,7 @@ const STREAM_SERVERS: StreamServer[] = [
     provider: "autoembed.cc",
     tag: "✨",
     color: "#E91E63",
+    feed: "trending_week",
     movie: (id) => `https://autoembed.co/movie/tmdb/${id}`,
     tv: (id, s, e) => `https://autoembed.co/tv/tmdb/${id}-${s}-${e}`,
   },
@@ -281,6 +322,7 @@ const STREAM_SERVERS: StreamServer[] = [
     provider: "moviesapi.club",
     tag: "🍿",
     color: "#2196F3",
+    feed: "popular",
     movie: (id) => `https://moviesapi.to/movie/${id}`,
     tv: (id, s, e) => `https://moviesapi.to/tv/${id}-${s}-${e}`,
   },
@@ -2530,16 +2572,15 @@ function MoreServers({
 
   const srv = activeIdx !== null ? STREAM_SERVERS[activeIdx] : null;
 
-  /* load this server's catalog (popular movies / series) */
+  /* load this server's own catalog (each server uses a distinct TMDB feed) */
   useEffect(() => {
     if (activeIdx === null) return;
+    const server = STREAM_SERVERS[activeIdx];
     let alive = true;
     setCatLoading(true);
     (async () => {
       try {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/${catTab}/popular?api_key=${TMDB_KEY}&language=en-US&page=1`,
-        );
+        const r = await fetch(feedUrl(server.feed, catTab, 1));
         const d = await r.json();
         const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
         const items = list
@@ -2556,6 +2597,7 @@ function MoreServers({
       alive = false;
     };
   }, [activeIdx, catTab]);
+
 
 
   useEffect(() => {
