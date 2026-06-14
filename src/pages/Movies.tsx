@@ -20,6 +20,18 @@ const TMDB_KEY = "4e44d9029b1270a757cddc766a1bcb63";
 const TMDB_BACKDROP = "https://image.tmdb.org/t/p/w1280";
 const TMDB_PROFILE = "https://image.tmdb.org/t/p/w185";
 
+const selectStyle: React.CSSProperties = {
+  background: C.panel2,
+  color: C.text,
+  border: `1px solid ${C.gold}`,
+  borderRadius: 10,
+  padding: "8px 12px",
+  fontSize: 14,
+  fontWeight: 700,
+  cursor: "pointer",
+  outline: "none",
+};
+
 type Lang = "ku" | "en";
 
 // ====== i18n ======
