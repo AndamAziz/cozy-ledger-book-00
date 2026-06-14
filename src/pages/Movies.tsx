@@ -2374,7 +2374,7 @@ function PlayerOverlay({
         >
           {closeLabel}
         </button>
-        <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden", position: "relative" }}>
           <iframe
             key={currentSrc}
             src={currentSrc}
@@ -2382,10 +2382,45 @@ function PlayerOverlay({
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             referrerPolicy="origin"
+            onLoad={() => {
+              setLoaded(true);
+              setAutoTrying(false);
+            }}
+            onError={goNext}
             style={{ width: "100%", height: "100%", border: "none" }}
           />
-
+          {autoTrying && !loaded && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                background: "rgba(10,10,15,.85)",
+                color: C.text,
+                fontWeight: 700,
+                fontSize: 14,
+                pointerEvents: "none",
+              }}
+            >
+              <div
+                className="mv-spin"
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: "50%",
+                  border: `3px solid ${C.border}`,
+                  borderTopColor: C.gold,
+                }}
+              />
+              {list.length > 0 ? `Trying ${list[active].name}…` : "Trying next server…"}
+            </div>
+          )}
         </div>
+
 
         {/* server selector */}
         {servers && servers.length > 1 && (
