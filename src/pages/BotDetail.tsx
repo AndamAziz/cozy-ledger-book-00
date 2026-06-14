@@ -41,15 +41,17 @@ export default function BotDetail() {
   }, []);
 
   // While the bot is active (running or holding an open trade) and the page is
-  // open, nudge the engine every ~6s so TP/SL and new scans react near-instantly
-  // (the background cron runs every minute regardless).
+  // open, nudge the engine so TP/SL and new scans react near-instantly. Scalp
+  // timeframes (1m/5m/15m) check every 5s; higher timeframes every ~6s.
+  // (The background cron runs every minute regardless.)
   useEffect(() => {
     if (!id || !bot) return;
     if (bot.status !== "running" && !openTrade) return;
+    const scalp = ["1m", "5m", "15m"].includes(bot.timeframe);
     const tick = () => callEngine({ action: "tick", botId: id }).catch(() => {});
-    const t = window.setInterval(tick, 6000);
+    const t = window.setInterval(tick, scalp ? 5000 : 6000);
     return () => window.clearInterval(t);
-  }, [id, bot?.status, openTrade?.id]);
+  }, [id, bot?.status, bot?.timeframe, openTrade?.id]);
 
   const live = bot ? quotes[bot.symbol]?.price ?? null : null;
 

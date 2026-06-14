@@ -21,6 +21,17 @@ const TIMEFRAME_SECONDS: Record<string, number> = {
   "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400,
 };
 
+// ───────────────────── scalping config ─────────────────────
+// Timeframes under/at 15m run in fast "scalp" mode: exit the moment a trade is
+// green, take a half-target on reversals, and never let a winner turn to loss.
+const SCALP_TIMEFRAMES = new Set(["1m", "5m", "15m"]);
+const isScalp = (tf: string) => SCALP_TIMEFRAMES.has(tf);
+// Minimum profit (as a %) at which a scalp trade is closed immediately.
+const MIN_SCALP_PROFIT_PCT = 0.1;
+// Once a scalp trade has been this far in profit (% of full TP) we protect the
+// gain: if price reverses back toward break-even we close in the green.
+const SCALP_LOCK_FRACTION = 0.5;
+
 const CRYPTO_BINANCE: Record<string, string> = {
   "BTC/USD": "BTCUSDT", "ETH/USD": "ETHUSDT", "BNB/USD": "BNBUSDT",
   "SOL/USD": "SOLUSDT", "XRP/USD": "XRPUSDT",
@@ -208,7 +219,21 @@ async function applyBalance(userId: string, pnl: number): Promise<number> {
 }
 
 // ───────────────────── close a trade ─────────────────────
-async function closeTrade(bot: Record<string, unknown>, trade: Record<string, unknown>, exitPrice: number, reason: "tp" | "sl" | "manual") {
+// `kind` describes WHY we closed (for logs/notifications). It is mapped to the
+// DB enum (tp/sl/manual) so no migration is needed: every profit-taking scalp
+// exit is recorded as "tp", stop-loss as "sl".
+type CloseKind = "tp" | "sl" | "manual" | "scalp_profit" | "scalp_reversal" | "scalp_breakeven";
+
+function fmtDuration(sec: number): string {
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (m < 60) return s ? `${m}m ${s}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+async function closeTrade(bot: Record<string, unknown>, trade: Record<string, unknown>, exitPrice: number, kind: CloseKind) {
   const botId = bot.id as string;
   const userId = bot.user_id as string;
   const symbol = bot.symbol as string;
@@ -220,9 +245,17 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   const pnlPct = +(diffPct * 100).toFixed(2);
   const win = pnl >= 0;
 
+  // How long the trade was open.
+  const openedAt = trade.opened_at ? new Date(trade.opened_at as string).getTime() : Date.now();
+  const durationSec = Math.max(0, Math.round((Date.now() - openedAt) / 1000));
+
+  // Map our rich reason to the DB enum.
+  const dbReason: "tp" | "sl" | "manual" =
+    kind === "sl" ? "sl" : kind === "manual" ? "manual" : "tp";
+
   await admin.from("bot_trades").update({
     status: "closed", exit_price: exitPrice, pnl, pnl_pct: pnlPct,
-    result: win ? "win" : "loss", close_reason: reason, closed_at: new Date().toISOString(),
+    result: win ? "win" : "loss", close_reason: dbReason, closed_at: new Date().toISOString(),
   }).eq("id", trade.id as string);
 
   const newBalance = await applyBalance(userId, pnl);
@@ -243,13 +276,30 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   }).eq("id", botId);
 
   const sign = pnl >= 0 ? "+" : "-";
-  if (reason === "manual") {
-    await log(botId, userId, win ? "win" : "loss",
-      `[${hhmmss()}] ${win ? "🏆 WIN" : "💔 LOSS"} — Manually closed ${dir.toUpperCase()} @ $${fmt(exitPrice, symbol)} | P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%)`);
-  } else {
-    await log(botId, userId, win ? "win" : "loss",
-      `[${hhmmss()}] ${win ? "🏆 WIN" : "💔 LOSS"} — Closed ${dir.toUpperCase()} @ $${fmt(exitPrice, symbol)} (${reason.toUpperCase()} hit) | P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%)`);
+  const dur = fmtDuration(durationSec);
+
+  // Human label for the exit reason.
+  let reasonLabel: string;
+  switch (kind) {
+    case "scalp_profit": reasonLabel = "took minimum profit"; break;
+    case "scalp_reversal": reasonLabel = "half-target locked on reversal"; break;
+    case "scalp_breakeven": reasonLabel = "protected winner near break-even"; break;
+    case "tp": reasonLabel = "TP target hit"; break;
+    case "sl": reasonLabel = "hit stop loss"; break;
+    case "manual": reasonLabel = "manually closed"; break;
   }
+
+  if (win) {
+    // 💰 Closed at profit
+    await log(botId, userId, "win",
+      `[${hhmmss()}] 💰 Closed at profit: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%) — ${reasonLabel} · ${dir.toUpperCase()} @ $${fmt(exitPrice, symbol)}`);
+  } else {
+    // 🛑 Closed at loss
+    await log(botId, userId, "loss",
+      `[${hhmmss()}] 🛑 Closed at loss: -$${fmt(Math.abs(pnl), symbol)} (-${Math.abs(pnlPct)}%) — ${reasonLabel} · ${dir.toUpperCase()} @ $${fmt(exitPrice, symbol)}`);
+  }
+  // ⏱️ How long the trade was open.
+  await log(botId, userId, "info", `[${hhmmss()}] ⏱️ Trade was open for ${dur}`);
   await log(botId, userId, "info", `[${hhmmss()}] 🤖 Bot auto-stopped after trade close`);
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Balance updated: $${newBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
@@ -258,7 +308,7 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   await notify(
     userId, botId, win ? "trade_win" : "trade_loss",
     win ? `🏆 ${botName} — Trade Won` : `💔 ${botName} — Trade Lost`,
-    `${dir.toUpperCase()} ${symbol} closed @ $${fmt(exitPrice, symbol)}${reason === "tp" ? " (TP hit)" : reason === "sl" ? " (SL hit)" : ""} · P/L ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%)`,
+    `${dir.toUpperCase()} ${symbol} closed @ $${fmt(exitPrice, symbol)} (${reasonLabel}) · P/L ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%) · ${dur}`,
     pnl,
   );
 
@@ -321,7 +371,33 @@ async function maybeLogAdvice(
     `[${hhmmss()}] 🤖 ${dir.toUpperCase()} @ $${fmt(entry, symbol)} → now $${fmt(price, symbol)} | Unrealized: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(diffPct * 100).toFixed(2)}%) | ${verdict}`);
 }
 
-// ───────────────────── process a single bot ─────────────────────
+// ───────────────────── scalp monitoring heartbeat ─────────────────────
+// Logs a "Monitoring..." line roughly every 5 seconds while a scalp trade is
+// open, e.g. "Monitoring... BTC $64,200 P/L: +$0.50 — HOLD".
+// `force` bypasses the throttle (used for the final CLOSING line).
+async function maybeLogScalpCheck(
+  botId: string, userId: string, symbol: string, price: number,
+  pnl: number, pnlPct: number, scalp: boolean, verdict: string, force: boolean,
+) {
+  if (!scalp) return;
+  if (!force) {
+    const { data: last } = await admin
+      .from("bot_logs")
+      .select("created_at")
+      .eq("bot_id", botId)
+      .eq("level", "advice")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (last && last.length) {
+      const age = Date.now() - new Date(last[0].created_at as string).getTime();
+      if (age < 4_500) return; // ~every 5 seconds
+    }
+  }
+  const sign = pnl >= 0 ? "+" : "-";
+  await log(botId, userId, "advice",
+    `[${hhmmss()}] ⏱️ Monitoring... ${symbol} $${fmt(price, symbol)} P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct).toFixed(2)}%) — ${verdict}`);
+}
+
 
 async function processBot(bot: Record<string, unknown>) {
   const botId = bot.id as string;
@@ -353,7 +429,15 @@ async function processBot(bot: Record<string, unknown>) {
     const amount = Number(openTrade.amount);
     const tp = Number(openTrade.tp_price);
     const sl = Number(openTrade.sl_price);
-    let hit: "tp" | "sl" | null = null;
+    const scalp = isScalp(timeframe);
+
+    // Current unrealized P/L at the live price.
+    const diffPct = dir === "buy" ? (price - entry) / entry : (entry - price) / entry;
+    const pnlPct = diffPct * 100;
+    const pnl = diffPct * amount;
+
+    // 1a) Hard TP / SL — always enforced (instant, no waiting).
+    let hit: CloseKind | null = null;
     let exit = price;
     if (dir === "buy") {
       if (price >= tp) { hit = "tp"; exit = tp; }
@@ -362,21 +446,56 @@ async function processBot(bot: Record<string, unknown>) {
       if (price <= tp) { hit = "tp"; exit = tp; }
       else if (price >= sl) { hit = "sl"; exit = sl; }
     }
+
+    // 1b) SCALP MODE (1m / 5m / 15m): close fast on minimum profit, never let a
+    // winner turn into a loss, and lock half-target on reversals.
+    if (!hit && scalp) {
+      // Distance to full TP, as a % of price.
+      const tpPctFull = Math.abs((tp - entry) / entry) * 100;
+      const halfTarget = tpPctFull * SCALP_LOCK_FRACTION;
+
+      if (pnlPct >= MIN_SCALP_PROFIT_PCT && pnlPct >= halfTarget) {
+        // Reached at least half the take-profit target → lock it in.
+        hit = "scalp_reversal";
+        exit = price;
+      } else if (pnlPct >= MIN_SCALP_PROFIT_PCT) {
+        // Green by at least the minimum → take the quick profit immediately.
+        hit = "scalp_profit";
+        exit = price;
+      }
+    }
+
     if (hit) {
+      // Final monitoring line announcing the close.
+      await maybeLogScalpCheck(
+        botId, userId, symbol, price, pnl, pnlPct, scalp,
+        `${pnlPct >= 0 ? "🟢 P/L positive → CLOSING" : "🔴 Stop hit → CLOSING"}`,
+        true,
+      );
       await closeTrade(bot, openTrade, exit, hit);
       return;
     }
 
-    // Not closed yet → emit a recommendation so the user can decide whether to
-    // keep holding or close manually. Throttled to ~once per minute (no spam).
-    await maybeLogAdvice(botId, userId, symbol, dir, entry, price, sl, tp, amount);
+    if (scalp) {
+      // ⏱️ Fast monitoring heartbeat (~every 5s) so the user sees live decisions.
+      await maybeLogScalpCheck(
+        botId, userId, symbol, price, pnl, pnlPct, scalp,
+        pnlPct > 0 ? "HOLD (green, waiting for min profit)" : "HOLD (within range)",
+        false,
+      );
+    } else {
+      // Higher timeframes keep the original ~once-a-minute hold/close advice.
+      await maybeLogAdvice(botId, userId, symbol, dir, entry, price, sl, tp, amount);
+    }
     return; // while a trade is open the bot does not scan for new entries
   }
 
   // 2) No open trade. Only running bots scan.
   if (bot.status !== "running") return;
 
-  const interval = TIMEFRAME_SECONDS[timeframe] || 300;
+  // Scalp timeframes scan fast (~every 10s) so trades open quickly on a signal;
+  // higher timeframes scan once per candle.
+  const interval = isScalp(timeframe) ? 10 : (TIMEFRAME_SECONDS[timeframe] || 300);
   const lastScan = bot.last_scan_at ? new Date(bot.last_scan_at as string).getTime() : 0;
   if (lastScan && Date.now() - lastScan < interval * 1000) return; // not time yet
 
@@ -411,10 +530,18 @@ async function processBot(bot: Record<string, unknown>) {
   await log(botId, userId, "info", `[${hhmmss()}] 🔊 Volume: ${volSpike ? "SPIKE detected ✓" : "Normal"}`);
 
   let buyScore = 0, sellScore = 0;
-  if (ema9 != null && ema21 != null) { if (ema9 > ema21) buyScore++; if (ema9 < ema21) sellScore++; }
-  if (rsi != null) { if (rsi < 55) buyScore++; if (rsi > 45) sellScore++; }
-  if (hist > 0) buyScore++; if (hist < 0) sellScore++;
-  if (volSpike) { buyScore++; sellScore++; }
+  const buyReasons: string[] = [], sellReasons: string[] = [];
+  if (ema9 != null && ema21 != null) {
+    if (ema9 > ema21) { buyScore++; buyReasons.push("EMA9>EMA21 uptrend"); }
+    if (ema9 < ema21) { sellScore++; sellReasons.push("EMA9<EMA21 downtrend"); }
+  }
+  if (rsi != null) {
+    if (rsi < 55) { buyScore++; buyReasons.push(`RSI ${rsi.toFixed(0)} (room to rise)`); }
+    if (rsi > 45) { sellScore++; sellReasons.push(`RSI ${rsi.toFixed(0)} (room to fall)`); }
+  }
+  if (hist > 0) { buyScore++; buyReasons.push("MACD bullish"); }
+  if (hist < 0) { sellScore++; sellReasons.push("MACD bearish"); }
+  if (volSpike) { buyScore++; sellScore++; buyReasons.push("volume spike"); sellReasons.push("volume spike"); }
 
   const strategy = bot.strategy as string;
   const threshold = strategy === "aggressive" ? 1 : strategy === "conservative" ? 3 : 2;
@@ -430,13 +557,16 @@ async function processBot(bot: Record<string, unknown>) {
   }
 
   // 4) Open trade.
+  const scalp = isScalp(timeframe);
   const slPct = Number(bot.sl_pct) / 100;
   const tpPct = Number(bot.tp_pct) / 100;
   const entry = price;
   const slPrice = direction === "buy" ? entry * (1 - slPct) : entry * (1 + slPct);
   const tpPrice = direction === "buy" ? entry * (1 + tpPct) : entry * (1 - tpPct);
+  const reasons = (direction === "buy" ? buyReasons : sellReasons).join(", ") || "signal threshold met";
 
-  await log(botId, userId, "signal", `[${hhmmss()}] ✅ Signal: ${direction.toUpperCase()} (score ${score}/4) — Opening trade`);
+  await log(botId, userId, "signal",
+    `[${hhmmss()}] ✅ ${scalp ? "SCALP " : ""}Signal: ${direction.toUpperCase()} (Score ${score}/4) — Opening trade`);
   const { error: insErr } = await admin.from("bot_trades").insert({
     bot_id: botId, user_id: userId, symbol, direction,
     entry_price: +entry.toFixed(4), sl_price: +slPrice.toFixed(4), tp_price: +tpPrice.toFixed(4),
@@ -449,7 +579,15 @@ async function processBot(bot: Record<string, unknown>) {
     await log(botId, userId, "info", `[${hhmmss()}] ⚠️ Could not open trade: ${insErr.message}`);
     return;
   }
-  await log(botId, userId, "info", `[${hhmmss()}] 💰 Opened ${direction.toUpperCase()} @ $${fmt(entry, symbol)} | SL: $${fmt(slPrice, symbol)} | TP: $${fmt(tpPrice, symbol)}`);
+  // 📍 Entry price + reason  🎯 TP  ⚠️ SL  📊 Score
+  await log(botId, userId, "info",
+    `[${hhmmss()}] 📍 Entry ${direction.toUpperCase()} @ $${fmt(entry, symbol)} — triggered by: ${reasons}`);
+  await log(botId, userId, "info",
+    `[${hhmmss()}] 🎯 TP target set @ $${fmt(tpPrice, symbol)} (+${Number(bot.tp_pct)}%)`);
+  await log(botId, userId, "info",
+    `[${hhmmss()}] ⚠️ SL set @ $${fmt(slPrice, symbol)} (-${Number(bot.sl_pct)}%)`);
+  await log(botId, userId, "info",
+    `[${hhmmss()}] 📊 Score ${score}/4 triggered the trade${scalp ? " · ⚡ Scalp mode: exits on minimum profit" : ""}`);
 
   // 🔔 Notify the user a new trade was opened.
   const botName = (bot.name as string) || symbol;
