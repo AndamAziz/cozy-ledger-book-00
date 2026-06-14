@@ -2253,15 +2253,20 @@ function MovieModal({
       {watch && (
         <PlayerOverlay
           servers={
-            isTv
-              ? [
-                  { name: "VidAPI ⚡", url: `https://vidapi.ru/embed/tv/${imdbId || movie.tmdb_id}/${season}/${episode}` },
-                ]
+            imdbId
+              ? IMDB_DOMAINS.map((d) => ({
+                  name: d.label,
+                  url: `https://www.${d.host}/title/${imdbId}/`,
+                }))
               : [
-                  { name: "VidAPI ⚡", url: `https://vidapi.ru/embed/movie/${imdbId || movie.tmdb_id}` },
+                  {
+                    name: "VidAPI ⚡",
+                    url: isTv
+                      ? `https://vidapi.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
+                      : `https://vidapi.ru/embed/movie/${movie.tmdb_id}`,
+                  },
                 ]
           }
-
           onClose={() => setWatch(false)}
           closeLabel={t.close}
           serverLabel={t.server}
