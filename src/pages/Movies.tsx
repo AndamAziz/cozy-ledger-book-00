@@ -167,6 +167,11 @@ const T = {
     tabSeries: "Series",
     seeAll: "See all",
     rankToday: "Today",
+    navHome: "Home",
+    navMovie: "Movies",
+    navSeries: "Series",
+    navSearch: "Search",
+    navMore: "More",
   },
 };
 
