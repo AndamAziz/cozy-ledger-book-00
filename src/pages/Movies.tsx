@@ -218,14 +218,49 @@ const TMDB_GENRES: Record<number, string> = {
 };
 
 // ====== Streaming servers (More tab) ======
+type ServerFeed =
+  | "popular"
+  | "top_rated"
+  | "trending_day"
+  | "trending_week"
+  | "now_playing"
+  | "upcoming";
+
 type StreamServer = {
   id: string;
   provider: string;
   tag: string;
   color: string;
+  feed: ServerFeed;
   movie: (id: string | number) => string;
   tv: (id: string | number, s: number, e: number) => string;
 };
+
+// Build a distinct TMDB catalog endpoint for each server feed,
+// so every server shows its own set of titles.
+function feedUrl(feed: ServerFeed, media: "movie" | "tv", page = 1): string {
+  const base = "https://api.themoviedb.org/3";
+  const common = `api_key=${TMDB_KEY}&language=en-US&page=${page}`;
+  switch (feed) {
+    case "trending_day":
+      return `${base}/trending/${media}/day?${common}`;
+    case "trending_week":
+      return `${base}/trending/${media}/week?${common}`;
+    case "top_rated":
+      return `${base}/${media}/top_rated?${common}`;
+    case "now_playing":
+      return media === "tv"
+        ? `${base}/tv/on_the_air?${common}`
+        : `${base}/movie/now_playing?${common}`;
+    case "upcoming":
+      return media === "tv"
+        ? `${base}/tv/airing_today?${common}`
+        : `${base}/movie/upcoming?${common}`;
+    case "popular":
+    default:
+      return `${base}/${media}/popular?${common}`;
+  }
+}
 
 const STREAM_SERVERS: StreamServer[] = [
   {
