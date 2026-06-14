@@ -316,7 +316,7 @@ export default function Movies() {
   const [selected, setSelected] = useState<Movie | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
   const [mediaTab, setMediaTab] = useState<"movie" | "tv">("movie");
-  const [view, setView] = useState<"home" | "movie" | "tv" | "search" | "more">("home");
+  const [view, setView] = useState<"home" | "movie" | "tv" | "search">("home");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const goView = (v: "home" | "movie" | "tv" | "search") => {
@@ -835,7 +835,7 @@ export default function Movies() {
 
 
         {/* ===== SHARED GRID (home / movie / tv / search results) ===== */}
-        {view !== "more" && (view !== "search" || searching) &&
+        {(view !== "search" || searching) &&
           (loading || (aiSearching && filtered.length === 0) ? (
             <Grid>
               {Array.from({ length: 18 }).map((_, i) => (
@@ -865,7 +865,7 @@ export default function Movies() {
           ))}
 
         {/* Pagination (catalog views only) */}
-        {view !== "search" && view !== "more" && <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />}
+        {view !== "search" && <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />}
       </main>
 
       {/* ===== Bottom Navigation Bar ===== */}
