@@ -2572,16 +2572,15 @@ function MoreServers({
 
   const srv = activeIdx !== null ? STREAM_SERVERS[activeIdx] : null;
 
-  /* load this server's catalog (popular movies / series) */
+  /* load this server's own catalog (each server uses a distinct TMDB feed) */
   useEffect(() => {
     if (activeIdx === null) return;
+    const server = STREAM_SERVERS[activeIdx];
     let alive = true;
     setCatLoading(true);
     (async () => {
       try {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/${catTab}/popular?api_key=${TMDB_KEY}&language=en-US&page=1`,
-        );
+        const r = await fetch(feedUrl(server.feed, catTab, 1));
         const d = await r.json();
         const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
         const items = list
@@ -2598,6 +2597,7 @@ function MoreServers({
       alive = false;
     };
   }, [activeIdx, catTab]);
+
 
 
   useEffect(() => {
