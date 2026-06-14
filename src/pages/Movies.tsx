@@ -967,7 +967,7 @@ export default function Movies() {
             return (
               <button
                 key={item.key}
-                onClick={() => (item.key === "more" ? navigate("/") : goView(item.key))}
+                onClick={() => (item.key === "more" ? setView("more") : goView(item.key))}
                 style={{
                   flex: 1,
                   display: "flex",
