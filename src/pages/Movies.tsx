@@ -116,6 +116,11 @@ const T = {
     clearSearch: "✕ Clear search",
     searching: "Searching...",
     resultsCount: "results",
+    seriesBadge: "Series",
+    season: "Season",
+    episode: "Episode",
+    selectEpisode: "Choose season & episode",
+    episodesCount: "episodes",
   },
 };
 
