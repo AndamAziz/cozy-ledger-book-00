@@ -2310,7 +2310,35 @@ function PlayerOverlay({
   hint?: string;
 }) {
   const [active, setActive] = useState(0);
-  const currentSrc = servers && servers.length > 0 ? servers[active].url : src || "";
+  const [loaded, setLoaded] = useState(false);
+  const [autoTrying, setAutoTrying] = useState(false);
+  const list = servers && servers.length > 0 ? servers : [];
+  const currentSrc = list.length > 0 ? list[active].url : src || "";
+
+  // Automatic fallback: if the active domain doesn't load within a few
+  // seconds (blocked / X-Frame-Options / network error), try the next one.
+  useEffect(() => {
+    if (list.length <= 1) return;
+    setLoaded(false);
+    const timer = setTimeout(() => {
+      setLoaded((isLoaded) => {
+        if (!isLoaded && active < list.length - 1) {
+          setAutoTrying(true);
+          setActive((i) => Math.min(i + 1, list.length - 1));
+        }
+        return isLoaded;
+      });
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, [active, currentSrc, list.length]);
+
+  const goNext = () => {
+    if (active < list.length - 1) {
+      setAutoTrying(true);
+      setActive((i) => i + 1);
+    }
+  };
+
   return (
     <div
       onClick={onClose}
@@ -2346,7 +2374,7 @@ function PlayerOverlay({
         >
           {closeLabel}
         </button>
-        <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden", position: "relative" }}>
           <iframe
             key={currentSrc}
             src={currentSrc}
@@ -2354,10 +2382,45 @@ function PlayerOverlay({
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             referrerPolicy="origin"
+            onLoad={() => {
+              setLoaded(true);
+              setAutoTrying(false);
+            }}
+            onError={goNext}
             style={{ width: "100%", height: "100%", border: "none" }}
           />
-
+          {autoTrying && !loaded && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                background: "rgba(10,10,15,.85)",
+                color: C.text,
+                fontWeight: 700,
+                fontSize: 14,
+                pointerEvents: "none",
+              }}
+            >
+              <div
+                className="mv-spin"
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: "50%",
+                  border: `3px solid ${C.border}`,
+                  borderTopColor: C.gold,
+                }}
+              />
+              {list.length > 0 ? `Trying ${list[active].name}…` : "Trying next server…"}
+            </div>
+          )}
         </div>
+
 
         {/* server selector */}
         {servers && servers.length > 1 && (
@@ -2380,7 +2443,10 @@ function PlayerOverlay({
                 return (
                   <button
                     key={s.name}
-                    onClick={() => setActive(i)}
+                    onClick={() => {
+                      setAutoTrying(false);
+                      setActive(i);
+                    }}
                     style={{
                       background: on ? C.gold : C.panel2,
                       color: on ? "#0A0A0F" : C.text,
