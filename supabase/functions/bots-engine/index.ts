@@ -308,7 +308,7 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   await notify(
     userId, botId, win ? "trade_win" : "trade_loss",
     win ? `🏆 ${botName} — Trade Won` : `💔 ${botName} — Trade Lost`,
-    `${dir.toUpperCase()} ${symbol} closed @ $${fmt(exitPrice, symbol)}${reason === "tp" ? " (TP hit)" : reason === "sl" ? " (SL hit)" : ""} · P/L ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%)`,
+    `${dir.toUpperCase()} ${symbol} closed @ $${fmt(exitPrice, symbol)} (${reasonLabel}) · P/L ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%) · ${dur}`,
     pnl,
   );
 
