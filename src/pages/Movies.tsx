@@ -231,7 +231,7 @@ export default function Movies() {
             ? `https://image.tmdb.org/t/p/w500${result.poster_path}`
             : "",
           rating: result.vote_average ? String(result.vote_average) : "",
-          genre: "",
+          genre: (result.genre_ids || []).map((g: number) => TMDB_GENRES[g]).filter(Boolean).join(", "),
           popularity: String(result.popularity || ""),
           type: "movie",
           embed_url: "",
@@ -245,46 +245,107 @@ export default function Movies() {
     return false;
   }, []);
 
+  // ---- POWERFUL CATALOG SEARCH (full TMDB database) ----
+  const mapTmdbResult = (r: TmdbSearchResult): Movie => ({
+    tmdb_id: r.id,
+    imdb_id: "",
+    title: r.title || r.original_title || "",
+    year: r.release_date ? r.release_date.slice(0, 4) : "",
+    poster_url: r.poster_path ? `https://image.tmdb.org/t/p/w500${r.poster_path}` : "",
+    rating: r.vote_average ? r.vote_average.toFixed(1) : "",
+    genre: (r.genre_ids || []).map((g) => TMDB_GENRES[g]).filter(Boolean).join(", "),
+    popularity: String(r.popularity || ""),
+    type: "movie",
+    embed_url: "",
+  });
+
+  const searchTmdb = useCallback(async (q: string): Promise<Movie[]> => {
+    try {
+      const r = await fetch(
+        `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}` +
+          `&query=${encodeURIComponent(q)}&include_adult=false&language=en-US&page=1`,
+      );
+      const d = await r.json();
+      const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
+      return list
+        .filter((m) => m.poster_path)
+        .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+        .map(mapTmdbResult);
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const clearSearch = useCallback(() => {
+    setSearch("");
+    setAiTitle(null);
+    setSearchResults(null);
+    inputRef.current?.focus();
+  }, []);
+
   const runAiSearch = useCallback(async () => {
     const q = search.trim();
     if (!q) return;
 
-    /* direct IMDB ID search */
-    if (/^tt\d{7,}$/i.test(q)) {
+    /* direct IMDB ID search → open the movie instantly */
+    if (/^tt\d{6,}$/i.test(q)) {
       setAiSearching(true);
       const found = await searchByImdbId(q.toLowerCase());
       setAiSearching(false);
-      if (!found) {
-        setAiTitle(lang === "ku" ? "IMDB ID نەدۆزرایەوە" : "IMDB ID not found");
-      }
+      if (!found) setAiTitle(lang === "ku" ? "IMDB ID نەدۆزرایەوە" : "IMDB ID not found");
       return;
     }
 
     setAiSearching(true);
     setAiTitle(null);
     try {
-      const { data } = await supabase.functions.invoke("movies-ai", {
-        body: { action: "resolve-title", query: q },
-      });
-      if (data?.corrected && data?.title) {
-        setAiTitle(data.title);
-        setSearch(data.title);
+      let results = await searchTmdb(q);
+
+      /* no hits → let AI fix typos / translate, then search again */
+      if (results.length === 0) {
+        try {
+          const { data } = await supabase.functions.invoke("movies-ai", {
+            body: { action: "resolve-title", query: q },
+          });
+          if (data?.title) {
+            const fixed = await searchTmdb(data.title);
+            if (fixed.length > 0) {
+              setAiTitle(data.title);
+              results = fixed;
+            }
+          }
+        } catch {
+          /* ignore — keep empty */
+        }
       }
-    } catch {
-      /* ignore — keep original search */
+      setSearchResults(results);
     } finally {
       setAiSearching(false);
     }
-  }, [search, searchByImdbId, lang]);
+  }, [search, searchByImdbId, searchTmdb, lang]);
 
-  const filtered = movies.filter((m) => {
-    const okGenre =
-      genre === "all" || (m.genre || "").toLowerCase().includes(genre.toLowerCase());
-    const okSearch =
-      !search.trim() ||
-      (m.title || "").toLowerCase().includes(search.trim().toLowerCase());
-    return okGenre && okSearch;
-  });
+  /* live (debounced) catalog search as the user types */
+  useEffect(() => {
+    const q = search.trim();
+    if (!q) {
+      setSearchResults(null);
+      return;
+    }
+    if (/^tt\d{6,}$/i.test(q)) return; // handled on submit
+    const id = setTimeout(async () => {
+      setAiSearching(true);
+      const results = await searchTmdb(q);
+      setSearchResults(results);
+      setAiSearching(false);
+    }, 450);
+    return () => clearTimeout(id);
+  }, [search, searchTmdb]);
+
+  const searching = searchResults !== null;
+  const baseList = searching ? searchResults! : movies;
+  const filtered = baseList.filter((m) =>
+    genre === "all" || (m.genre || "").toLowerCase().includes(genre.toLowerCase()),
+  );
 
   return (
     <div
