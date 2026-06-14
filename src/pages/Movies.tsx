@@ -180,6 +180,14 @@ const T = {
     navSeries: "Series",
     navSearch: "Search",
     navMore: "More",
+    serversTitle: "Streaming Servers",
+    serversSubtitle: "Pick a server and search for a movie or series inside it 👇",
+    serverSearch: "Search inside this server...",
+    backToServers: "← Servers",
+    watchOn: "Watch on",
+    chooseSE: "Choose season & episode",
+    playNow: "▶ Play",
+    serverEmpty: "Type a movie or series name to search",
   },
 };
 
