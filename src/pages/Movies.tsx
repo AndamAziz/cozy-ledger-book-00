@@ -983,13 +983,13 @@ function MovieModal({
 
   const loadSubs = async () => {
     setTab("subs");
-    if (subs || subsLoading || !movie.imdb_id) return;
+    if (subs || subsLoading || !imdbId) return;
     setSubsLoading(true);
     setSubsError("");
     try {
       const res = await fetch(
         `${SUPA_URL}/functions/v1/subtitles?action=search&imdb_id=${encodeURIComponent(
-          movie.imdb_id,
+          imdbId,
         )}&langs=kur,ara,eng,all`,
         { headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` } },
       );
