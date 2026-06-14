@@ -1169,17 +1169,17 @@ function MovieModal({
         </div>
 
         {/* PlayIMDb buttons */}
-        {movie.imdb_id && (
+        {imdbId && (
           <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
             <ActionBtn
               cyan
               label={t.openPlayIMDb}
-              onClick={() => window.open(`https://www.playimdb.com/title/${movie.imdb_id}/`, "_blank")}
+              onClick={() => window.open(`https://www.playimdb.com/title/${imdbId}/`, "_blank")}
             />
             <ActionBtn
               label={t.copyPlayIMDb}
               onClick={async () => {
-                const url = `https://www.playimdb.com/title/${movie.imdb_id}/`;
+                const url = `https://www.playimdb.com/title/${imdbId}/`;
                 try {
                   await navigator.clipboard.writeText(url);
                   toast.success(t.linkCopied);
