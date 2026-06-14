@@ -992,17 +992,38 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
           </div>
         )}
         {!isLoading && (error || candles.length === 0) && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/90 z-10 px-6">
-            <div className="flex flex-col items-center gap-3 text-center max-w-[260px]">
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/95 z-10 px-6">
+            <div className="flex flex-col items-center gap-3 text-center max-w-[280px]">
+              {/* Faux empty grid baseline for a clear chart-shaped placeholder */}
+              <div className="w-full h-12 mb-1 relative opacity-30">
+                <div className="absolute inset-0 flex flex-col justify-between">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="border-t border-dashed border-[#848e9c]/40" />
+                  ))}
+                </div>
+              </div>
               <AlertTriangle className="w-7 h-7 text-[#f0b90b]" />
               <span className="text-xs font-medium text-white">
-                {error || (language === 'en' ? 'No chart data available for this timeframe.' : 'هیچ داتایەکی چارت بۆ ئەم ماوەیە بەردەست نییە.')}
+                {language === 'en'
+                  ? `No ${(RANGES.find(r => r.key === range)?.label) || range} history for ${name || 'this asset'} yet.`
+                  : `هێشتا مێژووی ${(RANGES.find(r => r.key === range)?.label) || range} بۆ ${name || 'ئەم دارایە'} بەردەست نییە.`}
               </span>
               <span className="text-[10px] text-[#848e9c] leading-relaxed">
-                {language === 'en'
-                  ? 'Spot data may be briefly rate-limited. We never show futures prices instead — try again in a moment or pick another timeframe.'
-                  : 'لەوانەیە داتای spot بۆ ماوەیەکی کورت سنووردار بێت. هەرگیز نرخی futures جێگرەوە ناکەین — تکایە دوای چەند چرکەیەک هەوڵبدەرەوە یان ماوەیەکی تر هەڵبژێرە.'}
+                {error
+                  ? error
+                  : language === 'en'
+                    ? 'Spot data may be briefly rate-limited. We never show futures prices instead — try again in a moment or pick another timeframe.'
+                    : 'لەوانەیە داتای spot بۆ ماوەیەکی کورت سنووردار بێت. هەرگیز نرخی futures جێگرەوە ناکەین — تکایە دوای چەند چرکەیەک هەوڵبدەرەوە یان ماوەیەکی تر هەڵبژێرە.'}
               </span>
+              {lastUpdated && (
+                <span className="text-[10px] text-[#5e6673]">
+                  {language === 'en' ? 'Last updated: ' : 'دوایین نوێکردنەوە: '}
+                  {new Date(lastUpdated).toLocaleString(
+                    language === 'en' ? 'en-GB-u-nu-latn' : 'ku-Arab-u-nu-latn',
+                    { hour: '2-digit', minute: '2-digit', second: '2-digit', day: 'numeric', month: 'short', hour12: false }
+                  )}
+                </span>
+              )}
               {onRetry && (
                 <button
                   onClick={onRetry}
