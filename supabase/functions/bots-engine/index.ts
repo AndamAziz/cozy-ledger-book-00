@@ -530,10 +530,18 @@ async function processBot(bot: Record<string, unknown>) {
   await log(botId, userId, "info", `[${hhmmss()}] 🔊 Volume: ${volSpike ? "SPIKE detected ✓" : "Normal"}`);
 
   let buyScore = 0, sellScore = 0;
-  if (ema9 != null && ema21 != null) { if (ema9 > ema21) buyScore++; if (ema9 < ema21) sellScore++; }
-  if (rsi != null) { if (rsi < 55) buyScore++; if (rsi > 45) sellScore++; }
-  if (hist > 0) buyScore++; if (hist < 0) sellScore++;
-  if (volSpike) { buyScore++; sellScore++; }
+  const buyReasons: string[] = [], sellReasons: string[] = [];
+  if (ema9 != null && ema21 != null) {
+    if (ema9 > ema21) { buyScore++; buyReasons.push("EMA9>EMA21 uptrend"); }
+    if (ema9 < ema21) { sellScore++; sellReasons.push("EMA9<EMA21 downtrend"); }
+  }
+  if (rsi != null) {
+    if (rsi < 55) { buyScore++; buyReasons.push(`RSI ${rsi.toFixed(0)} (room to rise)`); }
+    if (rsi > 45) { sellScore++; sellReasons.push(`RSI ${rsi.toFixed(0)} (room to fall)`); }
+  }
+  if (hist > 0) { buyScore++; buyReasons.push("MACD bullish"); }
+  if (hist < 0) { sellScore++; sellReasons.push("MACD bearish"); }
+  if (volSpike) { buyScore++; sellScore++; buyReasons.push("volume spike"); sellReasons.push("volume spike"); }
 
   const strategy = bot.strategy as string;
   const threshold = strategy === "aggressive" ? 1 : strategy === "conservative" ? 3 : 2;
