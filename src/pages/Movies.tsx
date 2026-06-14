@@ -2208,22 +2208,10 @@ function MovieModal({
           servers={
             isTv
               ? [
-                  { name: "Server 1 ⚡", url: `https://vidlink.pro/tv/${movie.tmdb_id}/${season}/${episode}` },
-                  { name: "Server 2", url: `https://vidfast.pro/tv/${movie.tmdb_id}/${season}/${episode}` },
-                  { name: "Server 3", url: `https://embed.su/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
-                  { name: "Server 4", url: `https://vidsrc.cc/v2/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
-                  { name: "Server 5", url: `https://vidsrc.xyz/embed/tv/${imdbId || movie.tmdb_id}/${season}/${episode}` },
-                  { name: "Server 6", url: `https://player.autoembed.cc/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
-                  { name: "Server 7", url: `https://moviesapi.club/tv/${movie.tmdb_id}-${season}-${episode}` },
+                  { name: "VidAPI ⚡", url: `https://vidapi.ru/embed/tv/${imdbId || movie.tmdb_id}/${season}/${episode}` },
                 ]
               : [
-                  { name: "Server 1 ⚡", url: `https://vidlink.pro/movie/${movie.tmdb_id}` },
-                  { name: "Server 2", url: `https://vidfast.pro/movie/${movie.tmdb_id}` },
-                  { name: "Server 3", url: `https://embed.su/embed/movie/${movie.tmdb_id}` },
-                  { name: "Server 4", url: `https://vidsrc.cc/v2/embed/movie/${movie.tmdb_id}` },
-                  { name: "Server 5", url: `https://vidsrc.xyz/embed/movie/${imdbId || movie.tmdb_id}` },
-                  { name: "Server 6", url: `https://player.autoembed.cc/embed/movie/${movie.tmdb_id}` },
-                  { name: "Server 7", url: `https://moviesapi.club/movie/${movie.tmdb_id}` },
+                  { name: "VidAPI ⚡", url: `https://vidapi.ru/embed/movie/${imdbId || movie.tmdb_id}` },
                 ]
           }
 
