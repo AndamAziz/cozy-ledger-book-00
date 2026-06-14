@@ -861,6 +861,153 @@ function Grid({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ====== Trending Today (TOP 10) horizontal rail ======
+function TrendingRow({
+  lang,
+  t,
+  dir,
+  onSelect,
+}: {
+  lang: Lang;
+  t: (typeof T)["ku"];
+  dir: "rtl" | "ltr";
+  onSelect: (m: Movie) => void;
+}) {
+  const [items, setItems] = useState<Movie[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/trending/all/day?api_key=${TMDB_KEY}&language=en-US`,
+        );
+        const d = await r.json();
+        if (!alive) return;
+        const list: Movie[] = (Array.isArray(d.results) ? d.results : [])
+          .filter(
+            (x: TmdbSearchResult) =>
+              x.poster_path && (x.media_type === "movie" || x.media_type === "tv"),
+          )
+          .slice(0, 10)
+          .map(mapTmdbResult);
+        setItems(list);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section style={{ marginBottom: 26 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 14,
+        }}
+      >
+        <span style={{ fontSize: 22 }}>🔥</span>
+        <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>
+          {t.top10} · <span style={{ color: C.gold }}>{t.trendingToday}</span>
+        </h2>
+      </div>
+      <div
+        className="mv-scroll"
+        style={{
+          display: "flex",
+          gap: 18,
+          overflowX: "auto",
+          paddingBottom: 10,
+          paddingTop: 6,
+          paddingInlineStart: 4,
+        }}
+      >
+        {items.map((m, i) => {
+          const isTv = m.media === "tv";
+          return (
+            <div
+              key={`${m.tmdb_id}-${i}`}
+              className="mv-card"
+              onClick={() => onSelect(m)}
+              style={{
+                position: "relative",
+                flexShrink: 0,
+                width: 130,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "flex-end",
+              }}
+            >
+              {/* big rank number */}
+              <span
+                style={{
+                  fontSize: 78,
+                  fontWeight: 900,
+                  lineHeight: 0.8,
+                  color: "transparent",
+                  WebkitTextStroke: `2.5px ${C.gold}`,
+                  marginInlineEnd: -22,
+                  marginInlineStart: -6,
+                  zIndex: 1,
+                  textShadow: "0 4px 18px rgba(0,0,0,.6)",
+                  userSelect: "none",
+                  fontFamily: "'Arial Black', system-ui, sans-serif",
+                }}
+              >
+                {i + 1}
+              </span>
+              <div
+                style={{
+                  position: "relative",
+                  width: 100,
+                  aspectRatio: "2/3",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  background: C.panel,
+                  border: `1px solid ${C.border}`,
+                  zIndex: 2,
+                }}
+              >
+                <img
+                  className="mv-poster-img"
+                  src={m.poster_url}
+                  alt={m.title}
+                  loading="lazy"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    insetInlineStart: 6,
+                    background: isTv ? "#2563eb" : "#e11d2a",
+                    color: "#fff",
+                    fontSize: 9.5,
+                    fontWeight: 900,
+                    padding: "2px 7px",
+                    borderRadius: 6,
+                    letterSpacing: ".5px",
+                  }}
+                >
+                  {isTv ? "TV" : "MOVIE"}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+
 // ====== Featured Hero Carousel ======
 interface HeroItem extends Movie {
   backdrop: string;
