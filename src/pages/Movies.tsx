@@ -924,6 +924,12 @@ function MovieModal({
   const [downloadingId, setDownloadingId] = useState<string>("");
   const [imdbId, setImdbId] = useState<string>(movie.imdb_id || "");
 
+  const isTv = movie.media === "tv";
+  const mediaPath = isTv ? "tv" : "movie";
+  const [seasons, setSeasons] = useState<{ season_number: number; episode_count: number; name: string }[]>([]);
+  const [season, setSeason] = useState(1);
+  const [episode, setEpisode] = useState(1);
+
   const rating = parseFloat(movie.rating) || 0;
 
   useEffect(() => {
