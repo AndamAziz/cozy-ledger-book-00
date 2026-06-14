@@ -156,6 +156,12 @@ const T = {
     movieTag: "MOVIE",
     tvTag: "TV",
     latest: "Latest",
+    trendingToday: "Trending Today",
+    top10: "TOP 10",
+    tabMovies: "Movies",
+    tabSeries: "Series",
+    seeAll: "See all",
+    rankToday: "Today",
   },
 };
 
