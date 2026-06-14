@@ -104,6 +104,14 @@ const T = {
     navSeries: "سریال",
     navSearch: "گەڕان",
     navMore: "زیاتر",
+    serversTitle: "سێرڤەرەکانی سەیرکردن",
+    serversSubtitle: "سێرڤەرێک هەڵبژێرە و فیلم یان زنجیرەکەی تێدا بگەڕێ 👇",
+    serverSearch: "لەم سێرڤەرەدا بگەڕێ...",
+    backToServers: "← سێرڤەرەکان",
+    watchOn: "سەیرکردن لە",
+    chooseSE: "وەرز و ئەلقە هەڵبژێرە",
+    playNow: "▶ لێدان",
+    serverEmpty: "ناوی فیلم یان زنجیرەیەک بنووسە بۆ گەڕان",
   },
   en: {
     title: "Mov",
@@ -172,6 +180,14 @@ const T = {
     navSeries: "Series",
     navSearch: "Search",
     navMore: "More",
+    serversTitle: "Streaming Servers",
+    serversSubtitle: "Pick a server and search for a movie or series inside it 👇",
+    serverSearch: "Search inside this server...",
+    backToServers: "← Servers",
+    watchOn: "Watch on",
+    chooseSE: "Choose season & episode",
+    playNow: "▶ Play",
+    serverEmpty: "Type a movie or series name to search",
   },
 };
 
@@ -200,6 +216,77 @@ const TMDB_GENRES: Record<number, string> = {
   10759: "Action", 10765: "Science Fiction", 10768: "War", 10764: "Reality",
   10763: "News", 10762: "Family", 10766: "Drama", 10767: "Talk",
 };
+
+// ====== Streaming servers (More tab) ======
+type StreamServer = {
+  id: string;
+  provider: string;
+  tag: string;
+  color: string;
+  movie: (id: string | number) => string;
+  tv: (id: string | number, s: number, e: number) => string;
+};
+
+const STREAM_SERVERS: StreamServer[] = [
+  {
+    id: "vidlink",
+    provider: "vidlink.pro",
+    tag: "⚡",
+    color: "#7C4DFF",
+    movie: (id) => `https://vidlink.pro/movie/${id}`,
+    tv: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}`,
+  },
+  {
+    id: "vidfast",
+    provider: "vidfast.pro",
+    tag: "🚀",
+    color: "#00BCD4",
+    movie: (id) => `https://vidfast.pro/movie/${id}`,
+    tv: (id, s, e) => `https://vidfast.pro/tv/${id}/${s}/${e}`,
+  },
+  {
+    id: "embedsu",
+    provider: "embed.su",
+    tag: "🎯",
+    color: "#FF5252",
+    movie: (id) => `https://embed.su/embed/movie/${id}`,
+    tv: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`,
+  },
+  {
+    id: "vidsrccc",
+    provider: "vidsrc.cc",
+    tag: "🎬",
+    color: "#FF9800",
+    movie: (id) => `https://vidsrc.cc/v2/embed/movie/${id}`,
+    tv: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`,
+  },
+  {
+    id: "vidsrcxyz",
+    provider: "vidsrc.xyz",
+    tag: "📽️",
+    color: "#4CAF50",
+    movie: (id) => `https://vidsrc.xyz/embed/movie/${id}`,
+    tv: (id, s, e) => `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}`,
+  },
+  {
+    id: "autoembed",
+    provider: "autoembed.cc",
+    tag: "✨",
+    color: "#E91E63",
+    movie: (id) => `https://player.autoembed.cc/embed/movie/${id}`,
+    tv: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`,
+  },
+  {
+    id: "moviesapi",
+    provider: "moviesapi.club",
+    tag: "🍿",
+    color: "#2196F3",
+    movie: (id) => `https://moviesapi.club/movie/${id}`,
+    tv: (id, s, e) => `https://moviesapi.club/tv/${id}-${s}-${e}`,
+  },
+];
+
+
 
 interface TmdbSearchResult {
   id: number;
@@ -265,6 +352,8 @@ const GLOBAL_CSS = `
 .mv-card:hover { transform: translateY(-8px) scale(1.035); box-shadow: 0 18px 40px rgba(0,0,0,.6); z-index:2; }
 .mv-card:hover .mv-play { opacity:1; transform: scale(1); }
 .mv-card:hover .mv-poster-img { transform: scale(1.08); filter: brightness(.55); }
+.mv-srv-card:hover { transform: translateY(-5px); box-shadow: 0 14px 30px rgba(0,0,0,.5); }
+.mv-srv-card:active { transform: translateY(-1px) scale(.98); }
 .mv-play { opacity:0; transform: scale(.6); transition: all .28s; }
 .mv-poster-img { transition: transform .5s, filter .35s; }
 @keyframes mvShimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
@@ -295,7 +384,7 @@ export default function Movies() {
   const [selected, setSelected] = useState<Movie | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
   const [mediaTab, setMediaTab] = useState<"movie" | "tv">("movie");
-  const [view, setView] = useState<"home" | "movie" | "tv" | "search">("home");
+  const [view, setView] = useState<"home" | "movie" | "tv" | "search" | "more">("home");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const goView = (v: "home" | "movie" | "tv" | "search") => {
@@ -810,8 +899,13 @@ export default function Movies() {
           </>
         )}
 
+        {/* ===== MORE / SERVERS VIEW ===== */}
+        {view === "more" && <MoreServers lang={lang} t={t} dir={dir} />}
+
+
+
         {/* ===== SHARED GRID (home / movie / tv / search results) ===== */}
-        {(view !== "search" || searching) &&
+        {view !== "more" && (view !== "search" || searching) &&
           (loading || (aiSearching && filtered.length === 0) ? (
             <Grid>
               {Array.from({ length: 18 }).map((_, i) => (
@@ -841,7 +935,7 @@ export default function Movies() {
           ))}
 
         {/* Pagination (catalog views only) */}
-        {view !== "search" && <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />}
+        {view !== "search" && view !== "more" && <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />}
       </main>
 
       {/* ===== Bottom Navigation Bar ===== */}
@@ -880,7 +974,7 @@ export default function Movies() {
             return (
               <button
                 key={item.key}
-                onClick={() => (item.key === "more" ? navigate("/") : goView(item.key))}
+                onClick={() => (item.key === "more" ? setView("more") : goView(item.key))}
                 style={{
                   flex: 1,
                   display: "flex",
@@ -2410,3 +2504,351 @@ function InfoCell({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+// ====== MORE: 7 streaming servers, each with its own search ======
+function MoreServers({
+  lang,
+  t,
+  dir,
+}: {
+  lang: Lang;
+  t: (typeof T)["ku"];
+  dir: "rtl" | "ltr";
+}) {
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Movie[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [pendingTv, setPendingTv] = useState<Movie | null>(null);
+  const [season, setSeason] = useState(1);
+  const [episode, setEpisode] = useState(1);
+  const [play, setPlay] = useState<{ url: string } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const srv = activeIdx !== null ? STREAM_SERVERS[activeIdx] : null;
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResults(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const id = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}` +
+            `&query=${encodeURIComponent(q)}&include_adult=false&language=en-US&page=1`,
+        );
+        const d = await r.json();
+        const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
+        setResults(
+          list
+            .filter((m) => (m.media_type === "movie" || m.media_type === "tv") && m.poster_path)
+            .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+            .map(mapTmdbResult),
+        );
+      } catch {
+        setResults([]);
+      }
+      setLoading(false);
+    }, 450);
+    return () => clearTimeout(id);
+  }, [query]);
+
+  const openServer = (i: number) => {
+    setActiveIdx(i);
+    setQuery("");
+    setResults(null);
+    setTimeout(() => inputRef.current?.focus(), 60);
+  };
+
+  const playItem = (m: Movie) => {
+    if (!srv) return;
+    if (m.media === "tv") {
+      setPendingTv(m);
+      setSeason(1);
+      setEpisode(1);
+      return;
+    }
+    setPlay({ url: srv.movie(m.tmdb_id) });
+  };
+
+  const confirmTv = () => {
+    if (!srv || !pendingTv) return;
+    setPlay({ url: srv.tv(pendingTv.tmdb_id, season, episode) });
+    setPendingTv(null);
+  };
+
+  /* ===== Server grid ===== */
+  if (activeIdx === null || !srv) {
+    return (
+      <div className="mv-fade">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 6px" }}>
+          <span style={{ display: "inline-block", width: 4, height: 26, background: C.gold, borderRadius: 4 }} />
+          <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>{t.serversTitle} 📡</h2>
+        </div>
+        <p style={{ color: C.muted, fontSize: 13.5, margin: "0 0 18px" }}>{t.serversSubtitle}</p>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+            gap: 14,
+          }}
+        >
+          {STREAM_SERVERS.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => openServer(i)}
+              className="mv-srv-card"
+              style={{
+                position: "relative",
+                textAlign: "start",
+                background: `linear-gradient(150deg, ${s.color}26 0%, ${C.panel} 55%)`,
+                border: `1px solid ${s.color}55`,
+                borderRadius: 18,
+                padding: "16px 14px",
+                cursor: "pointer",
+                color: C.text,
+                overflow: "hidden",
+                transition: "transform .18s, box-shadow .18s",
+              }}
+            >
+              <div
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 24,
+                  background: `${s.color}33`,
+                  border: `1px solid ${s.color}66`,
+                  marginBottom: 12,
+                }}
+              >
+                {s.tag}
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: ".3px" }}>
+                {t.server} {i + 1}
+              </div>
+              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3 }}>{s.provider}</div>
+              <span
+                style={{
+                  position: "absolute",
+                  insetInlineEnd: 12,
+                  bottom: 12,
+                  fontSize: 16,
+                  color: s.color,
+                  fontWeight: 900,
+                }}
+              >
+                {dir === "rtl" ? "←" : "→"}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ===== Single server: its own search ===== */
+  return (
+    <div className="mv-fade">
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+        <button
+          onClick={() => setActiveIdx(null)}
+          style={{
+            background: C.panel2,
+            color: C.text,
+            border: `1px solid ${C.border}`,
+            borderRadius: 999,
+            padding: "7px 14px",
+            cursor: "pointer",
+            fontSize: 13,
+            fontWeight: 700,
+          }}
+        >
+          {t.backToServers}
+        </button>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            background: `${srv.color}1f`,
+            border: `1px solid ${srv.color}66`,
+            borderRadius: 999,
+            padding: "6px 14px",
+          }}
+        >
+          <span style={{ fontSize: 18 }}>{srv.tag}</span>
+          <span style={{ fontWeight: 900, fontSize: 14 }}>
+            {t.server} {activeIdx + 1}
+          </span>
+          <span style={{ fontSize: 11.5, color: C.muted }}>· {srv.provider}</span>
+        </div>
+      </div>
+
+      <div style={{ position: "relative", marginBottom: 18 }}>
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t.serverSearch}
+          style={{
+            width: "100%",
+            background: C.panel,
+            border: `1px solid ${srv.color}55`,
+            borderRadius: 14,
+            padding: dir === "rtl" ? "12px 44px 12px 16px" : "12px 16px 12px 44px",
+            color: C.text,
+            fontSize: 15,
+            outline: "none",
+            boxSizing: "border-box",
+          }}
+        />
+        <span
+          style={{
+            position: "absolute",
+            insetInlineStart: 14,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: srv.color,
+            fontSize: 16,
+          }}
+        >
+          🔍
+        </span>
+      </div>
+
+      {loading ? (
+        <Grid>
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i}>
+              <div className="mv-skel" style={{ width: "100%", aspectRatio: "2/3", borderRadius: 14 }} />
+              <div className="mv-skel" style={{ height: 12, borderRadius: 6, marginTop: 8, width: "80%" }} />
+            </div>
+          ))}
+        </Grid>
+      ) : results === null ? (
+        <div style={{ textAlign: "center", padding: "70px 0", color: C.muted }}>
+          <div style={{ fontSize: 52, marginBottom: 12 }}>🔍</div>
+          <div style={{ fontSize: 15 }}>{t.serverEmpty}</div>
+        </div>
+      ) : results.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
+          <div style={{ fontSize: 48, marginBottom: 10 }}>🎬</div>
+          {t.noMovies}
+        </div>
+      ) : (
+        <Grid>
+          {results.map((m, i) => (
+            <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} onClick={() => playItem(m)} />
+          ))}
+        </Grid>
+      )}
+
+      {/* Season / Episode picker for TV */}
+      {pendingTv && (
+        <div
+          onClick={() => setPendingTv(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 200,
+            background: "rgba(0,0,0,.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 360,
+              background: C.panel,
+              border: `1px solid ${C.border}`,
+              borderRadius: 18,
+              padding: 20,
+            }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 900, marginBottom: 4 }}>{pendingTv.title}</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>{t.chooseSE}</div>
+            <div style={{ display: "flex", gap: 12, marginBottom: 18 }}>
+              <label style={{ flex: 1, fontSize: 12.5, color: C.muted }}>
+                {t.season}
+                <input
+                  type="number"
+                  min={1}
+                  value={season}
+                  onChange={(e) => setSeason(Math.max(1, Number(e.target.value) || 1))}
+                  style={{
+                    width: "100%",
+                    marginTop: 6,
+                    background: C.panel2,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 10,
+                    padding: "10px 12px",
+                    color: C.text,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </label>
+              <label style={{ flex: 1, fontSize: 12.5, color: C.muted }}>
+                {t.episode}
+                <input
+                  type="number"
+                  min={1}
+                  value={episode}
+                  onChange={(e) => setEpisode(Math.max(1, Number(e.target.value) || 1))}
+                  style={{
+                    width: "100%",
+                    marginTop: 6,
+                    background: C.panel2,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 10,
+                    padding: "10px 12px",
+                    color: C.text,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </label>
+            </div>
+            <button
+              onClick={confirmTv}
+              style={{
+                width: "100%",
+                background: C.gold,
+                color: "#0A0A0F",
+                border: "none",
+                borderRadius: 12,
+                padding: "12px",
+                fontWeight: 900,
+                fontSize: 15,
+                cursor: "pointer",
+              }}
+            >
+              {t.playNow}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {play && (
+        <PlayerOverlay src={play.url} onClose={() => setPlay(null)} closeLabel={t.close} />
+      )}
+    </div>
+  );
+}
+
