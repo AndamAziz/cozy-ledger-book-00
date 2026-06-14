@@ -228,7 +228,10 @@ export default function Movies() {
     try {
       const r = await fetch(`https://vidapi.ru/movies/latest/page-${p}.json`);
       const data = await r.json();
-      setMovies(Array.isArray(data.items) ? data.items : []);
+      const items: Movie[] = (Array.isArray(data.items) ? data.items : []).map(
+        (m: Movie) => ({ ...m, media: m.media || "movie" }),
+      );
+      setMovies(items);
       setTotalPages(Math.min(data.total_pages || 1, 200));
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
