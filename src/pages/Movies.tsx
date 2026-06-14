@@ -99,6 +99,11 @@ const T = {
     tabSeries: "زنجیرەکان",
     seeAll: "هەموو ببینە",
     rankToday: "ئەمڕۆ",
+    navHome: "سەرەتا",
+    navMovie: "فیلم",
+    navSeries: "سریال",
+    navSearch: "گەڕان",
+    navMore: "زیاتر",
   },
   en: {
     title: "Mov",
