@@ -898,7 +898,7 @@ export default function Movies() {
         )}
 
         {/* ===== SHARED GRID (home / movie / tv / search results) ===== */}
-        {(view !== "search" || searching) &&
+        {view !== "search" && view !== "more" &&
           (loading || (aiSearching && filtered.length === 0) ? (
             <Grid>
               {Array.from({ length: 18 }).map((_, i) => (
