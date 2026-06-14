@@ -1033,6 +1033,7 @@ function Hero({
 
 function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
   const rating = parseFloat(movie.rating) || 0;
+  const isTv = movie.media === "tv";
   return (
     <div className="mv-card mv-fade" onClick={onClick} style={{ cursor: "pointer" }}>
       <div
@@ -1057,55 +1058,40 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
           }}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
-        {/* badges */}
+        {/* MOVIE / TV tag (top-start) */}
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            insetInlineStart: 8,
+            background: isTv ? "#2563eb" : "#e11d2a",
+            color: "#fff",
+            fontSize: 10.5,
+            fontWeight: 900,
+            padding: "3px 9px",
+            borderRadius: 7,
+            letterSpacing: ".6px",
+            boxShadow: "0 2px 8px rgba(0,0,0,.45)",
+          }}
+        >
+          {isTv ? "TV" : "MOVIE"}
+        </div>
+        {/* rating (top-end) */}
         {rating > 0 && (
           <div
             style={{
               position: "absolute",
               top: 8,
               insetInlineEnd: 8,
-              background: "rgba(0,0,0,.75)",
+              background: "rgba(0,0,0,.78)",
               color: C.gold,
-              fontSize: 12,
+              fontSize: 11.5,
               fontWeight: 800,
               padding: "3px 8px",
               borderRadius: 8,
             }}
           >
             ★ {rating.toFixed(1)}
-          </div>
-        )}
-        <div
-          style={{
-            position: "absolute",
-            top: 8,
-            insetInlineStart: 8,
-            background: "rgba(0,0,0,.75)",
-            color: C.text,
-            fontSize: 11.5,
-            fontWeight: 700,
-            padding: "3px 8px",
-            borderRadius: 8,
-          }}
-        >
-          {movie.year}
-        </div>
-        {movie.media === "tv" && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: 8,
-              insetInlineStart: 8,
-              background: C.gold,
-              color: "#0A0A0F",
-              fontSize: 11,
-              fontWeight: 800,
-              padding: "3px 8px",
-              borderRadius: 8,
-              letterSpacing: ".3px",
-            }}
-          >
-            📺 TV
           </div>
         )}
         {/* play overlay */}
@@ -1135,11 +1121,11 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
           </div>
         </div>
       </div>
-      <div style={{ marginTop: 8 }}>
+      <div style={{ marginTop: 9 }}>
         <div
           style={{
-            fontSize: 13.5,
-            fontWeight: 700,
+            fontSize: 14,
+            fontWeight: 800,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -1149,19 +1135,26 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
         </div>
         <div
           style={{
-            fontSize: 11.5,
+            fontSize: 12,
             color: C.muted,
+            marginTop: 2,
+            display: "flex",
+            gap: 8,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
           }}
         >
-          {(movie.genre || "").split(",")[0]}
+          {movie.year && <span>{movie.year}</span>}
+          {(movie.genre || "").split(",")[0] && (
+            <span style={{ opacity: 0.85 }}>· {(movie.genre || "").split(",")[0]}</span>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
 
 function Pagination({
   page,
