@@ -543,8 +543,8 @@ async function handleHistory(code: string, range: string): Promise<Response> {
 
     // 3) Nothing usable — surface an explicit error rather than raw futures.
     return new Response(
-      JSON.stringify({ error: "Spot history unavailable", code, range, unavailable: [code] }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ error: "Spot history unavailable", code, range, unavailable: [code], fallback: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
@@ -558,16 +558,16 @@ async function handleHistory(code: string, range: string): Promise<Response> {
     const res = await fetch(yahooUrl, { headers: yahooHeaders, signal: AbortSignal.timeout(10000) });
     if (!res.ok) {
       await res.text();
-      return new Response(JSON.stringify({ error: "Failed to fetch history" }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "Failed to fetch history", fallback: true }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await res.json();
     const result = data?.chart?.result?.[0];
     if (!result) {
-      return new Response(JSON.stringify({ error: "No data" }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "No data", fallback: true }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
