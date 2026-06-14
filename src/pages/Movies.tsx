@@ -352,6 +352,8 @@ const GLOBAL_CSS = `
 .mv-card:hover { transform: translateY(-8px) scale(1.035); box-shadow: 0 18px 40px rgba(0,0,0,.6); z-index:2; }
 .mv-card:hover .mv-play { opacity:1; transform: scale(1); }
 .mv-card:hover .mv-poster-img { transform: scale(1.08); filter: brightness(.55); }
+.mv-srv-card:hover { transform: translateY(-5px); box-shadow: 0 14px 30px rgba(0,0,0,.5); }
+.mv-srv-card:active { transform: translateY(-1px) scale(.98); }
 .mv-play { opacity:0; transform: scale(.6); transition: all .28s; }
 .mv-poster-img { transition: transform .5s, filter .35s; }
 @keyframes mvShimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
