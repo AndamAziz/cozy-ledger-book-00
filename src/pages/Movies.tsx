@@ -285,7 +285,25 @@ export default function Movies() {
   const [selected, setSelected] = useState<Movie | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
   const [mediaTab, setMediaTab] = useState<"movie" | "tv">("movie");
+  const [view, setView] = useState<"home" | "movie" | "tv" | "search">("home");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const goView = (v: "home" | "movie" | "tv" | "search") => {
+    if (v === "search") {
+      setView("search");
+      setTimeout(() => inputRef.current?.focus(), 50);
+      return;
+    }
+    /* leaving search → clear it */
+    setSearch("");
+    setAiTitle(null);
+    setSearchResults(null);
+    if (v === "tv") setMediaTab("tv");
+    else setMediaTab("movie");
+    setView(v);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
 
   const toggleLang = () => {
     const next: Lang = lang === "ku" ? "en" : "ku";
