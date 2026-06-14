@@ -2443,7 +2443,10 @@ function PlayerOverlay({
                 return (
                   <button
                     key={s.name}
-                    onClick={() => setActive(i)}
+                    onClick={() => {
+                      setAutoTrying(false);
+                      setActive(i);
+                    }}
                     style={{
                       background: on ? C.gold : C.panel2,
                       color: on ? "#0A0A0F" : C.text,
