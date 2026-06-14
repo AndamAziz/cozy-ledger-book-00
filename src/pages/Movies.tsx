@@ -1241,6 +1241,53 @@ function MovieModal({
           <ActionBtn label={t.subs} onClick={loadSubs} />
         </div>
 
+        {/* TV: season & episode picker */}
+        {isTv && seasons.length > 0 && (
+          <div
+            className="mv-fade"
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              alignItems: "center",
+              padding: "12px 16px 0",
+            }}
+          >
+            <span style={{ fontSize: 13, color: C.muted, fontWeight: 700 }}>
+              📺 {t.selectEpisode}:
+            </span>
+            <select
+              value={season}
+              onChange={(e) => {
+                setSeason(Number(e.target.value));
+                setEpisode(1);
+              }}
+              style={selectStyle}
+            >
+              {seasons.map((s) => (
+                <option key={s.season_number} value={s.season_number}>
+                  {t.season} {s.season_number}
+                  {s.episode_count ? ` (${s.episode_count} ${t.episodesCount})` : ""}
+                </option>
+              ))}
+            </select>
+            <select
+              value={episode}
+              onChange={(e) => setEpisode(Number(e.target.value))}
+              style={selectStyle}
+            >
+              {Array.from(
+                { length: seasons.find((s) => s.season_number === season)?.episode_count || 1 },
+                (_, i) => i + 1,
+              ).map((ep) => (
+                <option key={ep} value={ep}>
+                  {t.episode} {ep}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* PlayIMDb buttons */}
         {imdbId && (
           <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
