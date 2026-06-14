@@ -21,6 +21,16 @@ const TMDB_KEY = "4e44d9029b1270a757cddc766a1bcb63";
 const TMDB_BACKDROP = "https://image.tmdb.org/t/p/w1280";
 const TMDB_PROFILE = "https://image.tmdb.org/t/p/w185";
 
+// Official IMDb streaming domains (source for all movies & series).
+// playimdb.com is primary; the rest are mirrors used if it is blocked.
+const IMDB_DOMAINS: { host: string; label: string }[] = [
+  { host: "playimdb.com", label: "PlayIMDb ⚡" },
+  { host: "runimdb.com", label: "RunIMDb" },
+  { host: "streamimdb.com", label: "StreamIMDb" },
+  { host: "directimdb.com", label: "DirectIMDb" },
+  { host: "fastimdb.com", label: "FastIMDb" },
+];
+
 const selectStyle: React.CSSProperties = {
   background: C.panel2,
   color: C.text,
@@ -2253,18 +2263,22 @@ function MovieModal({
       {watch && (
         <PlayerOverlay
           servers={
-            isTv
-              ? [
-                  { name: "VidAPI ⚡", url: `https://vidapi.ru/embed/tv/${imdbId || movie.tmdb_id}/${season}/${episode}` },
-                ]
+            imdbId
+              ? IMDB_DOMAINS.map((d) => ({
+                  name: d.label,
+                  url: `https://www.${d.host}/title/${imdbId}/`,
+                }))
               : [
-                  { name: "VidAPI ⚡", url: `https://vidapi.ru/embed/movie/${imdbId || movie.tmdb_id}` },
+                  {
+                    name: "VidAPI ⚡",
+                    url: isTv
+                      ? `https://vidapi.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
+                      : `https://vidapi.ru/embed/movie/${movie.tmdb_id}`,
+                  },
                 ]
           }
-
           onClose={() => setWatch(false)}
           closeLabel={t.close}
-          serverLabel={t.server}
           hint={t.serverHint}
         />
       )}
