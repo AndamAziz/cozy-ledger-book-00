@@ -139,9 +139,13 @@ const TMDB_GENRES: Record<number, string> = {
 
 interface TmdbSearchResult {
   id: number;
+  media_type?: string;
   title?: string;
+  name?: string;
   original_title?: string;
+  original_name?: string;
   release_date?: string;
+  first_air_date?: string;
   poster_path?: string | null;
   vote_average?: number;
   genre_ids?: number[];
@@ -151,6 +155,7 @@ interface TmdbSearchResult {
 interface Movie {
   tmdb_id: number;
   imdb_id: string;
+  media: "movie" | "tv";
   title: string;
   year: string;
   poster_url: string;
