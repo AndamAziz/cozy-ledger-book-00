@@ -642,6 +642,32 @@ export default function Movies() {
 
       {/* Grid */}
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 16px 40px" }}>
+        {!searching && genre === "all" && (
+          <Hero lang={lang} t={t} dir={dir} onSelect={(m) => setSelected(m)} />
+        )}
+        {!searching && (
+          <h2
+            style={{
+              fontSize: 20,
+              fontWeight: 900,
+              margin: "0 0 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                width: 4,
+                height: 22,
+                background: C.gold,
+                borderRadius: 4,
+              }}
+            />
+            {t.latest} 🎬
+          </h2>
+        )}
         {searching && (
           <div
             className="mv-fade"
