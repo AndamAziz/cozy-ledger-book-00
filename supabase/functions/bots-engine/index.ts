@@ -557,13 +557,16 @@ async function processBot(bot: Record<string, unknown>) {
   }
 
   // 4) Open trade.
+  const scalp = isScalp(timeframe);
   const slPct = Number(bot.sl_pct) / 100;
   const tpPct = Number(bot.tp_pct) / 100;
   const entry = price;
   const slPrice = direction === "buy" ? entry * (1 - slPct) : entry * (1 + slPct);
   const tpPrice = direction === "buy" ? entry * (1 + tpPct) : entry * (1 - tpPct);
+  const reasons = (direction === "buy" ? buyReasons : sellReasons).join(", ") || "signal threshold met";
 
-  await log(botId, userId, "signal", `[${hhmmss()}] ✅ Signal: ${direction.toUpperCase()} (score ${score}/4) — Opening trade`);
+  await log(botId, userId, "signal",
+    `[${hhmmss()}] ✅ ${scalp ? "SCALP " : ""}Signal: ${direction.toUpperCase()} (Score ${score}/4) — Opening trade`);
   const { error: insErr } = await admin.from("bot_trades").insert({
     bot_id: botId, user_id: userId, symbol, direction,
     entry_price: +entry.toFixed(4), sl_price: +slPrice.toFixed(4), tp_price: +tpPrice.toFixed(4),
@@ -576,7 +579,15 @@ async function processBot(bot: Record<string, unknown>) {
     await log(botId, userId, "info", `[${hhmmss()}] ⚠️ Could not open trade: ${insErr.message}`);
     return;
   }
-  await log(botId, userId, "info", `[${hhmmss()}] 💰 Opened ${direction.toUpperCase()} @ $${fmt(entry, symbol)} | SL: $${fmt(slPrice, symbol)} | TP: $${fmt(tpPrice, symbol)}`);
+  // 📍 Entry price + reason  🎯 TP  ⚠️ SL  📊 Score
+  await log(botId, userId, "info",
+    `[${hhmmss()}] 📍 Entry ${direction.toUpperCase()} @ $${fmt(entry, symbol)} — triggered by: ${reasons}`);
+  await log(botId, userId, "info",
+    `[${hhmmss()}] 🎯 TP target set @ $${fmt(tpPrice, symbol)} (+${Number(bot.tp_pct)}%)`);
+  await log(botId, userId, "info",
+    `[${hhmmss()}] ⚠️ SL set @ $${fmt(slPrice, symbol)} (-${Number(bot.sl_pct)}%)`);
+  await log(botId, userId, "info",
+    `[${hhmmss()}] 📊 Score ${score}/4 triggered the trade${scalp ? " · ⚡ Scalp mode: exits on minimum profit" : ""}`);
 
   // 🔔 Notify the user a new trade was opened.
   const botName = (bot.name as string) || symbol;
