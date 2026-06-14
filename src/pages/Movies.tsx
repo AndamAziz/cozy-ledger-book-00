@@ -2303,11 +2303,11 @@ function PlayerOverlay({
             src={currentSrc}
             title="player"
             allowFullScreen
-            allow="autoplay; encrypted-media; fullscreen"
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             referrerPolicy="origin"
-            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
             style={{ width: "100%", height: "100%", border: "none" }}
           />
+
         </div>
 
         {/* server selector */}
