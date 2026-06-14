@@ -187,6 +187,7 @@ export default function Movies() {
   const [aiSearching, setAiSearching] = useState(false);
   const [aiTitle, setAiTitle] = useState<string | null>(null);
   const [selected, setSelected] = useState<Movie | null>(null);
+  const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const toggleLang = () => {
