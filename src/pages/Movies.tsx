@@ -251,20 +251,24 @@ export default function Movies() {
         `https://api.themoviedb.org/3/find/${imdbId}?api_key=${TMDB_KEY}&external_source=imdb_id`,
       );
       const d = await r.json();
-      const result = d?.movie_results?.[0];
+      const tv = d?.tv_results?.[0];
+      const mv = d?.movie_results?.[0];
+      const result = mv || tv;
       if (result) {
+        const isTv = !mv && !!tv;
         const movie: Movie = {
           tmdb_id: result.id,
           imdb_id: imdbId,
-          title: result.title || result.original_title || imdbId,
-          year: result.release_date ? result.release_date.slice(0, 4) : "",
+          media: isTv ? "tv" : "movie",
+          title: result.title || result.name || result.original_title || result.original_name || imdbId,
+          year: (result.release_date || result.first_air_date || "").slice(0, 4),
           poster_url: result.poster_path
             ? `https://image.tmdb.org/t/p/w500${result.poster_path}`
             : "",
           rating: result.vote_average ? String(result.vote_average) : "",
           genre: (result.genre_ids || []).map((g: number) => TMDB_GENRES[g]).filter(Boolean).join(", "),
           popularity: String(result.popularity || ""),
-          type: "movie",
+          type: isTv ? "tv" : "movie",
           embed_url: "",
         };
         setSelected(movie);
@@ -276,30 +280,34 @@ export default function Movies() {
     return false;
   }, []);
 
-  // ---- POWERFUL CATALOG SEARCH (full TMDB database) ----
-  const mapTmdbResult = (r: TmdbSearchResult): Movie => ({
-    tmdb_id: r.id,
-    imdb_id: "",
-    title: r.title || r.original_title || "",
-    year: r.release_date ? r.release_date.slice(0, 4) : "",
-    poster_url: r.poster_path ? `https://image.tmdb.org/t/p/w500${r.poster_path}` : "",
-    rating: r.vote_average ? r.vote_average.toFixed(1) : "",
-    genre: (r.genre_ids || []).map((g) => TMDB_GENRES[g]).filter(Boolean).join(", "),
-    popularity: String(r.popularity || ""),
-    type: "movie",
-    embed_url: "",
-  });
+  // ---- POWERFUL CATALOG SEARCH (movies + TV series, full TMDB database) ----
+  const mapTmdbResult = (r: TmdbSearchResult): Movie => {
+    const isTv = r.media_type === "tv";
+    return {
+      tmdb_id: r.id,
+      imdb_id: "",
+      media: isTv ? "tv" : "movie",
+      title: r.title || r.name || r.original_title || r.original_name || "",
+      year: (r.release_date || r.first_air_date || "").slice(0, 4),
+      poster_url: r.poster_path ? `https://image.tmdb.org/t/p/w500${r.poster_path}` : "",
+      rating: r.vote_average ? r.vote_average.toFixed(1) : "",
+      genre: (r.genre_ids || []).map((g) => TMDB_GENRES[g]).filter(Boolean).join(", "),
+      popularity: String(r.popularity || ""),
+      type: isTv ? "tv" : "movie",
+      embed_url: "",
+    };
+  };
 
   const searchTmdb = useCallback(async (q: string): Promise<Movie[]> => {
     try {
       const r = await fetch(
-        `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}` +
+        `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}` +
           `&query=${encodeURIComponent(q)}&include_adult=false&language=en-US&page=1`,
       );
       const d = await r.json();
       const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
       return list
-        .filter((m) => m.poster_path)
+        .filter((m) => (m.media_type === "movie" || m.media_type === "tv") && m.poster_path)
         .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
         .map(mapTmdbResult);
     } catch {
