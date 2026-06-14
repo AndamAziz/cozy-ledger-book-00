@@ -1240,7 +1240,7 @@ function MovieModal({
               <InfoCell label={t.fYear} value={movie.year} />
               <InfoCell label={t.fRating} value={rating > 0 ? `★ ${rating.toFixed(1)}` : "—"} />
               <InfoCell label={t.fGenre} value={movie.genre || "—"} />
-              <InfoCell label="IMDB ID" value={movie.imdb_id} />
+              <InfoCell label="IMDB ID" value={imdbId || "—"} />
               <InfoCell label="TMDB ID" value={String(movie.tmdb_id)} />
             </div>
           )}
