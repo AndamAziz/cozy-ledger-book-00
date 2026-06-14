@@ -371,7 +371,33 @@ async function maybeLogAdvice(
     `[${hhmmss()}] 🤖 ${dir.toUpperCase()} @ $${fmt(entry, symbol)} → now $${fmt(price, symbol)} | Unrealized: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(diffPct * 100).toFixed(2)}%) | ${verdict}`);
 }
 
-// ───────────────────── process a single bot ─────────────────────
+// ───────────────────── scalp monitoring heartbeat ─────────────────────
+// Logs a "Monitoring..." line roughly every 5 seconds while a scalp trade is
+// open, e.g. "Monitoring... BTC $64,200 P/L: +$0.50 — HOLD".
+// `force` bypasses the throttle (used for the final CLOSING line).
+async function maybeLogScalpCheck(
+  botId: string, userId: string, symbol: string, price: number,
+  pnl: number, pnlPct: number, scalp: boolean, verdict: string, force: boolean,
+) {
+  if (!scalp) return;
+  if (!force) {
+    const { data: last } = await admin
+      .from("bot_logs")
+      .select("created_at")
+      .eq("bot_id", botId)
+      .eq("level", "advice")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (last && last.length) {
+      const age = Date.now() - new Date(last[0].created_at as string).getTime();
+      if (age < 4_500) return; // ~every 5 seconds
+    }
+  }
+  const sign = pnl >= 0 ? "+" : "-";
+  await log(botId, userId, "advice",
+    `[${hhmmss()}] ⏱️ Monitoring... ${symbol} $${fmt(price, symbol)} P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct).toFixed(2)}%) — ${verdict}`);
+}
+
 
 async function processBot(bot: Record<string, unknown>) {
   const botId = bot.id as string;
