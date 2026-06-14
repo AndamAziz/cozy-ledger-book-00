@@ -84,6 +84,14 @@ const T = {
     episode: "ئەلقە",
     selectEpisode: "وەرز و ئەلقە هەڵبژێرە",
     episodesCount: "ئەلقە",
+    play: "▶ سەیرکردن",
+    details: "زانیاری",
+    featured: "تایبەت",
+    server: "سێرڤەر",
+    serverHint: "ئەگەر فیلمەکە کار نەکرد، سێرڤەرێکی تر تاقیبکەرەوە 👇",
+    movieTag: "فیلم",
+    tvTag: "زنجیرە",
+    latest: "نوێترین",
   },
   en: {
     title: "Mov",
@@ -133,6 +141,14 @@ const T = {
     episode: "Episode",
     selectEpisode: "Choose season & episode",
     episodesCount: "episodes",
+    play: "▶ Watch",
+    details: "Details",
+    featured: "Featured",
+    server: "Server",
+    serverHint: "If the movie doesn't load, try another server 👇",
+    movieTag: "MOVIE",
+    tvTag: "TV",
+    latest: "Latest",
   },
 };
 
@@ -196,6 +212,24 @@ interface CastMember {
   name: string;
   character: string;
   profile_path: string | null;
+}
+
+// Module-level TMDB result → Movie mapper (used by search + hero)
+function mapTmdbResult(r: TmdbSearchResult): Movie {
+  const isTv = r.media_type === "tv";
+  return {
+    tmdb_id: r.id,
+    imdb_id: "",
+    media: isTv ? "tv" : "movie",
+    title: r.title || r.name || r.original_title || r.original_name || "",
+    year: (r.release_date || r.first_air_date || "").slice(0, 4),
+    poster_url: r.poster_path ? `https://image.tmdb.org/t/p/w500${r.poster_path}` : "",
+    rating: r.vote_average ? r.vote_average.toFixed(1) : "",
+    genre: (r.genre_ids || []).map((g) => TMDB_GENRES[g]).filter(Boolean).join(", "),
+    popularity: String(r.popularity || ""),
+    type: isTv ? "tv" : "movie",
+    embed_url: "",
+  };
 }
 
 // ====== Global CSS (animations / scrollbar / skeleton) ======
@@ -303,22 +337,7 @@ export default function Movies() {
   }, []);
 
   // ---- POWERFUL CATALOG SEARCH (movies + TV series, full TMDB database) ----
-  const mapTmdbResult = (r: TmdbSearchResult): Movie => {
-    const isTv = r.media_type === "tv";
-    return {
-      tmdb_id: r.id,
-      imdb_id: "",
-      media: isTv ? "tv" : "movie",
-      title: r.title || r.name || r.original_title || r.original_name || "",
-      year: (r.release_date || r.first_air_date || "").slice(0, 4),
-      poster_url: r.poster_path ? `https://image.tmdb.org/t/p/w500${r.poster_path}` : "",
-      rating: r.vote_average ? r.vote_average.toFixed(1) : "",
-      genre: (r.genre_ids || []).map((g) => TMDB_GENRES[g]).filter(Boolean).join(", "),
-      popularity: String(r.popularity || ""),
-      type: isTv ? "tv" : "movie",
-      embed_url: "",
-    };
-  };
+
 
   const searchTmdb = useCallback(async (q: string): Promise<Movie[]> => {
     try {
@@ -623,6 +642,32 @@ export default function Movies() {
 
       {/* Grid */}
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 16px 40px" }}>
+        {!searching && genre === "all" && (
+          <Hero lang={lang} t={t} dir={dir} onSelect={(m) => setSelected(m)} />
+        )}
+        {!searching && (
+          <h2
+            style={{
+              fontSize: 20,
+              fontWeight: 900,
+              margin: "0 0 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                width: 4,
+                height: 22,
+                background: C.gold,
+                borderRadius: 4,
+              }}
+            />
+            {t.latest} 🎬
+          </h2>
+        )}
         {searching && (
           <div
             className="mv-fade"
@@ -717,8 +762,278 @@ function Grid({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ====== Featured Hero Carousel ======
+interface HeroItem extends Movie {
+  backdrop: string;
+  overview: string;
+}
+
+function Hero({
+  lang,
+  t,
+  dir,
+  onSelect,
+}: {
+  lang: Lang;
+  t: (typeof T)["ku"];
+  dir: "rtl" | "ltr";
+  onSelect: (m: Movie) => void;
+}) {
+  const [items, setItems] = useState<HeroItem[]>([]);
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/trending/all/week?api_key=${TMDB_KEY}&language=en-US`,
+        );
+        const d = await r.json();
+        if (!alive) return;
+        const list: HeroItem[] = (Array.isArray(d.results) ? d.results : [])
+          .filter(
+            (x: TmdbSearchResult & { backdrop_path?: string; overview?: string }) =>
+              x.backdrop_path && (x.media_type === "movie" || x.media_type === "tv"),
+          )
+          .slice(0, 6)
+          .map((x: TmdbSearchResult & { backdrop_path?: string; overview?: string }) => ({
+            ...mapTmdbResult(x),
+            backdrop: TMDB_BACKDROP + x.backdrop_path,
+            overview: x.overview || "",
+          }));
+        setItems(list);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (items.length < 2) return;
+    const id = setInterval(() => setIdx((i) => (i + 1) % items.length), 5500);
+    return () => clearInterval(id);
+  }, [items.length]);
+
+  if (items.length === 0) {
+    return (
+      <div
+        className="mv-skel"
+        style={{ width: "100%", aspectRatio: "16/8", borderRadius: 20, marginBottom: 22 }}
+      />
+    );
+  }
+
+  const cur = items[idx];
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: "16/9",
+        maxHeight: 460,
+        borderRadius: 20,
+        overflow: "hidden",
+        marginBottom: 22,
+        background: C.panel,
+        border: `1px solid ${C.border}`,
+      }}
+    >
+      {items.map((it, i) => (
+        <img
+          key={it.tmdb_id}
+          src={it.backdrop}
+          alt={it.title}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: i === idx ? 1 : 0,
+            transition: "opacity .8s ease",
+          }}
+        />
+      ))}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            dir === "rtl"
+              ? `linear-gradient(to left, ${C.bg} 6%, rgba(10,10,15,.55) 45%, rgba(10,10,15,.15) 100%)`
+              : `linear-gradient(to right, ${C.bg} 6%, rgba(10,10,15,.55) 45%, rgba(10,10,15,.15) 100%)`,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `linear-gradient(to top, ${C.bg} 2%, transparent 55%)`,
+        }}
+      />
+
+      <div
+        className="mv-fade"
+        key={cur.tmdb_id}
+        style={{
+          position: "absolute",
+          bottom: 0,
+          insetInlineStart: 0,
+          padding: "0 22px 22px",
+          maxWidth: 560,
+        }}
+      >
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: C.gold,
+            color: "#0A0A0F",
+            fontSize: 11,
+            fontWeight: 900,
+            padding: "4px 10px",
+            borderRadius: 999,
+            marginBottom: 12,
+            letterSpacing: ".5px",
+          }}
+        >
+          🔥 {t.featured}
+        </div>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: "clamp(24px, 6vw, 44px)",
+            fontWeight: 900,
+            lineHeight: 1.05,
+            textShadow: "0 4px 24px rgba(0,0,0,.7)",
+          }}
+        >
+          {cur.title}
+        </h2>
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+            marginTop: 10,
+            fontSize: 14,
+            color: C.text,
+            flexWrap: "wrap",
+          }}
+        >
+          {cur.media === "tv" && (
+            <span
+              style={{
+                background: "#2563eb",
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 800,
+                padding: "2px 8px",
+                borderRadius: 6,
+              }}
+            >
+              📺 {t.tvTag}
+            </span>
+          )}
+          {parseFloat(cur.rating) > 0 && (
+            <span style={{ color: C.gold, fontWeight: 800 }}>★ {parseFloat(cur.rating).toFixed(1)}</span>
+          )}
+          {cur.year && <span style={{ color: C.muted }}>{cur.year}</span>}
+          {cur.genre && <span style={{ color: C.muted }}>{cur.genre.split(",")[0]}</span>}
+        </div>
+        {cur.overview && (
+          <p
+            style={{
+              margin: "12px 0 0",
+              fontSize: 13.5,
+              lineHeight: 1.6,
+              color: C.muted,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {cur.overview}
+          </p>
+        )}
+        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <button
+            onClick={() => onSelect(cur)}
+            style={{
+              background: C.gold,
+              color: "#0A0A0F",
+              border: "none",
+              borderRadius: 12,
+              padding: "11px 24px",
+              fontWeight: 900,
+              fontSize: 14.5,
+              cursor: "pointer",
+            }}
+          >
+            {t.play}
+          </button>
+          <button
+            onClick={() => onSelect(cur)}
+            style={{
+              background: "rgba(255,255,255,0.12)",
+              color: C.text,
+              border: `1px solid ${C.border}`,
+              borderRadius: 12,
+              padding: "11px 22px",
+              fontWeight: 800,
+              fontSize: 14.5,
+              cursor: "pointer",
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            ⓘ {t.details}
+          </button>
+        </div>
+      </div>
+
+      {/* dots */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 18,
+          insetInlineEnd: 22,
+          display: "flex",
+          gap: 6,
+        }}
+      >
+        {items.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setIdx(i)}
+            aria-label={`slide ${i + 1}`}
+            style={{
+              width: i === idx ? 22 : 8,
+              height: 8,
+              borderRadius: 999,
+              border: "none",
+              background: i === idx ? C.gold : "rgba(255,255,255,.4)",
+              cursor: "pointer",
+              transition: "all .3s",
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+
 function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
   const rating = parseFloat(movie.rating) || 0;
+  const isTv = movie.media === "tv";
   return (
     <div className="mv-card mv-fade" onClick={onClick} style={{ cursor: "pointer" }}>
       <div
@@ -743,55 +1058,40 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
           }}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
-        {/* badges */}
+        {/* MOVIE / TV tag (top-start) */}
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            insetInlineStart: 8,
+            background: isTv ? "#2563eb" : "#e11d2a",
+            color: "#fff",
+            fontSize: 10.5,
+            fontWeight: 900,
+            padding: "3px 9px",
+            borderRadius: 7,
+            letterSpacing: ".6px",
+            boxShadow: "0 2px 8px rgba(0,0,0,.45)",
+          }}
+        >
+          {isTv ? "TV" : "MOVIE"}
+        </div>
+        {/* rating (top-end) */}
         {rating > 0 && (
           <div
             style={{
               position: "absolute",
               top: 8,
               insetInlineEnd: 8,
-              background: "rgba(0,0,0,.75)",
+              background: "rgba(0,0,0,.78)",
               color: C.gold,
-              fontSize: 12,
+              fontSize: 11.5,
               fontWeight: 800,
               padding: "3px 8px",
               borderRadius: 8,
             }}
           >
             ★ {rating.toFixed(1)}
-          </div>
-        )}
-        <div
-          style={{
-            position: "absolute",
-            top: 8,
-            insetInlineStart: 8,
-            background: "rgba(0,0,0,.75)",
-            color: C.text,
-            fontSize: 11.5,
-            fontWeight: 700,
-            padding: "3px 8px",
-            borderRadius: 8,
-          }}
-        >
-          {movie.year}
-        </div>
-        {movie.media === "tv" && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: 8,
-              insetInlineStart: 8,
-              background: C.gold,
-              color: "#0A0A0F",
-              fontSize: 11,
-              fontWeight: 800,
-              padding: "3px 8px",
-              borderRadius: 8,
-              letterSpacing: ".3px",
-            }}
-          >
-            📺 TV
           </div>
         )}
         {/* play overlay */}
@@ -821,11 +1121,11 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
           </div>
         </div>
       </div>
-      <div style={{ marginTop: 8 }}>
+      <div style={{ marginTop: 9 }}>
         <div
           style={{
-            fontSize: 13.5,
-            fontWeight: 700,
+            fontSize: 14,
+            fontWeight: 800,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -835,19 +1135,26 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
         </div>
         <div
           style={{
-            fontSize: 11.5,
+            fontSize: 12,
             color: C.muted,
+            marginTop: 2,
+            display: "flex",
+            gap: 8,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
           }}
         >
-          {(movie.genre || "").split(",")[0]}
+          {movie.year && <span>{movie.year}</span>}
+          {(movie.genre || "").split(",")[0] && (
+            <span style={{ opacity: 0.85 }}>· {(movie.genre || "").split(",")[0]}</span>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
 
 function Pagination({
   page,
@@ -1573,13 +1880,27 @@ function MovieModal({
       {/* Watch player */}
       {watch && (
         <PlayerOverlay
-          src={
+          servers={
             isTv
-              ? `https://vaplayer.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
-              : `https://vaplayer.ru/embed/movie/${imdbId || movie.tmdb_id}`
+              ? [
+                  { name: "Server 1 ⚡", url: `https://vidsrc.xyz/embed/tv/${imdbId || movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 2", url: `https://vidsrc.cc/v2/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 3", url: `https://www.2embed.cc/embedtv/${movie.tmdb_id}&s=${season}&e=${episode}` },
+                  ...(imdbId ? [{ name: "Server 4", url: `https://multiembed.mov/?video_id=${imdbId}&s=${season}&e=${episode}` }] : []),
+                  { name: "Server 5", url: `https://vaplayer.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
+                ]
+              : [
+                  { name: "Server 1 ⚡", url: `https://vidsrc.xyz/embed/movie/${imdbId || movie.tmdb_id}` },
+                  { name: "Server 2", url: `https://vidsrc.cc/v2/embed/movie/${movie.tmdb_id}` },
+                  { name: "Server 3", url: `https://www.2embed.cc/embed/${movie.tmdb_id}` },
+                  ...(imdbId ? [{ name: "Server 4", url: `https://multiembed.mov/?video_id=${imdbId}` }] : []),
+                  { name: "Server 5", url: `https://vaplayer.ru/embed/movie/${imdbId || movie.tmdb_id}` },
+                ]
           }
           onClose={() => setWatch(false)}
           closeLabel={t.close}
+          serverLabel={t.server}
+          hint={t.serverHint}
         />
       )}
       {/* Trailer player */}
@@ -1596,13 +1917,21 @@ function MovieModal({
 
 function PlayerOverlay({
   src,
+  servers,
   onClose,
   closeLabel,
+  serverLabel,
+  hint,
 }: {
-  src: string;
+  src?: string;
+  servers?: { name: string; url: string }[];
   onClose: () => void;
   closeLabel: string;
+  serverLabel?: string;
+  hint?: string;
 }) {
+  const [active, setActive] = useState(0);
+  const currentSrc = servers && servers.length > 0 ? servers[active].url : src || "";
   return (
     <div
       onClick={onClose}
@@ -1640,17 +1969,62 @@ function PlayerOverlay({
         </button>
         <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden" }}>
           <iframe
-            src={src}
+            key={currentSrc}
+            src={currentSrc}
             title="player"
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen"
+            referrerPolicy="origin"
             style={{ width: "100%", height: "100%", border: "none" }}
           />
         </div>
+
+        {/* server selector */}
+        {servers && servers.length > 1 && (
+          <div style={{ marginTop: 12 }}>
+            {hint && (
+              <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8, textAlign: "center" }}>
+                {hint}
+              </div>
+            )}
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+                justifyContent: "center",
+              }}
+            >
+              {servers.map((s, i) => {
+                const on = i === active;
+                return (
+                  <button
+                    key={s.name}
+                    onClick={() => setActive(i)}
+                    style={{
+                      background: on ? C.gold : C.panel2,
+                      color: on ? "#0A0A0F" : C.text,
+                      border: `1px solid ${on ? C.gold : C.border}`,
+                      borderRadius: 10,
+                      padding: "8px 14px",
+                      fontWeight: 800,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      transition: "all .15s",
+                    }}
+                  >
+                    {serverLabel ? `${serverLabel} ${i + 1}` : s.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
 
 function ActionBtn({
   label,
