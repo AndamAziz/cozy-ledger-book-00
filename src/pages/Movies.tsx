@@ -356,44 +356,47 @@ export default function Movies() {
     localStorage.setItem("moviesLang", next);
   };
 
-  const fetchMovies = useCallback(async (p: number, media: "movie" | "tv") => {
-    setLoading(true);
-    try {
-      if (media === "tv") {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/tv/popular?api_key=${TMDB_KEY}&language=en-US&page=${p}`,
-        );
+  const fetchMovies = useCallback(
+    async (p: number, media: "movie" | "tv", g: string) => {
+      setLoading(true);
+      try {
+        let url: string;
+        if (g && g !== "all") {
+          const gid =
+            media === "tv" ? TV_GENRE_IDS[g] : MOVIE_GENRE_IDS[g];
+          url =
+            `https://api.themoviedb.org/3/discover/${media}?api_key=${TMDB_KEY}` +
+            `&language=en-US&sort_by=popularity.desc&include_adult=false` +
+            `&vote_count.gte=40${gid ? `&with_genres=${gid}` : ""}&page=${p}`;
+        } else {
+          url = `https://api.themoviedb.org/3/${media}/popular?api_key=${TMDB_KEY}&language=en-US&page=${p}`;
+        }
+        const r = await fetch(url);
         const data = await r.json();
         const items: Movie[] = (Array.isArray(data.results) ? data.results : [])
           .filter((x: TmdbSearchResult) => x.poster_path)
-          .map((x: TmdbSearchResult) => mapTmdbResult({ ...x, media_type: "tv" }));
+          .map((x: TmdbSearchResult) => mapTmdbResult({ ...x, media_type: media }));
         setMovies(items);
         setTotalPages(Math.min(data.total_pages || 1, 200));
-      } else {
-        const r = await fetch(`https://vidapi.ru/movies/latest/page-${p}.json`);
-        const data = await r.json();
-        const items: Movie[] = (Array.isArray(data.items) ? data.items : []).map(
-          (m: Movie) => ({ ...m, media: m.media || "movie" }),
-        );
-        setMovies(items);
-        setTotalPages(Math.min(data.total_pages || 1, 200));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch {
+        setMovies([]);
+      } finally {
+        setLoading(false);
       }
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch {
-      setMovies([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
-    fetchMovies(page, mediaTab);
-  }, [page, mediaTab, fetchMovies]);
+    fetchMovies(page, mediaTab, genre);
+  }, [page, mediaTab, genre, fetchMovies]);
 
-  /* reset to first page when switching media tab */
+  /* reset to first page when switching media tab or genre */
   useEffect(() => {
     setPage(1);
-  }, [mediaTab]);
+  }, [mediaTab, genre]);
+
 
 
   const searchByImdbId = useCallback(async (imdbId: string) => {
