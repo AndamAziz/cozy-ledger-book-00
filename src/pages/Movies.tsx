@@ -141,6 +141,14 @@ const T = {
     episode: "Episode",
     selectEpisode: "Choose season & episode",
     episodesCount: "episodes",
+    play: "▶ Watch",
+    details: "Details",
+    featured: "Featured",
+    server: "Server",
+    serverHint: "If the movie doesn't load, try another server 👇",
+    movieTag: "MOVIE",
+    tvTag: "TV",
+    latest: "Latest",
   },
 };
 
