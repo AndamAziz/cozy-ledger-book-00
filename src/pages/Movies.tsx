@@ -2519,6 +2519,9 @@ function MoreServers({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Movie[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [catalog, setCatalog] = useState<Movie[]>([]);
+  const [catLoading, setCatLoading] = useState(false);
+  const [catTab, setCatTab] = useState<"movie" | "tv">("movie");
   const [pendingTv, setPendingTv] = useState<Movie | null>(null);
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
@@ -2526,6 +2529,34 @@ function MoreServers({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const srv = activeIdx !== null ? STREAM_SERVERS[activeIdx] : null;
+
+  /* load this server's catalog (popular movies / series) */
+  useEffect(() => {
+    if (activeIdx === null) return;
+    let alive = true;
+    setCatLoading(true);
+    (async () => {
+      try {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/${catTab}/popular?api_key=${TMDB_KEY}&language=en-US&page=1`,
+        );
+        const d = await r.json();
+        const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
+        const items = list
+          .filter((m) => m.poster_path)
+          .map((m) => mapTmdbResult({ ...m, media_type: catTab }));
+        if (alive) setCatalog(items);
+      } catch {
+        if (alive) setCatalog([]);
+      } finally {
+        if (alive) setCatLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [activeIdx, catTab]);
+
 
   useEffect(() => {
     const q = query.trim();
