@@ -897,6 +897,11 @@ export default function Movies() {
           </>
         )}
 
+        {/* ===== MORE / SERVERS VIEW ===== */}
+        {view === "more" && <MoreServers lang={lang} t={t} dir={dir} />}
+
+
+
         {/* ===== SHARED GRID (home / movie / tv / search results) ===== */}
         {view !== "more" && (view !== "search" || searching) &&
           (loading || (aiSearching && filtered.length === 0) ? (
