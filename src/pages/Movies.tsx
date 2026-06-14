@@ -67,6 +67,11 @@ const T = {
     clearSearch: "✕ پاککردنەوەی گەڕان",
     searching: "گەڕان...",
     resultsCount: "ئەنجام",
+    seriesBadge: "زنجیرە",
+    season: "وەرز",
+    episode: "ئەلقە",
+    selectEpisode: "وەرز و ئەلقە هەڵبژێرە",
+    episodesCount: "ئەلقە",
   },
   en: {
     title: "Mov",
