@@ -928,7 +928,7 @@ export default function Movies() {
           ))}
 
         {/* Pagination (catalog views only) */}
-        {view !== "search" && <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />}
+        {view !== "search" && view !== "more" && <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />}
       </main>
 
       {/* ===== Bottom Navigation Bar ===== */}
