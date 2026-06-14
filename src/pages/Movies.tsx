@@ -701,7 +701,7 @@ export default function Movies() {
           <Hero lang={lang} t={t} dir={dir} onSelect={(m) => setSelected(m)} />
         )}
         {!searching && (
-          <TrendingRow lang={lang} t={t} dir={dir} onSelect={(m) => setSelected(m)} />
+          <TrendingRow lang={lang} t={t} onSelect={(m) => setSelected(m)} />
         )}
 
         {/* Movies / Series tab switcher */}
