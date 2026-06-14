@@ -493,7 +493,9 @@ async function processBot(bot: Record<string, unknown>) {
   // 2) No open trade. Only running bots scan.
   if (bot.status !== "running") return;
 
-  const interval = TIMEFRAME_SECONDS[timeframe] || 300;
+  // Scalp timeframes scan fast (~every 10s) so trades open quickly on a signal;
+  // higher timeframes scan once per candle.
+  const interval = isScalp(timeframe) ? 10 : (TIMEFRAME_SECONDS[timeframe] || 300);
   const lastScan = bot.last_scan_at ? new Date(bot.last_scan_at as string).getTime() : 0;
   if (lastScan && Date.now() - lastScan < interval * 1000) return; // not time yet
 
