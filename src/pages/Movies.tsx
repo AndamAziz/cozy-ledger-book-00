@@ -1999,6 +1999,7 @@ function PlayerOverlay({
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen"
             referrerPolicy="origin"
+            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
             style={{ width: "100%", height: "100%", border: "none" }}
           />
         </div>
