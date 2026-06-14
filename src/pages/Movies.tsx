@@ -99,6 +99,11 @@ const T = {
     tabSeries: "زنجیرەکان",
     seeAll: "هەموو ببینە",
     rankToday: "ئەمڕۆ",
+    navHome: "سەرەتا",
+    navMovie: "فیلم",
+    navSeries: "سریال",
+    navSearch: "گەڕان",
+    navMore: "زیاتر",
   },
   en: {
     title: "Mov",
@@ -162,6 +167,11 @@ const T = {
     tabSeries: "Series",
     seeAll: "See all",
     rankToday: "Today",
+    navHome: "Home",
+    navMovie: "Movies",
+    navSeries: "Series",
+    navSearch: "Search",
+    navMore: "More",
   },
 };
 
@@ -285,7 +295,25 @@ export default function Movies() {
   const [selected, setSelected] = useState<Movie | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
   const [mediaTab, setMediaTab] = useState<"movie" | "tv">("movie");
+  const [view, setView] = useState<"home" | "movie" | "tv" | "search">("home");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const goView = (v: "home" | "movie" | "tv" | "search") => {
+    if (v === "search") {
+      setView("search");
+      setTimeout(() => inputRef.current?.focus(), 50);
+      return;
+    }
+    /* leaving search → clear it */
+    setSearch("");
+    setAiTitle(null);
+    setSearchResults(null);
+    if (v === "tv") setMediaTab("tv");
+    else setMediaTab("movie");
+    setView(v);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
 
   const toggleLang = () => {
     const next: Lang = lang === "ku" ? "en" : "ku";
@@ -484,361 +512,414 @@ export default function Movies() {
         />
       </Helmet>
 
-      {/* Header */}
+      {/* Slim Header */}
       <header
         style={{
           position: "sticky",
           top: 0,
           zIndex: 20,
-          background: "rgba(10,10,15,0.85)",
+          background: "rgba(10,10,15,0.9)",
           backdropFilter: "blur(14px)",
           borderBottom: `1px solid ${C.border}`,
-          padding: "14px 16px",
+          padding: "12px 16px",
         }}
       >
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-            <button
-              onClick={() => navigate("/")}
-              style={{
-                background: C.panel2,
-                color: C.text,
-                border: `1px solid ${C.border}`,
-                borderRadius: 12,
-                padding: "8px 14px",
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 600,
-              }}
-            >
-              {t.back}
-            </button>
-            <h1
-              style={{
-                fontSize: 26,
-                fontWeight: 800,
-                margin: 0,
-                letterSpacing: ".5px",
-              }}
-            >
-              <span style={{ color: C.gold }}>{t.title}</span>
-              {t.titleSuffix} 🎬
-            </h1>
-            <button
-              onClick={toggleLang}
-              style={{
-                marginInlineStart: "auto",
-                background: C.panel2,
-                color: C.gold,
-                border: `1px solid ${C.gold}`,
-                borderRadius: 999,
-                padding: "7px 16px",
-                cursor: "pointer",
-                fontSize: 13.5,
-                fontWeight: 800,
-              }}
-            >
-              {lang === "ku" ? "English" : "کوردی"}
-            </button>
-          </div>
-
-          {/* Search */}
-          <div style={{ display: "flex", gap: 8 }}>
-            <div style={{ position: "relative", flex: 1 }}>
-              <input
-                ref={inputRef}
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setAiTitle(null);
-                }}
-                onKeyDown={(e) => e.key === "Enter" && runAiSearch()}
-                placeholder={t.searchPlaceholder}
-                style={{
-                  width: "100%",
-                  background: C.panel,
-                  border: `1px solid ${C.border}`,
-                  borderRadius: 14,
-                  padding: dir === "rtl" ? "12px 44px 12px 16px" : "12px 16px 12px 44px",
-                  color: C.text,
-                  fontSize: 15,
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-              <span
-                style={{
-                  position: "absolute",
-                  insetInlineStart: 14,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: C.muted,
-                  fontSize: 16,
-                }}
-              >
-                🔍
-              </span>
-            </div>
-            <button
-              onClick={runAiSearch}
-              disabled={aiSearching || !search.trim()}
-              title={t.smartSearch}
-              style={{
-                background: !search.trim()
-                  ? "#1b1b27"
-                  : "linear-gradient(135deg, #00E5FF 0%, #00BCD4 50%, #2979FF 100%)",
-                color: !search.trim() ? "#5a5a6e" : "#fff",
-                border: "none",
-                borderRadius: 14,
-                padding: "0 16px",
-                cursor: aiSearching ? "wait" : "pointer",
-                fontWeight: 800,
-                fontSize: 14,
-                whiteSpace: "nowrap",
-                opacity: 1,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                boxShadow: !search.trim()
-                  ? "none"
-                  : "0 0 16px rgba(0, 188, 212, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25)",
-                transition: "all .25s ease",
-                position: "relative",
-                overflow: "hidden",
-              }}
-              onMouseEnter={(e) => {
-                if (search.trim()) {
-                  e.currentTarget.style.transform = "scale(1.04)";
-                  e.currentTarget.style.boxShadow =
-                    "0 0 24px rgba(0, 188, 212, 0.5), 0 6px 18px rgba(0, 0, 0, 0.3)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-                if (search.trim()) {
-                  e.currentTarget.style.boxShadow =
-                    "0 0 16px rgba(0, 188, 212, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25)";
-                }
-              }}
-            >
-              {aiSearching ? (
-                <span
-                  className="mv-spin"
-                  style={{
-                    width: 18,
-                    height: 18,
-                    border: "2.5px solid rgba(255,255,255,.3)",
-                    borderTopColor: "#fff",
-                    borderRadius: "50%",
-                    display: "inline-block",
-                  }}
-                />
-              ) : (
-                <Bot size={20} strokeWidth={2.2} />
-              )}
-              <span style={{ position: "relative", zIndex: 2 }}>{t.smartSearch}</span>
-            </button>
-          </div>
-
-          {aiTitle && (
-            <div
-              className="mv-fade"
-              style={{
-                marginTop: 10,
-                background: C.goldDim,
-                border: `1px solid ${C.gold}`,
-                borderRadius: 12,
-                padding: "8px 14px",
-                fontSize: 13.5,
-                color: C.gold,
-              }}
-            >
-              🤖 {t.aiFound} <b>{aiTitle}</b>
-            </div>
-          )}
-
-          {/* Genre pills */}
-          <div
-            className="mv-genre mv-scroll"
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <button
+            onClick={() => navigate("/")}
             style={{
-              display: "flex",
-              gap: 8,
-              overflowX: "auto",
-              marginTop: 14,
-              paddingBottom: 2,
+              background: C.panel2,
+              color: C.text,
+              border: `1px solid ${C.border}`,
+              borderRadius: 12,
+              padding: "8px 14px",
+              cursor: "pointer",
+              fontSize: 14,
+              fontWeight: 600,
             }}
           >
-            {GENRES.map((g) => {
-              const active = genre === g.key;
-              return (
-                <button
-                  key={g.key}
-                  onClick={() => setGenre(g.key)}
-                  style={{
-                    flexShrink: 0,
-                    background: active ? C.gold : C.panel,
-                    color: active ? "#0A0A0F" : C.muted,
-                    border: `1px solid ${active ? C.gold : C.border}`,
-                    borderRadius: 999,
-                    padding: "7px 16px",
-                    fontSize: 13.5,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    transition: "all .2s",
-                  }}
-                >
-                  {lang === "ku" ? g.ku : g.en}
-                </button>
-              );
-            })}
-          </div>
+            {t.back}
+          </button>
+          <h1 style={{ fontSize: 23, fontWeight: 800, margin: 0, letterSpacing: ".5px" }}>
+            <span style={{ color: C.gold }}>{t.title}</span>
+            {t.titleSuffix} 🎬
+          </h1>
+          <button
+            onClick={toggleLang}
+            style={{
+              marginInlineStart: "auto",
+              background: C.panel2,
+              color: C.gold,
+              border: `1px solid ${C.gold}`,
+              borderRadius: 999,
+              padding: "7px 16px",
+              cursor: "pointer",
+              fontSize: 13.5,
+              fontWeight: 800,
+            }}
+          >
+            {lang === "ku" ? "English" : "کوردی"}
+          </button>
         </div>
       </header>
 
-      {/* Grid */}
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 16px 40px" }}>
-        {!searching && (
-          <Hero lang={lang} t={t} dir={dir} onSelect={(m) => setSelected(m)} />
-        )}
-        {!searching && (
-          <TrendingRow lang={lang} t={t} onSelect={(m) => setSelected(m)} />
+      {/* Content */}
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "18px 16px 120px" }}>
+        {/* ===== SEARCH VIEW ===== */}
+        {view === "search" && (
+          <>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <div style={{ position: "relative", flex: 1 }}>
+                <input
+                  ref={inputRef}
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setAiTitle(null);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && runAiSearch()}
+                  placeholder={t.searchPlaceholder}
+                  style={{
+                    width: "100%",
+                    background: C.panel,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 14,
+                    padding: dir === "rtl" ? "12px 44px 12px 16px" : "12px 16px 12px 44px",
+                    color: C.text,
+                    fontSize: 15,
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <span
+                  style={{
+                    position: "absolute",
+                    insetInlineStart: 14,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: C.muted,
+                    fontSize: 16,
+                  }}
+                >
+                  🔍
+                </span>
+              </div>
+              <button
+                onClick={runAiSearch}
+                disabled={aiSearching || !search.trim()}
+                title={t.smartSearch}
+                style={{
+                  background: !search.trim()
+                    ? "#1b1b27"
+                    : "linear-gradient(135deg, #00E5FF 0%, #00BCD4 50%, #2979FF 100%)",
+                  color: !search.trim() ? "#5a5a6e" : "#fff",
+                  border: "none",
+                  borderRadius: 14,
+                  padding: "0 16px",
+                  cursor: aiSearching ? "wait" : "pointer",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  boxShadow: !search.trim()
+                    ? "none"
+                    : "0 0 16px rgba(0, 188, 212, 0.35), 0 4px 12px rgba(0, 0, 0, 0.25)",
+                  transition: "all .25s ease",
+                }}
+              >
+                {aiSearching ? (
+                  <span
+                    className="mv-spin"
+                    style={{
+                      width: 18,
+                      height: 18,
+                      border: "2.5px solid rgba(255,255,255,.3)",
+                      borderTopColor: "#fff",
+                      borderRadius: "50%",
+                      display: "inline-block",
+                    }}
+                  />
+                ) : (
+                  <Bot size={20} strokeWidth={2.2} />
+                )}
+                <span>{t.smartSearch}</span>
+              </button>
+            </div>
+
+            {aiTitle && (
+              <div
+                className="mv-fade"
+                style={{
+                  marginBottom: 14,
+                  background: C.goldDim,
+                  border: `1px solid ${C.gold}`,
+                  borderRadius: 12,
+                  padding: "8px 14px",
+                  fontSize: 13.5,
+                  color: C.gold,
+                }}
+              >
+                🤖 {t.aiFound} <b>{aiTitle}</b>
+              </div>
+            )}
+
+            {searching ? (
+              <div
+                className="mv-fade"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ fontSize: 15, color: C.text }}>
+                  <span style={{ color: C.muted }}>{t.searchResultsFor} </span>
+                  <b style={{ color: C.gold }}>“{search.trim()}”</b>
+                  {!aiSearching && (
+                    <span style={{ color: C.muted }}>
+                      {" "}— {filtered.length} {t.resultsCount}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={clearSearch}
+                  style={{
+                    background: C.panel2,
+                    color: C.text,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 999,
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t.clearSearch}
+                </button>
+              </div>
+            ) : (
+              !aiSearching && (
+                <div style={{ textAlign: "center", padding: "70px 0", color: C.muted }}>
+                  <div style={{ fontSize: 52, marginBottom: 12 }}>🔍</div>
+                  <div style={{ fontSize: 15 }}>{t.searchPlaceholder}</div>
+                </div>
+              )
+            )}
+          </>
         )}
 
-        {/* Movies / Series tab switcher */}
-        {!searching && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              margin: "26px 0 16px",
-              flexWrap: "wrap",
-            }}
-          >
-            <span
-              style={{
-                display: "inline-block",
-                width: 4,
-                height: 26,
-                background: C.gold,
-                borderRadius: 4,
-              }}
-            />
-            <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>
-              {mediaTab === "tv" ? `${t.tabSeries} 📺` : `${t.latest} 🎬`}
-            </h2>
+        {/* ===== HOME VIEW ===== */}
+        {view === "home" && (
+          <>
+            <Hero lang={lang} t={t} dir={dir} onSelect={(m) => setSelected(m)} />
+            <TrendingRow lang={lang} t={t} onSelect={(m) => setSelected(m)} />
             <div
               style={{
-                marginInlineStart: "auto",
-                display: "inline-flex",
-                background: C.panel,
-                border: `1px solid ${C.border}`,
-                borderRadius: 999,
-                padding: 4,
-                gap: 4,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                margin: "26px 0 16px",
               }}
             >
-              {([
-                { k: "movie" as const, label: `🎬 ${t.tabMovies}` },
-                { k: "tv" as const, label: `📺 ${t.tabSeries}` },
-              ]).map((tab) => {
-                const active = mediaTab === tab.k;
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 4,
+                  height: 26,
+                  background: C.gold,
+                  borderRadius: 4,
+                }}
+              />
+              <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>{t.latest} 🎬</h2>
+            </div>
+          </>
+        )}
+
+        {/* ===== MOVIE / TV VIEW ===== */}
+        {(view === "movie" || view === "tv") && (
+          <>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                margin: "0 0 14px",
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 4,
+                  height: 26,
+                  background: C.gold,
+                  borderRadius: 4,
+                }}
+              />
+              <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>
+                {view === "tv" ? `${t.tabSeries} 📺` : `${t.tabMovies} 🎬`}
+              </h2>
+            </div>
+            {/* Genre pills */}
+            <div
+              className="mv-genre mv-scroll"
+              style={{
+                display: "flex",
+                gap: 8,
+                overflowX: "auto",
+                marginBottom: 18,
+                paddingBottom: 2,
+              }}
+            >
+              {GENRES.map((g) => {
+                const active = genre === g.key;
                 return (
                   <button
-                    key={tab.k}
-                    onClick={() => setMediaTab(tab.k)}
+                    key={g.key}
+                    onClick={() => setGenre(g.key)}
                     style={{
-                      background: active ? C.gold : "transparent",
+                      flexShrink: 0,
+                      background: active ? C.gold : C.panel,
                       color: active ? "#0A0A0F" : C.muted,
-                      border: "none",
+                      border: `1px solid ${active ? C.gold : C.border}`,
                       borderRadius: 999,
-                      padding: "8px 18px",
+                      padding: "7px 16px",
                       fontSize: 13.5,
-                      fontWeight: 800,
+                      fontWeight: 700,
                       cursor: "pointer",
                       transition: "all .2s",
                     }}
                   >
-                    {tab.label}
+                    {lang === "ku" ? g.ku : g.en}
                   </button>
                 );
               })}
             </div>
-          </div>
+          </>
         )}
 
-        {searching && (
-          <div
-            className="mv-fade"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              flexWrap: "wrap",
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ fontSize: 15, color: C.text }}>
-              <span style={{ color: C.muted }}>{t.searchResultsFor} </span>
-              <b style={{ color: C.gold }}>“{search.trim()}”</b>
-              {!aiSearching && (
-                <span style={{ color: C.muted }}>
-                  {" "}— {filtered.length} {t.resultsCount}
-                </span>
-              )}
+        {/* ===== SHARED GRID (home / movie / tv / search results) ===== */}
+        {(view !== "search" || searching) &&
+          (loading || (aiSearching && filtered.length === 0) ? (
+            <Grid>
+              {Array.from({ length: 18 }).map((_, i) => (
+                <div key={i}>
+                  <div
+                    className="mv-skel"
+                    style={{ width: "100%", aspectRatio: "2/3", borderRadius: 14 }}
+                  />
+                  <div
+                    className="mv-skel"
+                    style={{ height: 12, borderRadius: 6, marginTop: 8, width: "80%" }}
+                  />
+                </div>
+              ))}
+            </Grid>
+          ) : filtered.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
+              <div style={{ fontSize: 48, marginBottom: 10 }}>🎬</div>
+              {t.noMovies}
             </div>
-            <button
-              onClick={clearSearch}
-              style={{
-                background: C.panel2,
-                color: C.text,
-                border: `1px solid ${C.border}`,
-                borderRadius: 999,
-                padding: "6px 14px",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              {t.clearSearch}
-            </button>
-          </div>
-        )}
+          ) : (
+            <Grid>
+              {filtered.map((m, i) => (
+                <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} onClick={() => setSelected(m)} />
+              ))}
+            </Grid>
+          ))}
 
-        {loading || (aiSearching && filtered.length === 0) ? (
-          <Grid>
-            {Array.from({ length: 18 }).map((_, i) => (
-              <div key={i}>
-                <div
-                  className="mv-skel"
-                  style={{ width: "100%", aspectRatio: "2/3", borderRadius: 14 }}
-                />
-                <div
-                  className="mv-skel"
-                  style={{ height: 12, borderRadius: 6, marginTop: 8, width: "80%" }}
-                />
-              </div>
-            ))}
-          </Grid>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
-            <div style={{ fontSize: 48, marginBottom: 10 }}>🎬</div>
-            {t.noMovies}
-          </div>
-        ) : (
-          <Grid>
-            {filtered.map((m, i) => (
-              <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} onClick={() => setSelected(m)} />
-            ))}
-          </Grid>
-        )}
-
-        {/* Pagination (latest list only) */}
-        {!searching && (
-          <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />
-        )}
+        {/* Pagination (catalog views only) */}
+        {view !== "search" && <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />}
       </main>
+
+      {/* ===== Bottom Navigation Bar ===== */}
+      <nav
+        style={{
+          position: "fixed",
+          bottom: 0,
+          insetInlineStart: 0,
+          insetInlineEnd: 0,
+          zIndex: 30,
+          background: "rgba(10,10,15,0.94)",
+          backdropFilter: "blur(18px)",
+          borderTop: `1px solid ${C.border}`,
+          boxShadow: "0 -8px 24px rgba(0,0,0,.45)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 600,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "stretch",
+            justifyContent: "space-around",
+            padding: "8px 6px",
+          }}
+        >
+          {([
+            { key: "home", icon: "🏠", label: t.navHome },
+            { key: "movie", icon: "🎬", label: t.navMovie },
+            { key: "tv", icon: "📺", label: t.navSeries },
+            { key: "search", icon: "🔍", label: t.navSearch },
+            { key: "more", icon: "☰", label: t.navMore },
+          ] as const).map((item) => {
+            const active = view === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => (item.key === "more" ? navigate("/") : goView(item.key))}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 4,
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "4px 2px",
+                  transition: "all .2s",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 22,
+                    lineHeight: 1,
+                    filter: active ? "none" : "grayscale(.4)",
+                    transform: active ? "translateY(-2px) scale(1.12)" : "none",
+                    transition: "all .2s",
+                  }}
+                >
+                  {item.icon}
+                </span>
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: active ? 900 : 600,
+                    color: active ? C.gold : C.muted,
+                  }}
+                >
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
 
       {selected && (
         <MovieModal movie={selected} onClose={() => setSelected(null)} lang={lang} t={t} dir={dir} />
