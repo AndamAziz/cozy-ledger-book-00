@@ -107,6 +107,10 @@ const T = {
     openPlayIMDb: "🌐 Open on PlayIMDb",
     copyPlayIMDb: "📋 Copy PlayIMDb Link",
     linkCopied: "Link copied ✓",
+    searchResultsFor: "Search results for",
+    clearSearch: "✕ Clear search",
+    searching: "Searching...",
+    resultsCount: "results",
   },
 };
 
