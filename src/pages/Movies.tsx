@@ -129,6 +129,25 @@ const GENRES: { key: string; ku: string; en: string }[] = [
   { key: "Fantasy", ku: "فانتازیا", en: "Fantasy" },
 ];
 
+// TMDB genre id → name (used to label search results & power the genre filter)
+const TMDB_GENRES: Record<number, string> = {
+  28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
+  99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
+  27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance",
+  878: "Science Fiction", 10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western",
+};
+
+interface TmdbSearchResult {
+  id: number;
+  title?: string;
+  original_title?: string;
+  release_date?: string;
+  poster_path?: string | null;
+  vote_average?: number;
+  genre_ids?: number[];
+  popularity?: number;
+}
+
 interface Movie {
   tmdb_id: number;
   imdb_id: string;
