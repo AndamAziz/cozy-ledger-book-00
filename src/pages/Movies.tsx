@@ -776,6 +776,24 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
         >
           {movie.year}
         </div>
+        {movie.media === "tv" && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 8,
+              insetInlineStart: 8,
+              background: C.gold,
+              color: "#0A0A0F",
+              fontSize: 11,
+              fontWeight: 800,
+              padding: "3px 8px",
+              borderRadius: 8,
+              letterSpacing: ".3px",
+            }}
+          >
+            📺 TV
+          </div>
+        )}
         {/* play overlay */}
         <div
           className="mv-play"
