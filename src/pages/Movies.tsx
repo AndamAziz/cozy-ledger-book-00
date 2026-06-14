@@ -93,6 +93,12 @@ const T = {
     movieTag: "فیلم",
     tvTag: "زنجیرە",
     latest: "نوێترین",
+    trendingToday: "ترێندی ئەمڕۆ",
+    top10: "تۆپ ١٠",
+    tabMovies: "فیلمەکان",
+    tabSeries: "زنجیرەکان",
+    seeAll: "هەموو ببینە",
+    rankToday: "ئەمڕۆ",
   },
   en: {
     title: "Mov",
@@ -150,6 +156,12 @@ const T = {
     movieTag: "MOVIE",
     tvTag: "TV",
     latest: "Latest",
+    trendingToday: "Trending Today",
+    top10: "TOP 10",
+    tabMovies: "Movies",
+    tabSeries: "Series",
+    seeAll: "See all",
+    rankToday: "Today",
   },
 };
 
@@ -272,6 +284,7 @@ export default function Movies() {
   const [aiTitle, setAiTitle] = useState<string | null>(null);
   const [selected, setSelected] = useState<Movie | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
+  const [mediaTab, setMediaTab] = useState<"movie" | "tv">("movie");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const toggleLang = () => {
@@ -280,16 +293,28 @@ export default function Movies() {
     localStorage.setItem("moviesLang", next);
   };
 
-  const fetchMovies = useCallback(async (p: number) => {
+  const fetchMovies = useCallback(async (p: number, media: "movie" | "tv") => {
     setLoading(true);
     try {
-      const r = await fetch(`https://vidapi.ru/movies/latest/page-${p}.json`);
-      const data = await r.json();
-      const items: Movie[] = (Array.isArray(data.items) ? data.items : []).map(
-        (m: Movie) => ({ ...m, media: m.media || "movie" }),
-      );
-      setMovies(items);
-      setTotalPages(Math.min(data.total_pages || 1, 200));
+      if (media === "tv") {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/tv/popular?api_key=${TMDB_KEY}&language=en-US&page=${p}`,
+        );
+        const data = await r.json();
+        const items: Movie[] = (Array.isArray(data.results) ? data.results : [])
+          .filter((x: TmdbSearchResult) => x.poster_path)
+          .map((x: TmdbSearchResult) => mapTmdbResult({ ...x, media_type: "tv" }));
+        setMovies(items);
+        setTotalPages(Math.min(data.total_pages || 1, 200));
+      } else {
+        const r = await fetch(`https://vidapi.ru/movies/latest/page-${p}.json`);
+        const data = await r.json();
+        const items: Movie[] = (Array.isArray(data.items) ? data.items : []).map(
+          (m: Movie) => ({ ...m, media: m.media || "movie" }),
+        );
+        setMovies(items);
+        setTotalPages(Math.min(data.total_pages || 1, 200));
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setMovies([]);
@@ -299,8 +324,14 @@ export default function Movies() {
   }, []);
 
   useEffect(() => {
-    fetchMovies(page);
-  }, [page, fetchMovies]);
+    fetchMovies(page, mediaTab);
+  }, [page, mediaTab, fetchMovies]);
+
+  /* reset to first page when switching media tab */
+  useEffect(() => {
+    setPage(1);
+  }, [mediaTab]);
+
 
   const searchByImdbId = useCallback(async (imdbId: string) => {
     try {
@@ -666,32 +697,76 @@ export default function Movies() {
 
       {/* Grid */}
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 16px 40px" }}>
-        {!searching && genre === "all" && (
+        {!searching && (
           <Hero lang={lang} t={t} dir={dir} onSelect={(m) => setSelected(m)} />
         )}
         {!searching && (
-          <h2
+          <TrendingRow lang={lang} t={t} onSelect={(m) => setSelected(m)} />
+        )}
+
+        {/* Movies / Series tab switcher */}
+        {!searching && (
+          <div
             style={{
-              fontSize: 20,
-              fontWeight: 900,
-              margin: "0 0 14px",
               display: "flex",
               alignItems: "center",
-              gap: 8,
+              gap: 10,
+              margin: "26px 0 16px",
+              flexWrap: "wrap",
             }}
           >
             <span
               style={{
                 display: "inline-block",
                 width: 4,
-                height: 22,
+                height: 26,
                 background: C.gold,
                 borderRadius: 4,
               }}
             />
-            {t.latest} 🎬
-          </h2>
+            <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>
+              {mediaTab === "tv" ? `${t.tabSeries} 📺` : `${t.latest} 🎬`}
+            </h2>
+            <div
+              style={{
+                marginInlineStart: "auto",
+                display: "inline-flex",
+                background: C.panel,
+                border: `1px solid ${C.border}`,
+                borderRadius: 999,
+                padding: 4,
+                gap: 4,
+              }}
+            >
+              {([
+                { k: "movie" as const, label: `🎬 ${t.tabMovies}` },
+                { k: "tv" as const, label: `📺 ${t.tabSeries}` },
+              ]).map((tab) => {
+                const active = mediaTab === tab.k;
+                return (
+                  <button
+                    key={tab.k}
+                    onClick={() => setMediaTab(tab.k)}
+                    style={{
+                      background: active ? C.gold : "transparent",
+                      color: active ? "#0A0A0F" : C.muted,
+                      border: "none",
+                      borderRadius: 999,
+                      padding: "8px 18px",
+                      fontSize: 13.5,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      transition: "all .2s",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
+
         {searching && (
           <div
             className="mv-fade"
@@ -785,6 +860,151 @@ function Grid({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+// ====== Trending Today (TOP 10) horizontal rail ======
+function TrendingRow({
+  lang,
+  t,
+  onSelect,
+}: {
+  lang: Lang;
+  t: (typeof T)["ku"];
+  onSelect: (m: Movie) => void;
+}) {
+  const [items, setItems] = useState<Movie[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/trending/all/day?api_key=${TMDB_KEY}&language=en-US`,
+        );
+        const d = await r.json();
+        if (!alive) return;
+        const list: Movie[] = (Array.isArray(d.results) ? d.results : [])
+          .filter(
+            (x: TmdbSearchResult) =>
+              x.poster_path && (x.media_type === "movie" || x.media_type === "tv"),
+          )
+          .slice(0, 10)
+          .map(mapTmdbResult);
+        setItems(list);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section style={{ marginBottom: 26 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 14,
+        }}
+      >
+        <span style={{ fontSize: 22 }}>🔥</span>
+        <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>
+          {t.top10} · <span style={{ color: C.gold }}>{t.trendingToday}</span>
+        </h2>
+      </div>
+      <div
+        className="mv-scroll"
+        style={{
+          display: "flex",
+          gap: 18,
+          overflowX: "auto",
+          paddingBottom: 10,
+          paddingTop: 6,
+          paddingInlineStart: 4,
+        }}
+      >
+        {items.map((m, i) => {
+          const isTv = m.media === "tv";
+          return (
+            <div
+              key={`${m.tmdb_id}-${i}`}
+              className="mv-card"
+              onClick={() => onSelect(m)}
+              style={{
+                position: "relative",
+                flexShrink: 0,
+                width: 130,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "flex-end",
+              }}
+            >
+              {/* big rank number */}
+              <span
+                style={{
+                  fontSize: 78,
+                  fontWeight: 900,
+                  lineHeight: 0.8,
+                  color: "transparent",
+                  WebkitTextStroke: `2.5px ${C.gold}`,
+                  marginInlineEnd: -22,
+                  marginInlineStart: -6,
+                  zIndex: 1,
+                  textShadow: "0 4px 18px rgba(0,0,0,.6)",
+                  userSelect: "none",
+                  fontFamily: "'Arial Black', system-ui, sans-serif",
+                }}
+              >
+                {i + 1}
+              </span>
+              <div
+                style={{
+                  position: "relative",
+                  width: 100,
+                  aspectRatio: "2/3",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  background: C.panel,
+                  border: `1px solid ${C.border}`,
+                  zIndex: 2,
+                }}
+              >
+                <img
+                  className="mv-poster-img"
+                  src={m.poster_url}
+                  alt={m.title}
+                  loading="lazy"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    insetInlineStart: 6,
+                    background: isTv ? "#2563eb" : "#e11d2a",
+                    color: "#fff",
+                    fontSize: 9.5,
+                    fontWeight: 900,
+                    padding: "2px 7px",
+                    borderRadius: 6,
+                    letterSpacing: ".5px",
+                  }}
+                >
+                  {isTv ? "TV" : "MOVIE"}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 
 // ====== Featured Hero Carousel ======
 interface HeroItem extends Movie {
