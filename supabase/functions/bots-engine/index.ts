@@ -219,7 +219,21 @@ async function applyBalance(userId: string, pnl: number): Promise<number> {
 }
 
 // ───────────────────── close a trade ─────────────────────
-async function closeTrade(bot: Record<string, unknown>, trade: Record<string, unknown>, exitPrice: number, reason: "tp" | "sl" | "manual") {
+// `kind` describes WHY we closed (for logs/notifications). It is mapped to the
+// DB enum (tp/sl/manual) so no migration is needed: every profit-taking scalp
+// exit is recorded as "tp", stop-loss as "sl".
+type CloseKind = "tp" | "sl" | "manual" | "scalp_profit" | "scalp_reversal" | "scalp_breakeven";
+
+function fmtDuration(sec: number): string {
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (m < 60) return s ? `${m}m ${s}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+async function closeTrade(bot: Record<string, unknown>, trade: Record<string, unknown>, exitPrice: number, kind: CloseKind) {
   const botId = bot.id as string;
   const userId = bot.user_id as string;
   const symbol = bot.symbol as string;
@@ -231,9 +245,17 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   const pnlPct = +(diffPct * 100).toFixed(2);
   const win = pnl >= 0;
 
+  // How long the trade was open.
+  const openedAt = trade.opened_at ? new Date(trade.opened_at as string).getTime() : Date.now();
+  const durationSec = Math.max(0, Math.round((Date.now() - openedAt) / 1000));
+
+  // Map our rich reason to the DB enum.
+  const dbReason: "tp" | "sl" | "manual" =
+    kind === "sl" ? "sl" : kind === "manual" ? "manual" : "tp";
+
   await admin.from("bot_trades").update({
     status: "closed", exit_price: exitPrice, pnl, pnl_pct: pnlPct,
-    result: win ? "win" : "loss", close_reason: reason, closed_at: new Date().toISOString(),
+    result: win ? "win" : "loss", close_reason: dbReason, closed_at: new Date().toISOString(),
   }).eq("id", trade.id as string);
 
   const newBalance = await applyBalance(userId, pnl);
@@ -254,13 +276,30 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   }).eq("id", botId);
 
   const sign = pnl >= 0 ? "+" : "-";
-  if (reason === "manual") {
-    await log(botId, userId, win ? "win" : "loss",
-      `[${hhmmss()}] ${win ? "🏆 WIN" : "💔 LOSS"} — Manually closed ${dir.toUpperCase()} @ $${fmt(exitPrice, symbol)} | P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%)`);
-  } else {
-    await log(botId, userId, win ? "win" : "loss",
-      `[${hhmmss()}] ${win ? "🏆 WIN" : "💔 LOSS"} — Closed ${dir.toUpperCase()} @ $${fmt(exitPrice, symbol)} (${reason.toUpperCase()} hit) | P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%)`);
+  const dur = fmtDuration(durationSec);
+
+  // Human label for the exit reason.
+  let reasonLabel: string;
+  switch (kind) {
+    case "scalp_profit": reasonLabel = "took minimum profit"; break;
+    case "scalp_reversal": reasonLabel = "half-target locked on reversal"; break;
+    case "scalp_breakeven": reasonLabel = "protected winner near break-even"; break;
+    case "tp": reasonLabel = "TP target hit"; break;
+    case "sl": reasonLabel = "hit stop loss"; break;
+    case "manual": reasonLabel = "manually closed"; break;
   }
+
+  if (win) {
+    // 💰 Closed at profit
+    await log(botId, userId, "win",
+      `[${hhmmss()}] 💰 Closed at profit: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct)}%) — ${reasonLabel} · ${dir.toUpperCase()} @ $${fmt(exitPrice, symbol)}`);
+  } else {
+    // 🛑 Closed at loss
+    await log(botId, userId, "loss",
+      `[${hhmmss()}] 🛑 Closed at loss: -$${fmt(Math.abs(pnl), symbol)} (-${Math.abs(pnlPct)}%) — ${reasonLabel} · ${dir.toUpperCase()} @ $${fmt(exitPrice, symbol)}`);
+  }
+  // ⏱️ How long the trade was open.
+  await log(botId, userId, "info", `[${hhmmss()}] ⏱️ Trade was open for ${dur}`);
   await log(botId, userId, "info", `[${hhmmss()}] 🤖 Bot auto-stopped after trade close`);
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Balance updated: $${newBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
