@@ -14,6 +14,7 @@ export interface MetalsHistoryState {
   isLoading: boolean;
   error: string | null;
   source: string | null;
+  lastUpdated: number | null;
   refetch: () => void;
 }
 
@@ -22,6 +23,7 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const baseCandlesRef = useRef<MetalCandle[]>([]);
 
@@ -81,7 +83,10 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
         setSource(null);
         setError('Could not load chart data. Check your connection and try again.');
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          setLastUpdated(Date.now());
+        }
       }
     };
 
@@ -116,5 +121,5 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
 
   const refetch = () => setReloadKey((k) => k + 1);
 
-  return { candles, isLoading, error, source, refetch };
+  return { candles, isLoading, error, source, lastUpdated, refetch };
 }
