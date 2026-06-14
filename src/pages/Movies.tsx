@@ -217,6 +217,77 @@ const TMDB_GENRES: Record<number, string> = {
   10763: "News", 10762: "Family", 10766: "Drama", 10767: "Talk",
 };
 
+// ====== Streaming servers (More tab) ======
+type StreamServer = {
+  id: string;
+  provider: string;
+  tag: string;
+  color: string;
+  movie: (id: string | number) => string;
+  tv: (id: string | number, s: number, e: number) => string;
+};
+
+const STREAM_SERVERS: StreamServer[] = [
+  {
+    id: "vidlink",
+    provider: "vidlink.pro",
+    tag: "⚡",
+    color: "#7C4DFF",
+    movie: (id) => `https://vidlink.pro/movie/${id}`,
+    tv: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}`,
+  },
+  {
+    id: "vidfast",
+    provider: "vidfast.pro",
+    tag: "🚀",
+    color: "#00BCD4",
+    movie: (id) => `https://vidfast.pro/movie/${id}`,
+    tv: (id, s, e) => `https://vidfast.pro/tv/${id}/${s}/${e}`,
+  },
+  {
+    id: "embedsu",
+    provider: "embed.su",
+    tag: "🎯",
+    color: "#FF5252",
+    movie: (id) => `https://embed.su/embed/movie/${id}`,
+    tv: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`,
+  },
+  {
+    id: "vidsrccc",
+    provider: "vidsrc.cc",
+    tag: "🎬",
+    color: "#FF9800",
+    movie: (id) => `https://vidsrc.cc/v2/embed/movie/${id}`,
+    tv: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`,
+  },
+  {
+    id: "vidsrcxyz",
+    provider: "vidsrc.xyz",
+    tag: "📽️",
+    color: "#4CAF50",
+    movie: (id) => `https://vidsrc.xyz/embed/movie/${id}`,
+    tv: (id, s, e) => `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}`,
+  },
+  {
+    id: "autoembed",
+    provider: "autoembed.cc",
+    tag: "✨",
+    color: "#E91E63",
+    movie: (id) => `https://player.autoembed.cc/embed/movie/${id}`,
+    tv: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`,
+  },
+  {
+    id: "moviesapi",
+    provider: "moviesapi.club",
+    tag: "🍿",
+    color: "#2196F3",
+    movie: (id) => `https://moviesapi.club/movie/${id}`,
+    tv: (id, s, e) => `https://moviesapi.club/tv/${id}-${s}-${e}`,
+  },
+];
+
+
+
 interface TmdbSearchResult {
   id: number;
   media_type?: string;
