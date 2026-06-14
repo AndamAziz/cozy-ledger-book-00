@@ -28,7 +28,7 @@ const T = {
     title: "فیلم",
     titleSuffix: "ەکان",
     back: "← گەڕانەوە",
-    searchPlaceholder: "گەڕان بۆ فیلم... (دەتوانیت ناوی ناودار یان وەسف بنووسیت)",
+    searchPlaceholder: "گەڕان بۆ هەر فیلمێک... (ناو، وەسف، یان IMDB ID وەک tt0371746)",
     smartSearch: "گەڕانی زیرەک",
     aiFound: "AI ناوی ڕاستەقینەی دۆزییەوە:",
     noMovies: "هیچ فیلمێک نەدۆزرایەوە",
@@ -63,12 +63,16 @@ const T = {
     openPlayIMDb: "🌐 کردنەوە لە PlayIMDb",
     copyPlayIMDb: "📋 کۆپی کردنی لینک",
     linkCopied: "لینکەکە کۆپی کرا ✓",
+    searchResultsFor: "ئەنجامەکانی گەڕان بۆ",
+    clearSearch: "✕ پاککردنەوەی گەڕان",
+    searching: "گەڕان...",
+    resultsCount: "ئەنجام",
   },
   en: {
     title: "Mov",
     titleSuffix: "ies",
     back: "← Back",
-    searchPlaceholder: "Search for a movie... (a nickname or a description works too)",
+    searchPlaceholder: "Search any movie... (name, description, or IMDB ID like tt0371746)",
     smartSearch: "Smart Search",
     aiFound: "AI found the real title:",
     noMovies: "No movies found",
@@ -103,6 +107,10 @@ const T = {
     openPlayIMDb: "🌐 Open on PlayIMDb",
     copyPlayIMDb: "📋 Copy PlayIMDb Link",
     linkCopied: "Link copied ✓",
+    searchResultsFor: "Search results for",
+    clearSearch: "✕ Clear search",
+    searching: "Searching...",
+    resultsCount: "results",
   },
 };
 
@@ -120,6 +128,25 @@ const GENRES: { key: string; ku: string; en: string }[] = [
   { key: "Crime", ku: "تاوان", en: "Crime" },
   { key: "Fantasy", ku: "فانتازیا", en: "Fantasy" },
 ];
+
+// TMDB genre id → name (used to label search results & power the genre filter)
+const TMDB_GENRES: Record<number, string> = {
+  28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
+  99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
+  27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance",
+  878: "Science Fiction", 10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western",
+};
+
+interface TmdbSearchResult {
+  id: number;
+  title?: string;
+  original_title?: string;
+  release_date?: string;
+  poster_path?: string | null;
+  vote_average?: number;
+  genre_ids?: number[];
+  popularity?: number;
+}
 
 interface Movie {
   tmdb_id: number;
@@ -179,6 +206,7 @@ export default function Movies() {
   const [aiSearching, setAiSearching] = useState(false);
   const [aiTitle, setAiTitle] = useState<string | null>(null);
   const [selected, setSelected] = useState<Movie | null>(null);
+  const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const toggleLang = () => {
@@ -223,7 +251,7 @@ export default function Movies() {
             ? `https://image.tmdb.org/t/p/w500${result.poster_path}`
             : "",
           rating: result.vote_average ? String(result.vote_average) : "",
-          genre: "",
+          genre: (result.genre_ids || []).map((g: number) => TMDB_GENRES[g]).filter(Boolean).join(", "),
           popularity: String(result.popularity || ""),
           type: "movie",
           embed_url: "",
@@ -237,46 +265,107 @@ export default function Movies() {
     return false;
   }, []);
 
+  // ---- POWERFUL CATALOG SEARCH (full TMDB database) ----
+  const mapTmdbResult = (r: TmdbSearchResult): Movie => ({
+    tmdb_id: r.id,
+    imdb_id: "",
+    title: r.title || r.original_title || "",
+    year: r.release_date ? r.release_date.slice(0, 4) : "",
+    poster_url: r.poster_path ? `https://image.tmdb.org/t/p/w500${r.poster_path}` : "",
+    rating: r.vote_average ? r.vote_average.toFixed(1) : "",
+    genre: (r.genre_ids || []).map((g) => TMDB_GENRES[g]).filter(Boolean).join(", "),
+    popularity: String(r.popularity || ""),
+    type: "movie",
+    embed_url: "",
+  });
+
+  const searchTmdb = useCallback(async (q: string): Promise<Movie[]> => {
+    try {
+      const r = await fetch(
+        `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}` +
+          `&query=${encodeURIComponent(q)}&include_adult=false&language=en-US&page=1`,
+      );
+      const d = await r.json();
+      const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
+      return list
+        .filter((m) => m.poster_path)
+        .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+        .map(mapTmdbResult);
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const clearSearch = useCallback(() => {
+    setSearch("");
+    setAiTitle(null);
+    setSearchResults(null);
+    inputRef.current?.focus();
+  }, []);
+
   const runAiSearch = useCallback(async () => {
     const q = search.trim();
     if (!q) return;
 
-    /* direct IMDB ID search */
-    if (/^tt\d{7,}$/i.test(q)) {
+    /* direct IMDB ID search → open the movie instantly */
+    if (/^tt\d{6,}$/i.test(q)) {
       setAiSearching(true);
       const found = await searchByImdbId(q.toLowerCase());
       setAiSearching(false);
-      if (!found) {
-        setAiTitle(lang === "ku" ? "IMDB ID نەدۆزرایەوە" : "IMDB ID not found");
-      }
+      if (!found) setAiTitle(lang === "ku" ? "IMDB ID نەدۆزرایەوە" : "IMDB ID not found");
       return;
     }
 
     setAiSearching(true);
     setAiTitle(null);
     try {
-      const { data } = await supabase.functions.invoke("movies-ai", {
-        body: { action: "resolve-title", query: q },
-      });
-      if (data?.corrected && data?.title) {
-        setAiTitle(data.title);
-        setSearch(data.title);
+      let results = await searchTmdb(q);
+
+      /* no hits → let AI fix typos / translate, then search again */
+      if (results.length === 0) {
+        try {
+          const { data } = await supabase.functions.invoke("movies-ai", {
+            body: { action: "resolve-title", query: q },
+          });
+          if (data?.title) {
+            const fixed = await searchTmdb(data.title);
+            if (fixed.length > 0) {
+              setAiTitle(data.title);
+              results = fixed;
+            }
+          }
+        } catch {
+          /* ignore — keep empty */
+        }
       }
-    } catch {
-      /* ignore — keep original search */
+      setSearchResults(results);
     } finally {
       setAiSearching(false);
     }
-  }, [search, searchByImdbId, lang]);
+  }, [search, searchByImdbId, searchTmdb, lang]);
 
-  const filtered = movies.filter((m) => {
-    const okGenre =
-      genre === "all" || (m.genre || "").toLowerCase().includes(genre.toLowerCase());
-    const okSearch =
-      !search.trim() ||
-      (m.title || "").toLowerCase().includes(search.trim().toLowerCase());
-    return okGenre && okSearch;
-  });
+  /* live (debounced) catalog search as the user types */
+  useEffect(() => {
+    const q = search.trim();
+    if (!q) {
+      setSearchResults(null);
+      return;
+    }
+    if (/^tt\d{6,}$/i.test(q)) return; // handled on submit
+    const id = setTimeout(async () => {
+      setAiSearching(true);
+      const results = await searchTmdb(q);
+      setSearchResults(results);
+      setAiSearching(false);
+    }, 450);
+    return () => clearTimeout(id);
+  }, [search, searchTmdb]);
+
+  const searching = searchResults !== null;
+  const baseList = searching ? searchResults! : movies;
+  const filtered = baseList.filter((m) =>
+    genre === "all" || (m.genre || "").toLowerCase().includes(genre.toLowerCase()),
+  );
 
   return (
     <div
@@ -493,7 +582,46 @@ export default function Movies() {
 
       {/* Grid */}
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 16px 40px" }}>
-        {loading ? (
+        {searching && (
+          <div
+            className="mv-fade"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ fontSize: 15, color: C.text }}>
+              <span style={{ color: C.muted }}>{t.searchResultsFor} </span>
+              <b style={{ color: C.gold }}>“{search.trim()}”</b>
+              {!aiSearching && (
+                <span style={{ color: C.muted }}>
+                  {" "}— {filtered.length} {t.resultsCount}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={clearSearch}
+              style={{
+                background: C.panel2,
+                color: C.text,
+                border: `1px solid ${C.border}`,
+                borderRadius: 999,
+                padding: "6px 14px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {t.clearSearch}
+            </button>
+          </div>
+        )}
+
+        {loading || (aiSearching && filtered.length === 0) ? (
           <Grid>
             {Array.from({ length: 18 }).map((_, i) => (
               <div key={i}>
@@ -521,8 +649,8 @@ export default function Movies() {
           </Grid>
         )}
 
-        {/* Pagination */}
-        {!search.trim() && (
+        {/* Pagination (latest list only) */}
+        {!searching && (
           <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />
         )}
       </main>
@@ -765,6 +893,7 @@ function MovieModal({
   const [subsLoading, setSubsLoading] = useState(false);
   const [subsError, setSubsError] = useState<string>("");
   const [downloadingId, setDownloadingId] = useState<string>("");
+  const [imdbId, setImdbId] = useState<string>(movie.imdb_id || "");
 
   const rating = parseFloat(movie.rating) || 0;
 
@@ -775,17 +904,19 @@ function MovieModal({
     };
   }, []);
 
-  // fetch TMDB details + credits
+  // fetch TMDB details + credits (+ imdb id for search results)
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const r = await fetch(
-          `https://api.themoviedb.org/3/movie/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits`,
+          `https://api.themoviedb.org/3/movie/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits,external_ids`,
         );
         const d = await r.json();
         if (!alive) return;
         if (d.backdrop_path) setBackdrop(TMDB_BACKDROP + d.backdrop_path);
+        if (d.external_ids?.imdb_id) setImdbId(d.external_ids.imdb_id);
+        else if (d.imdb_id) setImdbId(d.imdb_id);
         const dirCrew = d.credits?.crew?.find((c: { job: string }) => c.job === "Director");
         if (dirCrew) setDirector(dirCrew.name);
         if (Array.isArray(d.credits?.cast)) setCast(d.credits.cast.slice(0, 18));
@@ -852,13 +983,13 @@ function MovieModal({
 
   const loadSubs = async () => {
     setTab("subs");
-    if (subs || subsLoading || !movie.imdb_id) return;
+    if (subs || subsLoading || !imdbId) return;
     setSubsLoading(true);
     setSubsError("");
     try {
       const res = await fetch(
         `${SUPA_URL}/functions/v1/subtitles?action=search&imdb_id=${encodeURIComponent(
-          movie.imdb_id,
+          imdbId,
         )}&langs=kur,ara,eng,all`,
         { headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` } },
       );
@@ -1038,17 +1169,17 @@ function MovieModal({
         </div>
 
         {/* PlayIMDb buttons */}
-        {movie.imdb_id && (
+        {imdbId && (
           <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
             <ActionBtn
               cyan
               label={t.openPlayIMDb}
-              onClick={() => window.open(`https://www.playimdb.com/title/${movie.imdb_id}/`, "_blank")}
+              onClick={() => window.open(`https://www.playimdb.com/title/${imdbId}/`, "_blank")}
             />
             <ActionBtn
               label={t.copyPlayIMDb}
               onClick={async () => {
-                const url = `https://www.playimdb.com/title/${movie.imdb_id}/`;
+                const url = `https://www.playimdb.com/title/${imdbId}/`;
                 try {
                   await navigator.clipboard.writeText(url);
                   toast.success(t.linkCopied);
@@ -1109,7 +1240,7 @@ function MovieModal({
               <InfoCell label={t.fYear} value={movie.year} />
               <InfoCell label={t.fRating} value={rating > 0 ? `★ ${rating.toFixed(1)}` : "—"} />
               <InfoCell label={t.fGenre} value={movie.genre || "—"} />
-              <InfoCell label="IMDB ID" value={movie.imdb_id} />
+              <InfoCell label="IMDB ID" value={imdbId || "—"} />
               <InfoCell label="TMDB ID" value={String(movie.tmdb_id)} />
             </div>
           )}
@@ -1292,7 +1423,7 @@ function MovieModal({
       {/* Watch player */}
       {watch && (
         <PlayerOverlay
-          src={`https://vaplayer.ru/embed/movie/${movie.imdb_id}`}
+          src={`https://vaplayer.ru/embed/movie/${imdbId || movie.tmdb_id}`}
           onClose={() => setWatch(false)}
           closeLabel={t.close}
         />
