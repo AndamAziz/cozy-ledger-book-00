@@ -83,7 +83,10 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
         setSource(null);
         setError('Could not load chart data. Check your connection and try again.');
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          setLastUpdated(Date.now());
+        }
       }
     };
 
