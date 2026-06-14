@@ -939,13 +939,13 @@ function MovieModal({
     };
   }, []);
 
-  // fetch TMDB details + credits (+ imdb id for search results)
+  // fetch TMDB details + credits (+ imdb id, + seasons for TV)
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const r = await fetch(
-          `https://api.themoviedb.org/3/movie/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits,external_ids`,
+          `https://api.themoviedb.org/3/${mediaPath}/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits,external_ids`,
         );
         const d = await r.json();
         if (!alive) return;
@@ -954,7 +954,15 @@ function MovieModal({
         else if (d.imdb_id) setImdbId(d.imdb_id);
         const dirCrew = d.credits?.crew?.find((c: { job: string }) => c.job === "Director");
         if (dirCrew) setDirector(dirCrew.name);
-        if (Array.isArray(d.credits?.cast)) setCast(d.credits.cast.slice(0, 18));
+        if (!isTv && Array.isArray(d.credits?.cast)) setCast(d.credits.cast.slice(0, 18));
+        if (isTv && Array.isArray(d.seasons)) {
+          const ss = d.seasons.filter(
+            (s: { season_number: number; episode_count: number }) =>
+              s.season_number > 0 && s.episode_count > 0,
+          );
+          setSeasons(ss);
+          if (ss.length > 0) setSeason(ss[0].season_number);
+        }
       } catch {
         /* ignore */
       }
@@ -962,7 +970,37 @@ function MovieModal({
     return () => {
       alive = false;
     };
-  }, [movie.tmdb_id]);
+  }, [movie.tmdb_id, mediaPath, isTv]);
+
+  // TV: fetch the cast from the aggregate credits (uses series-level credits)
+  useEffect(() => {
+    if (!isTv) return;
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/tv/${movie.tmdb_id}/aggregate_credits?api_key=${TMDB_KEY}`,
+        );
+        const d = await r.json();
+        if (!alive) return;
+        if (Array.isArray(d.cast)) {
+          setCast(
+            d.cast.slice(0, 18).map((c: { id: number; name: string; profile_path: string | null; roles?: { character: string }[] }) => ({
+              id: c.id,
+              name: c.name,
+              character: c.roles?.[0]?.character || "",
+              profile_path: c.profile_path,
+            })),
+          );
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [movie.tmdb_id, isTv]);
 
   const loadTrailer = async () => {
     if (trailer) {
@@ -972,7 +1010,7 @@ function MovieModal({
     setTrailerLoading(true);
     try {
       const r = await fetch(
-        `https://api.themoviedb.org/3/movie/${movie.tmdb_id}/videos?api_key=${TMDB_KEY}`,
+        `https://api.themoviedb.org/3/${mediaPath}/${movie.tmdb_id}/videos?api_key=${TMDB_KEY}`,
       );
       const d = await r.json();
       const yt = (d.results || []).find(
