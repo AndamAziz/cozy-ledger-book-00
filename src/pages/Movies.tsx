@@ -2269,7 +2269,6 @@ function MovieModal({
           }
           onClose={() => setWatch(false)}
           closeLabel={t.close}
-          serverLabel={t.server}
           hint={t.serverHint}
         />
       )}
