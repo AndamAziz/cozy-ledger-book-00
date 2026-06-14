@@ -1917,13 +1917,21 @@ function MovieModal({
 
 function PlayerOverlay({
   src,
+  servers,
   onClose,
   closeLabel,
+  serverLabel,
+  hint,
 }: {
-  src: string;
+  src?: string;
+  servers?: { name: string; url: string }[];
   onClose: () => void;
   closeLabel: string;
+  serverLabel?: string;
+  hint?: string;
 }) {
+  const [active, setActive] = useState(0);
+  const currentSrc = servers && servers.length > 0 ? servers[active].url : src || "";
   return (
     <div
       onClick={onClose}
@@ -1961,17 +1969,62 @@ function PlayerOverlay({
         </button>
         <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden" }}>
           <iframe
-            src={src}
+            key={currentSrc}
+            src={currentSrc}
             title="player"
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen"
+            referrerPolicy="origin"
             style={{ width: "100%", height: "100%", border: "none" }}
           />
         </div>
+
+        {/* server selector */}
+        {servers && servers.length > 1 && (
+          <div style={{ marginTop: 12 }}>
+            {hint && (
+              <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8, textAlign: "center" }}>
+                {hint}
+              </div>
+            )}
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+                justifyContent: "center",
+              }}
+            >
+              {servers.map((s, i) => {
+                const on = i === active;
+                return (
+                  <button
+                    key={s.name}
+                    onClick={() => setActive(i)}
+                    style={{
+                      background: on ? C.gold : C.panel2,
+                      color: on ? "#0A0A0F" : C.text,
+                      border: `1px solid ${on ? C.gold : C.border}`,
+                      borderRadius: 10,
+                      padding: "8px 14px",
+                      fontWeight: 800,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      transition: "all .15s",
+                    }}
+                  >
+                    {serverLabel ? `${serverLabel} ${i + 1}` : s.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
 
 function ActionBtn({
   label,
