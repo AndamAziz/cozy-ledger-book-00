@@ -403,7 +403,15 @@ async function processBot(bot: Record<string, unknown>) {
     const amount = Number(openTrade.amount);
     const tp = Number(openTrade.tp_price);
     const sl = Number(openTrade.sl_price);
-    let hit: "tp" | "sl" | null = null;
+    const scalp = isScalp(timeframe);
+
+    // Current unrealized P/L at the live price.
+    const diffPct = dir === "buy" ? (price - entry) / entry : (entry - price) / entry;
+    const pnlPct = diffPct * 100;
+    const pnl = diffPct * amount;
+
+    // 1a) Hard TP / SL — always enforced (instant, no waiting).
+    let hit: CloseKind | null = null;
     let exit = price;
     if (dir === "buy") {
       if (price >= tp) { hit = "tp"; exit = tp; }
@@ -412,14 +420,47 @@ async function processBot(bot: Record<string, unknown>) {
       if (price <= tp) { hit = "tp"; exit = tp; }
       else if (price >= sl) { hit = "sl"; exit = sl; }
     }
+
+    // 1b) SCALP MODE (1m / 5m / 15m): close fast on minimum profit, never let a
+    // winner turn into a loss, and lock half-target on reversals.
+    if (!hit && scalp) {
+      // Distance to full TP, as a % of price.
+      const tpPctFull = Math.abs((tp - entry) / entry) * 100;
+      const halfTarget = tpPctFull * SCALP_LOCK_FRACTION;
+
+      if (pnlPct >= MIN_SCALP_PROFIT_PCT && pnlPct >= halfTarget) {
+        // Reached at least half the take-profit target → lock it in.
+        hit = "scalp_reversal";
+        exit = price;
+      } else if (pnlPct >= MIN_SCALP_PROFIT_PCT) {
+        // Green by at least the minimum → take the quick profit immediately.
+        hit = "scalp_profit";
+        exit = price;
+      }
+    }
+
     if (hit) {
+      // Final monitoring line announcing the close.
+      await maybeLogScalpCheck(
+        botId, userId, symbol, price, pnl, pnlPct, scalp,
+        `${pnlPct >= 0 ? "🟢 P/L positive → CLOSING" : "🔴 Stop hit → CLOSING"}`,
+        true,
+      );
       await closeTrade(bot, openTrade, exit, hit);
       return;
     }
 
-    // Not closed yet → emit a recommendation so the user can decide whether to
-    // keep holding or close manually. Throttled to ~once per minute (no spam).
-    await maybeLogAdvice(botId, userId, symbol, dir, entry, price, sl, tp, amount);
+    if (scalp) {
+      // ⏱️ Fast monitoring heartbeat (~every 5s) so the user sees live decisions.
+      await maybeLogScalpCheck(
+        botId, userId, symbol, price, pnl, pnlPct, scalp,
+        pnlPct > 0 ? "HOLD (green, waiting for min profit)" : "HOLD (within range)",
+        false,
+      );
+    } else {
+      // Higher timeframes keep the original ~once-a-minute hold/close advice.
+      await maybeLogAdvice(botId, userId, symbol, dir, entry, price, sl, tp, amount);
+    }
     return; // while a trade is open the bot does not scan for new entries
   }
 
