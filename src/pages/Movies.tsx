@@ -28,7 +28,7 @@ const T = {
     title: "فیلم",
     titleSuffix: "ەکان",
     back: "← گەڕانەوە",
-    searchPlaceholder: "گەڕان بۆ فیلم... (دەتوانیت ناوی ناودار یان وەسف بنووسیت)",
+    searchPlaceholder: "گەڕان بۆ هەر فیلمێک... (ناو، وەسف، یان IMDB ID وەک tt0371746)",
     smartSearch: "گەڕانی زیرەک",
     aiFound: "AI ناوی ڕاستەقینەی دۆزییەوە:",
     noMovies: "هیچ فیلمێک نەدۆزرایەوە",
