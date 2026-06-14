@@ -63,6 +63,10 @@ const T = {
     openPlayIMDb: "🌐 کردنەوە لە PlayIMDb",
     copyPlayIMDb: "📋 کۆپی کردنی لینک",
     linkCopied: "لینکەکە کۆپی کرا ✓",
+    searchResultsFor: "ئەنجامەکانی گەڕان بۆ",
+    clearSearch: "✕ پاککردنەوەی گەڕان",
+    searching: "گەڕان...",
+    resultsCount: "ئەنجام",
   },
   en: {
     title: "Mov",
