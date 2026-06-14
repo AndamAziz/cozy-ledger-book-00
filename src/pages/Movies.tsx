@@ -697,32 +697,76 @@ export default function Movies() {
 
       {/* Grid */}
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 16px 40px" }}>
-        {!searching && genre === "all" && (
+        {!searching && (
           <Hero lang={lang} t={t} dir={dir} onSelect={(m) => setSelected(m)} />
         )}
         {!searching && (
-          <h2
+          <TrendingRow lang={lang} t={t} dir={dir} onSelect={(m) => setSelected(m)} />
+        )}
+
+        {/* Movies / Series tab switcher */}
+        {!searching && (
+          <div
             style={{
-              fontSize: 20,
-              fontWeight: 900,
-              margin: "0 0 14px",
               display: "flex",
               alignItems: "center",
-              gap: 8,
+              gap: 10,
+              margin: "26px 0 16px",
+              flexWrap: "wrap",
             }}
           >
             <span
               style={{
                 display: "inline-block",
                 width: 4,
-                height: 22,
+                height: 26,
                 background: C.gold,
                 borderRadius: 4,
               }}
             />
-            {t.latest} 🎬
-          </h2>
+            <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>
+              {mediaTab === "tv" ? `${t.tabSeries} 📺` : `${t.latest} 🎬`}
+            </h2>
+            <div
+              style={{
+                marginInlineStart: "auto",
+                display: "inline-flex",
+                background: C.panel,
+                border: `1px solid ${C.border}`,
+                borderRadius: 999,
+                padding: 4,
+                gap: 4,
+              }}
+            >
+              {([
+                { k: "movie" as const, label: `🎬 ${t.tabMovies}` },
+                { k: "tv" as const, label: `📺 ${t.tabSeries}` },
+              ]).map((tab) => {
+                const active = mediaTab === tab.k;
+                return (
+                  <button
+                    key={tab.k}
+                    onClick={() => setMediaTab(tab.k)}
+                    style={{
+                      background: active ? C.gold : "transparent",
+                      color: active ? "#0A0A0F" : C.muted,
+                      border: "none",
+                      borderRadius: 999,
+                      padding: "8px 18px",
+                      fontSize: 13.5,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      transition: "all .2s",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
+
         {searching && (
           <div
             className="mv-fade"
