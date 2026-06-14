@@ -2208,20 +2208,25 @@ function MovieModal({
           servers={
             isTv
               ? [
-                  { name: "Server 1 ⚡", url: `https://vidsrc.xyz/embed/tv/${imdbId || movie.tmdb_id}/${season}/${episode}` },
-                  { name: "Server 2", url: `https://vidsrc.cc/v2/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
-                  { name: "Server 3", url: `https://www.2embed.cc/embedtv/${movie.tmdb_id}&s=${season}&e=${episode}` },
-                  ...(imdbId ? [{ name: "Server 4", url: `https://multiembed.mov/?video_id=${imdbId}&s=${season}&e=${episode}` }] : []),
-                  { name: "Server 5", url: `https://vaplayer.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 1 ⚡", url: `https://vidlink.pro/tv/${movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 2", url: `https://vidfast.pro/tv/${movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 3", url: `https://embed.su/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 4", url: `https://vidsrc.cc/v2/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 5", url: `https://vidsrc.xyz/embed/tv/${imdbId || movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 6", url: `https://player.autoembed.cc/embed/tv/${movie.tmdb_id}/${season}/${episode}` },
+                  { name: "Server 7", url: `https://moviesapi.club/tv/${movie.tmdb_id}-${season}-${episode}` },
                 ]
               : [
-                  { name: "Server 1 ⚡", url: `https://vidsrc.xyz/embed/movie/${imdbId || movie.tmdb_id}` },
-                  { name: "Server 2", url: `https://vidsrc.cc/v2/embed/movie/${movie.tmdb_id}` },
-                  { name: "Server 3", url: `https://www.2embed.cc/embed/${movie.tmdb_id}` },
-                  ...(imdbId ? [{ name: "Server 4", url: `https://multiembed.mov/?video_id=${imdbId}` }] : []),
-                  { name: "Server 5", url: `https://vaplayer.ru/embed/movie/${imdbId || movie.tmdb_id}` },
+                  { name: "Server 1 ⚡", url: `https://vidlink.pro/movie/${movie.tmdb_id}` },
+                  { name: "Server 2", url: `https://vidfast.pro/movie/${movie.tmdb_id}` },
+                  { name: "Server 3", url: `https://embed.su/embed/movie/${movie.tmdb_id}` },
+                  { name: "Server 4", url: `https://vidsrc.cc/v2/embed/movie/${movie.tmdb_id}` },
+                  { name: "Server 5", url: `https://vidsrc.xyz/embed/movie/${imdbId || movie.tmdb_id}` },
+                  { name: "Server 6", url: `https://player.autoembed.cc/embed/movie/${movie.tmdb_id}` },
+                  { name: "Server 7", url: `https://moviesapi.club/movie/${movie.tmdb_id}` },
                 ]
           }
+
           onClose={() => setWatch(false)}
           closeLabel={t.close}
           serverLabel={t.server}
@@ -2298,11 +2303,11 @@ function PlayerOverlay({
             src={currentSrc}
             title="player"
             allowFullScreen
-            allow="autoplay; encrypted-media; fullscreen"
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             referrerPolicy="origin"
-            sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
             style={{ width: "100%", height: "100%", border: "none" }}
           />
+
         </div>
 
         {/* server selector */}
