@@ -2519,6 +2519,9 @@ function MoreServers({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Movie[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [catalog, setCatalog] = useState<Movie[]>([]);
+  const [catLoading, setCatLoading] = useState(false);
+  const [catTab, setCatTab] = useState<"movie" | "tv">("movie");
   const [pendingTv, setPendingTv] = useState<Movie | null>(null);
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
@@ -2526,6 +2529,34 @@ function MoreServers({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const srv = activeIdx !== null ? STREAM_SERVERS[activeIdx] : null;
+
+  /* load this server's catalog (popular movies / series) */
+  useEffect(() => {
+    if (activeIdx === null) return;
+    let alive = true;
+    setCatLoading(true);
+    (async () => {
+      try {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/${catTab}/popular?api_key=${TMDB_KEY}&language=en-US&page=1`,
+        );
+        const d = await r.json();
+        const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
+        const items = list
+          .filter((m) => m.poster_path)
+          .map((m) => mapTmdbResult({ ...m, media_type: catTab }));
+        if (alive) setCatalog(items);
+      } catch {
+        if (alive) setCatalog([]);
+      } finally {
+        if (alive) setCatLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [activeIdx, catTab]);
+
 
   useEffect(() => {
     const q = query.trim();
@@ -2724,6 +2755,7 @@ function MoreServers({
         </span>
       </div>
 
+      {/* Search results take priority; otherwise show this server's catalog */}
       {loading ? (
         <Grid>
           {Array.from({ length: 12 }).map((_, i) => (
@@ -2733,23 +2765,73 @@ function MoreServers({
             </div>
           ))}
         </Grid>
-      ) : results === null ? (
-        <div style={{ textAlign: "center", padding: "70px 0", color: C.muted }}>
-          <div style={{ fontSize: 52, marginBottom: 12 }}>🔍</div>
-          <div style={{ fontSize: 15 }}>{t.serverEmpty}</div>
-        </div>
-      ) : results.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
-          <div style={{ fontSize: 48, marginBottom: 10 }}>🎬</div>
-          {t.noMovies}
-        </div>
+      ) : results !== null ? (
+        results.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
+            <div style={{ fontSize: 48, marginBottom: 10 }}>🎬</div>
+            {t.noMovies}
+          </div>
+        ) : (
+          <Grid>
+            {results.map((m, i) => (
+              <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} onClick={() => playItem(m)} />
+            ))}
+          </Grid>
+        )
       ) : (
-        <Grid>
-          {results.map((m, i) => (
-            <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} onClick={() => playItem(m)} />
-          ))}
-        </Grid>
+        <>
+          {/* Movies / Series tabs */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            {([
+              { key: "movie", label: `${t.tabMovies} 🎬` },
+              { key: "tv", label: `${t.tabSeries} 📺` },
+            ] as const).map((tab) => {
+              const on = catTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setCatTab(tab.key)}
+                  style={{
+                    background: on ? srv.color : C.panel2,
+                    color: on ? "#0A0A0F" : C.text,
+                    border: `1px solid ${on ? srv.color : C.border}`,
+                    borderRadius: 999,
+                    padding: "8px 18px",
+                    fontWeight: 800,
+                    fontSize: 13.5,
+                    cursor: "pointer",
+                    transition: "all .18s",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+          {catLoading ? (
+            <Grid>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i}>
+                  <div className="mv-skel" style={{ width: "100%", aspectRatio: "2/3", borderRadius: 14 }} />
+                  <div className="mv-skel" style={{ height: 12, borderRadius: 6, marginTop: 8, width: "80%" }} />
+                </div>
+              ))}
+            </Grid>
+          ) : catalog.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
+              <div style={{ fontSize: 48, marginBottom: 10 }}>🎬</div>
+              {t.noMovies}
+            </div>
+          ) : (
+            <Grid>
+              {catalog.map((m, i) => (
+                <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} onClick={() => playItem(m)} />
+              ))}
+            </Grid>
+          )}
+        </>
       )}
+
 
       {/* Season / Episode picker for TV */}
       {pendingTv && (
