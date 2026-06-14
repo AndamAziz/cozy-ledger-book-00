@@ -904,17 +904,19 @@ function MovieModal({
     };
   }, []);
 
-  // fetch TMDB details + credits
+  // fetch TMDB details + credits (+ imdb id for search results)
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const r = await fetch(
-          `https://api.themoviedb.org/3/movie/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits`,
+          `https://api.themoviedb.org/3/movie/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits,external_ids`,
         );
         const d = await r.json();
         if (!alive) return;
         if (d.backdrop_path) setBackdrop(TMDB_BACKDROP + d.backdrop_path);
+        if (d.external_ids?.imdb_id) setImdbId(d.external_ids.imdb_id);
+        else if (d.imdb_id) setImdbId(d.imdb_id);
         const dirCrew = d.credits?.crew?.find((c: { job: string }) => c.job === "Director");
         if (dirCrew) setDirector(dirCrew.name);
         if (Array.isArray(d.credits?.cast)) setCast(d.credits.cast.slice(0, 18));
