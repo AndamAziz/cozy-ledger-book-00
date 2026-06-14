@@ -898,13 +898,12 @@ export default function Movies() {
             { key: "movie", icon: "🎬", label: t.navMovie },
             { key: "tv", icon: "📺", label: t.navSeries },
             { key: "search", icon: "🔍", label: t.navSearch },
-            { key: "more", icon: "☰", label: t.navMore },
           ] as const).map((item) => {
             const active = view === item.key;
             return (
               <button
                 key={item.key}
-                onClick={() => (item.key === "more" ? setView("more") : goView(item.key))}
+                onClick={() => goView(item.key)}
                 style={{
                   flex: 1,
                   display: "flex",
