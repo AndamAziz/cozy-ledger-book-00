@@ -582,7 +582,46 @@ export default function Movies() {
 
       {/* Grid */}
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 16px 40px" }}>
-        {loading ? (
+        {searching && (
+          <div
+            className="mv-fade"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ fontSize: 15, color: C.text }}>
+              <span style={{ color: C.muted }}>{t.searchResultsFor} </span>
+              <b style={{ color: C.gold }}>“{search.trim()}”</b>
+              {!aiSearching && (
+                <span style={{ color: C.muted }}>
+                  {" "}— {filtered.length} {t.resultsCount}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={clearSearch}
+              style={{
+                background: C.panel2,
+                color: C.text,
+                border: `1px solid ${C.border}`,
+                borderRadius: 999,
+                padding: "6px 14px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {t.clearSearch}
+            </button>
+          </div>
+        )}
+
+        {loading || (aiSearching && filtered.length === 0) ? (
           <Grid>
             {Array.from({ length: 18 }).map((_, i) => (
               <div key={i}>
@@ -610,8 +649,8 @@ export default function Movies() {
           </Grid>
         )}
 
-        {/* Pagination */}
-        {!search.trim() && (
+        {/* Pagination (latest list only) */}
+        {!searching && (
           <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />
         )}
       </main>
