@@ -121,5 +121,5 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
 
   const refetch = () => setReloadKey((k) => k + 1);
 
-  return { candles, isLoading, error, source, refetch };
+  return { candles, isLoading, error, source, lastUpdated, refetch };
 }
