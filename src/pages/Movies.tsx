@@ -20,6 +20,18 @@ const TMDB_KEY = "4e44d9029b1270a757cddc766a1bcb63";
 const TMDB_BACKDROP = "https://image.tmdb.org/t/p/w1280";
 const TMDB_PROFILE = "https://image.tmdb.org/t/p/w185";
 
+const selectStyle: React.CSSProperties = {
+  background: C.panel2,
+  color: C.text,
+  border: `1px solid ${C.gold}`,
+  borderRadius: 10,
+  padding: "8px 12px",
+  fontSize: 14,
+  fontWeight: 700,
+  cursor: "pointer",
+  outline: "none",
+};
+
 type Lang = "ku" | "en";
 
 // ====== i18n ======
@@ -67,6 +79,11 @@ const T = {
     clearSearch: "✕ پاککردنەوەی گەڕان",
     searching: "گەڕان...",
     resultsCount: "ئەنجام",
+    seriesBadge: "زنجیرە",
+    season: "وەرز",
+    episode: "ئەلقە",
+    selectEpisode: "وەرز و ئەلقە هەڵبژێرە",
+    episodesCount: "ئەلقە",
   },
   en: {
     title: "Mov",
@@ -111,6 +128,11 @@ const T = {
     clearSearch: "✕ Clear search",
     searching: "Searching...",
     resultsCount: "results",
+    seriesBadge: "Series",
+    season: "Season",
+    episode: "Episode",
+    selectEpisode: "Choose season & episode",
+    episodesCount: "episodes",
   },
 };
 
@@ -135,13 +157,20 @@ const TMDB_GENRES: Record<number, string> = {
   99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
   27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance",
   878: "Science Fiction", 10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western",
+  // TV-specific genres
+  10759: "Action", 10765: "Science Fiction", 10768: "War", 10764: "Reality",
+  10763: "News", 10762: "Family", 10766: "Drama", 10767: "Talk",
 };
 
 interface TmdbSearchResult {
   id: number;
+  media_type?: string;
   title?: string;
+  name?: string;
   original_title?: string;
+  original_name?: string;
   release_date?: string;
+  first_air_date?: string;
   poster_path?: string | null;
   vote_average?: number;
   genre_ids?: number[];
@@ -151,6 +180,7 @@ interface TmdbSearchResult {
 interface Movie {
   tmdb_id: number;
   imdb_id: string;
+  media: "movie" | "tv";
   title: string;
   year: string;
   poster_url: string;
@@ -220,7 +250,10 @@ export default function Movies() {
     try {
       const r = await fetch(`https://vidapi.ru/movies/latest/page-${p}.json`);
       const data = await r.json();
-      setMovies(Array.isArray(data.items) ? data.items : []);
+      const items: Movie[] = (Array.isArray(data.items) ? data.items : []).map(
+        (m: Movie) => ({ ...m, media: m.media || "movie" }),
+      );
+      setMovies(items);
       setTotalPages(Math.min(data.total_pages || 1, 200));
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
@@ -240,20 +273,24 @@ export default function Movies() {
         `https://api.themoviedb.org/3/find/${imdbId}?api_key=${TMDB_KEY}&external_source=imdb_id`,
       );
       const d = await r.json();
-      const result = d?.movie_results?.[0];
+      const tv = d?.tv_results?.[0];
+      const mv = d?.movie_results?.[0];
+      const result = mv || tv;
       if (result) {
+        const isTv = !mv && !!tv;
         const movie: Movie = {
           tmdb_id: result.id,
           imdb_id: imdbId,
-          title: result.title || result.original_title || imdbId,
-          year: result.release_date ? result.release_date.slice(0, 4) : "",
+          media: isTv ? "tv" : "movie",
+          title: result.title || result.name || result.original_title || result.original_name || imdbId,
+          year: (result.release_date || result.first_air_date || "").slice(0, 4),
           poster_url: result.poster_path
             ? `https://image.tmdb.org/t/p/w500${result.poster_path}`
             : "",
           rating: result.vote_average ? String(result.vote_average) : "",
           genre: (result.genre_ids || []).map((g: number) => TMDB_GENRES[g]).filter(Boolean).join(", "),
           popularity: String(result.popularity || ""),
-          type: "movie",
+          type: isTv ? "tv" : "movie",
           embed_url: "",
         };
         setSelected(movie);
@@ -265,30 +302,34 @@ export default function Movies() {
     return false;
   }, []);
 
-  // ---- POWERFUL CATALOG SEARCH (full TMDB database) ----
-  const mapTmdbResult = (r: TmdbSearchResult): Movie => ({
-    tmdb_id: r.id,
-    imdb_id: "",
-    title: r.title || r.original_title || "",
-    year: r.release_date ? r.release_date.slice(0, 4) : "",
-    poster_url: r.poster_path ? `https://image.tmdb.org/t/p/w500${r.poster_path}` : "",
-    rating: r.vote_average ? r.vote_average.toFixed(1) : "",
-    genre: (r.genre_ids || []).map((g) => TMDB_GENRES[g]).filter(Boolean).join(", "),
-    popularity: String(r.popularity || ""),
-    type: "movie",
-    embed_url: "",
-  });
+  // ---- POWERFUL CATALOG SEARCH (movies + TV series, full TMDB database) ----
+  const mapTmdbResult = (r: TmdbSearchResult): Movie => {
+    const isTv = r.media_type === "tv";
+    return {
+      tmdb_id: r.id,
+      imdb_id: "",
+      media: isTv ? "tv" : "movie",
+      title: r.title || r.name || r.original_title || r.original_name || "",
+      year: (r.release_date || r.first_air_date || "").slice(0, 4),
+      poster_url: r.poster_path ? `https://image.tmdb.org/t/p/w500${r.poster_path}` : "",
+      rating: r.vote_average ? r.vote_average.toFixed(1) : "",
+      genre: (r.genre_ids || []).map((g) => TMDB_GENRES[g]).filter(Boolean).join(", "),
+      popularity: String(r.popularity || ""),
+      type: isTv ? "tv" : "movie",
+      embed_url: "",
+    };
+  };
 
   const searchTmdb = useCallback(async (q: string): Promise<Movie[]> => {
     try {
       const r = await fetch(
-        `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}` +
+        `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}` +
           `&query=${encodeURIComponent(q)}&include_adult=false&language=en-US&page=1`,
       );
       const d = await r.json();
       const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
       return list
-        .filter((m) => m.poster_path)
+        .filter((m) => (m.media_type === "movie" || m.media_type === "tv") && m.poster_path)
         .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
         .map(mapTmdbResult);
     } catch {
@@ -735,6 +776,24 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
         >
           {movie.year}
         </div>
+        {movie.media === "tv" && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 8,
+              insetInlineStart: 8,
+              background: C.gold,
+              color: "#0A0A0F",
+              fontSize: 11,
+              fontWeight: 800,
+              padding: "3px 8px",
+              borderRadius: 8,
+              letterSpacing: ".3px",
+            }}
+          >
+            📺 TV
+          </div>
+        )}
         {/* play overlay */}
         <div
           className="mv-play"
@@ -895,6 +954,12 @@ function MovieModal({
   const [downloadingId, setDownloadingId] = useState<string>("");
   const [imdbId, setImdbId] = useState<string>(movie.imdb_id || "");
 
+  const isTv = movie.media === "tv";
+  const mediaPath = isTv ? "tv" : "movie";
+  const [seasons, setSeasons] = useState<{ season_number: number; episode_count: number; name: string }[]>([]);
+  const [season, setSeason] = useState(1);
+  const [episode, setEpisode] = useState(1);
+
   const rating = parseFloat(movie.rating) || 0;
 
   useEffect(() => {
@@ -904,13 +969,13 @@ function MovieModal({
     };
   }, []);
 
-  // fetch TMDB details + credits (+ imdb id for search results)
+  // fetch TMDB details + credits (+ imdb id, + seasons for TV)
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const r = await fetch(
-          `https://api.themoviedb.org/3/movie/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits,external_ids`,
+          `https://api.themoviedb.org/3/${mediaPath}/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits,external_ids`,
         );
         const d = await r.json();
         if (!alive) return;
@@ -919,7 +984,15 @@ function MovieModal({
         else if (d.imdb_id) setImdbId(d.imdb_id);
         const dirCrew = d.credits?.crew?.find((c: { job: string }) => c.job === "Director");
         if (dirCrew) setDirector(dirCrew.name);
-        if (Array.isArray(d.credits?.cast)) setCast(d.credits.cast.slice(0, 18));
+        if (!isTv && Array.isArray(d.credits?.cast)) setCast(d.credits.cast.slice(0, 18));
+        if (isTv && Array.isArray(d.seasons)) {
+          const ss = d.seasons.filter(
+            (s: { season_number: number; episode_count: number }) =>
+              s.season_number > 0 && s.episode_count > 0,
+          );
+          setSeasons(ss);
+          if (ss.length > 0) setSeason(ss[0].season_number);
+        }
       } catch {
         /* ignore */
       }
@@ -927,7 +1000,37 @@ function MovieModal({
     return () => {
       alive = false;
     };
-  }, [movie.tmdb_id]);
+  }, [movie.tmdb_id, mediaPath, isTv]);
+
+  // TV: fetch the cast from the aggregate credits (uses series-level credits)
+  useEffect(() => {
+    if (!isTv) return;
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(
+          `https://api.themoviedb.org/3/tv/${movie.tmdb_id}/aggregate_credits?api_key=${TMDB_KEY}`,
+        );
+        const d = await r.json();
+        if (!alive) return;
+        if (Array.isArray(d.cast)) {
+          setCast(
+            d.cast.slice(0, 18).map((c: { id: number; name: string; profile_path: string | null; roles?: { character: string }[] }) => ({
+              id: c.id,
+              name: c.name,
+              character: c.roles?.[0]?.character || "",
+              profile_path: c.profile_path,
+            })),
+          );
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [movie.tmdb_id, isTv]);
 
   const loadTrailer = async () => {
     if (trailer) {
@@ -937,7 +1040,7 @@ function MovieModal({
     setTrailerLoading(true);
     try {
       const r = await fetch(
-        `https://api.themoviedb.org/3/movie/${movie.tmdb_id}/videos?api_key=${TMDB_KEY}`,
+        `https://api.themoviedb.org/3/${mediaPath}/${movie.tmdb_id}/videos?api_key=${TMDB_KEY}`,
       );
       const d = await r.json();
       const yt = (d.results || []).find(
@@ -1167,6 +1270,53 @@ function MovieModal({
           <ActionBtn label={t.aiInfo} onClick={loadAiInfo} />
           <ActionBtn label={t.subs} onClick={loadSubs} />
         </div>
+
+        {/* TV: season & episode picker */}
+        {isTv && seasons.length > 0 && (
+          <div
+            className="mv-fade"
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+              alignItems: "center",
+              padding: "12px 16px 0",
+            }}
+          >
+            <span style={{ fontSize: 13, color: C.muted, fontWeight: 700 }}>
+              📺 {t.selectEpisode}:
+            </span>
+            <select
+              value={season}
+              onChange={(e) => {
+                setSeason(Number(e.target.value));
+                setEpisode(1);
+              }}
+              style={selectStyle}
+            >
+              {seasons.map((s) => (
+                <option key={s.season_number} value={s.season_number}>
+                  {t.season} {s.season_number}
+                  {s.episode_count ? ` (${s.episode_count} ${t.episodesCount})` : ""}
+                </option>
+              ))}
+            </select>
+            <select
+              value={episode}
+              onChange={(e) => setEpisode(Number(e.target.value))}
+              style={selectStyle}
+            >
+              {Array.from(
+                { length: seasons.find((s) => s.season_number === season)?.episode_count || 1 },
+                (_, i) => i + 1,
+              ).map((ep) => (
+                <option key={ep} value={ep}>
+                  {t.episode} {ep}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* PlayIMDb buttons */}
         {imdbId && (
@@ -1423,7 +1573,11 @@ function MovieModal({
       {/* Watch player */}
       {watch && (
         <PlayerOverlay
-          src={`https://vaplayer.ru/embed/movie/${imdbId || movie.tmdb_id}`}
+          src={
+            isTv
+              ? `https://vaplayer.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
+              : `https://vaplayer.ru/embed/movie/${imdbId || movie.tmdb_id}`
+          }
           onClose={() => setWatch(false)}
           closeLabel={t.close}
         />
