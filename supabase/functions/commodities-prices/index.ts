@@ -543,8 +543,8 @@ async function handleHistory(code: string, range: string): Promise<Response> {
 
     // 3) Nothing usable — surface an explicit error rather than raw futures.
     return new Response(
-      JSON.stringify({ error: "Spot history unavailable", code, range, unavailable: [code] }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ error: "Spot history unavailable", code, range, unavailable: [code], fallback: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
