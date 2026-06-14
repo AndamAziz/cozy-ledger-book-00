@@ -382,7 +382,7 @@ export default function Movies() {
   const [selected, setSelected] = useState<Movie | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
   const [mediaTab, setMediaTab] = useState<"movie" | "tv">("movie");
-  const [view, setView] = useState<"home" | "movie" | "tv" | "search">("home");
+  const [view, setView] = useState<"home" | "movie" | "tv" | "search" | "more">("home");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const goView = (v: "home" | "movie" | "tv" | "search") => {
