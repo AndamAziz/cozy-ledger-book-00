@@ -496,6 +496,20 @@ function shiftCandlesToSpot(candles: Candle[], spotPrice: number): Candle[] {
   }));
 }
 
+function buildFlatSpotCandles(price: number, range: string): Candle[] {
+  const now = Math.floor(Date.now() / 1000);
+  const intraday = new Set(["1min", "5min", "15min", "1d", "5d"]);
+  const step = intraday.has(range) ? 300 : 86_400;
+  const count = intraday.has(range) ? 96 : range === "1y" ? 180 : range === "3mo" ? 90 : 60;
+  return Array.from({ length: count }, (_, i) => ({
+    time: now - (count - 1 - i) * step,
+    open: +price.toFixed(4),
+    high: +price.toFixed(4),
+    low: +price.toFixed(4),
+    close: +price.toFixed(4),
+  }));
+}
+
 
 async function handleHistory(code: string, range: string): Promise<Response> {
   const yahooSymbol = YAHOO_SYMBOLS[code];
@@ -541,9 +555,20 @@ async function handleHistory(code: string, range: string): Promise<Response> {
       });
     }
 
-    // 3) Nothing usable — surface an explicit error rather than raw futures.
+    // 3) Nothing usable — still return HTTP 200 and safe chart data so the app
+    //    never blanks on temporary upstream spot-history outages.
+    const fallbackPrice = spotPrice || cachedPrices?.[code];
+    if (fallbackPrice && fallbackPrice > 0) {
+      const candles = buildFlatSpotCandles(fallbackPrice, range);
+      const responseData = { code, range, candles, count: candles.length, source: "spot-price-continuity", fallback: true, warning: "Spot history temporarily unavailable" };
+      historyCache.set(cacheKey, { data: responseData, ts: Date.now() });
+      return new Response(JSON.stringify(responseData), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(
-      JSON.stringify({ error: "Spot history unavailable", code, range, unavailable: [code], fallback: true }),
+      JSON.stringify({ warning: "Spot history unavailable", code, range, candles: [], count: 0, unavailable: [code], fallback: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
@@ -595,8 +620,8 @@ async function handleHistory(code: string, range: string): Promise<Response> {
     });
   } catch (error) {
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ warning: error instanceof Error ? error.message : "History temporarily unavailable", candles: [], count: 0, fallback: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 }
@@ -618,6 +643,15 @@ serve(async (req) => {
 
     return await handleLivePrices();
   } catch (error) {
+    try {
+      const url = new URL(req.url);
+      if (url.searchParams.get("mode") === "history") {
+        return new Response(
+          JSON.stringify({ warning: error instanceof Error ? error.message : "History temporarily unavailable", candles: [], count: 0, fallback: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } catch {}
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
