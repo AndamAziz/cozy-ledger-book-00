@@ -321,22 +321,7 @@ export default function Movies() {
   }, []);
 
   // ---- POWERFUL CATALOG SEARCH (movies + TV series, full TMDB database) ----
-  const mapTmdbResult = (r: TmdbSearchResult): Movie => {
-    const isTv = r.media_type === "tv";
-    return {
-      tmdb_id: r.id,
-      imdb_id: "",
-      media: isTv ? "tv" : "movie",
-      title: r.title || r.name || r.original_title || r.original_name || "",
-      year: (r.release_date || r.first_air_date || "").slice(0, 4),
-      poster_url: r.poster_path ? `https://image.tmdb.org/t/p/w500${r.poster_path}` : "",
-      rating: r.vote_average ? r.vote_average.toFixed(1) : "",
-      genre: (r.genre_ids || []).map((g) => TMDB_GENRES[g]).filter(Boolean).join(", "),
-      popularity: String(r.popularity || ""),
-      type: isTv ? "tv" : "movie",
-      embed_url: "",
-    };
-  };
+
 
   const searchTmdb = useCallback(async (q: string): Promise<Movie[]> => {
     try {
