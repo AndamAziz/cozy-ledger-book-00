@@ -188,6 +188,63 @@ export function MarketNewsModal({ open, onClose }: Props) {
   const [fromCache, setFromCache] = useState(false);
   const [now, setNow] = useState(Date.now());
 
+  // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
+  const [currency, setCurrency] = useState<string>('All');
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(DISMISS_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch { return new Set<string>(); }
+  });
+  const [light, setLight] = useState<boolean>(() => {
+    try { return localStorage.getItem(THEME_KEY) === 'light'; } catch { return false; }
+  });
+  const [soundOn, setSoundOn] = useState<boolean>(() => {
+    try { return localStorage.getItem(SOUND_KEY) !== 'off'; } catch { return true; }
+  });
+  const [toast, setToast] = useState<string | null>(null);
+  const alertedRef = useRef<Set<string>>(new Set());
+
+  const dismissEvent = useCallback((key: string) => {
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      try { localStorage.setItem(DISMISS_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  const restoreDismissed = useCallback(() => {
+    setDismissed(new Set());
+    try { localStorage.removeItem(DISMISS_KEY); } catch { /* ignore */ }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setLight((p) => {
+      const v = !p;
+      try { localStorage.setItem(THEME_KEY, v ? 'light' : 'dark'); } catch { /* ignore */ }
+      return v;
+    });
+  }, []);
+
+  const toggleSound = useCallback(() => {
+    setSoundOn((p) => {
+      const v = !p;
+      try { localStorage.setItem(SOUND_KEY, v ? 'on' : 'off'); } catch { /* ignore */ }
+      return v;
+    });
+  }, []);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2200);
+  }, []);
+
+  // Theme palette for the calendar section
+  const T = light
+    ? { bg: '#f5f6fa', card: '#ffffff', cardBorder: '#e2e5ec', text: '#0a0e17', sub: '#5b6472', headBg: '#ffffff' }
+    : { bg: '#0a0e17', card: '#0d1117', cardBorder: '#1a1e2e', text: '#ffffff', sub: '#848e9c', headBg: '#0d1117' };
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const todayRef = useRef<HTMLDivElement | null>(null);
   const didScroll = useRef(false);
