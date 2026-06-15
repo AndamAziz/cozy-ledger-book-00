@@ -175,6 +175,66 @@ function isToday(iso: string): boolean {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }
 
+// Swipe-left-to-dismiss wrapper for event cards
+function SwipeCard({ children, onDismiss, light }: { children: React.ReactNode; onDismiss?: () => void; light: boolean }) {
+  const [dx, setDx] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const startX = useRef<number | null>(null);
+  const startY = useRef<number | null>(null);
+  const swiping = useRef(false);
+
+  const onStart = (x: number, y: number) => {
+    if (!onDismiss) return;
+    startX.current = x;
+    startY.current = y;
+    swiping.current = false;
+  };
+  const onMove = (x: number, y: number) => {
+    if (!onDismiss || startX.current === null || startY.current === null) return;
+    const diffX = x - startX.current;
+    const diffY = y - startY.current;
+    if (!swiping.current && Math.abs(diffX) > 8 && Math.abs(diffX) > Math.abs(diffY)) {
+      swiping.current = true;
+    }
+    if (swiping.current && diffX < 0) setDx(diffX);
+  };
+  const onEnd = () => {
+    if (!onDismiss) return;
+    if (dx < -90) {
+      setAnimating(true);
+      setDx(-window.innerWidth);
+      setTimeout(() => onDismiss(), 180);
+    } else {
+      setAnimating(true);
+      setDx(0);
+      setTimeout(() => setAnimating(false), 180);
+    }
+    startX.current = null;
+    startY.current = null;
+    swiping.current = false;
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-lg">
+      {onDismiss && (
+        <div className="absolute inset-0 flex items-center justify-end pr-4 rounded-lg" style={{ backgroundColor: 'rgba(246,70,93,0.18)' }}>
+          <X className="h-4 w-4" style={{ color: '#f6465d' }} />
+        </div>
+      )}
+      <div
+        style={{ transform: `translateX(${dx}px)`, transition: animating ? 'transform 0.18s ease-out' : 'none', opacity: dx < -90 ? 0.4 : 1 }}
+        onTouchStart={(e) => onStart(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchMove={(e) => onMove(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchEnd={onEnd}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+
+
 export function MarketNewsModal({ open, onClose }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
