@@ -599,7 +599,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
             )}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-sm text-white truncate flex-1">{ev.title}</span>
+            <span className="text-sm truncate flex-1" style={{ color: T.text }}>{ev.title}</span>
             {goldUp === true && (
               <span className="inline-flex items-center gap-0.5 shrink-0 text-[9px] font-bold animate-flash-blink" style={{ color: C_UP }}>
                 <TrendingUp className="h-4 w-4" /> {bi('زێڕ', 'Gold')}
