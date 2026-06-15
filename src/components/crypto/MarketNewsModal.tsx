@@ -857,6 +857,14 @@ export function MarketNewsModal({ open, onClose }: Props) {
             </div>
           )}
         </div>
+
+        {/* Toast (share / sound alert feedback) */}
+        {toast && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[#f0b90b] text-black text-xs font-bold shadow-lg flex items-center gap-1.5 animate-fade-in">
+            <Share2 className="h-3.5 w-3.5" />
+            {toast}
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
