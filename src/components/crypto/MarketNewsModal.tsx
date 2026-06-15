@@ -401,9 +401,18 @@ export function MarketNewsModal({ open, onClose }: Props) {
     [visibleEvents],
   );
 
+  // Apply currency filter + dismissed hiding for the rendered list
+  const displayEvents = useMemo(() => {
+    return visibleEvents.filter((e) => {
+      if (dismissed.has(eventKey(e))) return false;
+      if (currency !== 'All' && e.country !== currency) return false;
+      return true;
+    });
+  }, [visibleEvents, dismissed, currency]);
+
   // Group events by day label
   const grouped: { label: string; isToday: boolean; items: CalendarEvent[] }[] = [];
-  for (const ev of visibleEvents) {
+  for (const ev of displayEvents) {
     const d = new Date(ev.date);
     const label = Number.isNaN(d.getTime())
       ? '—'
@@ -412,6 +421,49 @@ export function MarketNewsModal({ open, onClose }: Props) {
     if (last && last.label === label) last.items.push(ev);
     else grouped.push({ label, isToday: isToday(ev.date), items: [ev] });
   }
+
+  // Share an event as formatted text
+  const shareEvent = useCallback(async (ev: CalendarEvent) => {
+    const a = analyzeEvent(ev);
+    const score = goldImpactScore(ev);
+    const bars = '🟡'.repeat(score) + '⚪'.repeat(3 - score);
+    const lines = [
+      `⚠️ ${ev.title}`,
+      `📅 ${eventTime(ev.date)}`,
+      ev.forecast ? `💰 Forecast: ${ev.forecast}` : null,
+      ev.previous ? `↩️ Previous: ${ev.previous}` : null,
+      ev.actual ? `✅ Actual: ${ev.actual}` : null,
+      `📊 Gold Impact: ${bars}`,
+    ].filter(Boolean);
+    const text = lines.join('\n');
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: ev.title, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        showToast(bi('کۆپی کرا', 'Copied to clipboard'));
+      }
+    } catch { /* user cancelled */ }
+  }, [bi, showToast, eventTime]);
+
+  // Sound alert: ding ~5 min before any red-dot (high-impact USD) event
+  useEffect(() => {
+    if (!open || !soundOn) return;
+    for (const e of visibleEvents) {
+      const imp = (e.impact || '').toLowerCase();
+      if (imp !== 'high' || e.country !== 'USD') continue;
+      const t = Date.parse(e.date);
+      if (Number.isNaN(t)) continue;
+      const mins = (t - now) / 60000;
+      const k = eventKey(e);
+      if (mins > 0 && mins <= 5 && !alertedRef.current.has(k)) {
+        alertedRef.current.add(k);
+        playDing();
+        showToast(bi(`⏰ ${e.title} لە ${Math.ceil(mins)} خولەکدا`, `⏰ ${e.title} in ${Math.ceil(mins)} min`));
+      }
+    }
+  }, [now, open, soundOn, visibleEvents, bi, showToast]);
+
 
   // Smooth scroll to today's group when calendar opens with data
   useEffect(() => {
