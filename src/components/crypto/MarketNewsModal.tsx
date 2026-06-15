@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo, type ReactNode } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Newspaper, CalendarClock, Loader2, RefreshCw, ExternalLink, AlertCircle, TrendingUp, TrendingDown, Pin, Clock } from 'lucide-react';
+import { Newspaper, CalendarClock, Loader2, RefreshCw, ExternalLink, AlertCircle, TrendingUp, TrendingDown, Pin, Clock, Share2, Sun, Moon, X, Bell } from 'lucide-react';
 
 interface CalendarEvent {
   title: string;
@@ -50,6 +50,44 @@ const GOLD_CURRENCIES = ['USD', 'CHF', 'GBP', 'JPY'];
 
 // localStorage cache
 const CACHE_KEY = 'marketNewsCache_v1';
+const DISMISS_KEY = 'marketNewsDismissed_v1';
+const THEME_KEY = 'marketNewsCalTheme_v1';
+const SOUND_KEY = 'marketNewsSound_v1';
+
+// Quick currency filter tabs (gold-relevant focus)
+const CURRENCY_FILTERS: { code: string; flag: string }[] = [
+  { code: 'All', flag: '🌐' },
+  { code: 'USD', flag: '🇺🇸' },
+  { code: 'GBP', flag: '🇬🇧' },
+  { code: 'JPY', flag: '🇯🇵' },
+  { code: 'CHF', flag: '🇨🇭' },
+];
+
+// A unique, stable key for an event (used for dismiss + share)
+function eventKey(ev: CalendarEvent): string {
+  return `${ev.country}|${ev.title}|${ev.date}`;
+}
+
+// Subtle "ding" using the Web Audio API (no asset needed)
+function playDing() {
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.6);
+    osc.onended = () => ctx.close();
+  } catch { /* ignore */ }
+}
 
 // Indicators where a HIGHER value means a WEAKER economy/USD (inverse logic)
 const INVERSE_KEYWORDS = ['unemployment', 'jobless', 'claims', 'misery', 'deficit', 'inventories'];
@@ -137,6 +175,66 @@ function isToday(iso: string): boolean {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
 }
 
+// Swipe-left-to-dismiss wrapper for event cards
+function SwipeCard({ children, onDismiss }: { children: ReactNode; onDismiss?: () => void; light?: boolean }) {
+  const [dx, setDx] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const startX = useRef<number | null>(null);
+  const startY = useRef<number | null>(null);
+  const swiping = useRef(false);
+
+  const onStart = (x: number, y: number) => {
+    if (!onDismiss) return;
+    startX.current = x;
+    startY.current = y;
+    swiping.current = false;
+  };
+  const onMove = (x: number, y: number) => {
+    if (!onDismiss || startX.current === null || startY.current === null) return;
+    const diffX = x - startX.current;
+    const diffY = y - startY.current;
+    if (!swiping.current && Math.abs(diffX) > 8 && Math.abs(diffX) > Math.abs(diffY)) {
+      swiping.current = true;
+    }
+    if (swiping.current && diffX < 0) setDx(diffX);
+  };
+  const onEnd = () => {
+    if (!onDismiss) return;
+    if (dx < -90) {
+      setAnimating(true);
+      setDx(-window.innerWidth);
+      setTimeout(() => onDismiss(), 180);
+    } else {
+      setAnimating(true);
+      setDx(0);
+      setTimeout(() => setAnimating(false), 180);
+    }
+    startX.current = null;
+    startY.current = null;
+    swiping.current = false;
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-lg">
+      {onDismiss && (
+        <div className="absolute inset-0 flex items-center justify-end pr-4 rounded-lg" style={{ backgroundColor: 'rgba(246,70,93,0.18)' }}>
+          <X className="h-4 w-4" style={{ color: '#f6465d' }} />
+        </div>
+      )}
+      <div
+        style={{ transform: `translateX(${dx}px)`, transition: animating ? 'transform 0.18s ease-out' : 'none', opacity: dx < -90 ? 0.4 : 1 }}
+        onTouchStart={(e) => onStart(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchMove={(e) => onMove(e.touches[0].clientX, e.touches[0].clientY)}
+        onTouchEnd={onEnd}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+
+
 export function MarketNewsModal({ open, onClose }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
@@ -149,6 +247,63 @@ export function MarketNewsModal({ open, onClose }: Props) {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [fromCache, setFromCache] = useState(false);
   const [now, setNow] = useState(Date.now());
+
+  // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
+  const [currency, setCurrency] = useState<string>('All');
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(DISMISS_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch { return new Set<string>(); }
+  });
+  const [light, setLight] = useState<boolean>(() => {
+    try { return localStorage.getItem(THEME_KEY) === 'light'; } catch { return false; }
+  });
+  const [soundOn, setSoundOn] = useState<boolean>(() => {
+    try { return localStorage.getItem(SOUND_KEY) !== 'off'; } catch { return true; }
+  });
+  const [toast, setToast] = useState<string | null>(null);
+  const alertedRef = useRef<Set<string>>(new Set());
+
+  const dismissEvent = useCallback((key: string) => {
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      try { localStorage.setItem(DISMISS_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  const restoreDismissed = useCallback(() => {
+    setDismissed(new Set());
+    try { localStorage.removeItem(DISMISS_KEY); } catch { /* ignore */ }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setLight((p) => {
+      const v = !p;
+      try { localStorage.setItem(THEME_KEY, v ? 'light' : 'dark'); } catch { /* ignore */ }
+      return v;
+    });
+  }, []);
+
+  const toggleSound = useCallback(() => {
+    setSoundOn((p) => {
+      const v = !p;
+      try { localStorage.setItem(SOUND_KEY, v ? 'on' : 'off'); } catch { /* ignore */ }
+      return v;
+    });
+  }, []);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2200);
+  }, []);
+
+  // Theme palette for the calendar section
+  const T = light
+    ? { bg: '#f5f6fa', card: '#ffffff', cardBorder: '#e2e5ec', text: '#0a0e17', sub: '#5b6472', headBg: '#ffffff' }
+    : { bg: '#0a0e17', card: '#0d1117', cardBorder: '#1a1e2e', text: '#ffffff', sub: '#848e9c', headBg: '#0d1117' };
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const todayRef = useRef<HTMLDivElement | null>(null);
@@ -306,9 +461,18 @@ export function MarketNewsModal({ open, onClose }: Props) {
     [visibleEvents],
   );
 
+  // Apply currency filter + dismissed hiding for the rendered list
+  const displayEvents = useMemo(() => {
+    return visibleEvents.filter((e) => {
+      if (dismissed.has(eventKey(e))) return false;
+      if (currency !== 'All' && e.country !== currency) return false;
+      return true;
+    });
+  }, [visibleEvents, dismissed, currency]);
+
   // Group events by day label
   const grouped: { label: string; isToday: boolean; items: CalendarEvent[] }[] = [];
-  for (const ev of visibleEvents) {
+  for (const ev of displayEvents) {
     const d = new Date(ev.date);
     const label = Number.isNaN(d.getTime())
       ? '—'
@@ -317,6 +481,49 @@ export function MarketNewsModal({ open, onClose }: Props) {
     if (last && last.label === label) last.items.push(ev);
     else grouped.push({ label, isToday: isToday(ev.date), items: [ev] });
   }
+
+  // Share an event as formatted text
+  const shareEvent = useCallback(async (ev: CalendarEvent) => {
+    const a = analyzeEvent(ev);
+    const score = goldImpactScore(ev);
+    const bars = '🟡'.repeat(score) + '⚪'.repeat(3 - score);
+    const lines = [
+      `⚠️ ${ev.title}`,
+      `📅 ${eventTime(ev.date)}`,
+      ev.forecast ? `💰 Forecast: ${ev.forecast}` : null,
+      ev.previous ? `↩️ Previous: ${ev.previous}` : null,
+      ev.actual ? `✅ Actual: ${ev.actual}` : null,
+      `📊 Gold Impact: ${bars}`,
+    ].filter(Boolean);
+    const text = lines.join('\n');
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: ev.title, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        showToast(bi('کۆپی کرا', 'Copied to clipboard'));
+      }
+    } catch { /* user cancelled */ }
+  }, [bi, showToast, eventTime]);
+
+  // Sound alert: ding ~5 min before any red-dot (high-impact USD) event
+  useEffect(() => {
+    if (!open || !soundOn) return;
+    for (const e of visibleEvents) {
+      const imp = (e.impact || '').toLowerCase();
+      if (imp !== 'high' || e.country !== 'USD') continue;
+      const t = Date.parse(e.date);
+      if (Number.isNaN(t)) continue;
+      const mins = (t - now) / 60000;
+      const k = eventKey(e);
+      if (mins > 0 && mins <= 5 && !alertedRef.current.has(k)) {
+        alertedRef.current.add(k);
+        playDing();
+        showToast(bi(`⏰ ${e.title} لە ${Math.ceil(mins)} خولەکدا`, `⏰ ${e.title} in ${Math.ceil(mins)} min`));
+      }
+    }
+  }, [now, open, soundOn, visibleEvents, bi, showToast]);
+
 
   // Smooth scroll to today's group when calendar opens with data
   useEffect(() => {
@@ -348,12 +555,12 @@ export function MarketNewsModal({ open, onClose }: Props) {
     const isHigh = (ev.impact || '').toLowerCase() === 'high';
 
     // Card background tint: gold up => red, gold down => green
-    const cardBg = goldUp === true ? 'rgba(246,70,93,0.10)' : goldUp === false ? 'rgba(14,203,129,0.10)' : '#0d1117';
+    const cardBg = goldUp === true ? 'rgba(246,70,93,0.10)' : goldUp === false ? 'rgba(14,203,129,0.10)' : T.card;
     const cardBorder = pinned
       ? '#f6465d'
       : goldRel
         ? 'rgba(212,175,55,0.55)'
-        : '#1a1e2e';
+        : T.cardBorder;
 
     const goldNote = a.usdUp === true
       ? bi('زێڕ ↓ دادەبەزێت', 'Gold ↓ down')
@@ -362,13 +569,15 @@ export function MarketNewsModal({ open, onClose }: Props) {
         : bi('زێڕ ⟷ چاوەڕوان', 'Gold ⟷ wait');
 
     return (
-      <div
-        key={key}
-        className="flex items-center gap-2 rounded-lg px-3 py-2 border"
-        style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: goldRel || pinned ? 1.5 : 1 }}
-      >
-        <span className="text-lg shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
-        <div className="min-w-0 flex-1">
+      <SwipeCard key={key} onDismiss={pinned ? undefined : () => dismissEvent(eventKey(ev))} light={light}>
+        <div
+          className="flex items-center gap-2 rounded-lg px-3 py-2 border cursor-pointer select-none"
+          style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: goldRel || pinned ? 1.5 : 1 }}
+          onClick={() => shareEvent(ev)}
+          title={bi('کرتە بکە بۆ هاوبەشکردن', 'Tap to share')}
+        >
+          <span className="text-lg shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
+          <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: impactColor(ev.impact) }} />
             <span className="text-[11px] font-bold text-[#848e9c]">{ev.country}</span>
@@ -390,7 +599,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
             )}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-sm text-white truncate flex-1">{ev.title}</span>
+            <span className="text-sm truncate flex-1" style={{ color: T.text }}>{ev.title}</span>
             {goldUp === true && (
               <span className="inline-flex items-center gap-0.5 shrink-0 text-[9px] font-bold animate-flash-blink" style={{ color: C_UP }}>
                 <TrendingUp className="h-4 w-4" /> {bi('زێڕ', 'Gold')}
@@ -440,8 +649,9 @@ export function MarketNewsModal({ open, onClose }: Props) {
             </div>
           )}
           {ev.previous && <div className="text-[#848e9c]">{bi('پێشتر', 'Prev')}: {ev.previous}</div>}
+          </div>
         </div>
-      </div>
+      </SwipeCard>
     );
   };
 
@@ -457,14 +667,32 @@ export function MarketNewsModal({ open, onClose }: Props) {
           <SheetTitle className="flex items-center gap-2 text-white">
             <Newspaper className="h-5 w-5 text-[#f0b90b]" />
             {bi('هەواڵی بازاڕ', 'Market News')}
-            <button
-              onClick={load}
-              disabled={loading}
-              className="ms-auto p-1.5 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors disabled:opacity-50"
-              aria-label={bi('نوێکردنەوە', 'Refresh')}
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="ms-auto flex items-center gap-1">
+              <button
+                onClick={toggleSound}
+                className={`p-1.5 rounded-lg hover:bg-[#1a1e2e] transition-colors ${soundOn ? 'text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'}`}
+                aria-label={bi('ئاگادارکردنەوەی دەنگ', 'Sound alerts')}
+                title={soundOn ? bi('دەنگ چالاکە', 'Sound on') : bi('دەنگ ناچالاکە', 'Sound off')}
+              >
+                <Bell className="h-4 w-4" />
+              </button>
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
+                aria-label={bi('گۆڕینی ڕووکار', 'Toggle theme')}
+                title={light ? bi('دۆخی تاریک', 'Dark mode') : bi('دۆخی ڕووناک', 'Light mode')}
+              >
+                {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              </button>
+              <button
+                onClick={load}
+                disabled={loading}
+                className="p-1.5 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors disabled:opacity-50"
+                aria-label={bi('نوێکردنەوە', 'Refresh')}
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </SheetTitle>
         </SheetHeader>
 
@@ -492,15 +720,22 @@ export function MarketNewsModal({ open, onClose }: Props) {
 
         {/* Sticky summary header (calendar only) */}
         {tab === 'calendar' && (
-          <div className="px-4 py-2 border-b border-[#1a1e2e] shrink-0 bg-[#0d1117]">
+          <div className="px-4 py-2 border-b border-[#1a1e2e] shrink-0" style={{ backgroundColor: T.headBg }}>
             <div className="flex items-center justify-between gap-2">
-              <div className="text-xs font-bold text-white">{todayLabel}</div>
-              <div className="text-[10px] text-[#848e9c] flex items-center gap-1">
-                <RefreshCw className="h-3 w-3" />
-                {fromCache && lastUpdated ? bi('کاش: ', 'cached: ') : bi('نوێکراوە ', 'updated ')}{timeAgo(lastUpdated)}
+              <div className="text-xs font-bold" style={{ color: T.text }}>{todayLabel}</div>
+              <div className="flex items-center gap-2">
+                {dismissed.size > 0 && (
+                  <button onClick={restoreDismissed} className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#1a1e2e] text-[#f0b90b]">
+                    {bi(`گەڕاندنەوە (${dismissed.size})`, `Restore (${dismissed.size})`)}
+                  </button>
+                )}
+                <div className="text-[10px] flex items-center gap-1" style={{ color: T.sub }}>
+                  <RefreshCw className="h-3 w-3" />
+                  {fromCache && lastUpdated ? bi('کاش: ', 'cached: ') : bi('نوێکراوە ', 'updated ')}{timeAgo(lastUpdated)}
+                </div>
               </div>
             </div>
-            <div className="text-[11px] text-[#cfd3dc] mt-0.5">
+            <div className="text-[11px] mt-0.5" style={{ color: T.sub }}>
               {todayHighCount > 0
                 ? bi(`${todayHighCount} ڕووداوی کاریگەری بەرز ئەمڕۆ`, `${todayHighCount} high-impact event${todayHighCount > 1 ? 's' : ''} today`)
                 : bi('هیچ ڕووداوی کاریگەری بەرز نییە ئەمڕۆ', 'No high-impact events today')}
@@ -510,10 +745,25 @@ export function MarketNewsModal({ open, onClose }: Props) {
                 </span>
               )}
             </div>
+            {/* Currency filter tabs */}
+            <div className="flex gap-1 mt-2 overflow-x-auto no-scrollbar">
+              {CURRENCY_FILTERS.map((c) => (
+                <button
+                  key={c.code}
+                  onClick={() => setCurrency(c.code)}
+                  className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-full whitespace-nowrap transition-colors ${
+                    currency === c.code ? 'bg-[#f0b90b] text-black' : 'bg-[#1a1e2e] text-[#848e9c] hover:text-white'
+                  }`}
+                >
+                  <span>{c.flag}</span>
+                  {c.code === 'All' ? bi('هەموو', 'All') : c.code}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto" ref={scrollRef}>
+        <div className="flex-1 overflow-y-auto" ref={scrollRef} style={tab === 'calendar' ? { backgroundColor: T.bg } : undefined}>
           {loading && events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-[#848e9c] gap-2">
               <Loader2 className="h-6 w-6 animate-spin" />
@@ -607,6 +857,14 @@ export function MarketNewsModal({ open, onClose }: Props) {
             </div>
           )}
         </div>
+
+        {/* Toast (share / sound alert feedback) */}
+        {toast && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[#f0b90b] text-black text-xs font-bold shadow-lg flex items-center gap-1.5 animate-fade-in">
+            <Share2 className="h-3.5 w-3.5" />
+            {toast}
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
