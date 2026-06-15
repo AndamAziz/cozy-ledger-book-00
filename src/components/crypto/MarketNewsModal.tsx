@@ -763,7 +763,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto" ref={scrollRef}>
+        <div className="flex-1 overflow-y-auto" ref={scrollRef} style={tab === 'calendar' ? { backgroundColor: T.bg } : undefined}>
           {loading && events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-[#848e9c] gap-2">
               <Loader2 className="h-6 w-6 animate-spin" />
