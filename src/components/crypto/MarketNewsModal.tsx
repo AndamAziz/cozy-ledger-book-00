@@ -667,14 +667,32 @@ export function MarketNewsModal({ open, onClose }: Props) {
           <SheetTitle className="flex items-center gap-2 text-white">
             <Newspaper className="h-5 w-5 text-[#f0b90b]" />
             {bi('هەواڵی بازاڕ', 'Market News')}
-            <button
-              onClick={load}
-              disabled={loading}
-              className="ms-auto p-1.5 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors disabled:opacity-50"
-              aria-label={bi('نوێکردنەوە', 'Refresh')}
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="ms-auto flex items-center gap-1">
+              <button
+                onClick={toggleSound}
+                className={`p-1.5 rounded-lg hover:bg-[#1a1e2e] transition-colors ${soundOn ? 'text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'}`}
+                aria-label={bi('ئاگادارکردنەوەی دەنگ', 'Sound alerts')}
+                title={soundOn ? bi('دەنگ چالاکە', 'Sound on') : bi('دەنگ ناچالاکە', 'Sound off')}
+              >
+                <Bell className="h-4 w-4" />
+              </button>
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
+                aria-label={bi('گۆڕینی ڕووکار', 'Toggle theme')}
+                title={light ? bi('دۆخی تاریک', 'Dark mode') : bi('دۆخی ڕووناک', 'Light mode')}
+              >
+                {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              </button>
+              <button
+                onClick={load}
+                disabled={loading}
+                className="p-1.5 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors disabled:opacity-50"
+                aria-label={bi('نوێکردنەوە', 'Refresh')}
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </SheetTitle>
         </SheetHeader>
 
