@@ -495,12 +495,12 @@ export function MarketNewsModal({ open, onClose }: Props) {
     const isHigh = (ev.impact || '').toLowerCase() === 'high';
 
     // Card background tint: gold up => red, gold down => green
-    const cardBg = goldUp === true ? 'rgba(246,70,93,0.10)' : goldUp === false ? 'rgba(14,203,129,0.10)' : '#0d1117';
+    const cardBg = goldUp === true ? 'rgba(246,70,93,0.10)' : goldUp === false ? 'rgba(14,203,129,0.10)' : T.card;
     const cardBorder = pinned
       ? '#f6465d'
       : goldRel
         ? 'rgba(212,175,55,0.55)'
-        : '#1a1e2e';
+        : T.cardBorder;
 
     const goldNote = a.usdUp === true
       ? bi('زێڕ ↓ دادەبەزێت', 'Gold ↓ down')
