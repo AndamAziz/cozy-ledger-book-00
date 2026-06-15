@@ -589,8 +589,9 @@ export function MarketNewsModal({ open, onClose }: Props) {
             </div>
           )}
           {ev.previous && <div className="text-[#848e9c]">{bi('پێشتر', 'Prev')}: {ev.previous}</div>}
+          </div>
         </div>
-      </div>
+      </SwipeCard>
     );
   };
 
