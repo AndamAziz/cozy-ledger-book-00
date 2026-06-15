@@ -50,6 +50,44 @@ const GOLD_CURRENCIES = ['USD', 'CHF', 'GBP', 'JPY'];
 
 // localStorage cache
 const CACHE_KEY = 'marketNewsCache_v1';
+const DISMISS_KEY = 'marketNewsDismissed_v1';
+const THEME_KEY = 'marketNewsCalTheme_v1';
+const SOUND_KEY = 'marketNewsSound_v1';
+
+// Quick currency filter tabs (gold-relevant focus)
+const CURRENCY_FILTERS: { code: string; flag: string }[] = [
+  { code: 'All', flag: '🌐' },
+  { code: 'USD', flag: '🇺🇸' },
+  { code: 'GBP', flag: '🇬🇧' },
+  { code: 'JPY', flag: '🇯🇵' },
+  { code: 'CHF', flag: '🇨🇭' },
+];
+
+// A unique, stable key for an event (used for dismiss + share)
+function eventKey(ev: CalendarEvent): string {
+  return `${ev.country}|${ev.title}|${ev.date}`;
+}
+
+// Subtle "ding" using the Web Audio API (no asset needed)
+function playDing() {
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.6);
+    osc.onended = () => ctx.close();
+  } catch { /* ignore */ }
+}
 
 // Indicators where a HIGHER value means a WEAKER economy/USD (inverse logic)
 const INVERSE_KEYWORDS = ['unemployment', 'jobless', 'claims', 'misery', 'deficit', 'inventories'];
