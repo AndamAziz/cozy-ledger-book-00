@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { useBotDetail, useDemoBalance, useBotPerformance } from "@/hooks/useBots";
 import { BotPerformanceChart } from "@/components/bots/BotPerformanceChart";
 import { NotificationBell } from "@/components/bots/NotificationBell";
+import { LiveMonitorFeed } from "@/components/bots/LiveMonitorFeed";
 import { useBotPrices, callEngine } from "@/hooks/useBotPrices";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
@@ -261,6 +262,9 @@ export default function BotDetail() {
             </Button>
           </div>
         )}
+
+        {/* Live monitoring feed (active trade) */}
+        <LiveMonitorFeed logs={logs} active={!!openTrade} />
 
         {/* Result card */}
         {showResult && lastClosed && (
