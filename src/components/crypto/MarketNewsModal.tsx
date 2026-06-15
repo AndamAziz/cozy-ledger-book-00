@@ -720,15 +720,22 @@ export function MarketNewsModal({ open, onClose }: Props) {
 
         {/* Sticky summary header (calendar only) */}
         {tab === 'calendar' && (
-          <div className="px-4 py-2 border-b border-[#1a1e2e] shrink-0 bg-[#0d1117]">
+          <div className="px-4 py-2 border-b border-[#1a1e2e] shrink-0" style={{ backgroundColor: T.headBg }}>
             <div className="flex items-center justify-between gap-2">
-              <div className="text-xs font-bold text-white">{todayLabel}</div>
-              <div className="text-[10px] text-[#848e9c] flex items-center gap-1">
-                <RefreshCw className="h-3 w-3" />
-                {fromCache && lastUpdated ? bi('کاش: ', 'cached: ') : bi('نوێکراوە ', 'updated ')}{timeAgo(lastUpdated)}
+              <div className="text-xs font-bold" style={{ color: T.text }}>{todayLabel}</div>
+              <div className="flex items-center gap-2">
+                {dismissed.size > 0 && (
+                  <button onClick={restoreDismissed} className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#1a1e2e] text-[#f0b90b]">
+                    {bi(`گەڕاندنەوە (${dismissed.size})`, `Restore (${dismissed.size})`)}
+                  </button>
+                )}
+                <div className="text-[10px] flex items-center gap-1" style={{ color: T.sub }}>
+                  <RefreshCw className="h-3 w-3" />
+                  {fromCache && lastUpdated ? bi('کاش: ', 'cached: ') : bi('نوێکراوە ', 'updated ')}{timeAgo(lastUpdated)}
+                </div>
               </div>
             </div>
-            <div className="text-[11px] text-[#cfd3dc] mt-0.5">
+            <div className="text-[11px] mt-0.5" style={{ color: T.sub }}>
               {todayHighCount > 0
                 ? bi(`${todayHighCount} ڕووداوی کاریگەری بەرز ئەمڕۆ`, `${todayHighCount} high-impact event${todayHighCount > 1 ? 's' : ''} today`)
                 : bi('هیچ ڕووداوی کاریگەری بەرز نییە ئەمڕۆ', 'No high-impact events today')}
@@ -737,6 +744,21 @@ export function MarketNewsModal({ open, onClose }: Props) {
                   {' · '}{bi('دواتر:', 'next:')} {nextHighImpact.title.length > 16 ? nextHighImpact.title.slice(0, 16) + '…' : nextHighImpact.title} {bi('لە', 'in')} {fmtCountdown(Date.parse(nextHighImpact.date))}
                 </span>
               )}
+            </div>
+            {/* Currency filter tabs */}
+            <div className="flex gap-1 mt-2 overflow-x-auto no-scrollbar">
+              {CURRENCY_FILTERS.map((c) => (
+                <button
+                  key={c.code}
+                  onClick={() => setCurrency(c.code)}
+                  className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-full whitespace-nowrap transition-colors ${
+                    currency === c.code ? 'bg-[#f0b90b] text-black' : 'bg-[#1a1e2e] text-[#848e9c] hover:text-white'
+                  }`}
+                >
+                  <span>{c.flag}</span>
+                  {c.code === 'All' ? bi('هەموو', 'All') : c.code}
+                </button>
+              ))}
             </div>
           </div>
         )}
