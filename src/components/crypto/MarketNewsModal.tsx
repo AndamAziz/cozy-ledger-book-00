@@ -176,7 +176,7 @@ function isToday(iso: string): boolean {
 }
 
 // Swipe-left-to-dismiss wrapper for event cards
-function SwipeCard({ children, onDismiss, light }: { children: ReactNode; onDismiss?: () => void; light: boolean }) {
+function SwipeCard({ children, onDismiss }: { children: ReactNode; onDismiss?: () => void; light?: boolean }) {
   const [dx, setDx] = useState(0);
   const [animating, setAnimating] = useState(false);
   const startX = useRef<number | null>(null);
