@@ -94,12 +94,24 @@ async function fetchNews(): Promise<NewsItem[]> {
   return all.slice(0, 60);
 }
 
+async function fetchWithRetry(url: string, attempts = 3): Promise<unknown[]> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (r.ok) {
+        const j = await r.json();
+        if (Array.isArray(j)) return j;
+      }
+    } catch (e) {
+      console.error(`calendar fetch failed (attempt ${i + 1}) for ${url}:`, e);
+    }
+    if (i < attempts - 1) await new Promise((res) => setTimeout(res, 600 * (i + 1)));
+  }
+  return [];
+}
+
 async function fetchCalendar(): Promise<CalendarEvent[]> {
-  const results = await Promise.allSettled(
-    CALENDAR_URLS.map((u) =>
-      fetch(u, { headers: { "User-Agent": "Mozilla/5.0" } }).then((r) => (r.ok ? r.json() : [])),
-    ),
-  );
+  const results = await Promise.allSettled(CALENDAR_URLS.map((u) => fetchWithRetry(u)));
   let events: CalendarEvent[] = [];
   for (const r of results) {
     if (r.status === "fulfilled" && Array.isArray(r.value)) {

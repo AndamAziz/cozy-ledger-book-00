@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Newspaper, CalendarClock, Loader2, RefreshCw, ExternalLink, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Newspaper, CalendarClock, Loader2, RefreshCw, ExternalLink, AlertCircle, TrendingUp, TrendingDown, Pin, Clock } from 'lucide-react';
 
 interface CalendarEvent {
   title: string;
@@ -44,6 +44,12 @@ const CAT_LABEL: Record<string, { ku: string; en: string; color: string }> = {
 const C_UP = '#0ecb81';   // stronger USD => green
 const C_DOWN = '#f6465d';  // weaker USD => red
 const C_FLAT = '#f0b90b';  // undecided => orange
+
+// Currencies whose data moves gold the most
+const GOLD_CURRENCIES = ['USD', 'CHF', 'GBP', 'JPY'];
+
+// localStorage cache
+const CACHE_KEY = 'marketNewsCache_v1';
 
 // Indicators where a HIGHER value means a WEAKER economy/USD (inverse logic)
 const INVERSE_KEYWORDS = ['unemployment', 'jobless', 'claims', 'misery', 'deficit', 'inventories'];
@@ -90,6 +96,47 @@ function dirColor(usdUp: boolean | null): string {
   return usdUp === true ? C_UP : usdUp === false ? C_DOWN : C_FLAT;
 }
 
+// Predicted/actual gold direction for an event (true = gold up, false = gold down, null = wait)
+function goldDirection(ev: CalendarEvent, a: EventAnalysis): boolean | null {
+  if (a.usdUp !== null) return !a.usdUp; // weaker USD => gold up
+  const f = parseNum(ev.forecast);
+  const p = parseNum(ev.previous);
+  if (f !== null && p !== null && p !== 0 && f !== p) {
+    const inv = INVERSE_KEYWORDS.some((k) => ev.title.toLowerCase().includes(k));
+    const usdUp = inv ? f < p : f > p;
+    return !usdUp;
+  }
+  return null;
+}
+
+// Gold impact score: 1-3 bars
+function goldImpactScore(ev: CalendarEvent): number {
+  const imp = (ev.impact || '').toLowerCase();
+  const goldRel = GOLD_CURRENCIES.includes(ev.country);
+  if (imp === 'high' && ev.country === 'USD') return 3;
+  if (imp === 'high' && goldRel) return 2;
+  if (imp === 'high') return 1;
+  if (imp === 'medium' && goldRel) return 1;
+  return 1;
+}
+
+function isGoldRelevant(country: string): boolean {
+  return GOLD_CURRENCIES.includes(country);
+}
+
+function startOfToday(): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function isToday(iso: string): boolean {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return false;
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
+
 export function MarketNewsModal({ open, onClose }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
@@ -99,44 +146,115 @@ export function MarketNewsModal({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [fromCache, setFromCache] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const todayRef = useRef<HTMLDivElement | null>(null);
+  const didScroll = useRef(false);
+
+  // Live clock tick (1s) for countdowns
+  useEffect(() => {
+    if (!open) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [open]);
+
+  // Load cached data immediately on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const c = JSON.parse(raw) as { events: CalendarEvent[]; news: NewsItem[]; ts: number };
+        if (Array.isArray(c.events)) {
+          setEvents(c.events);
+          setNews(Array.isArray(c.news) ? c.news : []);
+          setLastUpdated(c.ts);
+          setFromCache(true);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-news`, {
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setEvents(Array.isArray(data.events) ? data.events : []);
-      setNews(Array.isArray(data.news) ? data.news : []);
-      setLoaded(true);
-    } catch (e) {
-      setError(bi('نەتوانرا هەواڵەکان بهێنرێن. دووبارە هەوڵبدەرەوە.', 'Could not load the news. Please try again.'));
-    } finally {
-      setLoading(false);
+    const MAX = 3;
+    for (let attempt = 1; attempt <= MAX; attempt++) {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-news`, {
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'x-retry-count': String(attempt),
+          },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const evs: CalendarEvent[] = Array.isArray(data.events) ? data.events : [];
+        const nws: NewsItem[] = Array.isArray(data.news) ? data.news : [];
+        // Only accept as fresh success if we actually got events; otherwise keep cache
+        if (evs.length > 0) {
+          setEvents(evs);
+          setNews(nws);
+          const ts = Date.now();
+          setLastUpdated(ts);
+          setFromCache(false);
+          setLoaded(true);
+          setError(null);
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ events: evs, news: nws, ts })); } catch { /* ignore */ }
+          setLoading(false);
+          return;
+        }
+        // Empty payload — keep retrying
+        if (attempt === MAX) {
+          setLoaded(true);
+          setLoading(false);
+          // fall back to whatever cache we already have; if none, show empty
+          return;
+        }
+      } catch {
+        if (attempt === MAX) {
+          setLoaded(true);
+          setLoading(false);
+          // If we have cached events, keep showing them; otherwise show error
+          const hasData = events.length > 0;
+          if (!hasData) {
+            setError(bi('نەتوانرا ڕووداوەکان بهێنرێن — کرتە بکە بۆ هەوڵدانەوە', 'Unable to load events - tap to retry'));
+          }
+          return;
+        }
+      }
+      // backoff before next attempt
+      await new Promise((r) => setTimeout(r, 800 * attempt));
     }
-  }, [bi]);
+  }, [bi, events.length]);
 
+  // Initial load + auto-refresh every 5 minutes while open
   useEffect(() => {
-    if (open && !loaded) load();
+    if (!open) return;
+    if (!loaded) load();
+    const id = setInterval(() => load(), 5 * 60 * 1000);
+    return () => clearInterval(id);
   }, [open, loaded, load]);
 
-  const timeAgo = (iso: string): string => {
+  const timeAgo = (ms: number | null): string => {
+    if (!ms) return '';
+    const diff = Date.now() - ms;
+    const m = Math.round(diff / 60000);
+    if (m < 1) return bi('ئێستا', 'just now');
+    if (m < 60) return bi(`${m} خولەک لەمەوبەر`, `${m}m ago`);
+    const h = Math.round(m / 60);
+    if (h < 24) return bi(`${h} کاتژمێر لەمەوبەر`, `${h}h ago`);
+    const d = Math.round(h / 24);
+    return bi(`${d} ڕۆژ لەمەوبەر`, `${d}d ago`);
+  };
+
+  const newsTimeAgo = (iso: string): string => {
     const t = Date.parse(iso);
     if (Number.isNaN(t)) return '';
-    const diff = Date.now() - t;
-    const m = Math.round(diff / 60000);
-    if (m < 1) return bi('ئێستا', 'now');
-    if (m < 60) return bi(`${m} خ`, `${m}m`);
-    const h = Math.round(m / 60);
-    if (h < 24) return bi(`${h} ک`, `${h}h`);
-    const d = Math.round(h / 24);
-    return bi(`${d} ڕ`, `${d}d`);
+    return timeAgo(t);
   };
 
   const eventTime = (iso: string): string => {
@@ -147,22 +265,187 @@ export function MarketNewsModal({ open, onClose }: Props) {
     });
   };
 
+  // Format a countdown like "2h 35m" / "45m" / "30s"
+  const fmtCountdown = (target: number): string => {
+    let diff = Math.max(0, target - now);
+    const d = Math.floor(diff / 86400000); diff -= d * 86400000;
+    const h = Math.floor(diff / 3600000); diff -= h * 3600000;
+    const m = Math.floor(diff / 60000); diff -= m * 60000;
+    const s = Math.floor(diff / 1000);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m`;
+    return `${s}s`;
+  };
+
+  // Filter to TODAY .. +7 days and sort chronologically
+  const visibleEvents = useMemo(() => {
+    const start = startOfToday();
+    const end = now + 7 * 86400000;
+    return events
+      .filter((e) => {
+        const t = Date.parse(e.date);
+        if (Number.isNaN(t)) return false;
+        return t >= start && t <= end;
+      })
+      .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+  }, [events, now]);
+
+  // Next upcoming high-impact event (any country)
+  const nextHighImpact = useMemo(() => {
+    return visibleEvents.find((e) => (e.impact || '').toLowerCase() === 'high' && Date.parse(e.date) > now) || null;
+  }, [visibleEvents, now]);
+
+  // Pinned: next high-impact USD (red dot) event
+  const pinnedEvent = useMemo(() => {
+    return visibleEvents.find((e) => (e.impact || '').toLowerCase() === 'high' && e.country === 'USD' && Date.parse(e.date) > now) || null;
+  }, [visibleEvents, now]);
+
+  const todayHighCount = useMemo(
+    () => visibleEvents.filter((e) => isToday(e.date) && (e.impact || '').toLowerCase() === 'high').length,
+    [visibleEvents],
+  );
+
   // Group events by day label
-  const grouped: { label: string; items: CalendarEvent[] }[] = [];
-  for (const ev of events) {
+  const grouped: { label: string; isToday: boolean; items: CalendarEvent[] }[] = [];
+  for (const ev of visibleEvents) {
     const d = new Date(ev.date);
     const label = Number.isNaN(d.getTime())
       ? '—'
       : d.toLocaleDateString(language === 'en' || language === 'tr' ? 'en-US' : 'en-GB', { weekday: 'long', month: 'short', day: 'numeric' });
     const last = grouped[grouped.length - 1];
     if (last && last.label === label) last.items.push(ev);
-    else grouped.push({ label, items: [ev] });
+    else grouped.push({ label, isToday: isToday(ev.date), items: [ev] });
   }
+
+  // Smooth scroll to today's group when calendar opens with data
+  useEffect(() => {
+    if (open && tab === 'calendar' && grouped.length > 0 && !didScroll.current) {
+      const t = setTimeout(() => {
+        todayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        didScroll.current = true;
+      }, 250);
+      return () => clearTimeout(t);
+    }
+    if (!open) didScroll.current = false;
+  }, [open, tab, grouped.length]);
 
   const impactColor = (imp: string) => {
     const i = imp.toLowerCase();
     return i === 'high' ? '#f6465d' : i === 'medium' ? '#f0b90b' : '#848e9c';
   };
+
+  const renderEventCard = (ev: CalendarEvent, key: string, pinned = false) => {
+    const a = analyzeEvent(ev);
+    const isUSD = ev.country === 'USD';
+    const col = dirColor(a.usdUp);
+    const pctStr = a.pct === null ? null : `${a.pct >= 0 ? '+' : ''}${a.pct.toFixed(1)}%`;
+    const goldUp = goldDirection(ev, a);
+    const score = goldImpactScore(ev);
+    const goldRel = isGoldRelevant(ev.country);
+    const t = Date.parse(ev.date);
+    const upcoming = !Number.isNaN(t) && t > now;
+    const isHigh = (ev.impact || '').toLowerCase() === 'high';
+
+    // Card background tint: gold up => red, gold down => green
+    const cardBg = goldUp === true ? 'rgba(246,70,93,0.10)' : goldUp === false ? 'rgba(14,203,129,0.10)' : '#0d1117';
+    const cardBorder = pinned
+      ? '#f6465d'
+      : goldRel
+        ? 'rgba(212,175,55,0.55)'
+        : '#1a1e2e';
+
+    const goldNote = a.usdUp === true
+      ? bi('زێڕ ↓ دادەبەزێت', 'Gold ↓ down')
+      : a.usdUp === false
+        ? bi('زێڕ ↑ بەرز دەبێتەوە', 'Gold ↑ up')
+        : bi('زێڕ ⟷ چاوەڕوان', 'Gold ⟷ wait');
+
+    return (
+      <div
+        key={key}
+        className="flex items-center gap-2 rounded-lg px-3 py-2 border"
+        style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: goldRel || pinned ? 1.5 : 1 }}
+      >
+        <span className="text-lg shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: impactColor(ev.impact) }} />
+            <span className="text-[11px] font-bold text-[#848e9c]">{ev.country}</span>
+            <span className="text-[10px] text-[#848e9c]">{eventTime(ev.date)}</span>
+            {/* Gold impact score bars */}
+            <span className="inline-flex items-center gap-0.5 shrink-0" title={bi('کاریگەری زێڕ', 'Gold impact')}>
+              {[1, 2, 3].map((n) => (
+                <span
+                  key={n}
+                  className="inline-block rounded-sm"
+                  style={{ width: 3, height: 9, backgroundColor: n <= score ? '#f0b90b' : '#2a2e3e' }}
+                />
+              ))}
+            </span>
+            {upcoming && isHigh && (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#f6465d]">
+                <Clock className="h-3 w-3" />{fmtCountdown(t)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-white truncate flex-1">{ev.title}</span>
+            {goldUp === true && (
+              <span className="inline-flex items-center gap-0.5 shrink-0 text-[9px] font-bold animate-flash-blink" style={{ color: C_UP }}>
+                <TrendingUp className="h-4 w-4" /> {bi('زێڕ', 'Gold')}
+              </span>
+            )}
+            {goldUp === false && (
+              <span className="inline-flex items-center gap-0.5 shrink-0 text-[9px] font-bold animate-flash-blink" style={{ color: C_DOWN }}>
+                <TrendingDown className="h-4 w-4" /> {bi('زێڕ', 'Gold')}
+              </span>
+            )}
+          </div>
+          {isUSD && a.hasResult && (
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              {pctStr && (
+                <span className="text-[10px] font-bold" style={{ color: col }}>
+                  {bi('گۆڕان', 'Δ')}: {pctStr}
+                </span>
+              )}
+              <span
+                className="text-[9px] font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+                style={{ color: col, backgroundColor: col + '1a' }}
+              >
+                {a.usdUp === true ? bi('دۆلار ↑', 'USD ↑') : a.usdUp === false ? bi('دۆلار ↓', 'USD ↓') : bi('دۆلار ⟷', 'USD ⟷')} · {goldNote}
+                {a.usdUp === false && (
+                  <TrendingUp className="h-3.5 w-3.5 animate-flash-blink" style={{ color: C_UP }} />
+                )}
+                {a.usdUp === true && (
+                  <TrendingDown className="h-3.5 w-3.5 animate-flash-blink" style={{ color: C_DOWN }} />
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="text-right shrink-0 text-[10px] leading-tight">
+          {ev.actual && <div className="font-bold" style={{ color: isUSD ? col : '#ffffff' }}>{bi('ئەنجام', 'Act')}: {ev.actual}</div>}
+          {ev.forecast && (
+            <div style={{ color: (() => {
+              const f = parseNum(ev.forecast);
+              const p = parseNum(ev.previous);
+              if (f === null || p === null || p === 0) return '#848e9c';
+              const up = f > p;
+              const inv = INVERSE_KEYWORDS.some((k) => ev.title.toLowerCase().includes(k));
+              const usdUp = inv ? !up : up;
+              return usdUp === true ? C_UP : usdUp === false ? C_DOWN : C_FLAT;
+            })() }}>
+              {bi('پێشبینی', 'Fcst')}: {ev.forecast}
+            </div>
+          )}
+          {ev.previous && <div className="text-[#848e9c]">{bi('پێشتر', 'Prev')}: {ev.previous}</div>}
+        </div>
+      </div>
+    );
+  };
+
+  const todayLabel = new Date().toLocaleDateString(language === 'en' || language === 'tr' ? 'en-US' : 'en-GB', { weekday: 'long', month: 'short', day: 'numeric' });
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -207,126 +490,82 @@ export function MarketNewsModal({ open, onClose }: Props) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {loading && !loaded ? (
+        {/* Sticky summary header (calendar only) */}
+        {tab === 'calendar' && (
+          <div className="px-4 py-2 border-b border-[#1a1e2e] shrink-0 bg-[#0d1117]">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs font-bold text-white">{todayLabel}</div>
+              <div className="text-[10px] text-[#848e9c] flex items-center gap-1">
+                <RefreshCw className="h-3 w-3" />
+                {fromCache && lastUpdated ? bi('کاش: ', 'cached: ') : bi('نوێکراوە ', 'updated ')}{timeAgo(lastUpdated)}
+              </div>
+            </div>
+            <div className="text-[11px] text-[#cfd3dc] mt-0.5">
+              {todayHighCount > 0
+                ? bi(`${todayHighCount} ڕووداوی کاریگەری بەرز ئەمڕۆ`, `${todayHighCount} high-impact event${todayHighCount > 1 ? 's' : ''} today`)
+                : bi('هیچ ڕووداوی کاریگەری بەرز نییە ئەمڕۆ', 'No high-impact events today')}
+              {nextHighImpact && (
+                <span className="text-[#f0b90b] font-bold">
+                  {' · '}{bi('دواتر:', 'next:')} {nextHighImpact.title.length > 16 ? nextHighImpact.title.slice(0, 16) + '…' : nextHighImpact.title} {bi('لە', 'in')} {fmtCountdown(Date.parse(nextHighImpact.date))}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto" ref={scrollRef}>
+          {loading && events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-[#848e9c] gap-2">
               <Loader2 className="h-6 w-6 animate-spin" />
-              <span className="text-sm">{bi('هێنانی هەواڵەکان...', 'Loading news...')}</span>
+              <span className="text-sm">{bi('هێنانی ڕووداوەکان...', 'Loading events...')}</span>
             </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-16 text-[#f6465d] gap-2 px-6 text-center">
+          ) : error && events.length === 0 ? (
+            <button onClick={load} className="flex flex-col items-center justify-center py-16 text-[#f6465d] gap-2 px-6 text-center w-full">
               <AlertCircle className="h-6 w-6" />
               <span className="text-sm">{error}</span>
-              <button onClick={load} className="mt-2 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-white">
+              <span className="mt-2 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#1a1e2e] text-white">
                 {bi('دووبارە هەوڵبدە', 'Retry')}
-              </button>
-            </div>
+              </span>
+            </button>
           ) : tab === 'calendar' ? (
             <div className="p-3 space-y-4">
-              <p className="text-[10px] text-[#848e9c] px-1">
-                {bi('ڕووداوە گرنگەکانی ئابووری (سەرچاوە: ForexFactory). کاریگەری زۆر = ', 'High-impact economic events (source: ForexFactory). High impact = ')}
-                <span className="text-[#f6465d] font-bold">🔴</span>
-              </p>
               <p className="text-[10px] px-1 leading-relaxed">
-                <span style={{ color: C_UP }} className="font-bold">{bi('سەوز = دۆلار بەرز (زێڕ دادەبەزێت)', 'Green = USD up (gold down)')}</span>
+                <span style={{ color: C_DOWN }} className="font-bold">{bi('سور = زێڕ بەرز (دۆلار نزم)', 'Red card = Gold up (USD down)')}</span>
                 {' · '}
-                <span style={{ color: C_DOWN }} className="font-bold">{bi('سور = دۆلار نزم (زێڕ بەرز)', 'Red = USD down (gold up)')}</span>
-                {' · '}
-                <span style={{ color: C_FLAT }} className="font-bold">{bi('پرتەقاڵی = نادیار', 'Orange = undecided')}</span>
+                <span style={{ color: C_UP }} className="font-bold">{bi('سەوز = زێڕ نزم (دۆلار بەرز)', 'Green card = Gold down (USD up)')}</span>
               </p>
+              <p className="text-[10px] text-[#848e9c] px-1 leading-relaxed">
+                <span className="text-[#d4af37] font-bold">{bi('سنووری زێڕین = دراوی پەیوەست بە زێڕ (USD/CHF/GBP/JPY)', 'Gold border = gold-relevant currency (USD/CHF/GBP/JPY)')}</span>
+                {' · '}
+                <span className="text-[#f0b90b]">🟡 {bi('= ئاستی کاریگەری زێڕ', '= gold impact score')}</span>
+              </p>
+
+              {/* Pinned high-impact USD event */}
+              {pinnedEvent && (
+                <div>
+                  <div className="text-[10px] font-bold text-[#f6465d] mb-1.5 px-1 flex items-center gap-1">
+                    <Pin className="h-3 w-3" />
+                    {bi('گرنگترین ڕووداو', 'Most important event')} · {bi('لە', 'in')} {fmtCountdown(Date.parse(pinnedEvent.date))}
+                  </div>
+                  {renderEventCard(pinnedEvent, 'pinned', true)}
+                </div>
+              )}
+
               {grouped.length === 0 ? (
-                <div className="text-center text-sm text-[#848e9c] py-10">{bi('هیچ ڕووداوێک نییە.', 'No events.')}</div>
+                <div className="text-center text-sm text-[#848e9c] py-10">
+                  {loading ? bi('هێنان...', 'Loading...') : bi('هیچ ڕووداوێک نییە بۆ ٧ ڕۆژی داهاتوو.', 'No events for the next 7 days.')}
+                </div>
               ) : grouped.map((g) => (
-                <div key={g.label}>
-                  <div className="text-xs font-bold text-[#f0b90b] mb-2 px-1">{g.label}</div>
+                <div key={g.label} ref={g.isToday ? todayRef : undefined}>
+                  <div
+                    className={`text-xs font-bold mb-2 px-2 py-1 rounded-lg flex items-center gap-2 ${g.isToday ? 'text-black' : 'text-[#f0b90b]'}`}
+                    style={g.isToday ? { background: 'linear-gradient(90deg,#f0b90b,#d4af37)', boxShadow: '0 0 12px rgba(240,185,11,0.5)' } : undefined}
+                  >
+                    {g.isToday && <span className="text-[10px] uppercase tracking-wide">{bi('ئەمڕۆ', 'Today')}</span>}
+                    {g.label}
+                  </div>
                   <div className="space-y-1.5">
-                    {g.items.map((ev, i) => {
-                      const a = analyzeEvent(ev);
-                      const isUSD = ev.country === 'USD';
-                      const col = dirColor(a.usdUp);
-                      const pctStr = a.pct === null ? null : `${a.pct >= 0 ? '+' : ''}${a.pct.toFixed(1)}%`;
-                      // Gold direction: use actual result if published, otherwise the forecast vs previous expectation.
-                      let goldUp: boolean | null = null;
-                      if (a.usdUp !== null) {
-                        goldUp = !a.usdUp; // weaker USD => gold up
-                      } else {
-                        const f = parseNum(ev.forecast);
-                        const p = parseNum(ev.previous);
-                        if (f !== null && p !== null && p !== 0 && f !== p) {
-                          const inv = INVERSE_KEYWORDS.some((k) => ev.title.toLowerCase().includes(k));
-                          const usdUp = inv ? f < p : f > p;
-                          goldUp = !usdUp;
-                        }
-                      }
-                      const goldNote = a.usdUp === true
-                        ? bi('زێڕ ↓ دادەبەزێت', 'Gold ↓ down')
-                        : a.usdUp === false
-                          ? bi('زێڕ ↑ بەرز دەبێتەوە', 'Gold ↑ up')
-                          : bi('زێڕ ⟷ چاوەڕوان', 'Gold ⟷ wait');
-                      return (
-                      <div key={`${ev.title}-${i}`} className="flex items-center gap-2 bg-[#0d1117] border border-[#1a1e2e] rounded-lg px-3 py-2">
-                        <span className="text-lg shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: impactColor(ev.impact) }} />
-                            <span className="text-[11px] font-bold text-[#848e9c]">{ev.country}</span>
-                            <span className="text-[10px] text-[#848e9c]">{eventTime(ev.date)}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm text-white truncate flex-1">{ev.title}</span>
-                            {goldUp === true && (
-                              <span className="inline-flex items-center gap-0.5 shrink-0 text-[9px] font-bold animate-flash-blink" style={{ color: C_UP }}>
-                                <TrendingUp className="h-4 w-4" /> {bi('زێڕ', 'Gold')}
-                              </span>
-                            )}
-                            {goldUp === false && (
-                              <span className="inline-flex items-center gap-0.5 shrink-0 text-[9px] font-bold animate-flash-blink" style={{ color: C_DOWN }}>
-                                <TrendingDown className="h-4 w-4" /> {bi('زێڕ', 'Gold')}
-                              </span>
-                            )}
-                          </div>
-                          {isUSD && a.hasResult && (
-                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                              {pctStr && (
-                                <span className="text-[10px] font-bold" style={{ color: col }}>
-                                  {bi('گۆڕان', 'Δ')}: {pctStr}
-                                </span>
-                              )}
-                              <span
-                                className="text-[9px] font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1"
-                                style={{ color: col, backgroundColor: col + '1a' }}
-                              >
-                                {a.usdUp === true ? bi('دۆلار ↑', 'USD ↑') : a.usdUp === false ? bi('دۆلار ↓', 'USD ↓') : bi('دۆلار ⟷', 'USD ⟷')} · {goldNote}
-                                {a.usdUp === false && (
-                                  <TrendingUp className="h-3.5 w-3.5 animate-flash-blink" style={{ color: C_UP }} />
-                                )}
-                                {a.usdUp === true && (
-                                  <TrendingDown className="h-3.5 w-3.5 animate-flash-blink" style={{ color: C_DOWN }} />
-                                )}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0 text-[10px] leading-tight">
-                          {ev.actual && <div className="font-bold" style={{ color: isUSD ? col : '#ffffff' }}>{bi('ئەنجام', 'Act')}: {ev.actual}</div>}
-                          {ev.forecast && (
-                            <div style={{ color: (() => {
-                              const f = parseNum(ev.forecast);
-                              const p = parseNum(ev.previous);
-                              if (f === null || p === null || p === 0) return '#848e9c';
-                              const up = f > p;
-                              const inv = INVERSE_KEYWORDS.some((k) => ev.title.toLowerCase().includes(k));
-                              const usdUp = inv ? !up : up;
-                              return usdUp === true ? C_UP : usdUp === false ? C_DOWN : C_FLAT;
-                            })() }}>
-                              {bi('پێشبینی', 'Fcst')}: {ev.forecast}
-                            </div>
-                          )}
-                          {ev.previous && <div className="text-[#848e9c]">{bi('پێشتر', 'Prev')}: {ev.previous}</div>}
-                        </div>
-                      </div>
-                      );
-                    })}
+                    {g.items.map((ev, i) => renderEventCard(ev, `${ev.title}-${ev.date}-${i}`))}
                   </div>
                 </div>
               ))}
@@ -356,7 +595,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
                       )}
                       <span className="text-[10px] text-[#848e9c]">{n.source}</span>
                       <span className="text-[10px] text-[#848e9c] ms-auto flex items-center gap-1">
-                        {timeAgo(n.pubDate)}
+                        {newsTimeAgo(n.pubDate)}
                         <ExternalLink className="h-3 w-3" />
                       </span>
                     </div>
