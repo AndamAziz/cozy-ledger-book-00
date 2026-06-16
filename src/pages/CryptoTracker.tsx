@@ -464,14 +464,19 @@ export default function CryptoTracker() {
                     <span className="hidden sm:inline">{bi('پرۆ', 'Pro')}</span>
                   </button>
                 </div>
-                {forexView === 'pro' && (
-                  <span className="ms-2 text-[11px] text-[#848e9c] shrink-0">
-                    {(() => {
-                      const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
-                      return c ? `${c.flag} USD/${c.code}` : '';
-                    })()}
-                  </span>
-                )}
+                {(() => {
+                  const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
+                  if (!c) return null;
+                  return (
+                    <span className="ms-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] leading-none backdrop-blur-sm shrink-0">
+                      <span className="font-bold text-[#2962ff]">{c.code}</span>
+                      <span className="font-semibold tabular-nums text-white">{c.rate >= 1000 ? c.rate.toLocaleString(undefined, { maximumFractionDigits: 2 }) : c.rate.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
+                      <span className={c.change >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>
+                        {c.change >= 0 ? '▲' : '▼'}{Math.abs(c.change).toFixed(2)}%
+                      </span>
+                    </span>
+                  );
+                })()}
               </div>
 
               {forexView === 'pro' ? (
