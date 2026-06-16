@@ -543,6 +543,19 @@ export default function CryptoTracker() {
                     <span className="hidden sm:inline">{bi('پرۆ', 'Pro')}</span>
                   </button>
                 </div>
+                {selectedMetalCode && (() => {
+                  const m = metals.find(x => x.code === selectedMetalCode);
+                  if (!m) return null;
+                  return (
+                    <span className="ms-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] leading-none backdrop-blur-sm shrink-0">
+                      <span className="font-bold text-[#d4af37]">{m.code}</span>
+                      <span className="font-semibold tabular-nums text-white">${m.price >= 1000 ? m.price.toLocaleString(undefined, { maximumFractionDigits: 1 }) : m.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                      <span className={m.change >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>
+                        {m.change >= 0 ? '▲' : '▼'}{Math.abs(m.change).toFixed(2)}%
+                      </span>
+                    </span>
+                  );
+                })()}
               </div>
 
               {selectedMetalCode === null ? (
