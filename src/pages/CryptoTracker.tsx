@@ -244,6 +244,14 @@ export default function CryptoTracker() {
           </button>
 
           <button
+            onClick={() => setShowVerify(true)}
+            className="shrink-0 flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-2.5 py-2 sm:py-1.5 text-xs sm:text-xs font-bold bg-gradient-to-r from-[#2962ff]/20 to-[#2962ff]/5 border border-[#2962ff]/40 hover:border-[#2962ff]/70 rounded-lg transition-colors text-[#2962ff] min-h-[40px] min-w-[40px]"
+          >
+            <Scale className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">{bi('پشکنین', 'Verify')}</span>
+          </button>
+
+          <button
             onClick={() => navigate('/bots')}
             className="shrink-0 flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-2.5 py-2 sm:py-1.5 text-xs sm:text-xs font-bold bg-gradient-to-r from-[#d4af37]/20 to-[#d4af37]/5 border border-[#d4af37]/40 hover:border-[#d4af37]/70 rounded-lg transition-colors text-[#d4af37] min-h-[40px] min-w-[40px]"
           >
