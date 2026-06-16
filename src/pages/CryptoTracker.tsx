@@ -378,6 +378,15 @@ export default function CryptoTracker() {
                     <span className="hidden sm:inline">{bi('پرۆ', 'Pro')}</span>
                   </button>
                 </div>
+                <div className="ms-auto">
+                  <LivePriceBadge
+                    label={getDisplaySymbol(getSymbolFromPair(selectedPair))}
+                    price={currentPrice}
+                    change={currentCoin?.change24h ?? 0}
+                    decimals={0}
+                    accentColor="#f0b90b"
+                  />
+                </div>
               </div>
 
 
