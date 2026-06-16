@@ -41,7 +41,7 @@ export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, o
 
   const mainItems: MainItem[] = [
     { key: 'home', icon: Home, label: bi('ماڵەوە', 'Home'), active: false, onPress: onHome },
-    { key: 'news', icon: Newspaper, label: bi('هەواڵ', 'News'), active: false, onPress: onNews },
+    { key: 'bot', icon: Bot, label: bi('بۆت', 'Bot'), active: false, onPress: onBot },
     { key: 'charts', icon: CandlestickChart, label: bi('چارت', 'Charts'), active: activeTab === 'crypto', onPress: () => onTab('crypto') },
     { key: 'gold', icon: Coins, label: bi('زێڕ', 'Gold'), active: activeTab === 'metals', onPress: () => onTab('metals') },
     { key: 'ai', icon: Brain, label: bi('شیکاری', 'AI'), active: activeTab === 'ai', onPress: () => onTab('ai') },
