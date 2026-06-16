@@ -170,11 +170,6 @@ function dayStamp(d: Date): number {
 }
 
 
-function startOfToday(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
 
 function isToday(iso: string): boolean {
   const d = new Date(iso);
