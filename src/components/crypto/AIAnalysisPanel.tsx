@@ -398,21 +398,34 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
             {lastUpdated && ` · ${bi('نوێکرایەوە', 'updated')} ${Math.max(0, Math.round((Date.now() - lastUpdated) / 1000))}s`}
           </p>
         </div>
-        <button
-          onClick={runAnalysis}
-          disabled={loading}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1a1e2e] hover:bg-[#252a3a] text-xs font-bold text-[#f0b90b] disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          {bi('نوێکردنەوە', 'Refresh')}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setDebug((d) => !d)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold"
+            style={{
+              backgroundColor: debug ? '#0ecb8122' : '#1a1e2e',
+              color: debug ? '#0ecb81' : '#848e9c',
+            }}
+          >
+            <Bug className="h-3.5 w-3.5" />
+            {bi('دیباگ', 'Debug')}
+          </button>
+          <button
+            onClick={runAnalysis}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1a1e2e] hover:bg-[#252a3a] text-xs font-bold text-[#f0b90b] disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {bi('نوێکردنەوە', 'Refresh')}
+          </button>
+        </div>
       </div>
 
       <SessionsBlock sessions={sessions} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={gold} bi={bi} />
-        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btc} bi={bi} />
+        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={gold} bi={bi} debug={debug} />
+        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btc} bi={bi} debug={debug} />
       </div>
     </div>
   );
