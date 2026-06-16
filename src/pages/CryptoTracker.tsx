@@ -29,7 +29,7 @@ import { AIAnalysisPanel } from '@/components/crypto/AIAnalysisPanel';
 import { SignalsPanel } from '@/components/crypto/SignalsPanel';
 import { IndicatorVerify } from '@/components/crypto/IndicatorVerify';
 import { BottomNav } from '@/components/crypto/BottomNav';
-import { LivePriceBadge } from '@/components/crypto/LivePriceBadge';
+
 
 type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
 type CryptoView = 'overview' | 'chart' | 'analysis' | 'pro';
