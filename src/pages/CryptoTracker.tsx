@@ -379,14 +379,9 @@ export default function CryptoTracker() {
                   </button>
                 </div>
                 {currentPrice > 0 && (
-                  <span className="ms-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] leading-none backdrop-blur-sm">
+                  <span className="ms-1.5 flex items-center gap-1 rounded bg-black/50 px-1 py-[1px] text-[9px] leading-none whitespace-nowrap">
                     <span className="font-bold text-[#f0b90b]">{getDisplaySymbol(getSymbolFromPair(selectedPair))}</span>
-                    <span className="font-semibold tabular-nums text-white">${currentPrice >= 1000 ? currentPrice.toLocaleString(undefined, { maximumFractionDigits: 1 }) : currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                    {currentCoin && (
-                      <span className={currentCoin.change24h >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>
-                        {currentCoin.change24h >= 0 ? '▲' : '▼'}{Math.abs(currentCoin.change24h).toFixed(2)}%
-                      </span>
-                    )}
+                    <span className="font-medium tabular-nums text-white">${currentPrice >= 1000 ? currentPrice.toLocaleString(undefined, { maximumFractionDigits: 1 }) : currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </span>
                 )}
               </div>
@@ -468,12 +463,9 @@ export default function CryptoTracker() {
                   const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
                   if (!c) return null;
                   return (
-                    <span className="ms-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] leading-none backdrop-blur-sm shrink-0">
+                    <span className="ms-1.5 flex items-center gap-1 rounded bg-black/50 px-1 py-[1px] text-[9px] leading-none whitespace-nowrap shrink-0">
                       <span className="font-bold text-[#2962ff]">{c.code}</span>
-                      <span className="font-semibold tabular-nums text-white">{c.rate >= 1000 ? c.rate.toLocaleString(undefined, { maximumFractionDigits: 2 }) : c.rate.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
-                      <span className={c.change >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>
-                        {c.change >= 0 ? '▲' : '▼'}{Math.abs(c.change).toFixed(2)}%
-                      </span>
+                      <span className="font-medium tabular-nums text-white">{c.rate >= 1000 ? c.rate.toLocaleString(undefined, { maximumFractionDigits: 2 }) : c.rate.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
                     </span>
                   );
                 })()}
@@ -547,12 +539,9 @@ export default function CryptoTracker() {
                   const m = metals.find(x => x.code === selectedMetalCode);
                   if (!m) return null;
                   return (
-                    <span className="ms-2 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] leading-none backdrop-blur-sm shrink-0">
+                    <span className="ms-1.5 flex items-center gap-1 rounded bg-black/50 px-1 py-[1px] text-[9px] leading-none whitespace-nowrap shrink-0">
                       <span className="font-bold text-[#d4af37]">{m.code}</span>
-                      <span className="font-semibold tabular-nums text-white">${m.price >= 1000 ? m.price.toLocaleString(undefined, { maximumFractionDigits: 1 }) : m.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                      <span className={m.change >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>
-                        {m.change >= 0 ? '▲' : '▼'}{Math.abs(m.change).toFixed(2)}%
-                      </span>
+                      <span className="font-medium tabular-nums text-white">${m.price >= 1000 ? m.price.toLocaleString(undefined, { maximumFractionDigits: 1 }) : m.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                     </span>
                   );
                 })()}
