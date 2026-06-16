@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const [dxy, sentiment] = await Promise.all([fetchDxy(), fetchFearGreed()]);
+    const [dxy, sentiment, spx] = await Promise.all([fetchDxy(), fetchFearGreed(), fetchSpx()]);
 
     // Gold moves inverse to the dollar.
     let goldBias: "bullish" | "bearish" | "neutral" = "neutral";
@@ -146,6 +146,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         dxy,
         sentiment,
+        spx,
         goldBias,
         generatedAt: new Date().toISOString(),
       }),
