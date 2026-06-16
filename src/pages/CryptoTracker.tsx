@@ -599,6 +599,7 @@ export default function CryptoTracker() {
       )}
 
       <MarketNewsModal open={showNews} onClose={() => setShowNews(false)} />
+      {showVerify && <IndicatorVerify onClose={() => setShowVerify(false)} />}
     </DemoAccountProvider>
 
   );
