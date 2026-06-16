@@ -467,45 +467,44 @@ export default function CryptoTracker() {
                     })()}
                   </span>
                 )}
-                <div className="ms-auto">
-                  {(() => {
-                    const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
-                    if (!c) return null;
-                    return (
-                      <LivePriceBadge
-                        label={`USD/${c.code}`}
-                        price={c.rate}
-                        change={c.change}
-                        decimals={4}
-                        prefix=""
-                        accentColor="#2962ff"
-                      />
-                    );
-                  })()}
-                </div>
               </div>
 
-              {forexView === 'pro' ? (
-                (() => {
+              <div className="relative flex-1 flex flex-col overflow-hidden">
+                {(() => {
                   const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
-                  if (!c) {
-                    return (
-                      <div className="flex-1 flex items-center justify-center text-sm text-[#848e9c]">
-                        {bi('دراوێک هەڵبژێرە', 'Select a currency')}
-                      </div>
-                    );
-                  }
+                  if (!c) return null;
                   return (
-                    <ForexProPanel key={c.code} code={c.code} name={c.name} flag={c.flag} rate={c.rate} />
+                    <LivePriceBadge
+                      label={`USD/${c.code}`}
+                      price={c.rate}
+                      decimals={4}
+                      prefix=""
+                      accentColor="#2962ff"
+                    />
                   );
-                })()
-              ) : (
-                <ForexDetail
-                  currencies={forexCurrencies}
-                  selectedCode={selectedForexCode}
-                  isLoading={forexLoading}
-                />
-              )}
+                })()}
+                {forexView === 'pro' ? (
+                  (() => {
+                    const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
+                    if (!c) {
+                      return (
+                        <div className="flex-1 flex items-center justify-center text-sm text-[#848e9c]">
+                          {bi('دراوێک هەڵبژێرە', 'Select a currency')}
+                        </div>
+                      );
+                    }
+                    return (
+                      <ForexProPanel key={c.code} code={c.code} name={c.name} flag={c.flag} rate={c.rate} />
+                    );
+                  })()
+                ) : (
+                  <ForexDetail
+                    currencies={forexCurrencies}
+                    selectedCode={selectedForexCode}
+                    isLoading={forexLoading}
+                  />
+                )}
+              </div>
             </div>
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden">
