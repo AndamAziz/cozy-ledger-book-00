@@ -657,8 +657,8 @@ export function MarketNewsModal({ open, onClose }: Props) {
         <div
           className="flex items-center gap-2 rounded-lg px-3 py-2 border cursor-pointer select-none"
           style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: goldRel || pinned ? 1.5 : 1 }}
-          onClick={() => shareEvent(ev)}
-          title={bi('کرتە بکە بۆ هاوبەشکردن', 'Tap to share')}
+          onClick={() => setDetailEvent(ev)}
+          title={bi('کرتە بکە بۆ وردەکاری', 'Tap for details')}
         >
           <span className="text-lg shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
           <div className="min-w-0 flex-1">
