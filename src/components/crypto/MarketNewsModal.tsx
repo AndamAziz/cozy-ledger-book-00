@@ -279,6 +279,16 @@ export function MarketNewsModal({ open, onClose }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const alertedRef = useRef<Set<string>>(new Set());
 
+  // Event detail popup + reminders
+  const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
+  const [reminders, setReminders] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(REMIND_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch { return new Set<string>(); }
+  });
+  const reminderTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   const dismissEvent = useCallback((key: string) => {
     setDismissed((prev) => {
       const next = new Set(prev);
