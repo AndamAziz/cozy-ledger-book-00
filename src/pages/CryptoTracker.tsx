@@ -544,39 +544,25 @@ export default function CryptoTracker() {
                 </div>
               </div>
 
-              <div className="relative flex-1 flex flex-col overflow-hidden">
-                {selectedMetalCode !== null && (() => {
-                  const m = metals.find(x => x.code === selectedMetalCode);
-                  if (!m) return null;
-                  return (
-                    <LivePriceBadge
-                      label={selectedMetalCode}
-                      price={m.price}
-                      decimals={m.price >= 1000 ? 1 : 2}
-                      accentColor={m.category === 'oil' ? '#e67e22' : '#d4af37'}
-                    />
-                  );
-                })()}
-                {selectedMetalCode === null ? (
-                  <AssetOverview
-                    title={bi('پوختەی کاڵاکان', 'Commodities Overview')}
-                    subtitle={bi('نرخ، گۆڕان و سیگناڵی کڕین/فرۆشتن', 'Price, change & Buy/Sell signals')}
-                    entries={metalsEntries}
-                    isLoading={metalsOverview.isLoading}
-                    onOpen={(code, mode) => {
-                      setMetalsView(mode === 'analysis' ? 'analysis' : 'market');
-                      setSelectedMetalCode(code);
-                    }}
-                  />
-                ) : (
-                  <MetalsDetail
-                    metals={metals}
-                    selectedCode={selectedMetalCode}
-                    isLoading={metalsLoading}
-                    view={metalsView === 'overview' ? 'market' : metalsView}
-                  />
-                )}
-              </div>
+              {selectedMetalCode === null ? (
+                <AssetOverview
+                  title={bi('پوختەی کاڵاکان', 'Commodities Overview')}
+                  subtitle={bi('نرخ، گۆڕان و سیگناڵی کڕین/فرۆشتن', 'Price, change & Buy/Sell signals')}
+                  entries={metalsEntries}
+                  isLoading={metalsOverview.isLoading}
+                  onOpen={(code, mode) => {
+                    setMetalsView(mode === 'analysis' ? 'analysis' : 'market');
+                    setSelectedMetalCode(code);
+                  }}
+                />
+              ) : (
+                <MetalsDetail
+                  metals={metals}
+                  selectedCode={selectedMetalCode}
+                  isLoading={metalsLoading}
+                  view={metalsView === 'overview' ? 'market' : metalsView}
+                />
+              )}
             </div>
           )}
         </div>
