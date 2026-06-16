@@ -131,8 +131,11 @@ export function calculateBollinger(
   return { upper, middle, lower, percentB };
 }
 
-export function computeIndicators(candles: OHLCCandle[], settings: IndicatorSettings = STANDARD_INDICATOR_SETTINGS): IndicatorResult {
+export function computeIndicators(candles: OHLCCandle[], settings?: IndicatorSettings): IndicatorResult {
   const closes = candles.map((c) => c.close);
+  // When no explicit settings are passed, adapt to the available candle count
+  // so RSI/MACD compute reliably across every asset and chart range.
+  const cfg = settings ?? bestIndicatorSettings(candles.length);
   return {
     rsi: calculateRSI(closes, settings.rsiPeriod),
     macd: calculateMACD(closes, settings.macdFast, settings.macdSlow, settings.macdSignal),
