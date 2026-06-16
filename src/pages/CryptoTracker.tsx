@@ -308,10 +308,30 @@ export default function CryptoTracker() {
           {/* Main content */}
           {activeTab === 'ai' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <AIAnalysisPanel
-                btcPrice={coinsMap.get('XBT/USD')?.price ?? 0}
-                goldPrice={metals.find((m) => m.code === 'XAU')?.price ?? 0}
-              />
+              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
+                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setAiView('signals')}
+                    className={`px-3 py-1.5 text-xs font-bold transition-colors ${aiView === 'signals' ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c]'}`}
+                  >
+                    {bi('سیگناڵەکان', 'Signals')}
+                  </button>
+                  <button
+                    onClick={() => setAiView('confluence')}
+                    className={`px-3 py-1.5 text-xs font-bold transition-colors ${aiView === 'confluence' ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c]'}`}
+                  >
+                    {bi('هاوئاهەنگی', 'Confluence')}
+                  </button>
+                </div>
+              </div>
+              {aiView === 'signals' ? (
+                <SignalsPanel />
+              ) : (
+                <AIAnalysisPanel
+                  btcPrice={coinsMap.get('XBT/USD')?.price ?? 0}
+                  goldPrice={metals.find((m) => m.code === 'XAU')?.price ?? 0}
+                />
+              )}
             </div>
           ) : activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
