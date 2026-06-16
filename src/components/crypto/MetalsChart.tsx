@@ -230,6 +230,12 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       seriesRef.current = null;
       priceLineRef.current = null;
       maSeriesRefs.current = {};
+      // Indicator series belonged to the now-disposed chart. Drop the refs so the
+      // live-update effect doesn't call setData on disposed objects.
+      rsiSeriesRef.current = null;
+      macdHistRef.current = null;
+      macdLineRef.current = null;
+      macdSignalRef.current = null;
     }
 
     const rect = container.getBoundingClientRect();
@@ -437,6 +443,10 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       seriesRef.current = null;
       priceLineRef.current = null;
       maSeriesRefs.current = {};
+      rsiSeriesRef.current = null;
+      macdHistRef.current = null;
+      macdLineRef.current = null;
+      macdSignalRef.current = null;
       if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     };
   }, [chartType, range, isUp, activeMAs, maType, language]);
@@ -722,17 +732,21 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
   // Live-update the indicator pane data as new candles arrive.
   useEffect(() => {
     if (!candles.length) return;
-    if (rsiSeriesRef.current) {
-      rsiSeriesRef.current.setData(rsiSeries(ohlcForIndicators, STANDARD_INDICATOR_SETTINGS.rsiPeriod).map((d) => ({ time: d.time as Time, value: d.value })));
-    }
-    if (macdHistRef.current && macdLineRef.current && macdSignalRef.current) {
-      const data = macdSeries(ohlcForIndicators, STANDARD_INDICATOR_SETTINGS.macdFast, STANDARD_INDICATOR_SETTINGS.macdSlow, STANDARD_INDICATOR_SETTINGS.macdSignal);
-      macdHistRef.current.setData(data.histogram.map((d) => ({
-        time: d.time as Time, value: d.value,
-        color: d.value >= 0 ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)',
-      })));
-      macdLineRef.current.setData(data.macd.map((d) => ({ time: d.time as Time, value: d.value })));
-      macdSignalRef.current.setData(data.signal.map((d) => ({ time: d.time as Time, value: d.value })));
+    try {
+      if (rsiSeriesRef.current) {
+        rsiSeriesRef.current.setData(rsiSeries(ohlcForIndicators, STANDARD_INDICATOR_SETTINGS.rsiPeriod).map((d) => ({ time: d.time as Time, value: d.value })));
+      }
+      if (macdHistRef.current && macdLineRef.current && macdSignalRef.current) {
+        const data = macdSeries(ohlcForIndicators, STANDARD_INDICATOR_SETTINGS.macdFast, STANDARD_INDICATOR_SETTINGS.macdSlow, STANDARD_INDICATOR_SETTINGS.macdSignal);
+        macdHistRef.current.setData(data.histogram.map((d) => ({
+          time: d.time as Time, value: d.value,
+          color: d.value >= 0 ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)',
+        })));
+        macdLineRef.current.setData(data.macd.map((d) => ({ time: d.time as Time, value: d.value })));
+        macdSignalRef.current.setData(data.signal.map((d) => ({ time: d.time as Time, value: d.value })));
+      }
+    } catch {
+      /* series may belong to a chart that is mid-recreation; ignore */
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candles]);

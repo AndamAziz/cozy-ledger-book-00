@@ -48,7 +48,7 @@ export default function CryptoTracker() {
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [forexView, setForexView] = useState<ForexView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
-  const [interval, setInterval] = useState(60);
+  const [interval, setInterval] = useState(15);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showConverter, setShowConverter] = useState(false);
   const [showNews, setShowNews] = useState(false);
