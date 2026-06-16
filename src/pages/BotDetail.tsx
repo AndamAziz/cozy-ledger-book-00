@@ -8,6 +8,7 @@ import { LiveMonitorFeed } from "@/components/bots/LiveMonitorFeed";
 import { useBotPrices, callEngine } from "@/hooks/useBotPrices";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
+import { goToGold } from "@/lib/botNav";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
