@@ -52,7 +52,7 @@ export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, o
     { key: 'bitcoin', icon: Bitcoin, label: bi('بیتکۆین', 'Bitcoin'), color: '#f0b90b', onPress: () => onTab('crypto') },
     { key: 'forex', icon: DollarSign, label: bi('دراو', 'Forex'), color: '#2962ff', onPress: () => onTab('forex') },
     { key: 'verify', icon: Scale, label: bi('پشکنین', 'Verify'), color: '#22c55e', onPress: onVerify },
-    { key: 'bot', icon: Bot, label: bi('بۆت', 'Bot'), color: '#a855f7', onPress: onBot },
+    { key: 'news', icon: Newspaper, label: bi('هەواڵ', 'News'), color: '#f0b90b', onPress: onNews },
     { key: 'convert', icon: ArrowRightLeft, label: bi('گۆڕین', 'Convert'), color: '#f0b90b', onPress: onConvert },
   ];
 
