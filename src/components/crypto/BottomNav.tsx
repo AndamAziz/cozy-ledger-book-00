@@ -41,7 +41,7 @@ export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, o
 
   const mainItems: MainItem[] = [
     { key: 'home', icon: Home, label: bi('ماڵەوە', 'Home'), active: false, onPress: onHome },
-    { key: 'news', icon: Newspaper, label: bi('هەواڵ', 'News'), active: false, onPress: onNews },
+    { key: 'bot', icon: Bot, label: bi('بۆت', 'Bot'), active: false, onPress: onBot },
     { key: 'charts', icon: CandlestickChart, label: bi('چارت', 'Charts'), active: activeTab === 'crypto', onPress: () => onTab('crypto') },
     { key: 'gold', icon: Coins, label: bi('زێڕ', 'Gold'), active: activeTab === 'metals', onPress: () => onTab('metals') },
     { key: 'ai', icon: Brain, label: bi('شیکاری', 'AI'), active: activeTab === 'ai', onPress: () => onTab('ai') },
@@ -52,7 +52,7 @@ export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, o
     { key: 'bitcoin', icon: Bitcoin, label: bi('بیتکۆین', 'Bitcoin'), color: '#f0b90b', onPress: () => onTab('crypto') },
     { key: 'forex', icon: DollarSign, label: bi('دراو', 'Forex'), color: '#2962ff', onPress: () => onTab('forex') },
     { key: 'verify', icon: Scale, label: bi('پشکنین', 'Verify'), color: '#22c55e', onPress: onVerify },
-    { key: 'bot', icon: Bot, label: bi('بۆت', 'Bot'), color: '#a855f7', onPress: onBot },
+    { key: 'news', icon: Newspaper, label: bi('هەواڵ', 'News'), color: '#f0b90b', onPress: onNews },
     { key: 'convert', icon: ArrowRightLeft, label: bi('گۆڕین', 'Convert'), color: '#f0b90b', onPress: onConvert },
   ];
 
