@@ -971,6 +971,12 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
 
       {/* Chart — grows to fill the screen in landscape (MT5-style) */}
       <div className="relative h-[72vh] sm:h-[340px] landscape:h-[88vh] landscape:max-h-none">
+        <LivePriceBadge
+          label={code || name || ''}
+          price={livePrice()}
+          decimals={livePrice() >= 1000 ? 1 : 2}
+          accentColor={accentColor}
+        />
         <div ref={chartContainerRef} className="absolute inset-0" />
 
 
