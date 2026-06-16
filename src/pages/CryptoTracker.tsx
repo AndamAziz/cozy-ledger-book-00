@@ -304,7 +304,7 @@ export default function CryptoTracker() {
           />
         )}
 
-        <div className="flex flex-1 overflow-hidden relative">
+        <div key={activeTab} className="flex flex-1 overflow-hidden relative animate-tab-slide">
           {/* Main content */}
           {activeTab === 'ai' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
