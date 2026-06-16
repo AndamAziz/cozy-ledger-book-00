@@ -393,13 +393,7 @@ export default function CryptoTracker() {
                   }}
                 />
               ) : cryptoView === 'chart' ? (
-                <div className="relative flex-1 overflow-y-auto">
-                  <LivePriceBadge
-                    label={getDisplaySymbol(getSymbolFromPair(selectedPair))}
-                    price={currentPrice}
-                    decimals={0}
-                    accentColor="#f0b90b"
-                  />
+                <div className="flex-1 overflow-y-auto">
                   <CryptoChart
                     pair={selectedPair}
                     candles={candles}
