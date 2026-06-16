@@ -463,42 +463,27 @@ export default function CryptoTracker() {
                 )}
               </div>
 
-              <div className="relative flex-1 flex flex-col overflow-hidden">
-                {(() => {
+              {forexView === 'pro' ? (
+                (() => {
                   const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
-                  if (!c) return null;
-                  return (
-                    <LivePriceBadge
-                      label={`USD/${c.code}`}
-                      price={c.rate}
-                      decimals={4}
-                      prefix=""
-                      accentColor="#2962ff"
-                    />
-                  );
-                })()}
-                {forexView === 'pro' ? (
-                  (() => {
-                    const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
-                    if (!c) {
-                      return (
-                        <div className="flex-1 flex items-center justify-center text-sm text-[#848e9c]">
-                          {bi('دراوێک هەڵبژێرە', 'Select a currency')}
-                        </div>
-                      );
-                    }
+                  if (!c) {
                     return (
-                      <ForexProPanel key={c.code} code={c.code} name={c.name} flag={c.flag} rate={c.rate} />
+                      <div className="flex-1 flex items-center justify-center text-sm text-[#848e9c]">
+                        {bi('دراوێک هەڵبژێرە', 'Select a currency')}
+                      </div>
                     );
-                  })()
-                ) : (
-                  <ForexDetail
-                    currencies={forexCurrencies}
-                    selectedCode={selectedForexCode}
-                    isLoading={forexLoading}
-                  />
-                )}
-              </div>
+                  }
+                  return (
+                    <ForexProPanel key={c.code} code={c.code} name={c.name} flag={c.flag} rate={c.rate} />
+                  );
+                })()
+              ) : (
+                <ForexDetail
+                  currencies={forexCurrencies}
+                  selectedCode={selectedForexCode}
+                  isLoading={forexLoading}
+                />
+              )}
             </div>
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden">
