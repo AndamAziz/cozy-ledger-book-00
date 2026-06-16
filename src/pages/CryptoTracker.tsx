@@ -552,9 +552,22 @@ export default function CryptoTracker() {
                     <span className="hidden sm:inline">{bi('پرۆ', 'Pro')}</span>
                   </button>
                 </div>
+                {selectedMetalCode !== null && (() => {
+                  const m = metals.find(x => x.code === selectedMetalCode);
+                  if (!m) return null;
+                  return (
+                    <div className="ms-auto">
+                      <LivePriceBadge
+                        label={selectedMetalCode}
+                        price={m.price}
+                        change={m.change}
+                        decimals={m.price >= 1000 ? 1 : 2}
+                        accentColor={m.category === 'oil' ? '#e67e22' : '#d4af37'}
+                      />
+                    </div>
+                  );
+                })()}
               </div>
-
-              {selectedMetalCode === null ? (
                 <AssetOverview
                   title={bi('پوختەی کاڵاکان', 'Commodities Overview')}
                   subtitle={bi('نرخ، گۆڕان و سیگناڵی کڕین/فرۆشتن', 'Price, change & Buy/Sell signals')}
