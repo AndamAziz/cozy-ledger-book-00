@@ -142,15 +142,9 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
           </div>
         </div>
 
-        {/* Price + change */}
-        <div className="mt-3">
-          <div
-            className="font-bold tracking-tight tabular-nums leading-none"
-            style={{ color: accentColor, fontSize: 'clamp(1.75rem, 9vw, 2.5rem)' }}
-          >
-            ${selected.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+        {/* Change (large price now shown as a live badge next to the Pro button) */}
+        <div className="mt-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className={`flex items-center gap-1 text-sm font-semibold ${
               isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
             }`}>
