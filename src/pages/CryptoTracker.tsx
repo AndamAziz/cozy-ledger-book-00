@@ -26,6 +26,7 @@ import { DemoAccountProvider } from '@/contexts/DemoAccountContext';
 import { Menu, CandlestickChart, Activity, ChevronDown, LayoutGrid, Crown, Bell } from 'lucide-react';
 import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
 import { AIAnalysisPanel } from '@/components/crypto/AIAnalysisPanel';
+import { SignalsPanel } from '@/components/crypto/SignalsPanel';
 import { IndicatorVerify } from '@/components/crypto/IndicatorVerify';
 import { BottomNav } from '@/components/crypto/BottomNav';
 
