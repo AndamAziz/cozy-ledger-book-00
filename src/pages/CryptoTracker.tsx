@@ -61,6 +61,11 @@ export default function CryptoTracker() {
   const coinsRef = useRef(coinsMap);
   coinsRef.current = coinsMap;
 
+  // Persist last visited tab
+  useEffect(() => {
+    try { localStorage.setItem('tracker:lastTab', activeTab); } catch { /* noop */ }
+  }, [activeTab]);
+
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading, marketOpen: forexMarketOpen } = useForexData();
   const { metals, isLoading: metalsLoading, marketOpen: metalsMarketOpen } = useMetalsData();
