@@ -58,11 +58,11 @@ export function LivePriceBadge({
 
   return (
     <div
-      className="pointer-events-none absolute left-2 top-2 z-20 flex h-5 items-center gap-1 rounded-md bg-black/70 px-1.5 text-[10px] leading-none whitespace-nowrap backdrop-blur-sm opacity-85"
+      className="pointer-events-none absolute left-2 top-2 z-20 flex h-6 items-center gap-1 rounded-md bg-black/70 px-2 text-[12px] leading-none whitespace-nowrap backdrop-blur-sm opacity-85"
       title={`${label} ${prefix}${priceText}`}
     >
       <span
-        className="h-1 w-1 rounded-full transition-colors duration-300"
+        className="h-1.5 w-1.5 rounded-full transition-colors duration-300"
         style={{ backgroundColor: dotColor }}
       />
       <span className="font-bold" style={{ color: accentColor }}>{label}</span>

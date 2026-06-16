@@ -8,6 +8,7 @@ import { LiveMonitorFeed } from "@/components/bots/LiveMonitorFeed";
 import { useBotPrices, callEngine } from "@/hooks/useBotPrices";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
+import { goToGold } from "@/lib/botNav";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -119,7 +120,7 @@ export default function BotDetail() {
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <button onClick={() => { try { localStorage.setItem("tracker:lastTab", "metals"); } catch { /* noop */ } navigate("/crypto"); }} className="rounded-lg p-1.5 hover:bg-secondary"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
+            <button onClick={() => goToGold(navigate)} className="rounded-lg p-1.5 hover:bg-secondary"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
             <h1 className="text-lg font-bold text-foreground">{bot.name}</h1>
           </div>
           <div className="flex items-center gap-2">

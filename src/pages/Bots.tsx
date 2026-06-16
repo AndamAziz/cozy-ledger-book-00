@@ -8,6 +8,7 @@ import { PriceDetailModal } from "@/components/bots/PriceDetailModal";
 import { CreateBotModal } from "@/components/bots/CreateBotModal";
 import { NotificationBell } from "@/components/bots/NotificationBell";
 import { DailySummary } from "@/components/bots/DailySummary";
+import { goToGold } from "@/lib/botNav";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,7 @@ export default function Bots() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => { try { localStorage.setItem("tracker:lastTab", "metals"); } catch { /* noop */ } navigate("/crypto"); }}
+              onClick={() => goToGold(navigate)}
               className="rounded-lg p-1.5 hover:bg-secondary"
               aria-label="Back"
             >
