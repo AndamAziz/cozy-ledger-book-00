@@ -26,6 +26,7 @@ import { DemoAccountProvider } from '@/contexts/DemoAccountContext';
 import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid, LineChart, Newspaper, Crown, Brain } from 'lucide-react';
 import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
 import { AIAnalysisPanel } from '@/components/crypto/AIAnalysisPanel';
+import { IndicatorVerify } from '@/components/crypto/IndicatorVerify';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
 type CryptoView = 'overview' | 'chart' | 'analysis' | 'pro';
