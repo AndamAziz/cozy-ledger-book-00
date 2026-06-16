@@ -368,7 +368,6 @@ export default function CryptoTracker() {
                     <Activity className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                     <span className="hidden sm:inline">{bi('شیکاری', 'Analysis')}</span>
                   </button>
-                  </button>
                   {currentPrice > 0 && (
                     <span className="flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[10px] leading-none whitespace-nowrap shrink-0 -ms-1">
                       <span className="font-bold text-[#f0b90b]">{getDisplaySymbol(getSymbolFromPair(selectedPair))}</span>
