@@ -117,45 +117,13 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
   }
 
   // Detail view
-  const isPositive = selected.change > 0;
-  const isNeutral = selected.change === 0;
   const isOil = selected.category === 'oil';
   const accentColor = isOil ? '#e67e22' : '#d4af37';
   
 
   return (
     <div className="flex-1 flex flex-col bg-[#0a0e17] overflow-y-auto">
-      {/* Header */}
-      <div className="px-3 sm:px-4 pt-4 pb-3 border-b border-white/5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">{meta.symbol}</h2>
-              <span className="shrink-0 text-[10px] uppercase tracking-widest text-[#848e9c] font-semibold py-0.5 px-1.5 bg-white/5 rounded">
-                {isOil ? bi('نەوت', 'Energy') : bi('کاڵا', 'Commodities')}
-              </span>
-            </div>
-            <p className="text-xs text-[#848e9c] mt-0.5 truncate">{meta.name} {bi('نرخی سپۆت', 'Spot Price')}</p>
-          </div>
-          <div className="w-11 h-11 shrink-0 rounded-xl bg-[#1a1e2e] border border-white/5 flex items-center justify-center text-2xl">
-            {meta.emoji}
-          </div>
-        </div>
 
-        {/* Change (large price now shown as a live badge next to the Pro button) */}
-        <div className="mt-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`flex items-center gap-1 text-sm font-semibold ${
-              isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
-            }`}>
-              {isNeutral ? <Minus className="h-3.5 w-3.5" /> : isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-              {isNeutral ? '0.00%' : `${isPositive ? '+' : ''}${selected.change.toFixed(2)}%`}
-            </span>
-            <span className="text-[10px] text-[#848e9c] font-medium">/ {isOil ? bi('بەرمیل', 'barrel') : bi('ئۆنسی ترۆی', 'troy oz')}</span>
-          </div>
-        </div>
-
-      </div>
 
 
       {view === 'analysis' ? (
