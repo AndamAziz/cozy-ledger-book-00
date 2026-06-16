@@ -187,6 +187,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
         onRangeChange={setChartRange}
         currentPrice={selected.price}
         name={selected.name}
+        code={selectedCode ?? undefined}
       />
 
 
