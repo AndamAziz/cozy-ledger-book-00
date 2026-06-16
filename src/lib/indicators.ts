@@ -137,8 +137,8 @@ export function computeIndicators(candles: OHLCCandle[], settings?: IndicatorSet
   // so RSI/MACD compute reliably across every asset and chart range.
   const cfg = settings ?? bestIndicatorSettings(candles.length);
   return {
-    rsi: calculateRSI(closes, settings.rsiPeriod),
-    macd: calculateMACD(closes, settings.macdFast, settings.macdSlow, settings.macdSignal),
+    rsi: calculateRSI(closes, cfg.rsiPeriod),
+    macd: calculateMACD(closes, cfg.macdFast, cfg.macdSlow, cfg.macdSignal),
     bollinger: calculateBollinger(closes),
     ema9: emaLast(closes, 9),
     ema21: emaLast(closes, 21),
