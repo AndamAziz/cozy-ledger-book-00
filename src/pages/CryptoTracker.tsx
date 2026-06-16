@@ -344,6 +344,7 @@ export default function CryptoTracker() {
             </div>
           )}
         </div>
+        )}
 
         {/* Backdrop to close dropdown */}
         {showSidebar && (
