@@ -162,6 +162,14 @@ function isGoldRelevant(country: string): boolean {
   return GOLD_CURRENCIES.includes(country);
 }
 
+const REMIND_KEY = 'marketNewsReminders_v1';
+
+// Day-of-year comparison helper (timezone-safe "is this event today or later")
+function dayStamp(d: Date): number {
+  return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate();
+}
+
+
 function startOfToday(): number {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
