@@ -681,6 +681,18 @@ export function MarketNewsModal({ open, onClose }: Props) {
                 <Clock className="h-3 w-3" />{fmtCountdown(t)}
               </span>
             )}
+            {upcoming && isHigh && (
+              <button
+                onClick={(e) => { e.stopPropagation(); remindMe(ev); }}
+                className={`ms-auto inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full transition-colors ${
+                  reminders.has(eventKey(ev)) ? 'bg-[#f0b90b] text-black' : 'bg-[#1a1e2e] text-[#f0b90b] hover:bg-[#2a2e3e]'
+                }`}
+                title={bi('بیرخستنەوە ١٥ خولەک پێش', 'Remind 15 min before')}
+              >
+                <Pin className="h-3 w-3" />
+                {reminders.has(eventKey(ev)) ? bi('دانراوە', 'Set') : bi('بیرم بخەرەوە', 'Remind')}
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-sm truncate flex-1" style={{ color: T.text }}>{ev.title}</span>
