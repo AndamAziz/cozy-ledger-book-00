@@ -9,6 +9,7 @@ export type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
 interface BottomNavProps {
   activeTab: TrackerTab;
   onTab: (tab: TrackerTab) => void;
+  onHome: () => void;
   onNews: () => void;
   onVerify: () => void;
   onBot: () => void;
