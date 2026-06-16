@@ -14,7 +14,7 @@ interface IndicatorVerifyProps {
 // Shared timeframe options mapping the crypto interval (minutes) to the
 // equivalent metals range string so both assets use the same candle size.
 const TIMEFRAMES = [
-  { label: '5m', interval: 60 === 60 ? 5 : 5, metalRange: '5min', cryptoInterval: 5 },
+  { label: '5m', metalRange: '5min', cryptoInterval: 5 },
   { label: '15m', metalRange: '15min', cryptoInterval: 15 },
   { label: '1h', metalRange: '1d', cryptoInterval: 60 },
 ] as const;
