@@ -23,7 +23,7 @@ interface MetalsDetailProps {
 export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDetailProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
-  const [chartRange, setChartRange] = useState('1d');
+  const [chartRange, setChartRange] = useState('15min');
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const livePrice = selected?.price || 0;
   // The analysis & pro views need plenty of candles for accurate indicators
