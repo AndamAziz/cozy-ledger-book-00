@@ -443,6 +443,10 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       seriesRef.current = null;
       priceLineRef.current = null;
       maSeriesRefs.current = {};
+      rsiSeriesRef.current = null;
+      macdHistRef.current = null;
+      macdLineRef.current = null;
+      macdSignalRef.current = null;
       if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     };
   }, [chartType, range, isUp, activeMAs, maType, language]);
