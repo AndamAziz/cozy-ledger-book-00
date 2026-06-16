@@ -1,5 +1,5 @@
 import { OHLCCandle, fetchOHLC } from './krakenApi';
-import { computeIndicators, summarizeSignals } from './indicators';
+import { calculateRSI, calculateMACD, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from './indicators';
 
 export type TrendDir = 'up' | 'down' | 'neutral';
 
@@ -29,6 +29,14 @@ export interface TFTrend {
   dir: TrendDir;
   /** -100..100 signal score for the timeframe. */
   score: number;
+  /** Raw RSI value for the timeframe (debug). */
+  rsi: number | null;
+  /** Raw MACD line / signal / histogram for the timeframe (debug). */
+  macd: { macd: number; signal: number; histogram: number } | null;
+  /** Number of candles used for this timeframe (debug). */
+  candleCount: number;
+  /** Whether RSI and MACD agree (strong) or disagree (neutral). */
+  agreement: 'strong' | 'mixed' | 'none';
 }
 
 export interface KeyLevels {
