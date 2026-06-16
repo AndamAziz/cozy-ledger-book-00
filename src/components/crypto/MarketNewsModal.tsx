@@ -954,6 +954,124 @@ export function MarketNewsModal({ open, onClose }: Props) {
           )}
         </div>
 
+        {/* Event detail popup */}
+        {detailEvent && (() => {
+          const ev = detailEvent;
+          const a = analyzeEvent(ev);
+          const goldUp = goldDirection(ev, a);
+          const score = goldImpactScore(ev);
+          const isHigh = (ev.impact || '').toLowerCase() === 'high';
+          const t = Date.parse(ev.date);
+          const upcoming = !Number.isNaN(t) && t > now;
+          const bars = '🟡'.repeat(score) + '⚪'.repeat(3 - score);
+
+          // What this means for gold
+          const goldMeaning = goldUp === true
+            ? bi('ئەگەری بەرزبوونەوەی نرخی زێڕ هەیە (دۆلار لاواز).', 'Likely bullish for gold — points to a weaker USD, which usually pushes gold higher.')
+            : goldUp === false
+              ? bi('ئەگەری دابەزینی نرخی زێڕ هەیە (دۆلار بەهێز).', 'Likely bearish for gold — points to a stronger USD, which usually pressures gold lower.')
+              : bi('ئاراستەی زێڕ ڕوون نییە تا ئەنجامەکە بڵاودەبێتەوە.', 'Direction unclear until the actual figure is released — wait for the result.');
+
+          // Historical impact note based on impact + currency
+          const histImpact = isHigh
+            ? (ev.country === 'USD'
+                ? bi('ئەم جۆرە ڕووداوە بە شێوەیەکی مێژوویی جووڵەی خێرا و گەورە لە زێڕ دروست دەکات (٥٠ تا ٢٠٠+ خاڵ).', 'Historically triggers fast, large gold moves (often 50–200+ points) within minutes of release.')
+                : bi('کاریگەری بەرز، بەڵام کەمتر لە ڕووداوەکانی دۆلار. جووڵەی مامناوەند.', 'High impact, but typically smaller for gold than USD events — expect a moderate move.'))
+            : bi('کاریگەری کەم بۆ مامناوەند. زۆرجار جووڵەیەکی بچووک دروست دەکات.', 'Low-to-moderate impact — usually produces only a small, short-lived move.');
+
+          // Suggested action
+          const action = goldUp === true
+            ? { label: bi('کڕین (Buy Gold)', 'Buy Gold'), color: C_UP, note: bi('ئامادەبە بۆ هەلی کڕین لەسەر ئەنجامی لاوازی دۆلار.', 'Watch for buy setups if the result confirms USD weakness.') }
+            : goldUp === false
+              ? { label: bi('فرۆشتن (Sell Gold)', 'Sell Gold'), color: C_DOWN, note: bi('ئامادەبە بۆ هەلی فرۆشتن لەسەر ئەنجامی بەهێزی دۆلار.', 'Watch for sell setups if the result confirms USD strength.') }
+              : { label: bi('چاوەڕوانبە (Wait)', 'Wait'), color: C_FLAT, note: bi('مەکڕە و مەفرۆشە پێش بڵاوبوونەوەی ئەنجامەکە.', 'Stay flat until the actual number prints, then react.') };
+
+          return (
+            <div className="absolute inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 animate-fade-in" onClick={() => setDetailEvent(null)}>
+              <div
+                className="w-full sm:max-w-sm m-0 sm:m-4 rounded-t-2xl sm:rounded-2xl border max-h-[85%] overflow-y-auto"
+                style={{ backgroundColor: T.card, borderColor: T.cardBorder }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-start gap-2 p-4 border-b" style={{ borderColor: T.cardBorder }}>
+                  <span className="text-2xl shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: impactColor(ev.impact) }} />
+                      <span className="text-[11px] font-bold text-[#848e9c]">{ev.country}</span>
+                      <span className="text-[11px] text-[#848e9c]">{bi('کاریگەری زێڕ', 'Gold impact')}: {bars}</span>
+                    </div>
+                    <div className="text-sm font-bold leading-snug" style={{ color: T.text }}>{ev.title}</div>
+                    <div className="text-[11px] mt-0.5 flex items-center gap-1" style={{ color: T.sub }}>
+                      <Clock className="h-3 w-3" />{eventTime(ev.date)}
+                      {upcoming && <span className="text-[#f6465d] font-bold">· {bi('لە', 'in')} {fmtCountdown(t)}</span>}
+                    </div>
+                  </div>
+                  <button onClick={() => setDetailEvent(null)} className="p-1 rounded-full text-[#848e9c] hover:text-white shrink-0">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Figures */}
+                <div className="grid grid-cols-3 gap-2 p-4 text-center">
+                  {[
+                    { l: bi('پێشتر', 'Previous'), v: ev.previous },
+                    { l: bi('پێشبینی', 'Forecast'), v: ev.forecast },
+                    { l: bi('ئەنجام', 'Actual'), v: ev.actual || '—' },
+                  ].map((f) => (
+                    <div key={f.l} className="rounded-lg py-2 px-1" style={{ backgroundColor: T.bg }}>
+                      <div className="text-[9px] uppercase tracking-wide" style={{ color: T.sub }}>{f.l}</div>
+                      <div className="text-sm font-bold" style={{ color: T.text }}>{f.v || '—'}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Sections */}
+                <div className="px-4 pb-4 space-y-3">
+                  <div>
+                    <div className="text-[11px] font-bold mb-1" style={{ color: T.text }}>🥇 {bi('مانای بۆ زێڕ', 'What this means for gold')}</div>
+                    <p className="text-[12px] leading-relaxed" style={{ color: T.sub }}>{goldMeaning}</p>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold mb-1" style={{ color: T.text }}>📈 {bi('کاریگەری مێژوویی', 'Historical impact')}</div>
+                    <p className="text-[12px] leading-relaxed" style={{ color: T.sub }}>{histImpact}</p>
+                  </div>
+                  <div className="rounded-lg p-3 border" style={{ backgroundColor: action.color + '14', borderColor: action.color + '55' }}>
+                    <div className="text-[11px] font-bold mb-1" style={{ color: T.text }}>🎯 {bi('پێشنیاری کردار', 'Suggested action')}</div>
+                    <div className="text-sm font-extrabold mb-0.5" style={{ color: action.color }}>{action.label}</div>
+                    <p className="text-[12px] leading-relaxed" style={{ color: T.sub }}>{action.note}</p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 p-4 border-t" style={{ borderColor: T.cardBorder }}>
+                  {upcoming && isHigh && (
+                    <button
+                      onClick={() => remindMe(ev)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-colors ${
+                        reminders.has(eventKey(ev)) ? 'bg-[#f0b90b] text-black' : 'bg-[#1a1e2e] text-[#f0b90b] hover:bg-[#2a2e3e]'
+                      }`}
+                    >
+                      <Pin className="h-4 w-4" />
+                      {reminders.has(eventKey(ev)) ? bi('بیرخستنەوە دانراوە', 'Reminder set') : bi('📌 بیرم بخەرەوە', '📌 Remind me')}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => shareEvent(ev)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold bg-[#1a1e2e] text-white hover:bg-[#2a2e3e] transition-colors"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    {bi('هاوبەشکردن', 'Share')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+
+
         {/* Toast (share / sound alert feedback) */}
         {toast && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[#f0b90b] text-black text-xs font-bold shadow-lg flex items-center gap-1.5 animate-fade-in">
