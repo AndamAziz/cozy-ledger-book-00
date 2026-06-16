@@ -206,6 +206,11 @@ export function GoldProPanel({ candles, price }: Props) {
         </p>
       </div>
 
+      {/* Calendar-driven Gold Signal (today's bias, key events, entry zones) */}
+      <GoldSignalPanel events={events} price={price} loading={loadingEvents} lastUpdated={eventsUpdated} />
+
+
+
       <PriceAlerts storeKey="XAUUSD" label="XAU/USD" price={price} decimals={2} />
       <SignalHistory storeKey="XAUUSD" action={signal.action} confidence={signal.confidence} price={price} decimals={2} />
 
