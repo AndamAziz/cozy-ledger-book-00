@@ -470,6 +470,22 @@ export default function CryptoTracker() {
                     })()}
                   </span>
                 )}
+                <div className="ms-auto">
+                  {(() => {
+                    const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
+                    if (!c) return null;
+                    return (
+                      <LivePriceBadge
+                        label={`USD/${c.code}`}
+                        price={c.rate}
+                        change={c.change}
+                        decimals={4}
+                        prefix=""
+                        accentColor="#2962ff"
+                      />
+                    );
+                  })()}
+                </div>
               </div>
 
               {forexView === 'pro' ? (
