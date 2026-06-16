@@ -26,6 +26,7 @@ interface MetalsChartProps {
   onRangeChange: (range: string) => void;
   currentPrice?: number;
   name?: string;
+  code?: string;
 }
 
 const RANGES = [
