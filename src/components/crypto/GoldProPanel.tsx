@@ -40,6 +40,7 @@ export function GoldProPanel({ candles, price }: Props) {
   const [goldBias, setGoldBias] = useState<GoldBias>('neutral');
   const [sentiment, setSentiment] = useState<SentimentData>({ value: null, classification: '', available: false });
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [eventsUpdated, setEventsUpdated] = useState<number | null>(null);
   const [loadingMacro, setLoadingMacro] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
