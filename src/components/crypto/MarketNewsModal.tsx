@@ -454,13 +454,16 @@ export function MarketNewsModal({ open, onClose }: Props) {
 
   // Filter to TODAY .. +7 days and sort chronologically
   const visibleEvents = useMemo(() => {
-    const start = startOfToday();
+    const todayStamp = dayStamp(new Date());
     const end = now + 7 * 86400000;
     return events
       .filter((e) => {
-        const t = Date.parse(e.date);
-        if (Number.isNaN(t)) return false;
-        return t >= start && t <= end;
+        const d = new Date(e.date);
+        if (Number.isNaN(d.getTime())) return false;
+        // Always keep events whose calendar day is today (even if the time already passed),
+        // plus anything up to 7 days ahead.
+        const isTodayOrLater = dayStamp(d) >= todayStamp;
+        return isTodayOrLater && d.getTime() <= end;
       })
       .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
   }, [events, now]);
