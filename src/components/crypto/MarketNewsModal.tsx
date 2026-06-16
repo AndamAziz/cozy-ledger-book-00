@@ -162,11 +162,14 @@ function isGoldRelevant(country: string): boolean {
   return GOLD_CURRENCIES.includes(country);
 }
 
-function startOfToday(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
+const REMIND_KEY = 'marketNewsReminders_v1';
+
+// Day-of-year comparison helper (timezone-safe "is this event today or later")
+function dayStamp(d: Date): number {
+  return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate();
 }
+
+
 
 function isToday(iso: string): boolean {
   const d = new Date(iso);
@@ -215,8 +218,9 @@ function SwipeCard({ children, onDismiss }: { children: ReactNode; onDismiss?: (
   };
 
   return (
-    <div className="relative overflow-hidden rounded-lg">
-      {onDismiss && (
+    <div className="relative overflow-hidden rounded-lg group">
+      {/* Red swipe-to-dismiss backdrop — only visible while actually swiping */}
+      {onDismiss && dx < -6 && (
         <div className="absolute inset-0 flex items-center justify-end pr-4 rounded-lg" style={{ backgroundColor: 'rgba(246,70,93,0.18)' }}>
           <X className="h-4 w-4" style={{ color: '#f6465d' }} />
         </div>
@@ -229,6 +233,16 @@ function SwipeCard({ children, onDismiss }: { children: ReactNode; onDismiss?: (
       >
         {children}
       </div>
+      {/* Desktop X — only on hover */}
+      {onDismiss && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+          className="absolute top-1.5 right-1.5 z-10 p-1 rounded-full bg-black/40 text-[#f6465d] opacity-0 group-hover:opacity-100 transition-opacity"
+          aria-label="Dismiss"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
     </div>
   );
 }
@@ -265,6 +279,16 @@ export function MarketNewsModal({ open, onClose }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const alertedRef = useRef<Set<string>>(new Set());
 
+  // Event detail popup + reminders
+  const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
+  const [reminders, setReminders] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(REMIND_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch { return new Set<string>(); }
+  });
+  const reminderTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   const dismissEvent = useCallback((key: string) => {
     setDismissed((prev) => {
       const next = new Set(prev);
@@ -299,6 +323,63 @@ export function MarketNewsModal({ open, onClose }: Props) {
     setToast(msg);
     setTimeout(() => setToast(null), 2200);
   }, []);
+
+  // 📌 Remind me — schedule a browser notification 15 min before the event
+  const remindMe = useCallback(async (ev: CalendarEvent) => {
+    const t = Date.parse(ev.date);
+    if (Number.isNaN(t)) return;
+    const fireAt = t - 15 * 60000;
+    const k = eventKey(ev);
+
+    // Toggle off if already set
+    if (reminders.has(k)) {
+      if (reminderTimers.current[k]) { clearTimeout(reminderTimers.current[k]); delete reminderTimers.current[k]; }
+      setReminders((prev) => {
+        const next = new Set(prev); next.delete(k);
+        try { localStorage.setItem(REMIND_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+        return next;
+      });
+      showToast(bi('بیرخستنەوە لابرا', 'Reminder removed'));
+      return;
+    }
+
+    if (fireAt <= Date.now()) {
+      showToast(bi('ڕووداوەکە زۆر نزیکە', 'Event is too soon'));
+      return;
+    }
+
+    if ('Notification' in window) {
+      let perm = Notification.permission;
+      if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch { /* ignore */ } }
+      if (perm !== 'granted') {
+        showToast(bi('ئاگادارکردنەوە چالاک بکە', 'Enable notifications first'));
+        return;
+      }
+    }
+
+    setReminders((prev) => {
+      const next = new Set(prev); next.add(k);
+      try { localStorage.setItem(REMIND_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+
+    const delay = fireAt - Date.now();
+    reminderTimers.current[k] = setTimeout(() => {
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(`⚠️ ${ev.title}`, {
+            body: `${ev.country} · ${bi('لە ١٥ خولەکدا', 'in 15 minutes')}${ev.forecast ? ` · Forecast: ${ev.forecast}` : ''}`,
+          });
+        }
+      } catch { /* ignore */ }
+      playDing();
+      delete reminderTimers.current[k];
+    }, delay);
+
+    showToast(bi('بیرخستنەوە دانرا · ١٥ خولەک پێش', 'Reminder set · 15 min before'));
+  }, [reminders, bi, showToast]);
+
+
 
   // Theme palette for the calendar section
   const T = light
@@ -435,13 +516,16 @@ export function MarketNewsModal({ open, onClose }: Props) {
 
   // Filter to TODAY .. +7 days and sort chronologically
   const visibleEvents = useMemo(() => {
-    const start = startOfToday();
+    const todayStamp = dayStamp(new Date());
     const end = now + 7 * 86400000;
     return events
       .filter((e) => {
-        const t = Date.parse(e.date);
-        if (Number.isNaN(t)) return false;
-        return t >= start && t <= end;
+        const d = new Date(e.date);
+        if (Number.isNaN(d.getTime())) return false;
+        // Always keep events whose calendar day is today (even if the time already passed),
+        // plus anything up to 7 days ahead.
+        const isTodayOrLater = dayStamp(d) >= todayStamp;
+        return isTodayOrLater && d.getTime() <= end;
       })
       .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
   }, [events, now]);
@@ -573,8 +657,8 @@ export function MarketNewsModal({ open, onClose }: Props) {
         <div
           className="flex items-center gap-2 rounded-lg px-3 py-2 border cursor-pointer select-none"
           style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: goldRel || pinned ? 1.5 : 1 }}
-          onClick={() => shareEvent(ev)}
-          title={bi('کرتە بکە بۆ هاوبەشکردن', 'Tap to share')}
+          onClick={() => setDetailEvent(ev)}
+          title={bi('کرتە بکە بۆ وردەکاری', 'Tap for details')}
         >
           <span className="text-lg shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
           <div className="min-w-0 flex-1">
@@ -596,6 +680,18 @@ export function MarketNewsModal({ open, onClose }: Props) {
               <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#f6465d]">
                 <Clock className="h-3 w-3" />{fmtCountdown(t)}
               </span>
+            )}
+            {upcoming && isHigh && (
+              <button
+                onClick={(e) => { e.stopPropagation(); remindMe(ev); }}
+                className={`ms-auto inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full transition-colors ${
+                  reminders.has(eventKey(ev)) ? 'bg-[#f0b90b] text-black' : 'bg-[#1a1e2e] text-[#f0b90b] hover:bg-[#2a2e3e]'
+                }`}
+                title={bi('بیرخستنەوە ١٥ خولەک پێش', 'Remind 15 min before')}
+              >
+                <Pin className="h-3 w-3" />
+                {reminders.has(eventKey(ev)) ? bi('دانراوە', 'Set') : bi('بیرم بخەرەوە', 'Remind')}
+              </button>
             )}
           </div>
           <div className="flex items-center gap-1.5">
@@ -857,6 +953,124 @@ export function MarketNewsModal({ open, onClose }: Props) {
             </div>
           )}
         </div>
+
+        {/* Event detail popup */}
+        {detailEvent && (() => {
+          const ev = detailEvent;
+          const a = analyzeEvent(ev);
+          const goldUp = goldDirection(ev, a);
+          const score = goldImpactScore(ev);
+          const isHigh = (ev.impact || '').toLowerCase() === 'high';
+          const t = Date.parse(ev.date);
+          const upcoming = !Number.isNaN(t) && t > now;
+          const bars = '🟡'.repeat(score) + '⚪'.repeat(3 - score);
+
+          // What this means for gold
+          const goldMeaning = goldUp === true
+            ? bi('ئەگەری بەرزبوونەوەی نرخی زێڕ هەیە (دۆلار لاواز).', 'Likely bullish for gold — points to a weaker USD, which usually pushes gold higher.')
+            : goldUp === false
+              ? bi('ئەگەری دابەزینی نرخی زێڕ هەیە (دۆلار بەهێز).', 'Likely bearish for gold — points to a stronger USD, which usually pressures gold lower.')
+              : bi('ئاراستەی زێڕ ڕوون نییە تا ئەنجامەکە بڵاودەبێتەوە.', 'Direction unclear until the actual figure is released — wait for the result.');
+
+          // Historical impact note based on impact + currency
+          const histImpact = isHigh
+            ? (ev.country === 'USD'
+                ? bi('ئەم جۆرە ڕووداوە بە شێوەیەکی مێژوویی جووڵەی خێرا و گەورە لە زێڕ دروست دەکات (٥٠ تا ٢٠٠+ خاڵ).', 'Historically triggers fast, large gold moves (often 50–200+ points) within minutes of release.')
+                : bi('کاریگەری بەرز، بەڵام کەمتر لە ڕووداوەکانی دۆلار. جووڵەی مامناوەند.', 'High impact, but typically smaller for gold than USD events — expect a moderate move.'))
+            : bi('کاریگەری کەم بۆ مامناوەند. زۆرجار جووڵەیەکی بچووک دروست دەکات.', 'Low-to-moderate impact — usually produces only a small, short-lived move.');
+
+          // Suggested action
+          const action = goldUp === true
+            ? { label: bi('کڕین (Buy Gold)', 'Buy Gold'), color: C_UP, note: bi('ئامادەبە بۆ هەلی کڕین لەسەر ئەنجامی لاوازی دۆلار.', 'Watch for buy setups if the result confirms USD weakness.') }
+            : goldUp === false
+              ? { label: bi('فرۆشتن (Sell Gold)', 'Sell Gold'), color: C_DOWN, note: bi('ئامادەبە بۆ هەلی فرۆشتن لەسەر ئەنجامی بەهێزی دۆلار.', 'Watch for sell setups if the result confirms USD strength.') }
+              : { label: bi('چاوەڕوانبە (Wait)', 'Wait'), color: C_FLAT, note: bi('مەکڕە و مەفرۆشە پێش بڵاوبوونەوەی ئەنجامەکە.', 'Stay flat until the actual number prints, then react.') };
+
+          return (
+            <div className="absolute inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 animate-fade-in" onClick={() => setDetailEvent(null)}>
+              <div
+                className="w-full sm:max-w-sm m-0 sm:m-4 rounded-t-2xl sm:rounded-2xl border max-h-[85%] overflow-y-auto"
+                style={{ backgroundColor: T.card, borderColor: T.cardBorder }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="flex items-start gap-2 p-4 border-b" style={{ borderColor: T.cardBorder }}>
+                  <span className="text-2xl shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: impactColor(ev.impact) }} />
+                      <span className="text-[11px] font-bold text-[#848e9c]">{ev.country}</span>
+                      <span className="text-[11px] text-[#848e9c]">{bi('کاریگەری زێڕ', 'Gold impact')}: {bars}</span>
+                    </div>
+                    <div className="text-sm font-bold leading-snug" style={{ color: T.text }}>{ev.title}</div>
+                    <div className="text-[11px] mt-0.5 flex items-center gap-1" style={{ color: T.sub }}>
+                      <Clock className="h-3 w-3" />{eventTime(ev.date)}
+                      {upcoming && <span className="text-[#f6465d] font-bold">· {bi('لە', 'in')} {fmtCountdown(t)}</span>}
+                    </div>
+                  </div>
+                  <button onClick={() => setDetailEvent(null)} className="p-1 rounded-full text-[#848e9c] hover:text-white shrink-0">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Figures */}
+                <div className="grid grid-cols-3 gap-2 p-4 text-center">
+                  {[
+                    { l: bi('پێشتر', 'Previous'), v: ev.previous },
+                    { l: bi('پێشبینی', 'Forecast'), v: ev.forecast },
+                    { l: bi('ئەنجام', 'Actual'), v: ev.actual || '—' },
+                  ].map((f) => (
+                    <div key={f.l} className="rounded-lg py-2 px-1" style={{ backgroundColor: T.bg }}>
+                      <div className="text-[9px] uppercase tracking-wide" style={{ color: T.sub }}>{f.l}</div>
+                      <div className="text-sm font-bold" style={{ color: T.text }}>{f.v || '—'}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Sections */}
+                <div className="px-4 pb-4 space-y-3">
+                  <div>
+                    <div className="text-[11px] font-bold mb-1" style={{ color: T.text }}>🥇 {bi('مانای بۆ زێڕ', 'What this means for gold')}</div>
+                    <p className="text-[12px] leading-relaxed" style={{ color: T.sub }}>{goldMeaning}</p>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold mb-1" style={{ color: T.text }}>📈 {bi('کاریگەری مێژوویی', 'Historical impact')}</div>
+                    <p className="text-[12px] leading-relaxed" style={{ color: T.sub }}>{histImpact}</p>
+                  </div>
+                  <div className="rounded-lg p-3 border" style={{ backgroundColor: action.color + '14', borderColor: action.color + '55' }}>
+                    <div className="text-[11px] font-bold mb-1" style={{ color: T.text }}>🎯 {bi('پێشنیاری کردار', 'Suggested action')}</div>
+                    <div className="text-sm font-extrabold mb-0.5" style={{ color: action.color }}>{action.label}</div>
+                    <p className="text-[12px] leading-relaxed" style={{ color: T.sub }}>{action.note}</p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 p-4 border-t" style={{ borderColor: T.cardBorder }}>
+                  {upcoming && isHigh && (
+                    <button
+                      onClick={() => remindMe(ev)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition-colors ${
+                        reminders.has(eventKey(ev)) ? 'bg-[#f0b90b] text-black' : 'bg-[#1a1e2e] text-[#f0b90b] hover:bg-[#2a2e3e]'
+                      }`}
+                    >
+                      <Pin className="h-4 w-4" />
+                      {reminders.has(eventKey(ev)) ? bi('بیرخستنەوە دانراوە', 'Reminder set') : bi('📌 بیرم بخەرەوە', '📌 Remind me')}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => shareEvent(ev)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold bg-[#1a1e2e] text-white hover:bg-[#2a2e3e] transition-colors"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    {bi('هاوبەشکردن', 'Share')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+
 
         {/* Toast (share / sound alert feedback) */}
         {toast && (
