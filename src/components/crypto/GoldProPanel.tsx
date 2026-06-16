@@ -70,7 +70,10 @@ export function GoldProPanel({ candles, price }: Props) {
     try {
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-news`, { headers });
       const data = await res.json();
-      setEvents(Array.isArray(data.events) ? data.events : []);
+      if (Array.isArray(data.events)) {
+        setEvents(data.events);
+        setEventsUpdated(Date.now());
+      }
     } catch {
       /* ignore */
     } finally {
@@ -82,7 +85,14 @@ export function GoldProPanel({ candles, price }: Props) {
   useEffect(() => {
     loadMacro();
     loadEvents();
+    // Auto-refresh the gold signal + macro data every 30 minutes.
+    const id = setInterval(() => {
+      loadMacro();
+      loadEvents();
+    }, 30 * 60 * 1000);
+    return () => clearInterval(id);
   }, [loadMacro, loadEvents]);
+
 
   // ---- Combined Gold Signal ----
   const signal = useMemo(() => {
