@@ -241,9 +241,12 @@ const HISTORY_CACHE_TTL = 60_000;
 
 const RANGE_MAP: Record<string, { range: string; interval: string }> = {
   "1min": { range: "1d", interval: "1m" },
-  "5min": { range: "1d", interval: "5m" },
+  // Widen the lookback so intraday indicators (RSI 14 / MACD 26-9) always have
+  // enough candles. Yahoo only returns ~34 bars for a single trading day at
+  // these intervals, which leaves MACD/RSI unable to compute.
+  "5min": { range: "5d", interval: "5m" },
   "15min": { range: "5d", interval: "15m" },
-  "1d": { range: "1d", interval: "5m" },
+  "1d": { range: "5d", interval: "5m" },
   "5d": { range: "5d", interval: "15m" },
   "1mo": { range: "1mo", interval: "1h" },
   "3mo": { range: "3mo", interval: "1d" },
