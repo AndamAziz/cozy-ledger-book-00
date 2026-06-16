@@ -661,7 +661,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
     () => candles.map((c) => ({ time: c.time as number, open: c.open, high: c.high, low: c.low, close: c.close })) as any,
     [candles],
   );
-  const indicatorSettings = useMemo(() => bestIndicatorSettings(ohlcForIndicators.length), [ohlcForIndicators.length]);
+  
 
   // Create / remove the RSI and MACD panes when toggled or chart is recreated.
   useEffect(() => {
