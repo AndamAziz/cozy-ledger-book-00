@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Newspaper, CandlestickChart, Coins, Brain, Menu,
+  Newspaper, CandlestickChart, Coins, Brain, Menu, Home,
   Bitcoin, DollarSign, Scale, Bot, ArrowRightLeft, X,
 } from 'lucide-react';
 
