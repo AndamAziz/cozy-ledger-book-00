@@ -8,6 +8,7 @@ import { SentimentGauge, SentimentData } from '@/components/crypto/SentimentGaug
 import { TechnicalSignals } from '@/components/crypto/TechnicalSignals';
 import { RiskCalculator } from '@/components/crypto/RiskCalculator';
 import { EventAlertBanner, CalendarEvent } from '@/components/crypto/EventAlertBanner';
+import { GoldSignalPanel } from '@/components/crypto/GoldSignalPanel';
 import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { SignalHistory } from '@/components/crypto/SignalHistory';
 import { Crown, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
@@ -39,6 +40,7 @@ export function GoldProPanel({ candles, price }: Props) {
   const [goldBias, setGoldBias] = useState<GoldBias>('neutral');
   const [sentiment, setSentiment] = useState<SentimentData>({ value: null, classification: '', available: false });
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [eventsUpdated, setEventsUpdated] = useState<number | null>(null);
   const [loadingMacro, setLoadingMacro] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
@@ -68,7 +70,10 @@ export function GoldProPanel({ candles, price }: Props) {
     try {
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-news`, { headers });
       const data = await res.json();
-      setEvents(Array.isArray(data.events) ? data.events : []);
+      if (Array.isArray(data.events)) {
+        setEvents(data.events);
+        setEventsUpdated(Date.now());
+      }
     } catch {
       /* ignore */
     } finally {
@@ -80,7 +85,14 @@ export function GoldProPanel({ candles, price }: Props) {
   useEffect(() => {
     loadMacro();
     loadEvents();
+    // Auto-refresh the gold signal + macro data every 30 minutes.
+    const id = setInterval(() => {
+      loadMacro();
+      loadEvents();
+    }, 30 * 60 * 1000);
+    return () => clearInterval(id);
   }, [loadMacro, loadEvents]);
+
 
   // ---- Combined Gold Signal ----
   const signal = useMemo(() => {
@@ -193,6 +205,11 @@ export function GoldProPanel({ candles, price }: Props) {
           {bi('ئەمە یارمەتیدەرە نەک ڕاوێژی دارایی. هەمیشە Stop Loss بەکاربهێنە.', 'This is guidance, not financial advice. Always use a Stop Loss.')}
         </p>
       </div>
+
+      {/* Calendar-driven Gold Signal (today's bias, key events, entry zones) */}
+      <GoldSignalPanel events={events} price={price} loading={loadingEvents} lastUpdated={eventsUpdated} />
+
+
 
       <PriceAlerts storeKey="XAUUSD" label="XAU/USD" price={price} decimals={2} />
       <SignalHistory storeKey="XAUUSD" action={signal.action} confidence={signal.confidence} price={price} decimals={2} />
