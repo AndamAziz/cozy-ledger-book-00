@@ -27,6 +27,25 @@ function dirColor(dir: 'up' | 'down' | 'neutral'): string {
   return dir === 'up' ? C_BULL : dir === 'down' ? C_BEAR : C_NEUTRAL;
 }
 
+/** Map a 0..100 confluence score to a strength tier. */
+function signalStrength(score: number): { key: 'strong' | 'moderate' | 'weak'; emoji: string; color: string } {
+  if (score >= 75) return { key: 'strong', emoji: '⚡', color: C_BULL };
+  if (score >= 50) return { key: 'moderate', emoji: '🔶', color: '#f0b90b' };
+  return { key: 'weak', emoji: '⚠️', color: C_NEUTRAL };
+}
+
+/** Compact relative-time label, e.g. "5m", "2h", "1d". */
+function fmtAgo(ts: number | null): string {
+  if (!ts) return '—';
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60}m`;
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
 function fmtPrice(n: number, asset: 'btc' | 'gold'): string {
   if (!Number.isFinite(n) || n <= 0) return '—';
   return n.toLocaleString(undefined, {
