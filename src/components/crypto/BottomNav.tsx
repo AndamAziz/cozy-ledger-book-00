@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Newspaper, CandlestickChart, Coins, Brain, Menu,
+  Newspaper, CandlestickChart, Coins, Brain, Menu, Home,
   Bitcoin, DollarSign, Scale, Bot, ArrowRightLeft, X,
 } from 'lucide-react';
 
@@ -9,6 +9,7 @@ export type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
 interface BottomNavProps {
   activeTab: TrackerTab;
   onTab: (tab: TrackerTab) => void;
+  onHome: () => void;
   onNews: () => void;
   onVerify: () => void;
   onBot: () => void;
@@ -28,7 +29,7 @@ interface MainItem {
   onPress: () => void;
 }
 
-export function BottomNav({ activeTab, onTab, onNews, onVerify, onBot, onConvert, bi }: BottomNavProps) {
+export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, onConvert, bi }: BottomNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [tapped, setTapped] = useState<string | null>(null);
 
@@ -39,6 +40,7 @@ export function BottomNav({ activeTab, onTab, onNews, onVerify, onBot, onConvert
   };
 
   const mainItems: MainItem[] = [
+    { key: 'home', icon: Home, label: bi('ماڵەوە', 'Home'), active: false, onPress: onHome },
     { key: 'news', icon: Newspaper, label: bi('هەواڵ', 'News'), active: false, onPress: onNews },
     { key: 'charts', icon: CandlestickChart, label: bi('چارت', 'Charts'), active: activeTab === 'crypto', onPress: () => onTab('crypto') },
     { key: 'gold', icon: Coins, label: bi('زێڕ', 'Gold'), active: activeTab === 'metals', onPress: () => onTab('metals') },

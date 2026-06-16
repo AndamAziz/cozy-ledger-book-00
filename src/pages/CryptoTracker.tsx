@@ -574,6 +574,7 @@ export default function CryptoTracker() {
         <BottomNav
           activeTab={activeTab}
           onTab={(tab) => { setShowSidebar(false); setActiveTab(tab); }}
+          onHome={() => window.location.href = 'https://ctp.kurdcloud.xyz'}
           onNews={() => setShowNews(true)}
           onVerify={() => setShowVerify(true)}
           onBot={() => navigate('/bots')}
