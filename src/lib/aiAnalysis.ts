@@ -1,6 +1,5 @@
 import { OHLCCandle, fetchOHLC } from './krakenApi';
 import { computeIndicators, summarizeSignals } from './indicators';
-import { computeSR, SRLevels } from './supportResistance';
 
 export type TrendDir = 'up' | 'down' | 'neutral';
 
