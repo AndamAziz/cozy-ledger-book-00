@@ -8,6 +8,7 @@ import { SentimentGauge, SentimentData } from '@/components/crypto/SentimentGaug
 import { TechnicalSignals } from '@/components/crypto/TechnicalSignals';
 import { RiskCalculator } from '@/components/crypto/RiskCalculator';
 import { EventAlertBanner, CalendarEvent } from '@/components/crypto/EventAlertBanner';
+import { GoldSignalPanel } from '@/components/crypto/GoldSignalPanel';
 import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { SignalHistory } from '@/components/crypto/SignalHistory';
 import { Crown, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
