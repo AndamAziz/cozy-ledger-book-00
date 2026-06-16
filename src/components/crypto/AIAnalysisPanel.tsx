@@ -73,8 +73,15 @@ function TFRow({ trends }: { trends: TFTrend[] }) {
   );
 }
 
-function ConfluenceBar({ a }: { a: AssetAnalysis }) {
+function ConfluenceBar({ a, bi }: { a: AssetAnalysis; bi: (ku: string, en: string) => string }) {
   const color = dirColor(a.confluence.dir);
+  const strength = signalStrength(a.confluence.score);
+  const strengthLabel =
+    strength.key === 'strong'
+      ? bi('بەهێز', 'Strong')
+      : strength.key === 'moderate'
+      ? bi('مامناوەند', 'Moderate')
+      : bi('لاواز', 'Weak');
   return (
     <div className="rounded-lg bg-[#0a0e17] border border-[#1a1e2e] p-3">
       <div className="flex items-center justify-between mb-2">
@@ -91,6 +98,16 @@ function ConfluenceBar({ a }: { a: AssetAnalysis }) {
           style={{ width: `${a.confluence.score}%`, backgroundColor: color }}
         />
       </div>
+      {/* Signal strength meter */}
+      <div className="mt-2 flex items-center justify-between">
+        <span className="text-[10px] font-bold text-[#848e9c]">{bi('هێزی سیگناڵ', 'Signal Strength')}</span>
+        <span
+          className="text-xs font-extrabold px-2 py-0.5 rounded-full"
+          style={{ color: strength.color, backgroundColor: `${strength.color}1f` }}
+        >
+          {strength.emoji} {strengthLabel}
+        </span>
+      </div>
       <div className="mt-2 text-sm font-bold" style={{ color }}>
         {a.confluence.label}
       </div>
@@ -98,6 +115,13 @@ function ConfluenceBar({ a }: { a: AssetAnalysis }) {
         <span className="text-[#0ecb81]">⬆️ {a.confluence.upCount}</span>
         <span className="text-[#f6465d]">⬇️ {a.confluence.downCount}</span>
         <span>↔️ {a.confluence.neutralCount}</span>
+      </div>
+      {/* Last direction change timestamp */}
+      <div className="mt-2 pt-2 border-t border-[#1a1e2e] flex items-center gap-1.5 text-[10px] text-[#848e9c]">
+        <Clock className="h-3 w-3" />
+        {bi('ئاراستە گۆڕا', 'Signal changed')}{' '}
+        <span className="text-white font-bold">{fmtAgo(a.signalChangedAt)}</span>{' '}
+        {bi('لەمەوبەر', 'ago')}
       </div>
     </div>
   );
