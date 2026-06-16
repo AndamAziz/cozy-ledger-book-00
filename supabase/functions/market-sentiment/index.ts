@@ -165,6 +165,7 @@ Deno.serve(async (req) => {
         error: e instanceof Error ? e.message : "Unknown error",
         dxy: { price: null, changePct: null, available: false },
         sentiment: { value: null, classification: "", available: false },
+        spx: { price: null, changePct: null, available: false },
         goldBias: "neutral",
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
