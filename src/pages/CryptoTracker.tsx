@@ -356,7 +356,14 @@ export default function CryptoTracker() {
 
         <div className="flex flex-1 overflow-hidden relative">
           {/* Main content */}
-          {activeTab === 'crypto' ? (
+          {activeTab === 'ai' ? (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <AIAnalysisPanel
+                btcPrice={coinsMap.get('XBT/USD')?.price ?? 0}
+                goldPrice={metals.find((m) => m.code === 'XAU')?.price ?? 0}
+              />
+            </div>
+          ) : activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Chart / Analysis sub-toggle — mobile-friendly */}
               <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar">
