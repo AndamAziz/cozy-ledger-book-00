@@ -11,6 +11,7 @@ import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
+import { LivePriceBadge } from '@/components/crypto/LivePriceBadge';
 
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import type { OHLCCandle } from '@/lib/krakenApi';
