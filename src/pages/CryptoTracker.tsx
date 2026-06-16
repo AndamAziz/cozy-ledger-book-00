@@ -46,6 +46,7 @@ export default function CryptoTracker() {
     return 'metals';
   });
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
+  const [aiView, setAiView] = useState<'signals' | 'confluence'>('signals');
   const [forexView, setForexView] = useState<ForexView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(15);
