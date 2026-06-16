@@ -528,6 +528,17 @@ export default function CryptoTracker() {
             </div>
           )}
         </div>
+
+        {/* Bottom tab bar navigation */}
+        <BottomNav
+          activeTab={activeTab}
+          onTab={(tab) => { setShowSidebar(false); setActiveTab(tab); }}
+          onNews={() => setShowNews(true)}
+          onVerify={() => setShowVerify(true)}
+          onBot={() => navigate('/bots')}
+          onConvert={() => setShowConverter(true)}
+          bi={bi}
+        />
       </div>
 
       {showConverter && (
