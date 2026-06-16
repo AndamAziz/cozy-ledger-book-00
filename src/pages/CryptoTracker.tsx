@@ -568,6 +568,8 @@ export default function CryptoTracker() {
                   );
                 })()}
               </div>
+
+              {selectedMetalCode === null ? (
                 <AssetOverview
                   title={bi('پوختەی کاڵاکان', 'Commodities Overview')}
                   subtitle={bi('نرخ، گۆڕان و سیگناڵی کڕین/فرۆشتن', 'Price, change & Buy/Sell signals')}
