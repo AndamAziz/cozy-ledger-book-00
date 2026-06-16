@@ -48,7 +48,7 @@ const RANGE_MINUTES: Record<string, number> = {
 
 const INTRADAY_RANGES = new Set(['1min', '5min', '15min', '1d', '5d']);
 
-export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, accentColor, range, onRangeChange, currentPrice, name }: MetalsChartProps) {
+export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, accentColor, range, onRangeChange, currentPrice, name, code }: MetalsChartProps) {
   const { language } = useLanguage();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
