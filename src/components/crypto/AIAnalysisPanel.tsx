@@ -315,6 +315,7 @@ function AssetCard({
           <ConfluenceBar a={analysis} bi={bi} />
           <LevelsBlock a={analysis} asset={asset} />
           <SetupBlock setup={analysis.setup} asset={asset} />
+          {debug && <DebugBlock trends={analysis.trends} bi={bi} />}
         </>
       )}
     </div>
