@@ -23,10 +23,11 @@ import { METALS_META } from '@/lib/metalsApi';
 import { OverviewEntry } from '@/lib/overview';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DemoAccountProvider } from '@/contexts/DemoAccountContext';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid, LineChart, Newspaper, Crown } from 'lucide-react';
+import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid, LineChart, Newspaper, Crown, Brain } from 'lucide-react';
 import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
+import { AIAnalysisPanel } from '@/components/crypto/AIAnalysisPanel';
 
-type TrackerTab = 'crypto' | 'forex' | 'metals';
+type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
 type CryptoView = 'overview' | 'chart' | 'analysis' | 'pro';
 type ForexView = 'overview' | 'pro';
 type MetalsView = 'overview' | 'market' | 'analysis' | 'pro';
@@ -219,6 +220,15 @@ export default function CryptoTracker() {
               <CircleDot className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
               <span className="hidden sm:inline">{bi('کانزا', 'Metals')}</span>
             </button>
+            <button
+              onClick={() => setActiveTab('ai')}
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-xs font-bold transition-colors active:scale-95 min-h-[40px] ${
+                activeTab === 'ai' ? 'bg-gradient-to-r from-[#7c3aed] to-[#a855f7] text-white' : 'text-[#848e9c] hover:text-white'
+              }`}
+            >
+              <Brain className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden sm:inline">{bi('شیکاری', 'AI')}</span>
+            </button>
           </div>
 
           <div className="flex-1" />
@@ -282,7 +292,8 @@ export default function CryptoTracker() {
           )}
         </header>
 
-        {/* Asset selector dropdown (mobile + desktop) */}
+        {/* Asset selector dropdown (mobile + desktop) — hidden on AI tab */}
+        {activeTab !== 'ai' && (
         <div className="relative shrink-0 z-40 border-b border-[#1a1e2e] bg-[#0d1117]">
           <button
             onClick={() => setShowSidebar(v => !v)}
@@ -333,6 +344,7 @@ export default function CryptoTracker() {
             </div>
           )}
         </div>
+        )}
 
         {/* Backdrop to close dropdown */}
         {showSidebar && (
@@ -344,7 +356,14 @@ export default function CryptoTracker() {
 
         <div className="flex flex-1 overflow-hidden relative">
           {/* Main content */}
-          {activeTab === 'crypto' ? (
+          {activeTab === 'ai' ? (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <AIAnalysisPanel
+                btcPrice={coinsMap.get('XBT/USD')?.price ?? 0}
+                goldPrice={metals.find((m) => m.code === 'XAU')?.price ?? 0}
+              />
+            </div>
+          ) : activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Chart / Analysis sub-toggle — mobile-friendly */}
               <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar">

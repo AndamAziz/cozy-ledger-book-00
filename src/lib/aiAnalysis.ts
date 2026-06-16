@@ -1,0 +1,284 @@
+import { OHLCCandle, fetchOHLC } from './krakenApi';
+import { computeIndicators, summarizeSignals } from './indicators';
+import { computeSR, SRLevels } from './supportResistance';
+
+export type TrendDir = 'up' | 'down' | 'neutral';
+
+/** The six timeframes shown in the multi-timeframe summary. */
+export interface TFConfig {
+  /** Display label (D1, H4, ...). */
+  label: string;
+  /** Kraken interval in minutes for BTC. */
+  krakenInterval: number;
+  /** commodities-prices history range for gold. */
+  goldRange: string;
+  /** Aggregation factor applied to the gold candles (1 = none). */
+  goldAgg: number;
+}
+
+export const AI_TIMEFRAMES: TFConfig[] = [
+  { label: 'D1', krakenInterval: 1440, goldRange: '3mo', goldAgg: 1 },
+  { label: 'H4', krakenInterval: 240, goldRange: '1mo', goldAgg: 4 },
+  { label: 'H1', krakenInterval: 60, goldRange: '1mo', goldAgg: 1 },
+  { label: 'M30', krakenInterval: 30, goldRange: '5d', goldAgg: 2 },
+  { label: 'M15', krakenInterval: 15, goldRange: '15min', goldAgg: 1 },
+  { label: 'M5', krakenInterval: 5, goldRange: '5min', goldAgg: 1 },
+];
+
+export interface TFTrend {
+  label: string;
+  dir: TrendDir;
+  /** -100..100 signal score for the timeframe. */
+  score: number;
+}
+
+export interface KeyLevels {
+  supports: number[];
+  resistances: number[];
+  nearestSupport: number | null;
+  nearestResistance: number | null;
+}
+
+export interface TradeSetup {
+  side: 'buy' | 'sell' | 'none';
+  entry: number;
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2: number;
+  riskReward: number;
+}
+
+export interface ConfluenceResult {
+  /** 0..100 — how many timeframes agree with the dominant direction. */
+  score: number;
+  dir: TrendDir;
+  label: string;
+  upCount: number;
+  downCount: number;
+  neutralCount: number;
+}
+
+export interface AssetAnalysis {
+  trends: TFTrend[];
+  confluence: ConfluenceResult;
+  levels: KeyLevels;
+  setup: TradeSetup;
+  price: number;
+}
+
+/** Aggregate N consecutive candles into one (open/high/low/close). */
+export function aggregateCandles(candles: OHLCCandle[], factor: number): OHLCCandle[] {
+  if (factor <= 1) return candles;
+  const out: OHLCCandle[] = [];
+  for (let i = 0; i + factor <= candles.length; i += factor) {
+    const group = candles.slice(i, i + factor);
+    out.push({
+      time: group[0].time,
+      open: group[0].open,
+      high: Math.max(...group.map((c) => c.high)),
+      low: Math.min(...group.map((c) => c.low)),
+      close: group[group.length - 1].close,
+      volume: group.reduce((a, c) => a + (c.volume || 0), 0),
+    });
+  }
+  return out;
+}
+
+/** Trend direction for a candle series, derived from the shared indicator stack. */
+export function trendFromCandles(candles: OHLCCandle[], price: number): TFTrend {
+  if (!candles || candles.length < 20) {
+    return { label: '', dir: 'neutral', score: 0 };
+  }
+  const ind = computeIndicators(candles);
+  const ref = price > 0 ? price : candles[candles.length - 1].close;
+  const summary = summarizeSignals(ind, ref);
+  let dir: TrendDir = 'neutral';
+  if (summary.score >= 15) dir = 'up';
+  else if (summary.score <= -15) dir = 'down';
+  return { label: '', dir, score: summary.score };
+}
+
+export function computeConfluence(trends: TFTrend[]): ConfluenceResult {
+  const upCount = trends.filter((t) => t.dir === 'up').length;
+  const downCount = trends.filter((t) => t.dir === 'down').length;
+  const neutralCount = trends.filter((t) => t.dir === 'neutral').length;
+  const total = trends.length || 1;
+  const dominant = Math.max(upCount, downCount);
+  const dir: TrendDir = upCount > downCount ? 'up' : downCount > upCount ? 'down' : 'neutral';
+  const score = Math.round((dominant / total) * 100);
+
+  let label: string;
+  if (dir === 'neutral') {
+    label = 'Mixed / No Clear Bias';
+  } else {
+    const side = dir === 'up' ? 'Buy' : 'Sell';
+    if (score >= 80) label = `Strong ${side} Signal`;
+    else if (score >= 60) label = `${side} Signal`;
+    else label = `Weak ${side} Bias`;
+  }
+  return { score, dir, label, upCount, downCount, neutralCount };
+}
+
+/** Build support/resistance zones from a higher-timeframe candle series. */
+export function buildKeyLevels(candles: OHLCCandle[], price: number): KeyLevels {
+  const sr: SRLevels | null = computeSR(candles, 40);
+  if (!sr) {
+    return { supports: [], resistances: [], nearestSupport: null, nearestResistance: null };
+  }
+  const supportsRaw = [sr.s1, sr.s2, sr.s3, sr.recentLow].filter((v) => Number.isFinite(v) && v < price);
+  const resistancesRaw = [sr.r1, sr.r2, sr.r3, sr.recentHigh].filter((v) => Number.isFinite(v) && v > price);
+  const supports = Array.from(new Set(supportsRaw.map((v) => +v.toFixed(2)))).sort((a, b) => b - a).slice(0, 3);
+  const resistances = Array.from(new Set(resistancesRaw.map((v) => +v.toFixed(2)))).sort((a, b) => a - b).slice(0, 3);
+  return {
+    supports,
+    resistances,
+    nearestSupport: supports.length ? supports[0] : null,
+    nearestResistance: resistances.length ? resistances[0] : null,
+  };
+}
+
+/** Generate one trade setup of the day from the bias + key levels. */
+export function buildTradeSetup(dir: TrendDir, price: number, levels: KeyLevels): TradeSetup {
+  if (price <= 0 || dir === 'neutral') {
+    return { side: 'none', entry: price, stopLoss: 0, takeProfit1: 0, takeProfit2: 0, riskReward: 0 };
+  }
+  if (dir === 'up') {
+    const stopLoss = levels.nearestSupport ?? price * 0.99;
+    const tp1 = levels.nearestResistance ?? price * 1.01;
+    const tp2 = levels.resistances[1] ?? price * 1.02;
+    const risk = Math.max(price - stopLoss, price * 0.001);
+    const reward = tp1 - price;
+    return {
+      side: 'buy',
+      entry: +price.toFixed(2),
+      stopLoss: +stopLoss.toFixed(2),
+      takeProfit1: +tp1.toFixed(2),
+      takeProfit2: +tp2.toFixed(2),
+      riskReward: +(reward / risk).toFixed(2),
+    };
+  }
+  const stopLoss = levels.nearestResistance ?? price * 1.01;
+  const tp1 = levels.nearestSupport ?? price * 0.99;
+  const tp2 = levels.supports[1] ?? price * 0.98;
+  const risk = Math.max(stopLoss - price, price * 0.001);
+  const reward = price - tp1;
+  return {
+    side: 'sell',
+    entry: +price.toFixed(2),
+    stopLoss: +stopLoss.toFixed(2),
+    takeProfit1: +tp1.toFixed(2),
+    takeProfit2: +tp2.toFixed(2),
+    riskReward: +(reward / risk).toFixed(2),
+  };
+}
+
+/** Fetch BTC candles for a timeframe from Kraken. */
+async function fetchBtcTF(tf: TFConfig): Promise<OHLCCandle[]> {
+  try {
+    return await fetchOHLC('XBT/USD', tf.krakenInterval);
+  } catch {
+    return [];
+  }
+}
+
+/** Fetch gold candles for a timeframe from the commodities-prices function. */
+async function fetchGoldTF(tf: TFConfig): Promise<OHLCCandle[]> {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const res = await fetch(
+      `${supabaseUrl}/functions/v1/commodities-prices?mode=history&code=XAU&range=${tf.goldRange}`,
+      { headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey } },
+    );
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || !Array.isArray(data.candles)) return [];
+    const candles: OHLCCandle[] = data.candles.map((c: { time: number; open: number; high: number; low: number; close: number }) => ({
+      time: c.time,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: 0,
+    }));
+    return aggregateCandles(candles, tf.goldAgg);
+  } catch {
+    return [];
+  }
+}
+
+/** Run the full multi-timeframe analysis for one asset. */
+export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promise<AssetAnalysis> {
+  const fetcher = asset === 'btc' ? fetchBtcTF : fetchGoldTF;
+  const series = await Promise.all(AI_TIMEFRAMES.map((tf) => fetcher(tf)));
+
+  const trends: TFTrend[] = AI_TIMEFRAMES.map((tf, i) => {
+    const t = trendFromCandles(series[i], price);
+    return { ...t, label: tf.label };
+  });
+
+  const confluence = computeConfluence(trends);
+
+  // Use H4 (index 1) for key levels, fall back to D1, then H1.
+  const levelSeries = series[1]?.length ? series[1] : series[0]?.length ? series[0] : series[2] || [];
+  const effectivePrice = price > 0 ? price : levelSeries.length ? levelSeries[levelSeries.length - 1].close : 0;
+  const levels = buildKeyLevels(levelSeries, effectivePrice);
+  const setup = buildTradeSetup(confluence.dir, effectivePrice, levels);
+
+  return { trends, confluence, levels, setup, price: effectivePrice };
+}
+
+// ─── Forex sessions ───
+export interface TradingSession {
+  name: string;
+  emoji: string;
+  /** Open hour (UTC). */
+  openUtc: number;
+  /** Close hour (UTC). */
+  closeUtc: number;
+}
+
+export const TRADING_SESSIONS: TradingSession[] = [
+  { name: 'Asian', emoji: '🌏', openUtc: 0, closeUtc: 9 },
+  { name: 'London', emoji: '🌍', openUtc: 8, closeUtc: 17 },
+  { name: 'New York', emoji: '🌎', openUtc: 13, closeUtc: 22 },
+];
+
+export interface SessionStatus {
+  name: string;
+  emoji: string;
+  active: boolean;
+  /** Countdown label to the next state flip (open or close). */
+  countdown: string;
+  /** Whether the countdown is until this session opens (false = until close). */
+  untilOpen: boolean;
+}
+
+function fmtCountdown(ms: number): string {
+  if (ms <= 0) return '0m';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+export function getSessionStatuses(now = new Date()): SessionStatus[] {
+  const weekend = now.getUTCDay() === 6 || (now.getUTCDay() === 0 && now.getUTCHours() < 22);
+  return TRADING_SESSIONS.map((s) => {
+    const hour = now.getUTCHours() + now.getUTCMinutes() / 60;
+    const active = !weekend && hour >= s.openUtc && hour < s.closeUtc;
+
+    // Build the next open and next close timestamps.
+    const open = new Date(now);
+    open.setUTCHours(s.openUtc, 0, 0, 0);
+    if (open.getTime() <= now.getTime() && hour >= s.openUtc) open.setUTCDate(open.getUTCDate() + 1);
+
+    const close = new Date(now);
+    close.setUTCHours(s.closeUtc, 0, 0, 0);
+    if (close.getTime() <= now.getTime()) close.setUTCDate(close.getUTCDate() + 1);
+
+    if (active) {
+      return { name: s.name, emoji: s.emoji, active: true, countdown: fmtCountdown(close.getTime() - now.getTime()), untilOpen: false };
+    }
+    return { name: s.name, emoji: s.emoji, active: false, countdown: fmtCountdown(open.getTime() - now.getTime()), untilOpen: true };
+  });
+}
