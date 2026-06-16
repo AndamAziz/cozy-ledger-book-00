@@ -26,7 +26,12 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
   const [chartRange, setChartRange] = useState('1d');
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const livePrice = selected?.price || 0;
-  const { candles: historyCandles, isLoading: historyLoading, error: historyError, lastUpdated: historyLastUpdated, refetch: refetchHistory } = useMetalsHistory(selectedCode, chartRange, livePrice);
+  // The analysis & pro views need plenty of candles for accurate indicators
+  // (RSI 14, MACD 26/9, Bollinger 20, EMA 50). The 1d/5min ranges only return
+  // ~15 candles, which makes RSI unstable and the slower indicators unavailable.
+  // Use a data-rich intraday range (15m candles, ~270 bars) for those views.
+  const effectiveRange = view === 'market' ? chartRange : '15min';
+  const { candles: historyCandles, isLoading: historyLoading, error: historyError, lastUpdated: historyLastUpdated, refetch: refetchHistory } = useMetalsHistory(selectedCode, effectiveRange, livePrice);
 
   // Adapt metals candles (close/high/low) to the OHLC shape the analysis expects
   const ohlcCandles = useMemo<OHLCCandle[]>(
