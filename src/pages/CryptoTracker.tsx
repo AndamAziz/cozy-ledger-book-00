@@ -340,12 +340,6 @@ export default function CryptoTracker() {
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Chart / Analysis sub-toggle — mobile-friendly */}
               <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar">
-                {currentPrice > 0 && (
-                  <span className="flex items-center gap-1.5 rounded-lg bg-black/60 px-2.5 py-1.5 text-xs leading-none whitespace-nowrap shrink-0">
-                    <span className="font-bold text-[#f0b90b]">{getDisplaySymbol(getSymbolFromPair(selectedPair))}</span>
-                    <span className="font-semibold tabular-nums text-white">${currentPrice >= 1000 ? currentPrice.toLocaleString(undefined, { maximumFractionDigits: 1 }) : currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                  </span>
-                )}
                 <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
                   <button
                     onClick={() => setCryptoView('overview')}
