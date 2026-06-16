@@ -44,7 +44,7 @@ export function rsiSeries(candles: OHLCCandle[], period = 14): TimeValue[] {
   }
   let avgGain = gain / period;
   let avgLoss = loss / period;
-  const rsiAt = () => (avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss));
+  const rsiAt = () => (avgLoss === 0 && avgGain === 0 ? 50 : avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss));
   out.push({ time: candles[period].time, value: +rsiAt().toFixed(2) });
 
   for (let i = period + 1; i < closes.length; i++) {
@@ -69,7 +69,7 @@ export function macdSeries(
   signalPeriod = 9
 ): MacdSeries {
   const empty: MacdSeries = { macd: [], signal: [], histogram: [] };
-  if (candles.length < slow + signalPeriod) return empty;
+  if (candles.length < slow + signalPeriod - 1) return empty;
   const closes = candles.map((c) => c.close);
 
   const fastEma = emaSeriesAligned(closes, fast);

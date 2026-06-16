@@ -14,6 +14,28 @@ export interface IndicatorResult {
   ema50: number | null;
 }
 
+export interface IndicatorSettings {
+  rsiPeriod: number;
+  macdFast: number;
+  macdSlow: number;
+  macdSignal: number;
+}
+
+export const STANDARD_INDICATOR_SETTINGS: IndicatorSettings = {
+  rsiPeriod: 14,
+  macdFast: 12,
+  macdSlow: 26,
+  macdSignal: 9,
+};
+
+export function bestIndicatorSettings(candleCount: number): IndicatorSettings {
+  if (candleCount >= 35) return STANDARD_INDICATOR_SETTINGS;
+  if (candleCount >= 26) return { rsiPeriod: 14, macdFast: 8, macdSlow: 21, macdSignal: 5 };
+  if (candleCount >= 18) return { rsiPeriod: 14, macdFast: 5, macdSlow: 13, macdSignal: 5 };
+  if (candleCount >= 11) return { rsiPeriod: 7, macdFast: 3, macdSlow: 8, macdSignal: 3 };
+  return { rsiPeriod: Math.max(2, Math.min(7, candleCount - 1)), macdFast: 3, macdSlow: 8, macdSignal: 3 };
+}
+
 export interface SignalSummary {
   signal: SignalType;
   score: number; // -100 (strong sell) .. 100 (strong buy)
@@ -62,6 +84,7 @@ export function calculateRSI(closes: number[], period = 14): number | null {
     avgGain = (avgGain * (period - 1) + g) / period;
     avgLoss = (avgLoss * (period - 1) + l) / period;
   }
+  if (avgLoss === 0 && avgGain === 0) return 50;
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
   return 100 - 100 / (1 + rs);
@@ -74,7 +97,7 @@ export function calculateMACD(
   slow = 26,
   signalPeriod = 9
 ): { macd: number; signal: number; histogram: number } | null {
-  if (closes.length < slow + signalPeriod) return null;
+  if (closes.length < slow + signalPeriod - 1) return null;
   const fastEma = emaSeries(closes, fast);
   const slowEma = emaSeries(closes, slow);
   // Align the two EMA series (fast is longer)
@@ -108,11 +131,11 @@ export function calculateBollinger(
   return { upper, middle, lower, percentB };
 }
 
-export function computeIndicators(candles: OHLCCandle[]): IndicatorResult {
+export function computeIndicators(candles: OHLCCandle[], settings: IndicatorSettings = STANDARD_INDICATOR_SETTINGS): IndicatorResult {
   const closes = candles.map((c) => c.close);
   return {
-    rsi: calculateRSI(closes),
-    macd: calculateMACD(closes),
+    rsi: calculateRSI(closes, settings.rsiPeriod),
+    macd: calculateMACD(closes, settings.macdFast, settings.macdSlow, settings.macdSignal),
     bollinger: calculateBollinger(closes),
     ema9: emaLast(closes, 9),
     ema21: emaLast(closes, 21),
