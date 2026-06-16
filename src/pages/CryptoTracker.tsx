@@ -292,7 +292,8 @@ export default function CryptoTracker() {
           )}
         </header>
 
-        {/* Asset selector dropdown (mobile + desktop) */}
+        {/* Asset selector dropdown (mobile + desktop) — hidden on AI tab */}
+        {activeTab !== 'ai' && (
         <div className="relative shrink-0 z-40 border-b border-[#1a1e2e] bg-[#0d1117]">
           <button
             onClick={() => setShowSidebar(v => !v)}
