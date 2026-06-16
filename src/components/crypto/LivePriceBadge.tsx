@@ -5,8 +5,8 @@ interface LivePriceBadgeProps {
   label: string;
   /** Current live price */
   price: number;
-  /** 24h percentage change */
-  change: number;
+  /** 24h percentage change (used only for the dot fallback color) */
+  change?: number;
   /** Number of decimals for the price */
   decimals?: number;
   /** Prefix before the price, e.g. "$" (empty for forex) */
@@ -16,38 +16,25 @@ interface LivePriceBadgeProps {
 }
 
 /**
- * Compact live price badge designed to sit next to the Pro/Crown button.
- * - Price/percentage are green when up, red when down.
- * - Subtle fade pulse whenever the price changes.
- * - A small dot reflects the price direction over the last 30 seconds
+ * Tiny live price badge that floats over the TOP-LEFT corner of the chart.
+ * - position: absolute, so it overlays the chart without affecting layout.
+ * - Very small (10px), max ~20px tall, semi-transparent dark background.
+ * - Shows only: dot + symbol + price (no percentage).
+ * - The dot reflects the price direction over the last 30 seconds
  *   (green = up, red = down, grey = no change).
  */
 export function LivePriceBadge({
   label,
   price,
-  change,
   decimals = 2,
   prefix = '$',
   accentColor = '#f0b90b',
 }: LivePriceBadgeProps) {
-  const [flash, setFlash] = useState(false);
   const [dot, setDot] = useState<'up' | 'down' | 'none'>('none');
-  const prevPrice = useRef(price);
   const priceRef = useRef(price);
   const snapshotRef = useRef(price);
 
   priceRef.current = price;
-
-  // Subtle fade pulse whenever the price changes
-  useEffect(() => {
-    if (price > 0 && prevPrice.current > 0 && price !== prevPrice.current) {
-      setFlash(true);
-      const t = setTimeout(() => setFlash(false), 400);
-      prevPrice.current = price;
-      return () => clearTimeout(t);
-    }
-    prevPrice.current = price;
-  }, [price]);
 
   // 30-second direction dot (independent of render-cycle props via refs)
   useEffect(() => {
@@ -66,29 +53,21 @@ export function LivePriceBadge({
 
   if (!price || price <= 0) return null;
 
-  const up = change >= 0;
-  const priceColor = up ? '#0ecb81' : '#f6465d';
   const dotColor = dot === 'up' ? '#0ecb81' : dot === 'down' ? '#f6465d' : '#5b6472';
+  const priceText = price.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
   return (
     <div
-      className={`flex items-center gap-1 shrink-0 rounded-lg bg-[#1a1e2e] px-2 py-1 text-[11px] leading-none whitespace-nowrap transition-opacity duration-300 ${
-        flash ? 'opacity-50' : 'opacity-100'
-      }`}
-      title={`${label} ${prefix}${price.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`}
+      className="pointer-events-none absolute left-2 top-2 z-20 flex h-5 items-center gap-1 rounded-md bg-black/70 px-1.5 text-[10px] leading-none whitespace-nowrap backdrop-blur-sm opacity-85"
+      title={`${label} ${prefix}${priceText}`}
     >
       <span
-        className="h-1.5 w-1.5 rounded-full transition-colors duration-300"
+        className="h-1 w-1 rounded-full transition-colors duration-300"
         style={{ backgroundColor: dotColor }}
       />
       <span className="font-bold" style={{ color: accentColor }}>{label}</span>
-      <span className="font-semibold tabular-nums" style={{ color: priceColor }}>
-        {prefix}
-        {price.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
-      </span>
-      <span className="font-medium tabular-nums" style={{ color: priceColor }}>
-        {up ? '▲' : '▼'}
-        {Math.abs(change).toFixed(2)}%
+      <span className="font-semibold tabular-nums text-white">
+        {prefix}{priceText}
       </span>
     </div>
   );

@@ -29,7 +29,7 @@ import { AIAnalysisPanel } from '@/components/crypto/AIAnalysisPanel';
 import { SignalsPanel } from '@/components/crypto/SignalsPanel';
 import { IndicatorVerify } from '@/components/crypto/IndicatorVerify';
 import { BottomNav } from '@/components/crypto/BottomNav';
-import { LivePriceBadge } from '@/components/crypto/LivePriceBadge';
+
 
 type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
 type CryptoView = 'overview' | 'chart' | 'analysis' | 'pro';
@@ -378,15 +378,6 @@ export default function CryptoTracker() {
                     <span className="hidden sm:inline">{bi('پرۆ', 'Pro')}</span>
                   </button>
                 </div>
-                <div className="ms-auto">
-                  <LivePriceBadge
-                    label={getDisplaySymbol(getSymbolFromPair(selectedPair))}
-                    price={currentPrice}
-                    change={currentCoin?.change24h ?? 0}
-                    decimals={0}
-                    accentColor="#f0b90b"
-                  />
-                </div>
               </div>
 
 
@@ -470,22 +461,6 @@ export default function CryptoTracker() {
                     })()}
                   </span>
                 )}
-                <div className="ms-auto">
-                  {(() => {
-                    const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
-                    if (!c) return null;
-                    return (
-                      <LivePriceBadge
-                        label={`USD/${c.code}`}
-                        price={c.rate}
-                        change={c.change}
-                        decimals={4}
-                        prefix=""
-                        accentColor="#2962ff"
-                      />
-                    );
-                  })()}
-                </div>
               </div>
 
               {forexView === 'pro' ? (
@@ -552,21 +527,6 @@ export default function CryptoTracker() {
                     <span className="hidden sm:inline">{bi('پرۆ', 'Pro')}</span>
                   </button>
                 </div>
-                {selectedMetalCode !== null && (() => {
-                  const m = metals.find(x => x.code === selectedMetalCode);
-                  if (!m) return null;
-                  return (
-                    <div className="ms-auto">
-                      <LivePriceBadge
-                        label={selectedMetalCode}
-                        price={m.price}
-                        change={m.change}
-                        decimals={m.price >= 1000 ? 1 : 2}
-                        accentColor={m.category === 'oil' ? '#e67e22' : '#d4af37'}
-                      />
-                    </div>
-                  );
-                })()}
               </div>
 
               {selectedMetalCode === null ? (

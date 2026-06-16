@@ -8,6 +8,7 @@ import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
+import { LivePriceBadge } from '@/components/crypto/LivePriceBadge';
 
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -808,6 +809,12 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
       {/* Chart — sized so trade controls (above) and 24h stats (below) stay reachable on mobile without awkward scrolling */}
       <div className="relative h-[46vh] sm:h-[360px] md:h-[500px] landscape:h-[86vh] landscape:max-h-none">
+        <LivePriceBadge
+          label={getDisplaySymbol(getSymbolFromPair(pair))}
+          price={currentPrice}
+          decimals={0}
+          accentColor="#f0b90b"
+        />
         <div ref={chartContainerRef} className="absolute inset-0" />
 
 

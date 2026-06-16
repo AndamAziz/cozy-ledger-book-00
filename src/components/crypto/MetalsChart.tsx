@@ -11,6 +11,7 @@ import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
+import { LivePriceBadge } from '@/components/crypto/LivePriceBadge';
 
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import type { OHLCCandle } from '@/lib/krakenApi';
@@ -26,6 +27,7 @@ interface MetalsChartProps {
   onRangeChange: (range: string) => void;
   currentPrice?: number;
   name?: string;
+  code?: string;
 }
 
 const RANGES = [
@@ -47,7 +49,7 @@ const RANGE_MINUTES: Record<string, number> = {
 
 const INTRADAY_RANGES = new Set(['1min', '5min', '15min', '1d', '5d']);
 
-export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, accentColor, range, onRangeChange, currentPrice, name }: MetalsChartProps) {
+export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, accentColor, range, onRangeChange, currentPrice, name, code }: MetalsChartProps) {
   const { language } = useLanguage();
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -970,6 +972,12 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
 
       {/* Chart — grows to fill the screen in landscape (MT5-style) */}
       <div className="relative h-[72vh] sm:h-[340px] landscape:h-[88vh] landscape:max-h-none">
+        <LivePriceBadge
+          label={code || name || ''}
+          price={livePrice()}
+          decimals={livePrice() >= 1000 ? 1 : 2}
+          accentColor={accentColor}
+        />
         <div ref={chartContainerRef} className="absolute inset-0" />
 
 
