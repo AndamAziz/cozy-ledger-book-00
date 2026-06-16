@@ -339,14 +339,14 @@ export default function CryptoTracker() {
           ) : activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Chart / Analysis sub-toggle — mobile-friendly */}
-              <div className="flex items-center justify-between gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
+              <div className="flex items-center gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
                 {currentPrice > 0 && (
                   <span className="flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[13px] leading-none whitespace-nowrap shrink-0">
                     <span className="font-bold text-[#f0b90b]">{getDisplaySymbol(getSymbolFromPair(selectedPair))}</span>
                     <span className="font-semibold tabular-nums text-white">${currentPrice >= 1000 ? currentPrice.toLocaleString(undefined, { maximumFractionDigits: 1 }) : currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </span>
                 )}
-                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
+                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0 ml-auto">
                   <button
                     onClick={() => setCryptoView('overview')}
                     className={`flex items-center justify-center gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
@@ -438,7 +438,7 @@ export default function CryptoTracker() {
           ) : activeTab === 'forex' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Pro sub-toggle */}
-              <div className="flex items-center justify-between gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
+              <div className="flex items-center gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
                 {(() => {
                   const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
                   if (!c) return null;
@@ -449,7 +449,7 @@ export default function CryptoTracker() {
                     </span>
                   );
                 })()}
-                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
+                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0 ml-auto">
                   <button
                     onClick={() => setForexView('overview')}
                     className={`flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
@@ -496,7 +496,7 @@ export default function CryptoTracker() {
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Market / Analysis / Pro sub-toggle — mobile-friendly */}
-              <div className="flex items-center justify-between gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
+              <div className="flex items-center gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
                 {selectedMetalCode && (() => {
                   const m = metals.find(x => x.code === selectedMetalCode);
                   if (!m) return null;
@@ -507,7 +507,7 @@ export default function CryptoTracker() {
                     </span>
                   );
                 })()}
-                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
+                <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0 ml-auto">
                   <button
                     onClick={() => { setSelectedMetalCode(null); setMetalsView('overview'); }}
                     className={`flex items-center justify-center gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs font-bold transition-colors active:scale-95 min-h-[40px] min-w-[40px] ${
