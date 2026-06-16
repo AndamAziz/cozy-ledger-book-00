@@ -117,8 +117,6 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
   }
 
   // Detail view
-  const isPositive = selected.change > 0;
-  const isNeutral = selected.change === 0;
   const isOil = selected.category === 'oil';
   const accentColor = isOil ? '#e67e22' : '#d4af37';
   
