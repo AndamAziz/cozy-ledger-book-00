@@ -230,6 +230,12 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       seriesRef.current = null;
       priceLineRef.current = null;
       maSeriesRefs.current = {};
+      // Indicator series belonged to the now-disposed chart. Drop the refs so the
+      // live-update effect doesn't call setData on disposed objects.
+      rsiSeriesRef.current = null;
+      macdHistRef.current = null;
+      macdLineRef.current = null;
+      macdSignalRef.current = null;
     }
 
     const rect = container.getBoundingClientRect();
