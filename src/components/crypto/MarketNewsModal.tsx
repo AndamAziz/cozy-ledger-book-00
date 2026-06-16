@@ -215,8 +215,9 @@ function SwipeCard({ children, onDismiss }: { children: ReactNode; onDismiss?: (
   };
 
   return (
-    <div className="relative overflow-hidden rounded-lg">
-      {onDismiss && (
+    <div className="relative overflow-hidden rounded-lg group">
+      {/* Red swipe-to-dismiss backdrop — only visible while actually swiping */}
+      {onDismiss && dx < -6 && (
         <div className="absolute inset-0 flex items-center justify-end pr-4 rounded-lg" style={{ backgroundColor: 'rgba(246,70,93,0.18)' }}>
           <X className="h-4 w-4" style={{ color: '#f6465d' }} />
         </div>
@@ -229,6 +230,16 @@ function SwipeCard({ children, onDismiss }: { children: ReactNode; onDismiss?: (
       >
         {children}
       </div>
+      {/* Desktop X — only on hover */}
+      {onDismiss && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+          className="absolute top-1.5 right-1.5 z-10 p-1 rounded-full bg-black/40 text-[#f6465d] opacity-0 group-hover:opacity-100 transition-opacity"
+          aria-label="Dismiss"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
     </div>
   );
 }
