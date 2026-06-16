@@ -361,6 +361,7 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
   const [sessions, setSessions] = useState<SessionStatus[]>(getSessionStatuses());
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [debug, setDebug] = useState(false);
 
   const runAnalysis = useCallback(async () => {
     setLoading(true);
