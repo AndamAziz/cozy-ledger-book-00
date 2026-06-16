@@ -54,7 +54,7 @@ export default function Bots() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => { try { localStorage.setItem("tracker:lastTab", "metals"); } catch { /* noop */ } navigate("/crypto"); }}
+              onClick={() => goToGold(navigate)}
               className="rounded-lg p-1.5 hover:bg-secondary"
               aria-label="Back"
             >
