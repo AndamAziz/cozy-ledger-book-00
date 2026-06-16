@@ -79,6 +79,35 @@ async function fetchDxy(): Promise<DxySnapshot> {
   return fetchDxyTwelve();
 }
 
+async function fetchSpx(): Promise<DxySnapshot> {
+  try {
+    const r = await fetch(
+      "https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&range=5d",
+      { headers: { "User-Agent": "Mozilla/5.0" } },
+    );
+    if (!r.ok) return { price: null, changePct: null, available: false };
+    const j = await r.json();
+    const meta = j?.chart?.result?.[0]?.meta;
+    if (!meta) return { price: null, changePct: null, available: false };
+    const price = typeof meta.regularMarketPrice === "number" ? meta.regularMarketPrice : null;
+    const prev =
+      typeof meta.chartPreviousClose === "number"
+        ? meta.chartPreviousClose
+        : typeof meta.previousClose === "number"
+          ? meta.previousClose
+          : null;
+    let changePct: number | null = null;
+    if (price !== null && prev) changePct = ((price - prev) / prev) * 100;
+    return {
+      price,
+      changePct: Number.isFinite(changePct as number) ? changePct : null,
+      available: price !== null,
+    };
+  } catch {
+    return { price: null, changePct: null, available: false };
+  }
+}
+
 async function fetchFearGreed(): Promise<SentimentSnapshot> {
   try {
     const r = await fetch("https://api.alternative.me/fng/?limit=1", {
@@ -104,7 +133,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const [dxy, sentiment] = await Promise.all([fetchDxy(), fetchFearGreed()]);
+    const [dxy, sentiment, spx] = await Promise.all([fetchDxy(), fetchFearGreed(), fetchSpx()]);
 
     // Gold moves inverse to the dollar.
     let goldBias: "bullish" | "bearish" | "neutral" = "neutral";
@@ -117,6 +146,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         dxy,
         sentiment,
+        spx,
         goldBias,
         generatedAt: new Date().toISOString(),
       }),
@@ -135,6 +165,7 @@ Deno.serve(async (req) => {
         error: e instanceof Error ? e.message : "Unknown error",
         dxy: { price: null, changePct: null, available: false },
         sentiment: { value: null, classification: "", available: false },
+        spx: { price: null, changePct: null, available: false },
         goldBias: "neutral",
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
