@@ -29,7 +29,7 @@ interface MainItem {
   onPress: () => void;
 }
 
-export function BottomNav({ activeTab, onTab, onNews, onVerify, onBot, onConvert, bi }: BottomNavProps) {
+export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, onConvert, bi }: BottomNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [tapped, setTapped] = useState<string | null>(null);
 
