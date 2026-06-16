@@ -293,8 +293,9 @@ export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promis
   const effectivePrice = price > 0 ? price : levelSeries.length ? levelSeries[levelSeries.length - 1].close : 0;
   const levels = buildKeyLevels(levelSeries, effectivePrice);
   const setup = buildTradeSetup(confluence.dir, effectivePrice, levels);
+  const signalChangedAt = recordDirection(asset, confluence.dir);
 
-  return { trends, confluence, levels, setup, price: effectivePrice };
+  return { trends, confluence, levels, setup, price: effectivePrice, signalChangedAt };
 }
 
 // ─── Forex sessions ───
