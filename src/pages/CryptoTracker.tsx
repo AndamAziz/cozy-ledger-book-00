@@ -38,7 +38,13 @@ export default function CryptoTracker() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
-  const [activeTab, setActiveTab] = useState<TrackerTab>('metals');
+  const [activeTab, setActiveTab] = useState<TrackerTab>(() => {
+    try {
+      const saved = localStorage.getItem('tracker:lastTab') as TrackerTab | null;
+      if (saved === 'crypto' || saved === 'forex' || saved === 'metals' || saved === 'ai') return saved;
+    } catch { /* noop */ }
+    return 'metals';
+  });
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [forexView, setForexView] = useState<ForexView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
