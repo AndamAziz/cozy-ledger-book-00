@@ -1,0 +1,154 @@
+import { OHLCCandle, fetchOHLC } from './krakenApi';
+import { aggregateCandles } from './aiAnalysis';
+import { fetchForexCandles } from './forexApi';
+import {
+  AssetKey,
+  SignalTF,
+  SIGNAL_TIMEFRAMES,
+  MacroContext,
+  NewsEvent,
+} from './signalEngine';
+
+export interface AssetMeta {
+  key: AssetKey;
+  label: string;
+  short: string;
+  emoji: string;
+  decimals: number;
+  /** News currencies relevant to this asset. */
+  currencies: string[];
+  source: 'btc' | 'gold' | 'forex';
+  /** Forex code (for forex source). */
+  forexCode?: string;
+  /** Invert forex candles (e.g. EUR/USD = 1 / USDEUR). */
+  invert?: boolean;
+}
+
+export const SIGNAL_ASSETS: AssetMeta[] = [
+  { key: 'gold', label: 'XAU/USD', short: 'Gold', emoji: '🥇', decimals: 2, currencies: ['USD', 'EUR', 'CHF', 'GBP', 'JPY'], source: 'gold' },
+  { key: 'btc', label: 'BTC/USD', short: 'Bitcoin', emoji: '₿', decimals: 0, currencies: ['USD'], source: 'btc' },
+  { key: 'eurusd', label: 'EUR/USD', short: 'EUR/USD', emoji: '🇪🇺', decimals: 4, currencies: ['EUR', 'USD'], source: 'forex', forexCode: 'EUR', invert: true },
+  { key: 'gbpusd', label: 'GBP/USD', short: 'GBP/USD', emoji: '🇬🇧', decimals: 4, currencies: ['GBP', 'USD'], source: 'forex', forexCode: 'GBP', invert: true },
+  { key: 'usdjpy', label: 'USD/JPY', short: 'USD/JPY', emoji: '🇯🇵', decimals: 2, currencies: ['USD', 'JPY'], source: 'forex', forexCode: 'JPY', invert: false },
+];
+
+export function getAssetMeta(key: AssetKey): AssetMeta {
+  return SIGNAL_ASSETS.find((a) => a.key === key) ?? SIGNAL_ASSETS[0];
+}
+
+/** Kraken interval (minutes) per timeframe for BTC. */
+const BTC_INTERVAL: Record<SignalTF, number> = {
+  M5: 5, M15: 15, M30: 30, H1: 60, H4: 240, D1: 1440,
+};
+
+/** commodities-prices history range + aggregation per timeframe for gold. */
+const GOLD_TF: Record<SignalTF, { range: string; agg: number }> = {
+  M5: { range: '5min', agg: 1 },
+  M15: { range: '15min', agg: 1 },
+  M30: { range: '5d', agg: 2 },
+  H1: { range: '1mo', agg: 1 },
+  H4: { range: '1mo', agg: 4 },
+  D1: { range: '3mo', agg: 1 },
+};
+
+/** forex-prices history range + aggregation per timeframe. */
+const FOREX_TF: Record<SignalTF, { range: string; agg: number }> = {
+  M5: { range: '1d', agg: 1 },
+  M15: { range: '5d', agg: 1 },
+  M30: { range: '5d', agg: 2 },
+  H1: { range: '1mo', agg: 1 },
+  H4: { range: '1mo', agg: 4 },
+  D1: { range: '3mo', agg: 1 },
+};
+
+async function fetchGoldCandles(range: string, agg: number): Promise<OHLCCandle[]> {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const res = await fetch(
+      `${supabaseUrl}/functions/v1/commodities-prices?mode=history&code=XAU&range=${range}`,
+      { headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey } },
+    );
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || !Array.isArray(data.candles)) return [];
+    const candles: OHLCCandle[] = data.candles.map((c: { time: number; open: number; high: number; low: number; close: number }) => ({
+      time: c.time, open: c.open, high: c.high, low: c.low, close: c.close, volume: 0,
+    }));
+    return aggregateCandles(candles, agg);
+  } catch {
+    return [];
+  }
+}
+
+function invertCandles(candles: OHLCCandle[]): OHLCCandle[] {
+  return candles
+    .filter((c) => c.open > 0 && c.high > 0 && c.low > 0 && c.close > 0)
+    .map((c) => ({
+      time: c.time,
+      open: 1 / c.open,
+      close: 1 / c.close,
+      high: 1 / c.low,
+      low: 1 / c.high,
+      volume: 0,
+    }));
+}
+
+async function fetchForexTF(code: string, range: string, agg: number, invert: boolean): Promise<OHLCCandle[]> {
+  const raw = await fetchForexCandles(code, range);
+  const candles: OHLCCandle[] = raw.map((c) => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close, volume: 0 }));
+  const fixed = invert ? invertCandles(candles) : candles;
+  return aggregateCandles(fixed, agg);
+}
+
+/** Fetch OHLC candles for one asset + timeframe. */
+export async function fetchAssetTF(meta: AssetMeta, tf: SignalTF): Promise<OHLCCandle[]> {
+  try {
+    if (meta.source === 'btc') return await fetchOHLC('XBT/USD', BTC_INTERVAL[tf]);
+    if (meta.source === 'gold') { const c = GOLD_TF[tf]; return await fetchGoldCandles(c.range, c.agg); }
+    const c = FOREX_TF[tf];
+    return await fetchForexTF(meta.forexCode!, c.range, c.agg, !!meta.invert);
+  } catch {
+    return [];
+  }
+}
+
+/** Fetch candles for every timeframe of an asset (used for conflict detection). */
+export async function fetchAssetAllTF(meta: AssetMeta): Promise<Partial<Record<SignalTF, OHLCCandle[]>>> {
+  const entries = await Promise.all(
+    SIGNAL_TIMEFRAMES.map(async (tf) => [tf, await fetchAssetTF(meta, tf)] as const),
+  );
+  const out: Partial<Record<SignalTF, OHLCCandle[]>> = {};
+  for (const [tf, c] of entries) out[tf] = c;
+  return out;
+}
+
+const headers = {
+  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+};
+
+/** Fetch the shared macro snapshot (DXY, Fear & Greed, S&P 500). */
+export async function fetchMacro(): Promise<MacroContext> {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-sentiment`, { headers });
+    const data = await res.json();
+    return {
+      dxyChangePct: data?.dxy?.changePct ?? null,
+      fearGreed: data?.sentiment?.value ?? null,
+      spxChangePct: data?.spx?.changePct ?? null,
+    };
+  } catch {
+    return { dxyChangePct: null, fearGreed: null, spxChangePct: null };
+  }
+}
+
+/** Fetch the economic calendar events. */
+export async function fetchEvents(): Promise<NewsEvent[]> {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-news`, { headers });
+    const data = await res.json();
+    return Array.isArray(data?.events) ? data.events : [];
+  } catch {
+    return [];
+  }
+}
