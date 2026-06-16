@@ -45,6 +45,7 @@ export default function CryptoTracker() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showConverter, setShowConverter] = useState(false);
   const [showNews, setShowNews] = useState(false);
+  const [showVerify, setShowVerify] = useState(false);
   const [coinsMap, setCoinsMap] = useState<Map<string, KrakenCoin>>(new Map());
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedForexCode, setSelectedForexCode] = useState<string | null>(null);
