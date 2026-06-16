@@ -170,7 +170,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
           candles={ohlcCandles}
           currentPrice={selected.price}
           change24h={selected.change}
-          timeframeLabel={RANGE_LABELS[chartRange] ?? chartRange}
+          timeframeLabel={RANGE_LABELS[effectiveRange] ?? effectiveRange}
           tradeSymbol={`metal:${selected.name}`}
           tradeLabel={selected.name}
         />
