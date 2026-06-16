@@ -53,9 +53,13 @@ export default function Bots() {
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Link to="/gold" className="rounded-lg p-1.5 hover:bg-secondary" aria-label="Back">
+            <button
+              onClick={() => { try { localStorage.setItem("tracker:lastTab", "metals"); } catch { /* noop */ } navigate("/crypto"); }}
+              className="rounded-lg p-1.5 hover:bg-secondary"
+              aria-label="Back"
+            >
               <ArrowLeft className="h-5 w-5 text-foreground" />
-            </Link>
+            </button>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-accent">
               <LineChart className="h-5 w-5 text-gold-foreground" />
             </div>
