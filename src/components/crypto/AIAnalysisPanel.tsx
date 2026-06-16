@@ -204,18 +204,77 @@ function SetupBlock({ setup, asset }: { setup: TradeSetup; asset: 'btc' | 'gold'
   );
 }
 
+/** Raw RSI / MACD values per timeframe, shown only in debug mode. */
+function DebugBlock({ trends, bi }: { trends: TFTrend[]; bi: (ku: string, en: string) => string }) {
+  const fmt = (n: number | null | undefined, d = 2) =>
+    n == null || !Number.isFinite(n) ? '—' : n.toFixed(d);
+  return (
+    <div className="rounded-lg bg-[#08131a] border border-[#1f3a2e] p-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#0ecb81] mb-2">
+        <Bug className="h-3.5 w-3.5" /> {bi('شێوازی دیباگ — بەهای خاو', 'Debug — Raw Values')}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-[10px] tabular-nums">
+          <thead>
+            <tr className="text-[#848e9c] text-left">
+              <th className="py-1 pe-2 font-bold">TF</th>
+              <th className="py-1 pe-2 font-bold">RSI</th>
+              <th className="py-1 pe-2 font-bold">MACD</th>
+              <th className="py-1 pe-2 font-bold">Signal</th>
+              <th className="py-1 pe-2 font-bold">Hist</th>
+              <th className="py-1 pe-2 font-bold">N</th>
+              <th className="py-1 font-bold">Dir</th>
+            </tr>
+          </thead>
+          <tbody>
+            {trends.map((t) => {
+              const rsiColor = t.rsi == null ? '#848e9c' : t.rsi > 70 ? C_BEAR : t.rsi < 30 ? C_BULL : '#fff';
+              return (
+                <tr key={t.label} className="border-t border-[#142028]">
+                  <td className="py-1 pe-2 font-bold text-[#848e9c]">{t.label}</td>
+                  <td className="py-1 pe-2 font-bold" style={{ color: rsiColor }}>
+                    {fmt(t.rsi, 1)}
+                  </td>
+                  <td className="py-1 pe-2 text-white">{fmt(t.macd?.macd, 3)}</td>
+                  <td className="py-1 pe-2 text-white">{fmt(t.macd?.signal, 3)}</td>
+                  <td
+                    className="py-1 pe-2 font-bold"
+                    style={{ color: (t.macd?.histogram ?? 0) >= 0 ? C_BULL : C_BEAR }}
+                  >
+                    {fmt(t.macd?.histogram, 3)}
+                  </td>
+                  <td className="py-1 pe-2 text-[#848e9c]">{t.candleCount}</td>
+                  <td className="py-1 text-base leading-none">{trendArrow(t.dir)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-2 text-[9px] text-[#848e9c] leading-relaxed">
+        {bi(
+          'بوڵ: RSI>50 و MACD>Signal · بێر: RSI<50 و MACD<Signal · ناکۆکی: ناوەند',
+          'Bull: RSI>50 & MACD>Signal · Bear: RSI<50 & MACD<Signal · Disagree: Neutral',
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AssetCard({
   title,
   logo,
   asset,
   analysis,
   bi,
+  debug,
 }: {
   title: string;
   logo: string;
   asset: 'btc' | 'gold';
   analysis: AssetAnalysis | null;
   bi: (ku: string, en: string) => string;
+  debug: boolean;
 }) {
   // Glow the whole card when confluence is strong (>=75%) with a clear direction.
   const strong = !!analysis && analysis.confluence.score >= 75 && analysis.confluence.dir !== 'neutral';
