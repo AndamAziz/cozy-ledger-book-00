@@ -1,5 +1,5 @@
 import { OHLCCandle, fetchOHLC } from './krakenApi';
-import { computeIndicators, summarizeSignals } from './indicators';
+import { calculateRSI, calculateMACD, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from './indicators';
 
 export type TrendDir = 'up' | 'down' | 'neutral';
 
@@ -29,6 +29,14 @@ export interface TFTrend {
   dir: TrendDir;
   /** -100..100 signal score for the timeframe. */
   score: number;
+  /** Raw RSI value for the timeframe (debug). */
+  rsi: number | null;
+  /** Raw MACD line / signal / histogram for the timeframe (debug). */
+  macd: { macd: number; signal: number; histogram: number } | null;
+  /** Number of candles used for this timeframe (debug). */
+  candleCount: number;
+  /** Whether RSI and MACD agree (strong) or disagree (neutral). */
+  agreement: 'strong' | 'mixed' | 'none';
 }
 
 export interface KeyLevels {
@@ -85,18 +93,57 @@ export function aggregateCandles(candles: OHLCCandle[], factor: number): OHLCCan
   return out;
 }
 
-/** Trend direction for a candle series, derived from the shared indicator stack. */
-export function trendFromCandles(candles: OHLCCandle[], price: number): TFTrend {
-  if (!candles || candles.length < 20) {
-    return { label: '', dir: 'neutral', score: 0 };
+/**
+ * Trend direction for a candle series, derived from RSI + MACD:
+ *  - RSI > 50  → bullish tendency
+ *  - MACD line > Signal line → bullish
+ *  - Both agree → strong directional signal
+ *  - Disagreement → Flat / Neutral
+ */
+export function trendFromCandles(candles: OHLCCandle[]): TFTrend {
+  const candleCount = candles?.length ?? 0;
+  // Need at least 35 candles for MACD(12,26,9); fall back to adaptive periods otherwise.
+  if (!candles || candleCount < 28) {
+    return { label: '', dir: 'neutral', score: 0, rsi: null, macd: null, candleCount, agreement: 'none' };
   }
-  const ind = computeIndicators(candles);
-  const ref = price > 0 ? price : candles[candles.length - 1].close;
-  const summary = summarizeSignals(ind, ref);
+  const closes = candles.map((c) => c.close);
+  const cfg = candleCount >= 35 ? STANDARD_INDICATOR_SETTINGS : bestIndicatorSettings(candleCount);
+  const rsi = calculateRSI(closes, cfg.rsiPeriod);
+  const macd = calculateMACD(closes, cfg.macdFast, cfg.macdSlow, cfg.macdSignal);
+
+  const rsiBull = rsi != null ? rsi > 50 : null;
+  const macdBull = macd != null ? macd.macd > macd.signal : null;
+
   let dir: TrendDir = 'neutral';
-  if (summary.score >= 15) dir = 'up';
-  else if (summary.score <= -15) dir = 'down';
-  return { label: '', dir, score: summary.score };
+  let agreement: 'strong' | 'mixed' | 'none' = 'none';
+  let score = 0;
+
+  if (rsiBull != null && macdBull != null) {
+    if (rsiBull && macdBull) {
+      dir = 'up';
+      agreement = 'strong';
+      score = 100;
+    } else if (!rsiBull && !macdBull) {
+      dir = 'down';
+      agreement = 'strong';
+      score = -100;
+    } else {
+      // Disagreement → flat / neutral.
+      dir = 'neutral';
+      agreement = 'mixed';
+      score = 0;
+    }
+  } else if (rsiBull != null) {
+    dir = rsiBull ? 'up' : 'down';
+    agreement = 'mixed';
+    score = rsiBull ? 50 : -50;
+  } else if (macdBull != null) {
+    dir = macdBull ? 'up' : 'down';
+    agreement = 'mixed';
+    score = macdBull ? 50 : -50;
+  }
+
+  return { label: '', dir, score, rsi, macd, candleCount, agreement };
 }
 
 export function computeConfluence(trends: TFTrend[]): ConfluenceResult {
@@ -282,7 +329,7 @@ export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promis
   const series = await Promise.all(AI_TIMEFRAMES.map((tf) => fetcher(tf)));
 
   const trends: TFTrend[] = AI_TIMEFRAMES.map((tf, i) => {
-    const t = trendFromCandles(series[i], price);
+    const t = trendFromCandles(series[i]);
     return { ...t, label: tf.label };
   });
 

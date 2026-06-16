@@ -8,7 +8,7 @@ import {
   TFTrend,
   TradeSetup,
 } from '@/lib/aiAnalysis';
-import { RefreshCw, TrendingUp, TrendingDown, Minus, Target, Clock, Layers, Gauge } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Minus, Target, Clock, Layers, Gauge, Bug } from 'lucide-react';
 
 interface Props {
   btcPrice: number;
@@ -204,18 +204,77 @@ function SetupBlock({ setup, asset }: { setup: TradeSetup; asset: 'btc' | 'gold'
   );
 }
 
+/** Raw RSI / MACD values per timeframe, shown only in debug mode. */
+function DebugBlock({ trends, bi }: { trends: TFTrend[]; bi: (ku: string, en: string) => string }) {
+  const fmt = (n: number | null | undefined, d = 2) =>
+    n == null || !Number.isFinite(n) ? '—' : n.toFixed(d);
+  return (
+    <div className="rounded-lg bg-[#08131a] border border-[#1f3a2e] p-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#0ecb81] mb-2">
+        <Bug className="h-3.5 w-3.5" /> {bi('شێوازی دیباگ — بەهای خاو', 'Debug — Raw Values')}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-[10px] tabular-nums">
+          <thead>
+            <tr className="text-[#848e9c] text-left">
+              <th className="py-1 pe-2 font-bold">TF</th>
+              <th className="py-1 pe-2 font-bold">RSI</th>
+              <th className="py-1 pe-2 font-bold">MACD</th>
+              <th className="py-1 pe-2 font-bold">Signal</th>
+              <th className="py-1 pe-2 font-bold">Hist</th>
+              <th className="py-1 pe-2 font-bold">N</th>
+              <th className="py-1 font-bold">Dir</th>
+            </tr>
+          </thead>
+          <tbody>
+            {trends.map((t) => {
+              const rsiColor = t.rsi == null ? '#848e9c' : t.rsi > 70 ? C_BEAR : t.rsi < 30 ? C_BULL : '#fff';
+              return (
+                <tr key={t.label} className="border-t border-[#142028]">
+                  <td className="py-1 pe-2 font-bold text-[#848e9c]">{t.label}</td>
+                  <td className="py-1 pe-2 font-bold" style={{ color: rsiColor }}>
+                    {fmt(t.rsi, 1)}
+                  </td>
+                  <td className="py-1 pe-2 text-white">{fmt(t.macd?.macd, 3)}</td>
+                  <td className="py-1 pe-2 text-white">{fmt(t.macd?.signal, 3)}</td>
+                  <td
+                    className="py-1 pe-2 font-bold"
+                    style={{ color: (t.macd?.histogram ?? 0) >= 0 ? C_BULL : C_BEAR }}
+                  >
+                    {fmt(t.macd?.histogram, 3)}
+                  </td>
+                  <td className="py-1 pe-2 text-[#848e9c]">{t.candleCount}</td>
+                  <td className="py-1 text-base leading-none">{trendArrow(t.dir)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-2 text-[9px] text-[#848e9c] leading-relaxed">
+        {bi(
+          'بوڵ: RSI>50 و MACD>Signal · بێر: RSI<50 و MACD<Signal · ناکۆکی: ناوەند',
+          'Bull: RSI>50 & MACD>Signal · Bear: RSI<50 & MACD<Signal · Disagree: Neutral',
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AssetCard({
   title,
   logo,
   asset,
   analysis,
   bi,
+  debug,
 }: {
   title: string;
   logo: string;
   asset: 'btc' | 'gold';
   analysis: AssetAnalysis | null;
   bi: (ku: string, en: string) => string;
+  debug: boolean;
 }) {
   // Glow the whole card when confluence is strong (>=75%) with a clear direction.
   const strong = !!analysis && analysis.confluence.score >= 75 && analysis.confluence.dir !== 'neutral';
@@ -256,6 +315,7 @@ function AssetCard({
           <ConfluenceBar a={analysis} bi={bi} />
           <LevelsBlock a={analysis} asset={asset} />
           <SetupBlock setup={analysis.setup} asset={asset} />
+          {debug && <DebugBlock trends={analysis.trends} bi={bi} />}
         </>
       )}
     </div>
@@ -301,6 +361,7 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
   const [sessions, setSessions] = useState<SessionStatus[]>(getSessionStatuses());
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [debug, setDebug] = useState(false);
 
   const runAnalysis = useCallback(async () => {
     setLoading(true);
@@ -337,21 +398,34 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
             {lastUpdated && ` · ${bi('نوێکرایەوە', 'updated')} ${Math.max(0, Math.round((Date.now() - lastUpdated) / 1000))}s`}
           </p>
         </div>
-        <button
-          onClick={runAnalysis}
-          disabled={loading}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1a1e2e] hover:bg-[#252a3a] text-xs font-bold text-[#f0b90b] disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          {bi('نوێکردنەوە', 'Refresh')}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setDebug((d) => !d)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold"
+            style={{
+              backgroundColor: debug ? '#0ecb8122' : '#1a1e2e',
+              color: debug ? '#0ecb81' : '#848e9c',
+            }}
+          >
+            <Bug className="h-3.5 w-3.5" />
+            {bi('دیباگ', 'Debug')}
+          </button>
+          <button
+            onClick={runAnalysis}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1a1e2e] hover:bg-[#252a3a] text-xs font-bold text-[#f0b90b] disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {bi('نوێکردنەوە', 'Refresh')}
+          </button>
+        </div>
       </div>
 
       <SessionsBlock sessions={sessions} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={gold} bi={bi} />
-        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btc} bi={bi} />
+        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={gold} bi={bi} debug={debug} />
+        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btc} bi={bi} debug={debug} />
       </div>
     </div>
   );
