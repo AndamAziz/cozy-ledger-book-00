@@ -63,6 +63,8 @@ export interface AssetAnalysis {
   levels: KeyLevels;
   setup: TradeSetup;
   price: number;
+  /** Epoch ms when the confluence direction last flipped (null if unknown). */
+  signalChangedAt: number | null;
 }
 
 /** Aggregate N consecutive candles into one (open/high/low/close). */
