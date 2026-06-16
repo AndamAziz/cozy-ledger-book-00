@@ -1,6 +1,5 @@
 import { OHLCCandle, fetchOHLC } from './krakenApi';
 import { computeIndicators, summarizeSignals } from './indicators';
-import { computeSR, SRLevels } from './supportResistance';
 
 export type TrendDir = 'up' | 'down' | 'neutral';
 
@@ -64,6 +63,8 @@ export interface AssetAnalysis {
   levels: KeyLevels;
   setup: TradeSetup;
   price: number;
+  /** Epoch ms when the confluence direction last flipped (null if unknown). */
+  signalChangedAt: number | null;
 }
 
 /** Aggregate N consecutive candles into one (open/high/low/close). */
@@ -119,22 +120,91 @@ export function computeConfluence(trends: TFTrend[]): ConfluenceResult {
   return { score, dir, label, upCount, downCount, neutralCount };
 }
 
-/** Build support/resistance zones from a higher-timeframe candle series. */
+/**
+ * Detect swing (fractal) highs and lows over a candle window. A swing high is a
+ * candle whose high is greater than `strength` candles on each side; a swing low
+ * is the mirror. These are the real recent turning points in price action.
+ */
+export function findSwingLevels(candles: OHLCCandle[], lookback = 50, strength = 2): { highs: number[]; lows: number[] } {
+  const window = candles.slice(-lookback);
+  const highs: number[] = [];
+  const lows: number[] = [];
+  for (let i = strength; i < window.length - strength; i++) {
+    const h = window[i].high;
+    const l = window[i].low;
+    let isHigh = true;
+    let isLow = true;
+    for (let j = i - strength; j <= i + strength; j++) {
+      if (j === i) continue;
+      if (window[j].high > h) isHigh = false;
+      if (window[j].low < l) isLow = false;
+    }
+    if (isHigh) highs.push(h);
+    if (isLow) lows.push(l);
+  }
+  return { highs, lows };
+}
+
+/** Merge price levels that sit within `tolerance` of each other into one zone (their mean). */
+function clusterLevels(values: number[], tolerance: number): number[] {
+  if (!values.length) return [];
+  const sorted = [...values].sort((a, b) => a - b);
+  const clusters: number[][] = [[sorted[0]]];
+  for (let i = 1; i < sorted.length; i++) {
+    const last = clusters[clusters.length - 1];
+    if (Math.abs(sorted[i] - last[last.length - 1]) <= tolerance) last.push(sorted[i]);
+    else clusters.push([sorted[i]]);
+  }
+  return clusters.map((c) => c.reduce((a, b) => a + b, 0) / c.length);
+}
+
+/**
+ * Build support/resistance zones from real recent swing highs/lows (last 50
+ * candles on the supplied higher timeframe). Resistances are swing highs above
+ * price, supports are swing lows below price, each clustered into zones.
+ */
 export function buildKeyLevels(candles: OHLCCandle[], price: number): KeyLevels {
-  const sr: SRLevels | null = computeSR(candles, 40);
-  if (!sr) {
+  if (!candles || candles.length < 5 || price <= 0) {
     return { supports: [], resistances: [], nearestSupport: null, nearestResistance: null };
   }
-  const supportsRaw = [sr.s1, sr.s2, sr.s3, sr.recentLow].filter((v) => Number.isFinite(v) && v < price);
-  const resistancesRaw = [sr.r1, sr.r2, sr.r3, sr.recentHigh].filter((v) => Number.isFinite(v) && v > price);
-  const supports = Array.from(new Set(supportsRaw.map((v) => +v.toFixed(2)))).sort((a, b) => b - a).slice(0, 3);
-  const resistances = Array.from(new Set(resistancesRaw.map((v) => +v.toFixed(2)))).sort((a, b) => a - b).slice(0, 3);
+  const { highs, lows } = findSwingLevels(candles, 50, 2);
+  const window = candles.slice(-50);
+  const recentHigh = Math.max(...window.map((c) => c.high));
+  const recentLow = Math.min(...window.map((c) => c.low));
+  // Merge swings within ~0.15% of price into a single zone.
+  const tol = price * 0.0015;
+
+  const resCandidates = clusterLevels([...highs, recentHigh].filter((v) => Number.isFinite(v) && v > price), tol);
+  const supCandidates = clusterLevels([...lows, recentLow].filter((v) => Number.isFinite(v) && v < price), tol);
+
+  // Resistances: nearest above price first. Supports: nearest below price first.
+  const resistances = Array.from(new Set(resCandidates.map((v) => +v.toFixed(2)))).sort((a, b) => a - b).slice(0, 3);
+  const supports = Array.from(new Set(supCandidates.map((v) => +v.toFixed(2)))).sort((a, b) => b - a).slice(0, 3);
+
   return {
     supports,
     resistances,
     nearestSupport: supports.length ? supports[0] : null,
     nearestResistance: resistances.length ? resistances[0] : null,
   };
+}
+
+/**
+ * Persist the latest confluence direction per asset and return the timestamp at
+ * which the direction last changed. Used to show "signal changed X ago".
+ */
+export function recordDirection(asset: 'btc' | 'gold', dir: TrendDir): number {
+  const key = `ai_signal_dir_${asset}`;
+  try {
+    const raw = localStorage.getItem(key);
+    const prev = raw ? (JSON.parse(raw) as { dir: TrendDir; changedAt: number }) : null;
+    if (prev && prev.dir === dir && Number.isFinite(prev.changedAt)) return prev.changedAt;
+    const changedAt = Date.now();
+    localStorage.setItem(key, JSON.stringify({ dir, changedAt }));
+    return changedAt;
+  } catch {
+    return Date.now();
+  }
 }
 
 /** Generate one trade setup of the day from the bias + key levels. */
@@ -223,8 +293,9 @@ export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promis
   const effectivePrice = price > 0 ? price : levelSeries.length ? levelSeries[levelSeries.length - 1].close : 0;
   const levels = buildKeyLevels(levelSeries, effectivePrice);
   const setup = buildTradeSetup(confluence.dir, effectivePrice, levels);
+  const signalChangedAt = recordDirection(asset, confluence.dir);
 
-  return { trends, confluence, levels, setup, price: effectivePrice };
+  return { trends, confluence, levels, setup, price: effectivePrice, signalChangedAt };
 }
 
 // ─── Forex sessions ───

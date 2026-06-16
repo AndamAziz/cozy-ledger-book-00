@@ -27,6 +27,25 @@ function dirColor(dir: 'up' | 'down' | 'neutral'): string {
   return dir === 'up' ? C_BULL : dir === 'down' ? C_BEAR : C_NEUTRAL;
 }
 
+/** Map a 0..100 confluence score to a strength tier. */
+function signalStrength(score: number): { key: 'strong' | 'moderate' | 'weak'; emoji: string; color: string } {
+  if (score >= 75) return { key: 'strong', emoji: '⚡', color: C_BULL };
+  if (score >= 50) return { key: 'moderate', emoji: '🔶', color: '#f0b90b' };
+  return { key: 'weak', emoji: '⚠️', color: C_NEUTRAL };
+}
+
+/** Compact relative-time label, e.g. "5m", "2h", "1d". */
+function fmtAgo(ts: number | null): string {
+  if (!ts) return '—';
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60}m`;
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
 function fmtPrice(n: number, asset: 'btc' | 'gold'): string {
   if (!Number.isFinite(n) || n <= 0) return '—';
   return n.toLocaleString(undefined, {
@@ -54,8 +73,15 @@ function TFRow({ trends }: { trends: TFTrend[] }) {
   );
 }
 
-function ConfluenceBar({ a }: { a: AssetAnalysis }) {
+function ConfluenceBar({ a, bi }: { a: AssetAnalysis; bi: (ku: string, en: string) => string }) {
   const color = dirColor(a.confluence.dir);
+  const strength = signalStrength(a.confluence.score);
+  const strengthLabel =
+    strength.key === 'strong'
+      ? bi('بەهێز', 'Strong')
+      : strength.key === 'moderate'
+      ? bi('مامناوەند', 'Moderate')
+      : bi('لاواز', 'Weak');
   return (
     <div className="rounded-lg bg-[#0a0e17] border border-[#1a1e2e] p-3">
       <div className="flex items-center justify-between mb-2">
@@ -72,6 +98,16 @@ function ConfluenceBar({ a }: { a: AssetAnalysis }) {
           style={{ width: `${a.confluence.score}%`, backgroundColor: color }}
         />
       </div>
+      {/* Signal strength meter */}
+      <div className="mt-2 flex items-center justify-between">
+        <span className="text-[10px] font-bold text-[#848e9c]">{bi('هێزی سیگناڵ', 'Signal Strength')}</span>
+        <span
+          className="text-xs font-extrabold px-2 py-0.5 rounded-full"
+          style={{ color: strength.color, backgroundColor: `${strength.color}1f` }}
+        >
+          {strength.emoji} {strengthLabel}
+        </span>
+      </div>
       <div className="mt-2 text-sm font-bold" style={{ color }}>
         {a.confluence.label}
       </div>
@@ -79,6 +115,13 @@ function ConfluenceBar({ a }: { a: AssetAnalysis }) {
         <span className="text-[#0ecb81]">⬆️ {a.confluence.upCount}</span>
         <span className="text-[#f6465d]">⬇️ {a.confluence.downCount}</span>
         <span>↔️ {a.confluence.neutralCount}</span>
+      </div>
+      {/* Last direction change timestamp */}
+      <div className="mt-2 pt-2 border-t border-[#1a1e2e] flex items-center gap-1.5 text-[10px] text-[#848e9c]">
+        <Clock className="h-3 w-3" />
+        {bi('ئاراستە گۆڕا', 'Signal changed')}{' '}
+        <span className="text-white font-bold">{fmtAgo(a.signalChangedAt)}</span>{' '}
+        {bi('لەمەوبەر', 'ago')}
       </div>
     </div>
   );
@@ -166,14 +209,25 @@ function AssetCard({
   logo,
   asset,
   analysis,
+  bi,
 }: {
   title: string;
   logo: string;
   asset: 'btc' | 'gold';
   analysis: AssetAnalysis | null;
+  bi: (ku: string, en: string) => string;
 }) {
+  // Glow the whole card when confluence is strong (>=75%) with a clear direction.
+  const strong = !!analysis && analysis.confluence.score >= 75 && analysis.confluence.dir !== 'neutral';
+  const glowColor = analysis?.confluence.dir === 'up' ? C_BULL : C_BEAR;
+  const cardStyle = strong
+    ? { borderColor: glowColor, boxShadow: `0 0 18px ${glowColor}66, inset 0 0 24px ${glowColor}1a` }
+    : undefined;
   return (
-    <div className="rounded-xl bg-[#0d1117] border border-[#1a1e2e] p-3 space-y-3">
+    <div
+      className={`rounded-xl bg-[#0d1117] border p-3 space-y-3 transition-all duration-500 ${strong ? '' : 'border-[#1a1e2e]'}`}
+      style={cardStyle}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xl">{logo}</span>
@@ -182,7 +236,7 @@ function AssetCard({
         {analysis && (
           <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: dirColor(analysis.confluence.dir) }}>
             {analysis.confluence.dir === 'up' ? <TrendingUp className="h-3.5 w-3.5" /> : analysis.confluence.dir === 'down' ? <TrendingDown className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
-            {analysis.confluence.dir === 'up' ? 'Bullish' : analysis.confluence.dir === 'down' ? 'Bearish' : 'Neutral'}
+            {analysis.confluence.dir === 'up' ? bi('بەرزبوونەوە', 'Bullish') : analysis.confluence.dir === 'down' ? bi('داشکان', 'Bearish') : bi('ناوەند', 'Neutral')}
           </span>
         )}
       </div>
@@ -196,10 +250,10 @@ function AssetCard({
       ) : (
         <>
           <div>
-            <div className="text-[10px] font-bold text-[#848e9c] mb-1.5">Multi-Timeframe Trend</div>
+            <div className="text-[10px] font-bold text-[#848e9c] mb-1.5">{bi('ئاراستەی فرە-کاتی', 'Multi-Timeframe Trend')}</div>
             <TFRow trends={analysis.trends} />
           </div>
-          <ConfluenceBar a={analysis} />
+          <ConfluenceBar a={analysis} bi={bi} />
           <LevelsBlock a={analysis} asset={asset} />
           <SetupBlock setup={analysis.setup} asset={asset} />
         </>
@@ -296,8 +350,8 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
       <SessionsBlock sessions={sessions} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={gold} />
-        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btc} />
+        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={gold} bi={bi} />
+        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btc} bi={bi} />
       </div>
     </div>
   );
