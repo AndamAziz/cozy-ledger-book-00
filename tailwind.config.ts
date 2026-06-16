@@ -119,6 +119,16 @@ export default {
           "0%, 100%": { opacity: "1", transform: "scale(1)" },
           "50%": { opacity: "0.2", transform: "scale(0.82)" },
         },
+        "tab-bounce": {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(0.85)" },
+          "70%": { transform: "scale(1.08)" },
+          "100%": { transform: "scale(1)" },
+        },
+        "tab-slide": {
+          from: { opacity: "0", transform: "translateX(14px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -128,6 +138,8 @@ export default {
         pulse: "pulse 2s infinite",
         "price-flash": "price-flash 0.5s ease-out forwards",
         "flash-blink": "flash-blink 0.9s ease-in-out infinite",
+        "tab-bounce": "tab-bounce 0.35s ease-out",
+        "tab-slide": "tab-slide 0.28s ease-out",
       },
     },
   },

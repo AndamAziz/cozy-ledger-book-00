@@ -23,10 +23,11 @@ import { METALS_META } from '@/lib/metalsApi';
 import { OverviewEntry } from '@/lib/overview';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DemoAccountProvider } from '@/contexts/DemoAccountContext';
-import { Menu, Wifi, WifiOff, Bitcoin, DollarSign, CircleDot, ArrowRightLeft, ArrowLeft, CandlestickChart, Activity, ChevronDown, LayoutGrid, LineChart, Newspaper, Crown, Brain, Scale } from 'lucide-react';
+import { Menu, CandlestickChart, Activity, ChevronDown, LayoutGrid, Crown, Bell } from 'lucide-react';
 import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
 import { AIAnalysisPanel } from '@/components/crypto/AIAnalysisPanel';
 import { IndicatorVerify } from '@/components/crypto/IndicatorVerify';
+import { BottomNav } from '@/components/crypto/BottomNav';
 
 type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
 type CryptoView = 'overview' | 'chart' | 'analysis' | 'pro';
@@ -37,7 +38,13 @@ export default function CryptoTracker() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
-  const [activeTab, setActiveTab] = useState<TrackerTab>('metals');
+  const [activeTab, setActiveTab] = useState<TrackerTab>(() => {
+    try {
+      const saved = localStorage.getItem('tracker:lastTab') as TrackerTab | null;
+      if (saved === 'crypto' || saved === 'forex' || saved === 'metals' || saved === 'ai') return saved;
+    } catch { /* noop */ }
+    return 'metals';
+  });
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [forexView, setForexView] = useState<ForexView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
@@ -53,6 +60,11 @@ export default function CryptoTracker() {
   const [metalsView, setMetalsView] = useState<MetalsView>('market');
   const coinsRef = useRef(coinsMap);
   coinsRef.current = coinsMap;
+
+  // Persist last visited tab
+  useEffect(() => {
+    try { localStorage.setItem('tracker:lastTab', activeTab); } catch { /* noop */ }
+  }, [activeTab]);
 
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading, marketOpen: forexMarketOpen } = useForexData();
@@ -181,125 +193,53 @@ export default function CryptoTracker() {
 
 
       <div className="h-[100dvh] flex flex-col bg-[#0a0e17] text-white overflow-hidden">
-        {/* Top bar */}
-        {/* Mobile: horizontal scrollable top bar with larger touch targets */}
-        <header className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 border-b border-[#1a1e2e] bg-[#0d1117] shrink-0 overflow-x-auto no-scrollbar">
-          {/* Back button */}
+        {/* Top bar — clean: logo left, live ticker center, bell right */}
+        <header className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] bg-[#0d1117] shrink-0">
+          {/* Logo / app name */}
           <button
             onClick={() => navigate('/')}
-            className="shrink-0 p-2 sm:p-2 rounded-lg hover:bg-[#1a1e2e] active:bg-[#252a3a] transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
-            aria-label={bi('گەڕانەوە بۆ ژمێرکار', 'Back to calculator')}
+            className="shrink-0 flex items-center gap-2 active:scale-95 transition-transform"
+            aria-label={bi('گەڕانەوە', 'Home')}
           >
-            <ArrowLeft className="h-5 w-5 sm:h-5 sm:w-5" />
+            <span className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-[#f0b90b] to-[#d4af37] text-black font-black text-sm">C</span>
+            <span className="hidden xs:inline text-sm font-extrabold tracking-tight text-white">CITY <span className="text-[#f0b90b]">TAXPERTS</span></span>
           </button>
 
-          {/* Tab switcher */}
-          <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden shrink-0">
-            <button
-              onClick={() => setActiveTab('crypto')}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-xs font-bold transition-colors active:scale-95 min-h-[40px] ${
-                activeTab === 'crypto' ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              <Bitcoin className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-              <span className="hidden sm:inline">{bi('کریپتۆ', 'Crypto')}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('forex')}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-xs font-bold transition-colors active:scale-95 min-h-[40px] ${
-                activeTab === 'forex' ? 'bg-[#2962ff] text-white' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              <DollarSign className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-              <span className="hidden sm:inline">{bi('دراو', 'Forex')}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('metals')}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-xs font-bold transition-colors active:scale-95 min-h-[40px] ${
-                activeTab === 'metals' ? 'bg-[#d4af37] text-black' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              <CircleDot className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-              <span className="hidden sm:inline">{bi('کانزا', 'Metals')}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('ai')}
-              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-xs font-bold transition-colors active:scale-95 min-h-[40px] ${
-                activeTab === 'ai' ? 'bg-gradient-to-r from-[#7c3aed] to-[#a855f7] text-white' : 'text-[#848e9c] hover:text-white'
-              }`}
-            >
-              <Brain className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-              <span className="hidden sm:inline">{bi('شیکاری', 'AI')}</span>
-            </button>
+          {/* Live price ticker (center) */}
+          <div className="flex-1 min-w-0 flex items-center justify-center gap-3 overflow-x-auto no-scrollbar">
+            {(() => {
+              const btc = coinsMap.get('XBT/USD');
+              const gold = metals.find((m) => m.code === 'XAU');
+              const tick = (label: string, price: number, change: number, color: string) => (
+                <span className="flex items-center gap-1 whitespace-nowrap text-[11px]">
+                  <span className="font-bold" style={{ color }}>{label}</span>
+                  <span className="text-white font-semibold">${price > 0 ? price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
+                  {price > 0 && (
+                    <span className={change >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>
+                      {change >= 0 ? '▲' : '▼'}{Math.abs(change).toFixed(2)}%
+                    </span>
+                  )}
+                </span>
+              );
+              return (
+                <>
+                  {tick('BTC', btc?.price ?? 0, btc?.change24h ?? 0, '#f0b90b')}
+                  <span className="h-3 w-px bg-[#1a1e2e]" />
+                  {tick('XAU', gold?.price ?? 0, gold?.change ?? 0, '#d4af37')}
+                </>
+              );
+            })()}
           </div>
 
-          <div className="flex-1" />
-
+          {/* Notification bell */}
           <button
             onClick={() => setShowNews(true)}
-            className="shrink-0 flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-2.5 py-2 sm:py-1.5 text-xs sm:text-xs font-bold bg-gradient-to-r from-[#f6465d]/20 to-[#f6465d]/5 border border-[#f6465d]/40 hover:border-[#f6465d]/70 rounded-lg transition-colors text-[#f6465d] min-h-[40px] min-w-[40px]"
+            className="shrink-0 relative p-2 rounded-lg text-[#c7cdd9] hover:text-white hover:bg-[#1a1e2e] active:scale-90 transition min-h-[40px] min-w-[40px] flex items-center justify-center"
+            aria-label={bi('ئاگادارکردنەوەکان', 'Notifications')}
           >
-            <Newspaper className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-            <span className="hidden sm:inline">{bi('هەواڵ', 'News')}</span>
+            <Bell className="h-5 w-5" />
+            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[#f6465d] ring-2 ring-[#0d1117]" />
           </button>
-
-          <button
-            onClick={() => setShowVerify(true)}
-            className="shrink-0 flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-2.5 py-2 sm:py-1.5 text-xs sm:text-xs font-bold bg-gradient-to-r from-[#2962ff]/20 to-[#2962ff]/5 border border-[#2962ff]/40 hover:border-[#2962ff]/70 rounded-lg transition-colors text-[#2962ff] min-h-[40px] min-w-[40px]"
-          >
-            <Scale className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-            <span className="hidden sm:inline">{bi('پشکنین', 'Verify')}</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/bots')}
-            className="shrink-0 flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-2.5 py-2 sm:py-1.5 text-xs sm:text-xs font-bold bg-gradient-to-r from-[#d4af37]/20 to-[#d4af37]/5 border border-[#d4af37]/40 hover:border-[#d4af37]/70 rounded-lg transition-colors text-[#d4af37] min-h-[40px] min-w-[40px]"
-          >
-            <LineChart className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-            <span className="hidden sm:inline">{bi('بوتەکان', 'Bots')}</span>
-          </button>
-
-          <button
-            onClick={() => setShowConverter(true)}
-            className="shrink-0 flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-2.5 py-2 sm:py-1.5 text-xs sm:text-xs font-bold bg-[#1a1e2e] hover:bg-[#252a3a] active:bg-[#303548] rounded-lg transition-colors text-[#f0b90b] min-h-[40px] min-w-[40px]"
-          >
-            <ArrowRightLeft className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-            <span className="hidden sm:inline">{bi('گۆڕین', 'Convert')}</span>
-          </button>
-          
-          {activeTab === 'crypto' && (
-            <div className="shrink-0 flex items-center gap-1 sm:gap-1.5 text-xs sm:text-xs min-h-[40px]">
-              {isConnected ? (
-                <>
-                  <Wifi className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-[#0ecb81]" />
-                  <span className="text-[#0ecb81] hidden sm:inline">{bi('ڕاستەوخۆ', 'Live')}</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-[#f6465d]" />
-                  <span className="text-[#f6465d] hidden sm:inline">{bi('پەیوەندیکردنەوە...', 'Reconnecting...')}</span>
-                </>
-              )}
-            </div>
-          )}
-          {activeTab === 'forex' && (
-            forexMarketOpen ? (
-              <span className="shrink-0 text-xs sm:text-[10px] text-[#0ecb81] min-h-[40px] flex items-center">🟢 {bi('ڕاستەوخۆ', 'Live')} • 2s</span>
-            ) : (
-              <span className="shrink-0 text-xs sm:text-[10px] text-[#f6465d] flex items-center gap-1 min-h-[40px]">
-                🔴 {bi('داخراو', 'Closed')}
-              </span>
-            )
-          )}
-          {activeTab === 'metals' && (
-            metalsMarketOpen ? (
-              <span className="shrink-0 text-xs sm:text-[10px] text-[#0ecb81] min-h-[40px] flex items-center">🟢 {bi('ڕاستەوخۆ', 'Live')} • 1s</span>
-            ) : (
-              <span className="shrink-0 text-xs sm:text-[10px] text-[#f6465d] flex items-center gap-1 min-h-[40px]">
-                🔴 {bi('داخراو', 'Closed')}
-              </span>
-            )
-          )}
         </header>
 
         {/* Asset selector dropdown (mobile + desktop) — hidden on AI tab */}
@@ -364,7 +304,7 @@ export default function CryptoTracker() {
           />
         )}
 
-        <div className="flex flex-1 overflow-hidden relative">
+        <div key={activeTab} className="flex flex-1 overflow-hidden relative animate-tab-slide">
           {/* Main content */}
           {activeTab === 'ai' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -588,6 +528,17 @@ export default function CryptoTracker() {
             </div>
           )}
         </div>
+
+        {/* Bottom tab bar navigation */}
+        <BottomNav
+          activeTab={activeTab}
+          onTab={(tab) => { setShowSidebar(false); setActiveTab(tab); }}
+          onNews={() => setShowNews(true)}
+          onVerify={() => setShowVerify(true)}
+          onBot={() => navigate('/bots')}
+          onConvert={() => setShowConverter(true)}
+          bi={bi}
+        />
       </div>
 
       {showConverter && (
