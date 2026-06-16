@@ -339,7 +339,7 @@ export default function CryptoTracker() {
           ) : activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Chart / Analysis sub-toggle — mobile-friendly */}
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
                 {currentPrice > 0 && (
                   <span className="flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[10px] leading-none whitespace-nowrap shrink-0">
                     <span className="font-bold text-[#f0b90b]">{getDisplaySymbol(getSymbolFromPair(selectedPair))}</span>
@@ -438,7 +438,7 @@ export default function CryptoTracker() {
           ) : activeTab === 'forex' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Pro sub-toggle */}
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
                 {(() => {
                   const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
                   if (!c) return null;
@@ -496,7 +496,7 @@ export default function CryptoTracker() {
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Market / Analysis / Pro sub-toggle — mobile-friendly */}
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
                 {selectedMetalCode && (() => {
                   const m = metals.find(x => x.code === selectedMetalCode);
                   if (!m) return null;
