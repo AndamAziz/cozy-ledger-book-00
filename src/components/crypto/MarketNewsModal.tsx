@@ -324,6 +324,63 @@ export function MarketNewsModal({ open, onClose }: Props) {
     setTimeout(() => setToast(null), 2200);
   }, []);
 
+  // 📌 Remind me — schedule a browser notification 15 min before the event
+  const remindMe = useCallback(async (ev: CalendarEvent) => {
+    const t = Date.parse(ev.date);
+    if (Number.isNaN(t)) return;
+    const fireAt = t - 15 * 60000;
+    const k = eventKey(ev);
+
+    // Toggle off if already set
+    if (reminders.has(k)) {
+      if (reminderTimers.current[k]) { clearTimeout(reminderTimers.current[k]); delete reminderTimers.current[k]; }
+      setReminders((prev) => {
+        const next = new Set(prev); next.delete(k);
+        try { localStorage.setItem(REMIND_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+        return next;
+      });
+      showToast(bi('بیرخستنەوە لابرا', 'Reminder removed'));
+      return;
+    }
+
+    if (fireAt <= Date.now()) {
+      showToast(bi('ڕووداوەکە زۆر نزیکە', 'Event is too soon'));
+      return;
+    }
+
+    if ('Notification' in window) {
+      let perm = Notification.permission;
+      if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch { /* ignore */ } }
+      if (perm !== 'granted') {
+        showToast(bi('ئاگادارکردنەوە چالاک بکە', 'Enable notifications first'));
+        return;
+      }
+    }
+
+    setReminders((prev) => {
+      const next = new Set(prev); next.add(k);
+      try { localStorage.setItem(REMIND_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+
+    const delay = fireAt - Date.now();
+    reminderTimers.current[k] = setTimeout(() => {
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(`⚠️ ${ev.title}`, {
+            body: `${ev.country} · ${bi('لە ١٥ خولەکدا', 'in 15 minutes')}${ev.forecast ? ` · Forecast: ${ev.forecast}` : ''}`,
+          });
+        }
+      } catch { /* ignore */ }
+      playDing();
+      delete reminderTimers.current[k];
+    }, delay);
+
+    showToast(bi('بیرخستنەوە دانرا · ١٥ خولەک پێش', 'Reminder set · 15 min before'));
+  }, [reminders, bi, showToast]);
+
+
+
   // Theme palette for the calendar section
   const T = light
     ? { bg: '#f5f6fa', card: '#ffffff', cardBorder: '#e2e5ec', text: '#0a0e17', sub: '#5b6472', headBg: '#ffffff' }
