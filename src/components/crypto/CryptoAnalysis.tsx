@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { OHLCCandle, TIMEFRAMES } from '@/lib/krakenApi';
-import { computeIndicators, summarizeSignals, computeBuySellPct, SignalType } from '@/lib/indicators';
+import { computeIndicators, summarizeSignals, computeBuySellPct, SignalType, bestIndicatorSettings } from '@/lib/indicators';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -299,7 +299,8 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
   const CHART_TIMEFRAMES = ['1H', '4H', '1D'];
 
-  const indicators = useMemo(() => computeIndicators(candles), [candles]);
+  const indicatorSettings = useMemo(() => bestIndicatorSettings(candles.length), [candles.length]);
+  const indicators = useMemo(() => computeIndicators(candles, indicatorSettings), [candles, indicatorSettings]);
   const summary = useMemo(() => summarizeSignals(indicators, currentPrice), [indicators, currentPrice]);
 
   // Highest / lowest price over the last 24h (1 day)
@@ -361,7 +362,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const rows: { label: string; value: string; signal: SignalType; hint?: string }[] = [];
   if (indicators.rsi != null) {
     rows.push({
-      label: 'RSI (14)',
+      label: `RSI (${indicatorSettings.rsiPeriod})`,
       value: fmt(indicators.rsi),
       signal: indicators.rsi < 30 ? 'buy' : indicators.rsi > 70 ? 'sell' : 'neutral',
       hint: indicators.rsi < 30 ? bi('زۆر فرۆشراو', 'Oversold', langMode) : indicators.rsi > 70 ? bi('زۆر کڕراو', 'Overbought', langMode) : bi('ناوەند', 'Neutral', langMode),
@@ -369,7 +370,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   }
   if (indicators.macd) {
     rows.push({
-      label: 'MACD',
+      label: `MACD ${indicatorSettings.macdFast}/${indicatorSettings.macdSlow}/${indicatorSettings.macdSignal}`,
       value: fmt(indicators.macd.histogram, 4),
       signal: indicators.macd.histogram > 0 ? 'buy' : indicators.macd.histogram < 0 ? 'sell' : 'neutral',
       hint: indicators.macd.histogram > 0 ? bi('هێزی کڕین', 'Bullish momentum', langMode) : bi('هێزی فرۆشتن', 'Bearish momentum', langMode),
