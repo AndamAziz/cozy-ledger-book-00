@@ -6,7 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
-import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
+import { computeIndicators, summarizeSignals, computeBuySellPct, bestIndicatorSettings } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
@@ -139,7 +139,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
     const ohlc: OHLCCandle[] = candles.map(c => ({
       time: c.time, open: c.close, high: c.high, low: c.low, close: c.close, volume: 0,
     }));
-    const ind = computeIndicators(ohlc);
+    const ind = computeIndicators(ohlc, bestIndicatorSettings(ohlc.length));
     const summary = summarizeSignals(ind, livePrice());
     const { hasData, buyPct, sellPct } = computeBuySellPct(summary);
     setTradePct({ hasData, buyPct, sellPct });
@@ -661,6 +661,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
     () => candles.map((c) => ({ time: c.time as number, open: c.open, high: c.high, low: c.low, close: c.close })) as any,
     [candles],
   );
+  const indicatorSettings = useMemo(() => bestIndicatorSettings(ohlcForIndicators.length), [ohlcForIndicators.length]);
 
   // Create / remove the RSI and MACD panes when toggled or chart is recreated.
   useEffect(() => {
@@ -685,7 +686,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
         priceLineVisible: false, lastValueVisible: true,
         priceFormat: { type: 'custom', minMove: 0.01, formatter: (v: number) => v.toFixed(0) },
       }, paneIndex);
-      if (candles.length) s.setData(rsiSeries(ohlcForIndicators).map((d) => ({ time: d.time as Time, value: d.value })));
+      if (candles.length) s.setData(rsiSeries(ohlcForIndicators, indicatorSettings.rsiPeriod).map((d) => ({ time: d.time as Time, value: d.value })));
       try {
         s.createPriceLine({ price: 70, color: '#f6465d', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
         s.createPriceLine({ price: 30, color: '#0ecb81', lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
@@ -696,7 +697,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
     }
 
     if (showMACD) {
-      const data = candles.length ? macdSeries(ohlcForIndicators) : { macd: [], signal: [], histogram: [] };
+      const data = candles.length ? macdSeries(ohlcForIndicators, indicatorSettings.macdFast, indicatorSettings.macdSlow, indicatorSettings.macdSignal) : { macd: [], signal: [], histogram: [] };
       const hist = chart.addSeries(HistogramSeries, { priceLineVisible: false, lastValueVisible: false }, paneIndex);
       hist.setData(data.histogram.map((d) => ({
         time: d.time as Time, value: d.value,
@@ -722,10 +723,10 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
   useEffect(() => {
     if (!candles.length) return;
     if (rsiSeriesRef.current) {
-      rsiSeriesRef.current.setData(rsiSeries(ohlcForIndicators).map((d) => ({ time: d.time as Time, value: d.value })));
+      rsiSeriesRef.current.setData(rsiSeries(ohlcForIndicators, indicatorSettings.rsiPeriod).map((d) => ({ time: d.time as Time, value: d.value })));
     }
     if (macdHistRef.current && macdLineRef.current && macdSignalRef.current) {
-      const data = macdSeries(ohlcForIndicators);
+      const data = macdSeries(ohlcForIndicators, indicatorSettings.macdFast, indicatorSettings.macdSlow, indicatorSettings.macdSignal);
       macdHistRef.current.setData(data.histogram.map((d) => ({
         time: d.time as Time, value: d.value,
         color: d.value >= 0 ? 'rgba(14,203,129,0.6)' : 'rgba(246,70,93,0.6)',
