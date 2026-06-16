@@ -329,7 +329,7 @@ export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promis
   const series = await Promise.all(AI_TIMEFRAMES.map((tf) => fetcher(tf)));
 
   const trends: TFTrend[] = AI_TIMEFRAMES.map((tf, i) => {
-    const t = trendFromCandles(series[i], price);
+    const t = trendFromCandles(series[i]);
     return { ...t, label: tf.label };
   });
 
