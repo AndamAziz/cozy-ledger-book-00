@@ -6,7 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
-import { computeIndicators, summarizeSignals, computeBuySellPct, bestIndicatorSettings } from '@/lib/indicators';
+import { computeIndicators, summarizeSignals, computeBuySellPct, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
