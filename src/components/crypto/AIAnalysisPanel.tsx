@@ -8,7 +8,7 @@ import {
   TFTrend,
   TradeSetup,
 } from '@/lib/aiAnalysis';
-import { RefreshCw, TrendingUp, TrendingDown, Minus, Target, Clock, Layers, Gauge } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Minus, Target, Clock, Layers, Gauge, Bug } from 'lucide-react';
 
 interface Props {
   btcPrice: number;
