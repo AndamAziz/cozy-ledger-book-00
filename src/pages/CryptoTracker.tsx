@@ -339,9 +339,9 @@ export default function CryptoTracker() {
           ) : activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Chart / Analysis sub-toggle — mobile-friendly */}
-              <div className="flex items-center gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
+              <div className="flex items-center justify-between gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
                 {currentPrice > 0 && (
-                  <span className="flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[11px] leading-none whitespace-nowrap shrink-0">
+                  <span className="flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[13px] leading-none whitespace-nowrap shrink-0">
                     <span className="font-bold text-[#f0b90b]">{getDisplaySymbol(getSymbolFromPair(selectedPair))}</span>
                     <span className="font-semibold tabular-nums text-white">${currentPrice >= 1000 ? currentPrice.toLocaleString(undefined, { maximumFractionDigits: 1 }) : currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </span>
@@ -438,12 +438,12 @@ export default function CryptoTracker() {
           ) : activeTab === 'forex' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Pro sub-toggle */}
-              <div className="flex items-center gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
+              <div className="flex items-center justify-between gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
                 {(() => {
                   const c = forexCurrencies.find(x => x.code === (selectedForexCode || 'EUR'));
                   if (!c) return null;
                   return (
-                    <span className="flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[11px] leading-none whitespace-nowrap shrink-0">
+                    <span className="flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[13px] leading-none whitespace-nowrap shrink-0">
                       <span className="font-bold text-[#2962ff]">{c.code}</span>
                       <span className="font-semibold tabular-nums text-white">{c.rate >= 1000 ? c.rate.toLocaleString(undefined, { maximumFractionDigits: 2 }) : c.rate.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</span>
                     </span>
@@ -496,12 +496,12 @@ export default function CryptoTracker() {
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Overview / Market / Analysis / Pro sub-toggle — mobile-friendly */}
-              <div className="flex items-center gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
+              <div className="flex items-center justify-between gap-4 px-3 py-2 border-b border-[#1a1e2e] shrink-0 overflow-x-auto no-scrollbar [direction:ltr]">
                 {selectedMetalCode && (() => {
                   const m = metals.find(x => x.code === selectedMetalCode);
                   if (!m) return null;
                   return (
-                    <span className="flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[11px] leading-none whitespace-nowrap shrink-0">
+                    <span className="flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[13px] leading-none whitespace-nowrap shrink-0">
                       <span className="font-bold text-[#d4af37]">{m.code}</span>
                       <span className="font-semibold tabular-nums text-white">${m.price >= 1000 ? m.price.toLocaleString(undefined, { maximumFractionDigits: 1 }) : m.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                     </span>
