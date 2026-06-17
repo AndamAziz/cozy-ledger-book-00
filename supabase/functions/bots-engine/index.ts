@@ -204,6 +204,27 @@ function fmt(n: number, symbol: string): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
+// Pull the "current" price out of a previous monitoring/advice log line so the
+// next line can show the price MOVE (e.g. "$4,340.30 → $4,341.50"). Prefers the
+// number after "→" (the latest price) and falls back to the first $ amount.
+function extractLoggedPrice(message: string | null | undefined): number | null {
+  if (!message) return null;
+  const arrow = message.match(/→\s*\$([\d,]+\.\d+)/);
+  const m = arrow ?? message.match(/\$([\d,]+\.\d+)/);
+  if (!m) return null;
+  const n = Number(m[1].replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+// Build a "XAU $4,340.30 → $4,341.50 (+$1.20)" style price-move segment.
+function priceMoveSegment(symbol: string, prev: number | null, price: number): string {
+  const short = symbol.split("/")[0];
+  if (prev == null) return `${short} $${fmt(price, symbol)}`;
+  const delta = price - prev;
+  const dsign = delta >= 0 ? "+" : "-";
+  return `${short} $${fmt(prev, symbol)} → $${fmt(price, symbol)} (${dsign}$${fmt(Math.abs(delta), symbol)})`;
+}
+
 // ───────────────────── balance ─────────────────────
 async function applyBalance(userId: string, pnl: number): Promise<number> {
   const { data } = await admin
