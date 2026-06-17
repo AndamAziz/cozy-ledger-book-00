@@ -32,13 +32,37 @@ const FLAGS: Record<string, string> = {
   AUD: '🇦🇺', NZD: '🇳🇿', CNY: '🇨🇳', All: '🌐',
 };
 
-const CAT_LABEL: Record<string, { ku: string; en: string; color: string }> = {
-  forex: { ku: 'دراو', en: 'Forex', color: '#2962ff' },
-  crypto: { ku: 'کریپتۆ', en: 'Crypto', color: '#f0b90b' },
-  commodities: { ku: 'کاڵا', en: 'Commodities', color: '#d4af37' },
-  economy: { ku: 'ئابووری', en: 'Economy', color: '#0ecb81' },
-  markets: { ku: 'بازاڕ', en: 'Markets', color: '#a78bfa' },
+const CAT_LABEL: Record<string, { ku: string; en: string; color: string; emoji: string }> = {
+  gold: { ku: 'زێڕ', en: 'Gold', color: '#d4af37', emoji: '🥇' },
+  forex: { ku: 'دراو', en: 'Forex', color: '#2962ff', emoji: '💱' },
+  markets: { ku: 'بازاڕ', en: 'Markets', color: '#a78bfa', emoji: '📈' },
+  oil: { ku: 'نەوت', en: 'Oil', color: '#ff7a00', emoji: '🛢️' },
+  crypto: { ku: 'کریپتۆ', en: 'Crypto', color: '#f0b90b', emoji: '₿' },
+  commodities: { ku: 'کاڵا', en: 'Commodities', color: '#d4af37', emoji: '🥇' },
+  economy: { ku: 'ئابووری', en: 'Economy', color: '#0ecb81', emoji: '📊' },
 };
+
+// News category filter tabs
+const NEWS_FILTERS: { code: string; emoji: string }[] = [
+  { code: 'all', emoji: '🗞️' },
+  { code: 'gold', emoji: '🥇' },
+  { code: 'forex', emoji: '💱' },
+  { code: 'markets', emoji: '📈' },
+  { code: 'oil', emoji: '🛢️' },
+  { code: 'crypto', emoji: '₿' },
+];
+
+// Decode any leftover HTML entities client-side (defense-in-depth)
+function decodeHtml(s: string): string {
+  if (!s || (!s.includes('&') )) return s;
+  try {
+    const el = document.createElement('textarea');
+    el.innerHTML = s;
+    return el.value;
+  } catch {
+    return s;
+  }
+}
 
 // Direction colors
 const C_UP = '#0ecb81';   // stronger USD => green
