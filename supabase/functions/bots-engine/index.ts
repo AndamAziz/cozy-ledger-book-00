@@ -32,6 +32,24 @@ const MIN_SCALP_PROFIT_PCT = 0.1;
 // gain: if price reverses back toward break-even we close in the green.
 const SCALP_LOCK_FRACTION = 0.5;
 
+// ───────────────────── risk protection (USD, per single trade) ─────────────────────
+// Once a trade is at least this much in profit, move the Stop Loss to break-even
+// (the entry price) so a winning trade can never turn into a loss.
+const BREAKEVEN_TRIGGER_USD = 2.00;
+// Hard max loss: if a single trade reaches this unrealized loss, close it
+// immediately instead of waiting for the Stop Loss.
+const MAX_LOSS_USD = 5.00;
+
+// ───────────────────── trading sessions (UTC) ─────────────────────
+// Gold moves far less during the Asian session, so we automatically halve the
+// lot size in those hours. Sessions are also surfaced in the bot logs.
+function getSession(date = new Date()): { key: "asian" | "london" | "ny"; label: string; asian: boolean } {
+  const h = date.getUTCHours();
+  if (h >= 0 && h < 8) return { key: "asian", label: "🌏 Asian Session - lower volatility", asian: true };
+  if (h >= 8 && h < 16) return { key: "london", label: "🌍 London Session - high volatility", asian: false };
+  return { key: "ny", label: "🌎 NY Session - high volatility", asian: false };
+}
+
 const CRYPTO_BINANCE: Record<string, string> = {
   "BTC/USD": "BTCUSDT", "ETH/USD": "ETHUSDT", "BNB/USD": "BNBUSDT",
   "SOL/USD": "SOLUSDT", "XRP/USD": "XRPUSDT",
