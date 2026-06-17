@@ -7,7 +7,7 @@ import { MarketDropdown } from "@/components/bots/MarketDropdown";
 import { PriceDetailModal } from "@/components/bots/PriceDetailModal";
 import { CreateBotModal } from "@/components/bots/CreateBotModal";
 import { NotificationBell } from "@/components/bots/NotificationBell";
-import { DailySummary } from "@/components/bots/DailySummary";
+import { BotDashboard } from "@/components/bots/BotDashboard";
 import { goToGold } from "@/lib/botNav";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,8 +79,8 @@ export default function Bots() {
           </div>
         </div>
 
-        {/* Daily summary */}
-        <DailySummary />
+        {/* Bot dashboard */}
+        <BotDashboard bots={bots} />
 
         {/* Live markets */}
         <div className="mt-4">
