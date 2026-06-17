@@ -581,6 +581,17 @@ Deno.serve(async (req) => {
     if (test) {
       const quotes = await getPrices();
       const priceBlock = quotes.map((q) => priceLine(q, ruleSignal(q.changePct)));
+
+      // Build a sample full trade signal + a sample TP outcome from live gold price.
+      const sample = quotes[0] ?? { symbol: "XAU/USD", price: 4275, changePct: 0.3 } as Quote;
+      const sm = ASSET_META[sample.symbol] ?? ASSET_META["XAU/USD"];
+      const sampleTp = +(sample.price * (1 + sm.tpPct / 100)).toFixed(2);
+      const sampleSl = +(sample.price * (1 - sm.slPct / 100)).toFixed(2);
+      const sTpPips = toPips(sampleTp - sample.price, sm.pip);
+      const sSlPips = toPips(sampleSl - sample.price, sm.pip);
+      const signalSample = newSignalLine(sample, "BUY", sampleTp, sampleSl, sTpPips, sSlPips, 78, sessionLabel());
+      const outcomeSample = outcomeLine(sample.symbol, "BUY", "tp", sample.price, sampleTp, sTpPips);
+
       const liveNews = (await fetchNews()).slice(0, 3);
       const kuTitles = await translateToKurdish(liveNews.map((n) => n.title));
       const newsBlock = liveNews.map((n, i) => newsLine(n.title, kuTitles[i] ?? "", n.summary, n.category, n.source));
@@ -589,6 +600,14 @@ Deno.serve(async (req) => {
         "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
         "<i>🧪 TEST / تاقیکردنەوە</i>",
         "━━━━━━━━━━━━━━━",
+        "",
+        "🚨 <b>New Signals / سیگنالی نوێ</b>",
+        "",
+        signalSample,
+        "",
+        "🏁 <b>Signal Results / ئەنجامی سیگنال</b>",
+        "",
+        outcomeSample,
         "",
         "📈 <b>Analysis / شیکاری بازاڕ</b>",
         "",
@@ -605,6 +624,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, sent: ok, mode: "test", quotes: quotes.length, news: newsBlock.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
 
     const signalAlerts: string[] = [];
     const outcomeAlerts: string[] = [];
