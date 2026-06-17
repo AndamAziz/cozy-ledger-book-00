@@ -410,6 +410,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
   const quotes = await getPrices();
   const priceState = await getState("prices");      // { "XAU/USD": { price, signal } }
   const openState = await getState("open_signals"); // { "XAU/USD": OpenSig }
+  const enabledRegions = await getEnabledRegions(); // which markets may open new targets
   const signalAlerts: SignalMsg[] = [];
   const outcomeAlerts: string[] = [];
 
