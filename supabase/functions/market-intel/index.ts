@@ -825,7 +825,7 @@ Deno.serve(async (req) => {
         const gapOk = !lastTargetAt || Date.now() - lastTargetAt >= TARGET_MIN_GAP_MS;
         // Skip ordinary targets while inside the throttle window; always send important ones.
         if (!sig.important && !gapOk) continue;
-        const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text));
+        const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason));
         sent = ok || sent;
         if (ok) { targetsSent++; lastTargetAt = Date.now(); }
       }
