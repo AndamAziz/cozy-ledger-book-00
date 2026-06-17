@@ -116,3 +116,29 @@ export function playLoseSound() {
     /* ignore — audio is optional */
   }
 }
+
+/** Subtle two-tone "ding" for status alerts (pause / stop / break-even). */
+export function playDing() {
+  try {
+    const s = readSettings();
+    if (!s.enabled) return;
+    resumeIfSuspended();
+    const c = getCtx();
+    const t = c.currentTime;
+    const vol = Math.max(0, Math.min(1, s.winVolume));
+
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(660, t);       // E5
+    o.frequency.setValueAtTime(880, t + 0.1); // A5
+    g.gain.setValueAtTime(0.18 * vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    o.connect(g);
+    g.connect(c.destination);
+    o.start(t);
+    o.stop(t + 0.3);
+  } catch {
+    /* ignore — audio is optional */
+  }
+}
