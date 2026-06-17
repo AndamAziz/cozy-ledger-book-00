@@ -436,10 +436,12 @@ async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts
 
 async function evaluateCalendar(): Promise<string[]> {
   const events = await getHighImpactEvents();
-  const state = await getState("events"); // { alertedKeys: string[] }
+  const state = await getState("events"); // { alertedKeys: string[], resultKeys: string[] }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
+  const resulted = new Set((state.resultKeys as string[]) ?? []);
   const now = Date.now();
   const out: string[] = [];
+  let goldPrice: number | null = null; // fetched lazily for USD-event gold bias
 
   for (const ev of events) {
     // Persist upcoming events for the dashboard.
@@ -449,6 +451,8 @@ async function evaluateCalendar(): Promise<string[]> {
     }, { onConflict: "ext_key" });
 
     const minutes = (ev.time - now) / 60_000;
+
+    // 1) BEFORE the event → heads-up alert.
     if (minutes >= 0 && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
       alerted.add(ev.key);
       out.push([
@@ -456,12 +460,69 @@ async function evaluateCalendar(): Promise<string[]> {
         `🕒 In ${Math.round(minutes)} min · لە ${Math.round(minutes)} خولەکدا`,
         ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
       ].filter(Boolean).join("\n"));
+      continue;
+    }
+
+    // 2) AFTER the event releases → post the RESULT + market reaction/bias.
+    // Only when an actual figure exists, event is in the past but recent (<=6h), and not yet posted.
+    const minsSince = (now - ev.time) / 60_000;
+    if (ev.actual && minsSince >= 0 && minsSince <= 360 && !resulted.has(ev.key)) {
+      resulted.add(ev.key);
+
+      const lines: string[] = [
+        `🏁 <b>RESULT / ئەنجامی هەواڵ</b>`,
+        `📅 <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
+        `Actual: <code>${esc(ev.actual)}</code> · Forecast: <code>${esc(ev.forecast || "—")}</code> · Prev: <code>${esc(ev.previous || "—")}</code>`,
+      ];
+
+      const a = parseFigure(ev.actual);
+      const f = parseFigure(ev.forecast);
+      const isUsd = ev.currency.toUpperCase() === "USD";
+
+      if (isUsd && a !== null && f !== null) {
+        const { dir, usd } = goldFromUsdSurprise(ev.title, a, f);
+        if (dir === "HOLD") {
+          lines.push(`⚪️ As expected / وەک پێشبینی — کاریگەری کەم لەسەر بازار`);
+        } else {
+          if (goldPrice === null) { const g = await fetchGold(); goldPrice = g?.price ?? null; }
+          const usdTxt = usd === "stronger"
+            ? `🔴 USD stronger / دۆلار بەهێزتر → Gold bearish / ئاڵتوون دادەبەزێت`
+            : `🟢 USD weaker / دۆلار لاوازتر → Gold bullish / ئاڵتوون بەرز دەبێتەوە`;
+          lines.push(usdTxt);
+          const m = ASSET_META["XAU/USD"];
+          if (goldPrice) {
+            const isBuy = dir === "BUY";
+            const tp = +(goldPrice * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+            const sl = +(goldPrice * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
+            const tpPips = toPips(tp - goldPrice, m.pip);
+            const slPips = toPips(sl - goldPrice, m.pip);
+            lines.push(
+              `${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`,
+              `📍 Entry: <code>$${fmt(goldPrice)}</code>`,
+              `🎯🟢 TP: <code>$${fmt(tp)}</code> (${isBuy ? "+" : "-"}${tpPips} pips)`,
+              `🛑🔴 SL: <code>$${fmt(sl)}</code>`,
+            );
+          } else {
+            lines.push(`${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`);
+          }
+        }
+      } else if (a !== null && f !== null) {
+        const beat = a > f, miss = a < f;
+        lines.push(beat ? `🟢 Beat forecast / باشتر لە پێشبینی` : miss ? `🔴 Below forecast / خراپتر لە پێشبینی` : `⚪️ As expected / وەک پێشبینی`);
+      }
+
+      out.push(lines.join("\n"));
     }
   }
-  // Keep last 100 alerted keys.
-  await setState("events", { alertedKeys: [...alerted].slice(-100) });
+
+  // Keep last 100 keys of each kind.
+  await setState("events", {
+    alertedKeys: [...alerted].slice(-100),
+    resultKeys: [...resulted].slice(-100),
+  });
   return out;
 }
+
 
 // ───────────────────── market news (live fetch + bilingual) ─────────────────────
 interface NewsItem { title: string; link: string; source: string; category: string; pubDate: string; summary: string; }
