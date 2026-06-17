@@ -64,20 +64,26 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
     const rows = (data as TradeRow[]) ?? [];
 
     // ---- Weekly bars (last 7 local days) ----
+    const fmtDateKey = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
     const days: DayBar[] = [];
     const byKey: Record<string, number> = {};
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setHours(0, 0, 0, 0);
       d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
+      const key = fmtDateKey(d);
       const label = d.toLocaleDateString("en-US", { weekday: "short" });
       days.push({ key, label, pnl: 0 });
       byKey[key] = days.length - 1;
     }
     for (const r of rows) {
       if (!r.closed_at) continue;
-      const key = new Date(r.closed_at).toISOString().slice(0, 10);
+      const key = fmtDateKey(new Date(r.closed_at));
       const idx = byKey[key];
       if (idx != null) days[idx].pnl += Number(r.pnl ?? 0);
     }
@@ -85,8 +91,8 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
     setWeek(days);
 
     // ---- Today's summary ----
-    const todayKey = new Date().toISOString().slice(0, 10);
-    const todayRows = rows.filter((r) => r.closed_at && new Date(r.closed_at).toISOString().slice(0, 10) === todayKey);
+    const todayKey = fmtDateKey(new Date());
+    const todayRows = rows.filter((r) => r.closed_at && fmtDateKey(new Date(r.closed_at)) === todayKey);
     const pnls = todayRows.map((r) => Number(r.pnl ?? 0));
     const wins = todayRows.filter((r) => r.result === "win").length;
     setToday({
