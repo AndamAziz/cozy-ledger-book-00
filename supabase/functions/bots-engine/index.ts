@@ -446,6 +446,66 @@ async function maybeLogScalpCheck(
     `[${hhmmss()}] ⏱️ Monitoring... ${symbol} $${fmt(price, symbol)} P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct).toFixed(2)}%) — ${verdict}`);
 }
 
+// ───────────────────── daily P/L (per user, current UTC day) ─────────────────────
+// Sums realized P/L from trades closed since 00:00 UTC today.
+async function getDailyPnl(userId: string): Promise<{ pnl: number; trades: number }> {
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const { data } = await admin
+    .from("bot_trades")
+    .select("pnl")
+    .eq("user_id", userId)
+    .eq("status", "closed")
+    .gte("closed_at", startOfDay.toISOString());
+  const rows = data ?? [];
+  const pnl = rows.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+  return { pnl: +pnl.toFixed(2), trades: rows.length };
+}
+
+// ───────────────────── economic calendar (news filter) ─────────────────────
+// Cached for 5 minutes across all bots processed in one sweep.
+type NewsEvent = { title: string; country: string; impact: string; time: number };
+let _newsCache: { at: number; events: NewsEvent[] } | null = null;
+
+async function getHighImpactUsdEvents(): Promise<NewsEvent[]> {
+  if (_newsCache && Date.now() - _newsCache.at < 5 * 60_000) return _newsCache.events;
+  const events: NewsEvent[] = [];
+  try {
+    for (const url of CALENDAR_URLS) {
+      const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(8000) });
+      if (!r.ok) { await r.text(); continue; }
+      const j = await r.json();
+      if (!Array.isArray(j)) continue;
+      for (const e of j as Record<string, string>[]) {
+        const impact = (e.impact || "").toLowerCase();
+        const country = (e.country || "").toUpperCase();
+        // Gold (XAU) is USD-driven → only USD high-impact events matter.
+        if (impact !== "high") continue;
+        if (country !== "USD") continue;
+        const t = e.date ? Date.parse(e.date) : NaN;
+        if (Number.isNaN(t)) continue;
+        events.push({ title: e.title ?? "Event", country, impact, time: t });
+      }
+    }
+  } catch (e) {
+    console.error("calendar fetch error", e);
+  }
+  _newsCache = { at: Date.now(), events };
+  return events;
+}
+
+// Finds the nearest upcoming high-impact USD event within `withinMin` minutes.
+function nextEventWithin(events: NewsEvent[], withinMin: number): { ev: NewsEvent; minutes: number } | null {
+  const now = Date.now();
+  let best: { ev: NewsEvent; minutes: number } | null = null;
+  for (const ev of events) {
+    const diffMin = (ev.time - now) / 60_000;
+    if (diffMin >= 0 && diffMin <= withinMin) {
+      if (!best || diffMin < best.minutes) best = { ev, minutes: diffMin };
+    }
+  }
+  return best;
+}
 
 async function processBot(bot: Record<string, unknown>) {
   const botId = bot.id as string;
