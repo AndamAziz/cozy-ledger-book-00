@@ -561,6 +561,19 @@ async function processBot(bot: Record<string, unknown>) {
     const pnlPct = diffPct * 100;
     const pnl = diffPct * amount;
 
+    // 1-NEWS) NEWS FILTER — force-close USD-sensitive trades when a high-impact
+    // USD/gold event is within 10 minutes (don't risk the spike).
+    const usdSensitive = !CRYPTO_BINANCE[symbol];
+    if (usdSensitive) {
+      const ev = nextEventWithin(await getHighImpactUsdEvents(), NEWS_CLOSE_OPEN_MIN);
+      if (ev) {
+        await log(botId, userId, "loss",
+          `[${hhmmss()}] ⛔ Closing trade - ${ev.ev.title} in ${Math.round(ev.minutes)}min (high-impact USD news)`);
+        await closeTrade(bot, openTrade, price, "news");
+        return;
+      }
+    }
+
     // 1a) Hard TP / SL — always enforced (instant, no waiting).
     let hit: CloseKind | null = null;
     let exit = price;
