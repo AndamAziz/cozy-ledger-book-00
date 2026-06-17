@@ -8,9 +8,8 @@ import { cn } from "@/lib/utils";
 import type { Bot } from "@/hooks/useBots";
 import {
   DAILY_LOSS_LIMIT_USD, DAILY_PROFIT_TARGET_USD, NEWS_BLOCK_NEW_MIN,
-  getActiveWindow, nextWindowOpen, formatCountdown, sessionForHour,
 } from "@/lib/tradingSessions";
-import { LayoutDashboard, Clock } from "lucide-react";
+import { LayoutDashboard, Activity } from "lucide-react";
 
 interface TradeRow {
   pnl: number | null;
@@ -29,7 +28,6 @@ interface Summary {
   best: number;
   worst: number;
   net: number;
-  sessions: string[];
 }
 
 const newsHeaders = {
@@ -91,20 +89,12 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
     const todayRows = rows.filter((r) => r.closed_at && new Date(r.closed_at).toISOString().slice(0, 10) === todayKey);
     const pnls = todayRows.map((r) => Number(r.pnl ?? 0));
     const wins = todayRows.filter((r) => r.result === "win").length;
-    const sessions = Array.from(
-      new Set(
-        todayRows
-          .map((r) => sessionForHour(new Date(r.opened_at).getUTCHours()))
-          .filter((s) => s === "London" || s === "NY"),
-      ),
-    );
     setToday({
       trades: todayRows.length,
       winRate: todayRows.length ? Math.round((wins / todayRows.length) * 100) : 0,
       best: pnls.length ? Math.max(...pnls) : 0,
       worst: pnls.length ? Math.min(...pnls) : 0,
       net: +pnls.reduce((a, b) => a + b, 0).toFixed(2),
-      sessions,
     });
   }, []);
 
@@ -148,7 +138,6 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
     const net = today?.net ?? 0;
     const anyRunning = bots.some((b) => b.status === "running");
     const anyAutoPaused = bots.some((b) => b.auto_paused);
-    const activeWindow = getActiveWindow(new Date(now));
 
     if (net <= -DAILY_LOSS_LIMIT_USD)
       return { dot: "🔴", text: "Paused", detail: "Daily loss limit reached", cls: "border-destructive/40 bg-destructive/10 text-destructive" };
@@ -158,17 +147,11 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
       return { dot: "🔴", text: "Paused", detail: "Loss streak — auto-paused", cls: "border-destructive/40 bg-destructive/10 text-destructive" };
     if (newsBlock)
       return { dot: "⛔", text: "Blocked", detail: `${newsBlock.title} in ${newsBlock.minutes}min`, cls: "border-orange-500/40 bg-orange-500/10 text-orange-500" };
-    if (anyRunning && activeWindow)
-      return { dot: "🟢", text: "Trading", detail: `${activeWindow.short} session`, cls: "border-success/40 bg-success/10 text-success" };
-    return { dot: "🟡", text: "Waiting", detail: "Between sessions", cls: "border-gold/40 bg-gold/10 text-gold" };
-  }, [bots, today, now, newsBlock]);
+    if (anyRunning)
+      return { dot: "🟢", text: "Trading", detail: "Scanning volatility 24/7", cls: "border-success/40 bg-success/10 text-success" };
+    return { dot: "🟡", text: "Waiting", detail: "Bot idle — press start", cls: "border-gold/40 bg-gold/10 text-gold" };
+  }, [bots, today, newsBlock]);
 
-  const next = useMemo(() => {
-    const active = getActiveWindow(new Date(now));
-    if (active) return { label: `${active.short} session is open now`, active: true };
-    const nw = nextWindowOpen(new Date(now));
-    return { label: `${nw.window.short} opens in ${formatCountdown(nw.at.getTime() - now)}`, active: false };
-  }, [now]);
 
   const maxAbs = Math.max(1, ...week.map((d) => Math.abs(d.pnl)));
 
@@ -204,8 +187,9 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
               <Stat label="Best Trade" value={`+$${fmtUsd(Math.max(0, today.best))}`} valueClass="text-success" />
               <Stat label="Worst Trade" value={`-$${fmtUsd(Math.abs(Math.min(0, today.worst)))}`} valueClass="text-destructive" />
               <Stat
-                label="Sessions"
-                value={today.sessions.length ? today.sessions.join(" / ") : "—"}
+                label="Avg/Trade"
+                value={`${today.trades && today.net < 0 ? "-" : "+"}$${fmtUsd(today.trades ? Math.abs(today.net / today.trades) : 0)}`}
+                valueClass={today.net >= 0 ? "text-success" : "text-destructive"}
               />
             </div>
           </>
@@ -245,14 +229,11 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
         <div className="mt-1 text-center text-[10px] text-muted-foreground">Scale ±${fmtUsd(maxAbs)}</div>
       </div>
 
-      {/* Next trade window */}
-      <div className={cn(
-        "flex items-center gap-2 rounded-2xl border p-3 text-sm",
-        next.active ? "border-success/40 bg-success/5 text-success" : "border-border bg-card text-foreground",
-      )}>
-        <Clock className="h-4 w-4 shrink-0" />
-        <span className="font-medium">Next trading window:</span>
-        <span className="ml-auto font-semibold tabular-nums">{next.label}</span>
+      {/* Trading mode */}
+      <div className="flex items-center gap-2 rounded-2xl border border-border bg-card p-3 text-sm text-foreground">
+        <Activity className="h-4 w-4 shrink-0 text-success" />
+        <span className="font-medium">Trading mode:</span>
+        <span className="ml-auto font-semibold">24/7 · volatility-based</span>
       </div>
     </div>
   );

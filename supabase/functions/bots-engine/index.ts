@@ -54,26 +54,62 @@ const CALENDAR_URLS = [
   "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
 ];
 
-// ───────────────────── trading sessions / best-time filter (UTC) ─────────────────────
-// We ONLY open trades during the high-liquidity London & NY windows and skip the
-// Asian session entirely.
-const TRADE_WINDOWS_UTC: { start: number; end: number; label: string }[] = [
-  { start: 7, end: 11, label: "🌍 London open (07:00-11:00 UTC) - high volatility" },
-  { start: 13, end: 16, label: "🌎 NY open (13:00-16:00 UTC) - high volatility" },
-];
-function getSession(date = new Date()): { key: "asian" | "london" | "ny"; label: string; asian: boolean } {
-  const h = date.getUTCHours();
-  if (h >= 0 && h < 8) return { key: "asian", label: "🌏 Asian Session - lower volatility", asian: true };
-  if (h >= 8 && h < 16) return { key: "london", label: "🌍 London Session - high volatility", asian: false };
-  return { key: "ny", label: "🌎 NY Session - high volatility", asian: false };
+// ───────────────────── volatility-based trade filter ─────────────────────
+// We no longer trade by the clock. Instead the bot runs 24/7 and only opens
+// trades when the market is actually moving and cheap to transact in. Two live
+// signals decide this on every scan:
+//   • SPREAD   — how wide / erratic the market is right now (estimated from the
+//                candle wicks, since we have no live bid/ask feed).
+//   • MOVEMENT — the average candle range over the last few candles.
+// Thresholds are calibrated to gold (0.50 spread / 0.30 move, per spec) and
+// scaled by price so they stay sensible for crypto / forex symbols too.
+const VOL_REF_PRICE = 3000;       // gold reference price used for scaling
+const VOL_SPREAD_MAX_PTS = 0.50;  // spread above this = market too wide → wait
+const VOL_MOVE_MIN_PTS = 0.30;    // avg candle below this = market too flat → wait
+const VOL_LOOKBACK = 5;           // candles averaged for the movement check
+
+type VolLevel = "LOW" | "MEDIUM" | "HIGH";
+type VolReport = {
+  level: VolLevel; spread: number; avgMove: number;
+  spreadMax: number; moveMin: number; lotMult: number;
+};
+
+// Format a points value: 2 decimals for big instruments, 4 for forex.
+function pts(n: number): string {
+  return Math.abs(n) >= 1 ? n.toFixed(2) : n.toFixed(4);
 }
-// Returns the active trading window (or null when outside the allowed hours).
-function getTradeWindow(date = new Date()): { label: string } | null {
-  const h = date.getUTCHours();
-  for (const w of TRADE_WINDOWS_UTC) {
-    if (h >= w.start && h < w.end) return { label: w.label };
-  }
-  return null;
+
+function assessVolatility(price: number, candles: Candle[]): VolReport {
+  const scale = price > 0 ? price / VOL_REF_PRICE : 1;
+  const spreadMax = VOL_SPREAD_MAX_PTS * scale;
+  const moveMin = VOL_MOVE_MIN_PTS * scale;
+
+  // PRICE MOVEMENT — average candle size over the last N candles.
+  const recent = candles.slice(-VOL_LOOKBACK);
+  const avgMove = recent.length
+    ? recent.reduce((a, c) => a + (c.high - c.low), 0) / recent.length
+    : 0;
+
+  // SPREAD — estimate the effective spread from the average wick (price rejected
+  // outside the candle body) over the last 3 candles. Wide/choppy wicks ≈ a wide
+  // market that is expensive to enter.
+  const wickWin = candles.slice(-3);
+  const spread = wickWin.length
+    ? wickWin.reduce((a, c) => {
+        const body = Math.abs(c.close - c.open);
+        return a + Math.max(0, (c.high - c.low) - body);
+      }, 0) / wickWin.length
+    : 0;
+
+  // VOLATILITY SCORE — combine spread + movement.
+  const tightSpread = spread <= spreadMax;
+  const bigMoves = avgMove >= moveMin;
+  let level: VolLevel;
+  let lotMult: number;
+  if (tightSpread && bigMoves) { level = "HIGH"; lotMult = 1; }          // 🟢 full lot
+  else if (tightSpread || bigMoves) { level = "MEDIUM"; lotMult = 0.5; } // 🟡 half lot
+  else { level = "LOW"; lotMult = 0; }                                   // 🔴 wait
+  return { level, spread, avgMove, spreadMax, moveMin, lotMult };
 }
 
 
@@ -676,13 +712,10 @@ async function processBot(bot: Record<string, unknown>) {
     return;
   }
 
-  // GUARD B) BEST-TIME FILTER — only trade the London & NY windows; skip Asian.
-  const window = getTradeWindow();
-  if (!window) {
-    await log(botId, userId, "info",
-      `[${hhmmss()}] ⏰ Outside trading hours (${getSession().label}) - waiting for London (07:00) / NY (13:00) UTC`);
-    return;
-  }
+  // (No time-of-day filter anymore — the bot trades 24/7 and gates on live
+  //  volatility instead, evaluated below once we have the latest candles.)
+
+
 
   // GUARD C) NEWS FILTER — no new trades within 60 min of a high-impact USD event.
   if (!CRYPTO_BINANCE[symbol]) {
@@ -708,8 +741,21 @@ async function processBot(bot: Record<string, unknown>) {
   const curVol = volumes[volumes.length - 1];
   const volSpike = curVol > avgVol * 1.5;
 
-  const session = getSession();
-  await log(botId, userId, "info", `[${hhmmss()}] ${session.label}`);
+  // GUARD B) VOLATILITY FILTER — only trade when the market is moving and the
+  // spread is tight. LOW → wait, MEDIUM → half lot, HIGH → full lot.
+  const vol = assessVolatility(price, candles);
+  if (vol.level === "LOW") {
+    await log(botId, userId, "info",
+      `[${hhmmss()}] ⏸️ Volatility: LOW - spread ${pts(vol.spread)}, avg move ${pts(vol.avgMove)}pts - waiting`);
+    return;
+  }
+  if (vol.level === "MEDIUM") {
+    await log(botId, userId, "info",
+      `[${hhmmss()}] 🟡 Volatility: MEDIUM - spread ${pts(vol.spread)}, avg move ${pts(vol.avgMove)}pts - trading smaller lot`);
+  } else {
+    await log(botId, userId, "signal",
+      `[${hhmmss()}] 📊 Volatility: HIGH - spread ${pts(vol.spread)}, avg move ${pts(vol.avgMove)}pts - entering trade`);
+  }
   await log(botId, userId, "info", `[${hhmmss()}] 📊 Analyzing ${symbol} on ${timeframe}...`);
   if (ema9 != null && ema21 != null) {
     await log(botId, userId, "info", `[${hhmmss()}] 📈 EMA9 (${fmt(ema9, symbol)}) ${ema9 > ema21 ? ">" : "<"} EMA21 (${fmt(ema21, symbol)}) → ${ema9 > ema21 ? "Uptrend ✓" : "Downtrend ✓"}`);
@@ -760,12 +806,12 @@ async function processBot(bot: Record<string, unknown>) {
   const tpPrice = direction === "buy" ? entry * (1 + tpPct) : entry * (1 - tpPct);
   const reasons = (direction === "buy" ? buyReasons : sellReasons).join(", ") || "signal threshold met";
 
-  // ASIAN SESSION PROTECTION — gold moves less in Asian hours, so halve the lot.
+  // VOLATILITY LOT SIZING — full lot on HIGH, half lot on MEDIUM.
   const baseAmount = Number(bot.amount);
-  const tradeAmount = session.asian ? +(baseAmount * 0.5).toFixed(2) : baseAmount;
-  if (session.asian) {
+  const tradeAmount = +(baseAmount * vol.lotMult).toFixed(2);
+  if (vol.lotMult < 1) {
     await log(botId, userId, "info",
-      `[${hhmmss()}] 🌏 Asian session → lot size reduced 50% ($${baseAmount.toFixed(2)} → $${tradeAmount.toFixed(2)})`);
+      `[${hhmmss()}] 🟡 ${vol.level} volatility → lot size ${Math.round(vol.lotMult * 100)}% ($${baseAmount.toFixed(2)} → $${tradeAmount.toFixed(2)})`);
   }
 
   await log(botId, userId, "signal",
