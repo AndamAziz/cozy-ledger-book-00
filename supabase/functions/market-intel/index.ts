@@ -509,8 +509,9 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 
 async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAlerts: SignalMsg[] }> {
   const events = await getHighImpactEvents();
-  const state = await getState("events"); // { alertedKeys: string[], resultKeys: string[] }
+  const state = await getState("events"); // { alertedKeys, remindKeys, resultKeys }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
+  const reminded = new Set((state.remindKeys as string[]) ?? []);
   const resulted = new Set((state.resultKeys as string[]) ?? []);
   const now = Date.now();
   const calendarAlerts: string[] = [];     // pure news / heads-up / result info (NO trade targets)
@@ -526,16 +527,31 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
 
     const minutes = (ev.time - now) / 60_000;
 
-    // 1) BEFORE the event → heads-up alert (news only).
-    if (minutes >= 0 && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
+    // 1) EARLY heads-up → fired once between the 5-min reminder window and EVENT_ALERT_MIN.
+    if (minutes > EVENT_REMINDER_MIN && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
       alerted.add(ev.key);
       calendarAlerts.push([
         `🟠⚠️ <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
         `🕒 In ${Math.round(minutes)} min · لە ${Math.round(minutes)} خولەکدا`,
         ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
+        `ئامادە بە — تارگێت دوای دەرچوونی هەواڵەکە دەنێردرێت`,
       ].filter(Boolean).join("\n"));
-      continue;
     }
+
+    // 2) FINAL 5-minute reminder → fired once inside the last EVENT_REMINDER_MIN minutes.
+    if (minutes >= 0 && minutes <= EVENT_REMINDER_MIN && !reminded.has(ev.key)) {
+      reminded.add(ev.key);
+      const left = Math.max(0, Math.round(minutes));
+      calendarAlerts.push([
+        `🔔⏰ <b>بیرهێنانەوە / REMINDER</b>`,
+        `🟠 <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
+        `🕒 ${left} min left · ${left} خولەک ماوە بۆ دەرچوونی هەواڵەکە`,
+        ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
+        `🟢🔴 ئامادە بە بۆ کڕین یان فرۆشتن / Get ready to BUY or SELL`,
+      ].filter(Boolean).join("\n"));
+    }
+
+
 
     // 2) AFTER the event releases → post the RESULT + market reaction/bias.
     // Only when an actual figure exists, event is in the past but recent (<=6h), and not yet posted.
