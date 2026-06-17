@@ -208,6 +208,8 @@ export type Database = {
           id: string
           last_scan_at: string | null
           name: string
+          pause_reason: string | null
+          pause_reason_at: string | null
           sl_pct: number
           status: Database["public"]["Enums"]["bot_status"]
           strategy: Database["public"]["Enums"]["bot_strategy"]
@@ -229,6 +231,8 @@ export type Database = {
           id?: string
           last_scan_at?: string | null
           name: string
+          pause_reason?: string | null
+          pause_reason_at?: string | null
           sl_pct?: number
           status?: Database["public"]["Enums"]["bot_status"]
           strategy?: Database["public"]["Enums"]["bot_strategy"]
@@ -250,6 +254,8 @@ export type Database = {
           id?: string
           last_scan_at?: string | null
           name?: string
+          pause_reason?: string | null
+          pause_reason_at?: string | null
           sl_pct?: number
           status?: Database["public"]["Enums"]["bot_status"]
           strategy?: Database["public"]["Enums"]["bot_strategy"]

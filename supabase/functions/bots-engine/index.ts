@@ -226,6 +226,38 @@ async function notify(
     pnl: pnl == null ? null : +pnl.toFixed(2),
   });
 }
+
+// Persistent pause/stop state. Records WHY a bot is paused (for the in-app
+// banner) and only sends a notification when the reason CHANGES — so a bot
+// sitting in e.g. LOW volatility never spams an alert every scan tick.
+async function setPauseReason(
+  bot: Record<string, unknown>,
+  code: string,
+  type: string,
+  title: string,
+  message: string,
+  pnl?: number,
+) {
+  const botId = bot.id as string;
+  const userId = bot.user_id as string;
+  const changed = (bot.pause_reason as string | null) !== code;
+  await admin
+    .from("bots")
+    .update({ pause_reason: code, pause_reason_at: new Date().toISOString() })
+    .eq("id", botId);
+  bot.pause_reason = code;
+  if (changed) await notify(userId, botId, type, title, message, pnl);
+}
+
+// Clear the pause reason once the bot is trading normally again.
+async function clearPauseReason(bot: Record<string, unknown>) {
+  if (bot.pause_reason == null) return;
+  bot.pause_reason = null;
+  await admin
+    .from("bots")
+    .update({ pause_reason: null, pause_reason_at: null })
+    .eq("id", bot.id as string);
+}
 function fmt(n: number, symbol: string): string {
   const dec = symbol === "USD/JPY" ? 3 : 2;
   return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -349,13 +381,15 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   if (daily.pnl <= -DAILY_LOSS_LIMIT_USD) {
     await log(botId, userId, "loss",
       `[${hhmmss()}] 🛑 Daily loss limit reached (${dSign}$${fmt(Math.abs(daily.pnl), symbol)}) - bot paused until tomorrow`);
-    await notify(userId, botId, "auto_pause", "🛑 Daily Loss Limit",
-      `Today's P/L hit ${dSign}$${fmt(Math.abs(daily.pnl), symbol)}. Bots paused until tomorrow to protect your balance.`, daily.pnl);
+    await setPauseReason(bot, "daily_loss", "bot_stopped_loss", "🛑 Bot Stopped - Loss Limit Hit",
+      `Daily loss of -$${fmt(Math.abs(daily.pnl), symbol)} reached. Bot paused until tomorrow UTC midnight. · Current P/L: -$${fmt(Math.abs(daily.pnl), symbol)}`,
+      daily.pnl);
   } else if (daily.pnl >= DAILY_PROFIT_TARGET_USD) {
     await log(botId, userId, "win",
       `[${hhmmss()}] 🎯 Daily target reached (+$${fmt(daily.pnl, symbol)})! Locking in profits.`);
-    await notify(userId, botId, "trade_win", "🎯 Daily Target Reached",
-      `Today's P/L hit +$${fmt(daily.pnl, symbol)}. Locking in profits — bots paused until tomorrow.`, daily.pnl);
+    await setPauseReason(bot, "daily_target", "bot_stopped_target", "🎯 Bot Stopped - Target Reached!",
+      `Daily profit of +$${fmt(daily.pnl, symbol)} locked in! Great trading day. Bot stopped. · Current P/L: +$${fmt(daily.pnl, symbol)}`,
+      daily.pnl);
   }
 
   // 🔔 Notify the user the trade was closed (with result).
@@ -370,10 +404,10 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
   // ⏸ Auto-pause after 3 consecutive losses.
   if (autoPause) {
     await log(botId, userId, "info", `[${hhmmss()}] ⏸ AUTO-PAUSED — ${streak} losses in a row. Bot paused for safety.`);
-    await notify(
-      userId, botId, "auto_pause",
+    await setPauseReason(
+      bot, "loss_streak", "auto_pause",
       `⏸ ${botName} Auto-Paused`,
-      `Bot paused after ${streak} losing trades in a row. Review your settings before restarting.`,
+      `Bot paused after ${streak} losing trades in a row. Review your settings before restarting. · Current P/L: ${daily.pnl >= 0 ? "+" : "-"}$${fmt(Math.abs(daily.pnl), symbol)}`,
     );
   } else if (!win) {
     await log(botId, userId, "info", `[${hhmmss()}] ⚠️ Loss streak: ${streak}/3 before auto-pause.`);
@@ -559,6 +593,9 @@ async function processBot(bot: Record<string, unknown>) {
       if (ev) {
         await log(botId, userId, "loss",
           `[${hhmmss()}] ⛔ Closing trade - ${ev.ev.title} in ${Math.round(ev.minutes)}min (high-impact USD news)`);
+        await notify(userId, botId, "news_close", "📰 Trade Closed - News Incoming",
+          `High impact event in ${Math.round(ev.minutes)}min. Trade closed for safety. · ${ev.ev.title} · Current P/L: ${pnl >= 0 ? "+" : "-"}$${fmt(Math.abs(pnl), symbol)}`,
+          pnl);
         await closeTrade(bot, openTrade, price, "news");
         return;
       }
@@ -582,6 +619,9 @@ async function processBot(bot: Record<string, unknown>) {
       exit = price;
       await log(botId, userId, "loss",
         `[${hhmmss()}] 🚨 MAX LOSS hit (-$${fmt(Math.abs(pnl), symbol)}) — closing immediately to cap the loss`);
+      await notify(userId, botId, "trade_emergency", "⚠️ Trade Closed - Max Loss",
+        `Single trade hit -$${MAX_LOSS_USD.toFixed(2)} limit. Trade closed to protect account. · Current P/L: -$${fmt(Math.abs(pnl), symbol)}`,
+        pnl);
     }
 
     // 1a-BE) MIN PROFIT EXIT → BREAK-EVEN — once a trade is at least +$2.00,
@@ -594,6 +634,9 @@ async function processBot(bot: Record<string, unknown>) {
         openTrade.sl_price = beSl;
         await log(botId, userId, "info",
           `[${hhmmss()}] 🛡️ +$${fmt(pnl, symbol)} profit → Stop Loss moved to break-even @ $${fmt(entry, symbol)} (risk-free trade)`);
+        await notify(userId, botId, "breakeven", "🛡️ Stop Loss → Break Even",
+          `Trade in profit +$${fmt(pnl, symbol)}. SL moved to entry price. Risk = zero now. · Current P/L: +$${fmt(pnl, symbol)}`,
+          pnl);
       }
     }
 
@@ -658,11 +701,17 @@ async function processBot(bot: Record<string, unknown>) {
   if (dayPnl.pnl <= -DAILY_LOSS_LIMIT_USD) {
     await log(botId, userId, "loss",
       `[${hhmmss()}] 🛑 Daily loss limit reached (-$${fmt(Math.abs(dayPnl.pnl), symbol)}) - bot paused until tomorrow`);
+    await setPauseReason(bot, "daily_loss", "bot_stopped_loss", "🛑 Bot Stopped - Loss Limit Hit",
+      `Daily loss of -$${fmt(Math.abs(dayPnl.pnl), symbol)} reached. Bot paused until tomorrow UTC midnight. · Current P/L: -$${fmt(Math.abs(dayPnl.pnl), symbol)}`,
+      dayPnl.pnl);
     return;
   }
   if (dayPnl.pnl >= DAILY_PROFIT_TARGET_USD) {
     await log(botId, userId, "win",
       `[${hhmmss()}] 🎯 Daily target reached (+$${fmt(dayPnl.pnl, symbol)})! Locking in profits.`);
+    await setPauseReason(bot, "daily_target", "bot_stopped_target", "🎯 Bot Stopped - Target Reached!",
+      `Daily profit of +$${fmt(dayPnl.pnl, symbol)} locked in! Great trading day. Bot stopped. · Current P/L: +$${fmt(dayPnl.pnl, symbol)}`,
+      dayPnl.pnl);
     return;
   }
 
@@ -677,6 +726,8 @@ async function processBot(bot: Record<string, unknown>) {
     if (ev) {
       await log(botId, userId, "info",
         `[${hhmmss()}] ⛔ No trade - ${ev.ev.title} in ${Math.round(ev.minutes)}min`);
+      await setPauseReason(bot, `news_block:${ev.ev.title}`, "bot_paused", "⛔ Bot Paused - High Impact News",
+        `${ev.ev.title} in ${Math.round(ev.minutes)}min - bot blocked to protect your account. Resumes after.`);
       return;
     }
   }
@@ -701,8 +752,12 @@ async function processBot(bot: Record<string, unknown>) {
   if (vol.level === "LOW") {
     await log(botId, userId, "info",
       `[${hhmmss()}] ⏸️ Volatility: LOW - spread ${pts(vol.spread)}, avg move ${pts(vol.avgMove)}pts - waiting`);
+    await setPauseReason(bot, "vol_low", "bot_paused", "⏸️ Bot Paused - Market Too Quiet",
+      `Spread too wide or candles too small. Waiting for better conditions. · Spread ${pts(vol.spread)}pts`);
     return;
   }
+  // Conditions are tradeable again — clear any pause banner.
+  await clearPauseReason(bot);
   if (vol.level === "MEDIUM") {
     await log(botId, userId, "info",
       `[${hhmmss()}] 🟡 Volatility: MEDIUM - spread ${pts(vol.spread)}, avg move ${pts(vol.avgMove)}pts - trading smaller lot`);
@@ -792,6 +847,9 @@ async function processBot(bot: Record<string, unknown>) {
   await log(botId, userId, "info",
     `[${hhmmss()}] 📊 Score ${score}/4 triggered the trade${scalp ? " · ⚡ Scalp mode: exits on minimum profit" : ""}`);
 
+  // A trade opened → the bot is active, clear any pause banner.
+  await clearPauseReason(bot);
+
   // 🔔 Notify the user a new trade was opened.
   const botName = (bot.name as string) || symbol;
   await notify(
@@ -852,10 +910,10 @@ serve(async (req) => {
       if (!bot) return new Response(JSON.stringify({ error: "Bot not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       if (action === "start") {
-        // Restarting resets the loss streak and clears any auto-pause.
-        await admin.from("bots").update({ status: "running", last_scan_at: null, consecutive_losses: 0, auto_paused: false }).eq("id", botId);
+        // Restarting resets the loss streak and clears any auto-pause / pause banner.
+        await admin.from("bots").update({ status: "running", last_scan_at: null, consecutive_losses: 0, auto_paused: false, pause_reason: null, pause_reason_at: null }).eq("id", botId);
         await log(botId, userId, "info", `[${hhmmss()}] ▶️ Bot started — scanning ${bot.symbol} on ${bot.timeframe}`);
-        await processBot({ ...bot, status: "running", last_scan_at: null, consecutive_losses: 0, auto_paused: false });
+        await processBot({ ...bot, status: "running", last_scan_at: null, consecutive_losses: 0, auto_paused: false, pause_reason: null, pause_reason_at: null });
       } else if (action === "stop" || action === "close") {
         const { data: openTrade } = await admin.from("bot_trades").select("*").eq("bot_id", botId).eq("status", "open").maybeSingle();
         if (openTrade) {

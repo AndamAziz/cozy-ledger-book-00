@@ -19,6 +19,8 @@ export interface Bot {
   consecutive_losses: number;
   auto_paused: boolean;
   last_scan_at: string | null;
+  pause_reason: string | null;
+  pause_reason_at: string | null;
   created_at: string;
   updated_at: string;
 }
