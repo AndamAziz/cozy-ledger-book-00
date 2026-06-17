@@ -558,6 +558,8 @@ async function processBot(bot: Record<string, unknown>) {
 
   await admin.from("bots").update({ last_scan_at: new Date().toISOString() }).eq("id", botId);
 
+  const session = getSession();
+  await log(botId, userId, "info", `[${hhmmss()}] ${session.label}`);
   await log(botId, userId, "info", `[${hhmmss()}] 📊 Analyzing ${symbol} on ${timeframe}...`);
   if (ema9 != null && ema21 != null) {
     await log(botId, userId, "info", `[${hhmmss()}] 📈 EMA9 (${fmt(ema9, symbol)}) ${ema9 > ema21 ? ">" : "<"} EMA21 (${fmt(ema21, symbol)}) → ${ema9 > ema21 ? "Uptrend ✓" : "Downtrend ✓"}`);
