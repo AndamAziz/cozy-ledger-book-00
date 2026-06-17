@@ -288,6 +288,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
 
   // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
   const [currency, setCurrency] = useState<string>('All');
+  const [newsCat, setNewsCat] = useState<string>('all');
   const [dismissed, setDismissed] = useState<Set<string>>(() => {
     try {
       const raw = localStorage.getItem(DISMISS_KEY);
