@@ -367,7 +367,8 @@ function oneSignalMessage(subtitle: string, body: string, reason?: string): stri
 // ───────────────────── core scan ─────────────────────
 interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number; }
 // A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
-interface SignalMsg { text: string; important: boolean; }
+// `reason` tells the user why this specific target was sent (very important, cooldown, news, etc.).
+interface SignalMsg { text: string; important: boolean; reason: string; }
 
 async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAlerts: string[]; quotes: Quote[] }> {
   const quotes = await getPrices();
