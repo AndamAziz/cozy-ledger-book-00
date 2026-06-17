@@ -812,7 +812,7 @@ Deno.serve(async (req) => {
 
     // 1) OUTCOMES (TP/SL hit) → always sent, each as its own message (must close now).
     for (const o of outcomeAlerts) {
-      const ok = await sendTelegram("ctp_signal", oneSignalMessage("Signal Result · ئەنجامی سیگنال", o));
+      const ok = await sendTelegram("ctp_signal", oneSignalMessage("Signal Result · ئەنجامی سیگنال", o, "⚡ Immediate alert (TP/SL hit) · ئاگادارکردنەوەی خێرا"));
       sent = ok || sent;
       if (ok) targetsSent++;
     }
