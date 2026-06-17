@@ -73,6 +73,17 @@ export default function BotDetail() {
     return () => window.clearInterval(t);
   }, [id, bot?.status, bot?.timeframe, openTrade?.id]);
 
+  // Reconcile run-state with the database once it loads: persist it to
+  // localStorage and clear the optimistic flag when the DB confirms it. A bot
+  // is considered "running" if its status is running OR it still has an open
+  // trade being monitored.
+  useEffect(() => {
+    if (!id || !bot) return;
+    const dbRunning = bot.status === "running" || !!openTrade;
+    writeRunning(id, dbRunning);
+    setPendingRunning((prev) => (prev === null || prev === dbRunning ? null : prev));
+  }, [id, bot?.status, openTrade?.id, bot]);
+
   const live = bot ? quotes[bot.symbol]?.price ?? null : null;
 
   const unrealized = useMemo(() => {
