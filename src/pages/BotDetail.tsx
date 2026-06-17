@@ -20,6 +20,22 @@ import { cn } from "@/lib/utils";
 
 const TF_SECONDS: Record<string, number> = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400 };
 
+// Persisted run-state per bot, so the page knows the bot is running the instant
+// the user returns — no flash of the START button while the DB loads (BUG 2).
+const runKey = (botId: string) => `botRunning:${botId}`;
+function readRunning(botId: string | undefined): boolean | null {
+  if (!botId) return null;
+  try {
+    const v = localStorage.getItem(runKey(botId));
+    return v === null ? null : v === "true";
+  } catch {
+    return null;
+  }
+}
+function writeRunning(botId: string, value: boolean) {
+  try { localStorage.setItem(runKey(botId), String(value)); } catch { /* ignore */ }
+}
+
 function duration(fromSec: number): string {
   const s = Math.max(0, Math.floor(Date.now() / 1000) - fromSec);
   const m = Math.floor(s / 60);
@@ -35,6 +51,8 @@ export default function BotDetail() {
   const { perf } = useBotPerformance(id);
   const [busy, setBusy] = useState(false);
   const [, force] = useState(0);
+  // Optimistic run-state seeded from localStorage; reconciled with the DB below.
+  const [pendingRunning, setPendingRunning] = useState<boolean | null>(() => readRunning(id));
 
   // Re-render every second for live durations / countdown.
   useEffect(() => {
