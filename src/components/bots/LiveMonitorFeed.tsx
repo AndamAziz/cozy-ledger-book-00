@@ -61,7 +61,8 @@ export function LiveMonitorFeed({ logs, active }: { logs: MonitorLog[]; active: 
       <div className="mt-1 text-[10px] text-muted-foreground">Checking the open trade every 5 seconds</div>
       <div
         ref={scrollRef}
-        className="mt-2 max-h-56 space-y-1 overflow-y-auto scroll-smooth font-mono text-[11px] leading-relaxed"
+        dir="ltr"
+        className="mt-2 max-h-56 space-y-1 overflow-y-auto scroll-smooth text-left font-mono text-[11px] leading-relaxed"
       >
         {monitorLogs.length === 0 ? (
           <div className="py-6 text-center text-muted-foreground">Waiting for the next check…</div>
@@ -73,7 +74,7 @@ export function LiveMonitorFeed({ logs, active }: { logs: MonitorLog[]; active: 
               <div
                 key={l.id}
                 className={cn(
-                  "rounded px-1.5 py-0.5 transition-colors",
+                  "rounded px-1.5 py-0.5 text-left transition-colors",
                   closing ? "text-gold" : "text-muted-foreground",
                   isLatest && "animate-fade-in bg-muted/40 text-foreground",
                 )}
