@@ -84,7 +84,7 @@ const BINANCE_INTERVAL: Record<string, string> = {
 };
 const METAL_CODES: Record<string, string> = { "XAU/USD": "XAU", "XAG/USD": "XAG" };
 
-type Candle = { time: number; open: number; high: number; low: number; close: number; volume: number };
+
 
 // ───────────────────── indicators ─────────────────────
 function emaSeries(values: number[], period: number): number[] {
