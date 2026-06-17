@@ -39,8 +39,12 @@ function esc(s: string): string {
 }
 
 type Signal = "BUY" | "SELL" | "HOLD";
+// Rich color indicators: 🟢 BUY · 🔴 SELL · 🟡 HOLD (with extra colored squares for emphasis).
 const sigEmoji = (s: Signal) => (s === "BUY" ? "🟢" : s === "SELL" ? "🔴" : "🟡");
+const sigBadge = (s: Signal) => (s === "BUY" ? "🟢🟩" : s === "SELL" ? "🔴🟥" : "🟡🟧");
 const sigKu = (s: Signal) => (s === "BUY" ? "کڕین" : s === "SELL" ? "فرۆشتن" : "هەڵگرتن");
+// Colored dot for % change: green up / red down / yellow flat.
+const changeDot = (pct: number) => (pct > 0 ? "🟢" : pct < 0 ? "🔴" : "🟡");
 
 // Rule-based signal from the day's % change.
 function ruleSignal(changePct: number): Signal {
@@ -243,12 +247,13 @@ function sessionLabel(d = new Date()): string {
 
 function priceLine(q: Quote, sig: Signal): string {
   const m = ASSET_META[q.symbol];
-  const arrow = q.changePct >= 0 ? "▲" : "▼";
-  const pct = `${q.changePct >= 0 ? "+" : ""}${q.changePct.toFixed(2)}%`;
+  const up = q.changePct >= 0;
+  const arrow = up ? "🟢▲" : "🔴▼";
+  const pct = `${up ? "+" : ""}${q.changePct.toFixed(2)}%`;
   return [
     `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
     `Price: <code>$${q.price.toLocaleString("en-US")}</code> ${arrow} ${pct}`,
-    `Signal: ${sigEmoji(sig)} <b>${sig}</b> · کاریگەری: ${sigKu(sig)}`,
+    `Signal: ${sigBadge(sig)} <b>${sig}</b> · کاریگەری: ${sigKu(sig)}`,
   ].join("\n");
 }
 
@@ -260,13 +265,15 @@ function newSignalLine(
   confidence: number, session: string,
 ): string {
   const m = ASSET_META[q.symbol];
+  // Yellow/orange for medium confidence, green for high.
+  const confDot = confidence >= 80 ? "🟢" : confidence >= 70 ? "🟡" : "🟠";
   return [
     `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
-    `${sigEmoji(sig)} <b>${sig}</b> / ${sigKu(sig)}`,
+    `${sigBadge(sig)} <b>${sig}</b> / ${sigKu(sig)}`,
     `📍 Entry / دەستپێک: <code>$${fmt(q.price)}</code>`,
-    `🎯 TP / تارگێت: <code>$${fmt(tp)}</code> (+${tpPips} pips)`,
-    `🛑 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (-${slPips} pips)`,
-    `📊 Confidence / متمانە: <b>${confidence}%</b>`,
+    `🎯🟢 TP / تارگێت: <code>$${fmt(tp)}</code> (+${tpPips} pips)`,
+    `🛑🔴 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (-${slPips} pips)`,
+    `📊 Confidence / متمانە: ${confDot} <b>${confidence}%</b>`,
     `🏙 Session / بازاڕ: ${session}`,
   ].join("\n");
 }
@@ -279,19 +286,19 @@ function outcomeLine(
   const m = ASSET_META[symbol];
   if (hit === "tp") {
     return [
-      `✅ <b>TARGET HIT / تارگێت تەواوبوو</b> 🎉`,
+      `🟢✅ <b>TARGET HIT / تارگێت تەواوبوو</b> 🎉`,
       `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
-      `📈 Result / ئەنجام: <b>+${pips} pips</b>`,
+      `📈🟢 Result / ئەنجام: <b>+${pips} pips</b>`,
       `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
-      `سیگنالەکە سەرکەوتوو بوو ✅`,
+      `سیگنالەکە سەرکەوتوو بوو 🟢✅`,
     ].join("\n");
   }
   return [
-    `❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
+    `🔴❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
     `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
-    `📉 Result / ئەنجام: <b>-${pips} pips</b>`,
+    `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
     `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
-    `⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
+    `🟠⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
     `🚪 تکایە پۆزیشنەکە دابخە / Please close your position`,
   ].join("\n");
 }
@@ -403,7 +410,7 @@ async function evaluateCalendar(): Promise<string[]> {
     if (minutes >= 0 && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
       alerted.add(ev.key);
       out.push([
-        `⚠️ <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
+        `🟠⚠️ <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
         `🕒 In ${Math.round(minutes)} min · لە ${Math.round(minutes)} خولەکدا`,
         ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
       ].filter(Boolean).join("\n"));
@@ -519,8 +526,10 @@ async function translateToKurdish(titles: string[]): Promise<string[]> {
   return titles.map(() => "");
 }
 
+const CAT_EMOJI: Record<string, string> = { GOLD: "🟡", OIL: "🟠", CRYPTO: "🟣", FOREX: "🔵", MARKETS: "🟢" };
 function newsLine(title: string, titleKu: string, summary: string, category: string, source: string): string {
-  const parts = [`• <b>${esc(title)}</b>`];
+  const dot = CAT_EMOJI[category] ?? "🔹";
+  const parts = [`${dot} <b>${esc(title)}</b>`];
   if (titleKu) parts.push(`  🇹🇯 ${esc(titleKu)}`);
   if (summary) parts.push(`  <i>${esc(summary)}</i>`);
   const meta = [category ? `🏷 ${esc(category)}` : "", source ? esc(source) : ""].filter(Boolean).join(" · ");
