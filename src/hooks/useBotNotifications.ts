@@ -132,6 +132,7 @@ export function useBotNotifications() {
           const n = payload.new as BotNotification;
           if (seen.current.has(n.id)) return;
           seen.current.add(n.id);
+          persistSeenIds(seen.current);
           setItems((prev) => [n, ...prev].slice(0, 50));
           showToast(n);
           fireBrowserNotification(n);
