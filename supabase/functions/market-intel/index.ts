@@ -74,18 +74,19 @@ async function fetchBtc(): Promise<Quote | null> {
 }
 
 async function fetchOil(): Promise<Quote | null> {
-  const key = Deno.env.get("TWELVE_DATA_API_KEY");
-  if (!key) return null;
+  // Free Yahoo Finance feed for WTI crude (CL=F) — price + % change vs prev close.
   try {
     const res = await fetch(
-      `https://api.twelvedata.com/quote?symbol=WTI/USD&apikey=${key}`,
-      { signal: AbortSignal.timeout(8000) },
+      "https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1d&range=1d",
+      { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(8000) },
     );
     if (!res.ok) { await res.text(); return null; }
     const d = await res.json();
-    const price = Number(d?.close ?? d?.price);
+    const m = d?.chart?.result?.[0]?.meta;
+    const price = Number(m?.regularMarketPrice);
+    const prev = Number(m?.chartPreviousClose ?? m?.previousClose);
     if (!Number.isFinite(price) || price <= 0) return null;
-    const changePct = Number(d?.percent_change) || 0;
+    const changePct = Number.isFinite(prev) && prev > 0 ? +(((price - prev) / prev) * 100).toFixed(2) : 0;
     return { symbol: "WTI/USD", price: +price.toFixed(2), changePct };
   } catch { return null; }
 }
