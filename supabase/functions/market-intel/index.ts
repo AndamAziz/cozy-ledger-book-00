@@ -154,11 +154,11 @@ async function setState(key: string, value: Record<string, unknown>) {
 }
 
 // ───────────────────── Telegram (retry + backoff) ─────────────────────
-async function sendTelegram(kind: string, text: string): Promise<boolean> {
+async function sendToChat(chatId: string, kind: string, text: string): Promise<boolean> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_API_KEY");
   const { data: logRow } = await admin.from("telegram_logs")
-    .insert({ kind, chat_id: ADMIN_CHAT_ID, payload: { text }, status: "pending", attempts: 0 })
+    .insert({ kind, chat_id: chatId, payload: { text }, status: "pending", attempts: 0 })
     .select("id").maybeSingle();
   const logId = logRow?.id as string | undefined;
 
@@ -178,7 +178,7 @@ async function sendTelegram(kind: string, text: string): Promise<boolean> {
           "X-Connection-Api-Key": TELEGRAM_API_KEY,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ chat_id: ADMIN_CHAT_ID, text, parse_mode: "HTML", disable_web_page_preview: true }),
+        body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
       });
       const d = await res.json().catch(() => ({}));
       if (res.ok && d.ok) {
@@ -193,6 +193,14 @@ async function sendTelegram(kind: string, text: string): Promise<boolean> {
   }
   if (logId) await admin.from("telegram_logs").update({ status: "failed", attempts: 3, error: lastErr }).eq("id", logId);
   return false;
+}
+
+// Broadcast to admin DM + public channel. Succeeds if any target accepts it.
+async function sendTelegram(kind: string, text: string): Promise<boolean> {
+  const results = await Promise.all(
+    TARGET_CHAT_IDS.map((id) => sendToChat(id, kind, text)),
+  );
+  return results.some(Boolean);
 }
 
 // ───────────────────── message builders ─────────────────────
