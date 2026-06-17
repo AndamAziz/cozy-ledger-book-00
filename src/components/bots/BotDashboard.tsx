@@ -28,7 +28,6 @@ interface Summary {
   best: number;
   worst: number;
   net: number;
-  sessions: string[];
 }
 
 const newsHeaders = {
@@ -90,20 +89,12 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
     const todayRows = rows.filter((r) => r.closed_at && new Date(r.closed_at).toISOString().slice(0, 10) === todayKey);
     const pnls = todayRows.map((r) => Number(r.pnl ?? 0));
     const wins = todayRows.filter((r) => r.result === "win").length;
-    const sessions = Array.from(
-      new Set(
-        todayRows
-          .map((r) => sessionForHour(new Date(r.opened_at).getUTCHours()))
-          .filter((s) => s === "London" || s === "NY"),
-      ),
-    );
     setToday({
       trades: todayRows.length,
       winRate: todayRows.length ? Math.round((wins / todayRows.length) * 100) : 0,
       best: pnls.length ? Math.max(...pnls) : 0,
       worst: pnls.length ? Math.min(...pnls) : 0,
       net: +pnls.reduce((a, b) => a + b, 0).toFixed(2),
-      sessions,
     });
   }, []);
 
