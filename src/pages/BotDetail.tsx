@@ -113,13 +113,21 @@ export default function BotDetail() {
 
   const a = getAsset(bot.symbol);
   const winRate = bot.trades_count > 0 ? Math.round((bot.wins_count / bot.trades_count) * 100) : 0;
-  const running = bot.status === "running";
+  // Prefer the optimistic flag (instant feedback / survives navigation) and fall
+  // back to the live DB state. An open trade always counts as running.
+  const dbRunning = bot.status === "running" || !!openTrade;
+  const running = pendingRunning !== null ? pendingRunning : dbRunning;
 
   const handleStartStop = async () => {
+    const next = !running;
+    setPendingRunning(next);          // optimistic: flip the button immediately
+    writeRunning(bot.id, next);       // persist so a quick navigation keeps state
     setBusy(true);
     try {
       await callEngine({ action: running ? "stop" : "start", botId: bot.id });
     } catch {
+      setPendingRunning(running);     // revert optimistic state on failure
+      writeRunning(bot.id, running);
       toast({ title: "Action failed", variant: "destructive" });
     } finally {
       setBusy(false);
