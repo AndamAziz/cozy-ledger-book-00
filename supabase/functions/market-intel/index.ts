@@ -771,7 +771,7 @@ Deno.serve(async (req) => {
     }
 
 
-    const signalAlerts: string[] = [];
+    const signalAlerts: SignalMsg[] = [];
     const outcomeAlerts: string[] = [];
     let lastQuotes: Quote[] = [];
 
@@ -793,35 +793,39 @@ Deno.serve(async (req) => {
     }
 
     // Calendar + news once per invocation (≈60s cadence).
-    const eventAlerts = await evaluateCalendar();
+    const { calendarAlerts, signalAlerts: calSignals } = await evaluateCalendar();
     const newsAlerts = await evaluateNews();
 
-    let sent = false;
+    // News-driven targets join the price targets — all sent as separate messages.
+    signalAlerts.push(...calSignals);
 
-    // 1) Time-sensitive TRADE SIGNALS: outcomes (close now!) + fresh BUY/SELL setups.
-    if (signalAlerts.length || outcomeAlerts.length) {
-      const s: string[] = [
-        "📊 <b>CTP APP REPORTS</b>",
-        "<i>Trade Signals · سیگنالی بازرگانی</i>",
-        "━━━━━━━━━━━━━━━",
-        "",
-      ];
-      if (outcomeAlerts.length) {
-        s.push("🏁 <b>Signal Results / ئەنجامی سیگنال</b>", "");
-        s.push(outcomeAlerts.join("\n\n"), "");
-      }
-      if (signalAlerts.length) {
-        s.push("🚨 <b>New Signals / سیگنالی نوێ</b>", "");
-        s.push(signalAlerts.join("\n\n"), "");
-      }
-      s.push("━━━━━━━━━━━━━━━");
-      s.push(`<i>🕒 ${nowStamp()}</i>`);
-      s.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
-      sent = (await sendTelegram("ctp_signal", s.join("\n"))) || sent;
+    let sent = false;
+    let targetsSent = 0;
+
+    // 1) OUTCOMES (TP/SL hit) → always sent, each as its own message (must close now).
+    for (const o of outcomeAlerts) {
+      const ok = await sendTelegram("ctp_signal", oneSignalMessage("Signal Result · ئەنجامی سیگنال", o));
+      sent = ok || sent;
+      if (ok) targetsSent++;
     }
 
-    // 2) News + economic calendar report.
-    if (eventAlerts.length || newsAlerts.length) {
+    // 2) NEW TARGETS → one message each, throttled to ~15–30 min unless very important.
+    if (signalAlerts.length) {
+      const throttle = await getState("target_throttle");
+      let lastTargetAt = (throttle.lastAt as number) ?? 0;
+      for (const sig of signalAlerts) {
+        const gapOk = !lastTargetAt || Date.now() - lastTargetAt >= TARGET_MIN_GAP_MS;
+        // Skip ordinary targets while inside the throttle window; always send important ones.
+        if (!sig.important && !gapOk) continue;
+        const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text));
+        sent = ok || sent;
+        if (ok) { targetsSent++; lastTargetAt = Date.now(); }
+      }
+      await setState("target_throttle", { lastAt: lastTargetAt });
+    }
+
+    // 3) NEWS + economic calendar report — NEVER mixed with trade targets.
+    if (calendarAlerts.length || newsAlerts.length) {
       const lines: string[] = [
         "📊 <b>CTP APP REPORTS</b>",
         "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
@@ -832,9 +836,9 @@ Deno.serve(async (req) => {
         lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "");
         lines.push(newsAlerts.join("\n\n"), "");
       }
-      if (eventAlerts.length) {
+      if (calendarAlerts.length) {
         lines.push("🗓 <b>Economic Calendar / ساڵنامەی ئابووری</b>", "");
-        lines.push(eventAlerts.join("\n\n"), "");
+        lines.push(calendarAlerts.join("\n\n"), "");
       }
       lines.push("━━━━━━━━━━━━━━━");
       lines.push(`<i>🕒 ${nowStamp()}</i>`);
