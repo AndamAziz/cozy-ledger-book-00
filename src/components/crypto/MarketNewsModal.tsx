@@ -560,6 +560,12 @@ export function MarketNewsModal({ open, onClose }: Props) {
     return visibleEvents.find((e) => (e.impact || '').toLowerCase() === 'high' && Date.parse(e.date) > now) || null;
   }, [visibleEvents, now]);
 
+  // Next upcoming event of ANY impact (used to highlight with a glowing border)
+  const nextEventKeyStr = useMemo(() => {
+    const ev = visibleEvents.find((e) => Date.parse(e.date) > now);
+    return ev ? eventKey(ev) : null;
+  }, [visibleEvents, now]);
+
   // Pinned: next high-impact USD (red dot) event
   const pinnedEvent = useMemo(() => {
     return visibleEvents.find((e) => (e.impact || '').toLowerCase() === 'high' && e.country === 'USD' && Date.parse(e.date) > now) || null;
