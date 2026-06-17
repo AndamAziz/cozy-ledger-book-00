@@ -847,7 +847,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, eventAlerts: eventAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
+      JSON.stringify({ ok: true, sent, targetsSent, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
