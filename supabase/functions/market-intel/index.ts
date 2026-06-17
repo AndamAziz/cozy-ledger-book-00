@@ -350,12 +350,14 @@ function nowStamp(): string {
 
 // ───────────────────── core scan ─────────────────────
 interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number; }
+// A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
+interface SignalMsg { text: string; important: boolean; }
 
-async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts: string[]; quotes: Quote[] }> {
+async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAlerts: string[]; quotes: Quote[] }> {
   const quotes = await getPrices();
   const priceState = await getState("prices");      // { "XAU/USD": { price, signal } }
   const openState = await getState("open_signals"); // { "XAU/USD": OpenSig }
-  const signalAlerts: string[] = [];
+  const signalAlerts: SignalMsg[] = [];
   const outcomeAlerts: string[] = [];
 
   for (const q of quotes) {
