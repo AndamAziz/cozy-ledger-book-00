@@ -759,6 +759,16 @@ export function MarketNewsModal({ open, onClose }: Props) {
               </span>
             )}
           </div>
+          {upcoming && !a.hasResult && goldUp !== null && (
+            <div className="mt-0.5">
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+                style={{ color: goldUp ? C_UP : C_DOWN, backgroundColor: (goldUp ? C_UP : C_DOWN) + '14' }}
+              >
+                {goldForecastNote}
+              </span>
+            </div>
+          )}
           {isUSD && a.hasResult && (
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               {pctStr && (
