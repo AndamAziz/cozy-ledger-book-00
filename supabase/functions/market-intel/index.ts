@@ -265,13 +265,16 @@ const ASSET_META: Record<
 const toPips = (priceMove: number, pip: number) => Math.round(Math.abs(priceMove) / pip);
 
 // ───────────────────── market sessions (UTC) ─────────────────────
-interface SessionDef { name: string; ku: string; start: number; end: number; }
+interface SessionDef { name: string; ku: string; region: "Asia" | "London" | "New York"; emoji: string; start: number; end: number; }
 const SESSIONS: SessionDef[] = [
-  { name: "Sydney", ku: "سیدنی", start: 21, end: 6 },
-  { name: "Tokyo", ku: "تۆکیۆ", start: 0, end: 9 },
-  { name: "London", ku: "لەندەن", start: 7, end: 16 },
-  { name: "New York", ku: "نیویۆرک", start: 12, end: 21 },
+  { name: "Sydney", ku: "سیدنی", region: "Asia", emoji: "🌏", start: 21, end: 6 },
+  { name: "Tokyo", ku: "تۆکیۆ", region: "Asia", emoji: "🌏", start: 0, end: 9 },
+  { name: "London", ku: "لەندەن", region: "London", emoji: "🇬🇧", start: 7, end: 16 },
+  { name: "New York", ku: "نیویۆرک", region: "New York", emoji: "🇺🇸", start: 12, end: 21 },
 ];
+// Kurdish names per region for the report.
+const REGION_KU: Record<string, string> = { Asia: "ئاسیا", London: "لەندەن", "New York": "نیویۆرک" };
+const REGION_EMOJI: Record<string, string> = { Asia: "🌏", London: "🇬🇧", "New York": "🇺🇸" };
 function openSessions(d = new Date()): SessionDef[] {
   const h = d.getUTCHours();
   return SESSIONS.filter((s) => (s.start <= s.end ? h >= s.start && h < s.end : h >= s.start || h < s.end));
@@ -280,10 +283,18 @@ function openSessions(d = new Date()): SessionDef[] {
 function isMajorSessionOpen(d = new Date()): boolean {
   return openSessions(d).some((s) => s.name === "London" || s.name === "New York");
 }
-function sessionLabel(d = new Date()): string {
+// The active trading region — London / New York take priority (highest liquidity), else Asia.
+function activeRegion(d = new Date()): string | null {
   const open = openSessions(d);
-  if (open.length === 0) return "Closed / داخراو";
-  return open.map((s) => `${s.name} (${s.ku})`).join(" + ");
+  if (open.length === 0) return null;
+  if (open.some((s) => s.region === "New York")) return "New York";
+  if (open.some((s) => s.region === "London")) return "London";
+  return "Asia";
+}
+function sessionLabel(d = new Date()): string {
+  const region = activeRegion(d);
+  if (!region) return "Closed / داخراو";
+  return `${REGION_EMOJI[region]} ${region} (${REGION_KU[region]})`;
 }
 
 function priceLine(q: Quote, sig: Signal): string {
