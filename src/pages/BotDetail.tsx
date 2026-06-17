@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { useBotDetail, useDemoBalance, useBotPerformance } from "@/hooks/useBots";
 import { BotPerformanceChart } from "@/components/bots/BotPerformanceChart";
 import { NotificationBell } from "@/components/bots/NotificationBell";
+import { SoundSettingsPanel } from "@/components/bots/SoundSettingsPanel";
 import { LiveMonitorFeed } from "@/components/bots/LiveMonitorFeed";
 import { VolatilityMeter } from "@/components/bots/VolatilityMeter";
 import { useBotPrices, callEngine } from "@/hooks/useBotPrices";
@@ -166,6 +167,7 @@ export default function BotDetail() {
             <h1 className="text-lg font-bold text-foreground">{bot.name}</h1>
           </div>
           <div className="flex items-center gap-2">
+            <SoundSettingsPanel />
             <NotificationBell />
             <div className="rounded-full border border-gold/50 bg-gold/10 px-3 py-1.5 text-sm font-bold tabular-nums text-gold">
               💰 ${balance != null ? fmtUsd(balance) : "—"}
