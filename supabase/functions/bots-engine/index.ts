@@ -610,12 +610,20 @@ async function processBot(bot: Record<string, unknown>) {
   const tpPrice = direction === "buy" ? entry * (1 + tpPct) : entry * (1 - tpPct);
   const reasons = (direction === "buy" ? buyReasons : sellReasons).join(", ") || "signal threshold met";
 
+  // ASIAN SESSION PROTECTION — gold moves less in Asian hours, so halve the lot.
+  const baseAmount = Number(bot.amount);
+  const tradeAmount = session.asian ? +(baseAmount * 0.5).toFixed(2) : baseAmount;
+  if (session.asian) {
+    await log(botId, userId, "info",
+      `[${hhmmss()}] 🌏 Asian session → lot size reduced 50% ($${baseAmount.toFixed(2)} → $${tradeAmount.toFixed(2)})`);
+  }
+
   await log(botId, userId, "signal",
     `[${hhmmss()}] ✅ ${scalp ? "SCALP " : ""}Signal: ${direction.toUpperCase()} (Score ${score}/4) — Opening trade`);
   const { error: insErr } = await admin.from("bot_trades").insert({
     bot_id: botId, user_id: userId, symbol, direction,
     entry_price: +entry.toFixed(4), sl_price: +slPrice.toFixed(4), tp_price: +tpPrice.toFixed(4),
-    amount: Number(bot.amount), status: "open",
+    amount: tradeAmount, status: "open",
   });
   if (insErr) {
     // Unique index (one open trade per bot) — another concurrent run already
