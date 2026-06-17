@@ -240,7 +240,7 @@ async function applyBalance(userId: string, pnl: number): Promise<number> {
 // `kind` describes WHY we closed (for logs/notifications). It is mapped to the
 // DB enum (tp/sl/manual) so no migration is needed: every profit-taking scalp
 // exit is recorded as "tp", stop-loss as "sl".
-type CloseKind = "tp" | "sl" | "manual" | "scalp_profit" | "scalp_reversal" | "scalp_breakeven";
+type CloseKind = "tp" | "sl" | "manual" | "scalp_profit" | "scalp_reversal" | "scalp_breakeven" | "max_loss" | "breakeven";
 
 function fmtDuration(sec: number): string {
   if (sec < 60) return `${sec}s`;
