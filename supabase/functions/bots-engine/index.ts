@@ -874,13 +874,14 @@ serve(async (req) => {
     }
     const candles = await getCandles(symbol, timeframe, price);
     const v = assessVolatility(price, candles);
-    // Continuous 0-100 gauge value: tight spread + big moves → higher.
-    const moveComp = Math.max(0, Math.min(1, v.avgMove / (v.moveMin * 2)));
-    const spreadComp = Math.max(0, Math.min(1, 1 - v.spread / (v.spreadMax * 2)));
-    const percent = Math.round((moveComp * 0.5 + spreadComp * 0.5) * 100);
+    // Continuous 0-100 gauge value, driven mainly by movement (the real
+    // volatility), with the realistic spread as a small modifier.
+    const moveComp = Math.max(0, Math.min(1, v.avgMove / v.moveHigh));
+    const spreadComp = Math.max(0, Math.min(1, 1 - (v.spread - VOL_SPREAD_MIN_PTS * (price / VOL_REF_PRICE)) / (v.spreadMax)));
+    const percent = Math.round((moveComp * 0.8 + spreadComp * 0.2) * 100);
     return new Response(JSON.stringify({
       symbol, price, level: v.level, spread: v.spread, avgMove: v.avgMove,
-      spreadMax: v.spreadMax, moveMin: v.moveMin, percent,
+      spreadMax: v.spreadMax, moveLow: v.moveLow, moveHigh: v.moveHigh, percent,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
