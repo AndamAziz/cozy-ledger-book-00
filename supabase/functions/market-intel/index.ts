@@ -460,7 +460,8 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
     // 2) No open position → consider opening a NEW signal when timing is right.
     const prev = priceState[q.symbol] as { price?: number; signal?: Signal; lastSignalAt?: number } | undefined;
     const actionable = sig === "BUY" || sig === "SELL";
-    const timingOk = !m.requireSession || isMajorSessionOpen();
+    // requireSession assets only open while an ENABLED region is live (user-configurable).
+    const timingOk = !m.requireSession || enabledSessionOpen(enabledRegions);
     // Avoid re-opening the same direction immediately; only fire when signal flips.
     const fresh = prev?.signal !== sig;
     // Quiet-market guard: skip weak moves and respect a per-symbol cooldown so we
