@@ -846,7 +846,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
     );
   };
 
-  const todayLabel = new Date().toLocaleDateString(language === 'en' || language === 'tr' ? 'en-US' : 'en-GB', { weekday: 'long', month: 'short', day: 'numeric' });
+  const todayLabel = formatDayInTimezone(new Date(now), tz, language === 'en' || language === 'tr' ? 'en-US' : 'en-GB');
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
