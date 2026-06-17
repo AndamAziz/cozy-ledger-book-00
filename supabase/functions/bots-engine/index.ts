@@ -468,6 +468,28 @@ async function processBot(bot: Record<string, unknown>) {
       else if (price >= sl) { hit = "sl"; exit = sl; }
     }
 
+    // 1a-MAX) MAX LOSS PROTECTION — if a single trade is down $5.00 or more,
+    // close immediately at the live price instead of waiting for the SL.
+    if (!hit && pnl <= -MAX_LOSS_USD) {
+      hit = "max_loss";
+      exit = price;
+      await log(botId, userId, "loss",
+        `[${hhmmss()}] 🚨 MAX LOSS hit (-$${fmt(Math.abs(pnl), symbol)}) — closing immediately to cap the loss`);
+    }
+
+    // 1a-BE) MIN PROFIT EXIT → BREAK-EVEN — once a trade is at least +$2.00,
+    // move the Stop Loss up to the entry price so a winner can't turn into a loss.
+    if (!hit && pnl >= BREAKEVEN_TRIGGER_USD) {
+      const atBreakeven = dir === "buy" ? sl >= entry : sl <= entry;
+      if (!atBreakeven) {
+        const beSl = +entry.toFixed(4);
+        await admin.from("bot_trades").update({ sl_price: beSl }).eq("id", openTrade.id as string);
+        openTrade.sl_price = beSl;
+        await log(botId, userId, "info",
+          `[${hhmmss()}] 🛡️ +$${fmt(pnl, symbol)} profit → Stop Loss moved to break-even @ $${fmt(entry, symbol)} (risk-free trade)`);
+      }
+    }
+
     // 1b) SCALP MODE (1m / 5m / 15m): close fast on minimum profit, never let a
     // winner turn into a loss, and lock half-target on reversals.
     if (!hit && scalp) {
