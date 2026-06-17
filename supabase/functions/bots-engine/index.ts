@@ -334,6 +334,7 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
     case "sl": reasonLabel = "hit stop loss"; break;
     case "max_loss": reasonLabel = `max loss protection (-$${MAX_LOSS_USD.toFixed(2)})`; break;
     case "breakeven": reasonLabel = "break-even stop (winner protected)"; break;
+    case "news": reasonLabel = "closed before high-impact news"; break;
     case "manual": reasonLabel = "manually closed"; break;
   }
 
