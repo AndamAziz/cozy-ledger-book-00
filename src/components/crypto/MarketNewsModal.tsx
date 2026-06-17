@@ -536,11 +536,8 @@ export function MarketNewsModal({ open, onClose }: Props) {
   };
 
   const eventTime = (iso: string): string => {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleString(language === 'en' || language === 'tr' ? 'en-US' : 'en-GB', {
-      weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
-    });
+    const locale = language === 'en' || language === 'tr' ? 'en-US' : 'en-GB';
+    return formatInTimezone(iso, tz, locale);
   };
 
   // Format a countdown like "2h 35m" / "45m" / "30s"
