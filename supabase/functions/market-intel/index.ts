@@ -361,7 +361,8 @@ async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts
         delete openState[q.symbol];
       }
       // Only one active signal per symbol — never stack a second one.
-      priceState[q.symbol] = { price: q.price, signal: sig };
+      const prevOpen = priceState[q.symbol] as { lastSignalAt?: number } | undefined;
+      priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt: prevOpen?.lastSignalAt };
       continue;
     }
 
