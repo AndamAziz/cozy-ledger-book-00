@@ -191,6 +191,11 @@ export default function BotDetail() {
           </span>
         </div>
 
+        {/* Why the bot is paused / stopped (colored, reason-specific banner) */}
+        <BotStatusBanner reason={bot.pause_reason} />
+
+
+
 
         {/* Bot card */}
         <div className={cn("mt-4 rounded-2xl border bg-card p-4", a.primary ? "border-gold/40" : "border-border")}>
