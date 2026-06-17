@@ -615,6 +615,7 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
   // Keep last 100 keys of each kind.
   await setState("events", {
     alertedKeys: [...alerted].slice(-100),
+    remindKeys: [...reminded].slice(-100),
     resultKeys: [...resulted].slice(-100),
   });
   return { calendarAlerts, signalAlerts };
