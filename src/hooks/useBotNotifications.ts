@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { playWinSound, playLoseSound } from "./useTradeSounds";
+import { playWinSound, playLoseSound, playDing } from "./useTradeSounds";
 
 export interface BotNotification {
   id: string;
@@ -15,29 +15,46 @@ export interface BotNotification {
   created_at: string;
 }
 
+// Notifications stay visible for 10 seconds (rule: keep notification 10s).
+const TOAST_MS = 10_000;
+
 function fireBrowserNotification(n: BotNotification) {
   try {
     if (typeof window === "undefined" || !("Notification" in window)) return;
+    // Surface even when the app is in the background / another tab.
     if (Notification.permission === "granted") {
-      new Notification(n.title, { body: n.message, tag: n.id });
+      const nt = new Notification(n.title, { body: n.message, tag: n.id });
+      // Auto-close after the same 10s window.
+      window.setTimeout(() => { try { nt.close(); } catch { /* ignore */ } }, TOAST_MS);
     }
   } catch {
     /* ignore */
   }
 }
 
+// Notification types that represent a bot pause/stop (error/warning styling + ding).
+const ERROR_TYPES = new Set(["trade_loss", "auto_pause", "bot_stopped_loss", "trade_emergency"]);
+const WARNING_TYPES = new Set(["bot_paused", "news_close"]);
+const SUCCESS_TYPES = new Set(["trade_win", "bot_stopped_target", "breakeven"]);
+
 function showToast(n: BotNotification) {
-  const opts = { description: n.message } as const;
-  if (n.type === "trade_win" || (n.pnl != null && n.pnl >= 0 && n.type !== "auto_pause")) {
+  const opts = { description: n.message, duration: TOAST_MS } as const;
+  if (SUCCESS_TYPES.has(n.type)) {
     toast.success(n.title, opts);
     if (n.type === "trade_win") playWinSound();
-  } else if (n.type === "trade_loss" || n.type === "auto_pause") {
+    else playDing();
+  } else if (ERROR_TYPES.has(n.type)) {
     toast.error(n.title, opts);
     if (n.type === "trade_loss") playLoseSound();
+    else playDing();
+  } else if (WARNING_TYPES.has(n.type)) {
+    toast.warning(n.title, opts);
+    playDing();
   } else {
     toast(n.title, opts);
   }
 }
+
 
 // Persisted set of notification IDs we've already toasted, so a given alert
 // (e.g. "trade opened") surfaces ONCE only — even after the user leaves the
