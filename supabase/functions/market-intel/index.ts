@@ -444,13 +444,14 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 }
 
 
-async function evaluateCalendar(): Promise<string[]> {
+async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAlerts: SignalMsg[] }> {
   const events = await getHighImpactEvents();
   const state = await getState("events"); // { alertedKeys: string[], resultKeys: string[] }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
   const resulted = new Set((state.resultKeys as string[]) ?? []);
   const now = Date.now();
-  const out: string[] = [];
+  const calendarAlerts: string[] = [];     // pure news / heads-up / result info (NO trade targets)
+  const signalAlerts: SignalMsg[] = [];    // news-driven trade targets (sent as separate messages)
   let goldPrice: number | null = null; // fetched lazily for USD-event gold bias
 
   for (const ev of events) {
@@ -462,10 +463,10 @@ async function evaluateCalendar(): Promise<string[]> {
 
     const minutes = (ev.time - now) / 60_000;
 
-    // 1) BEFORE the event → heads-up alert.
+    // 1) BEFORE the event → heads-up alert (news only).
     if (minutes >= 0 && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
       alerted.add(ev.key);
-      out.push([
+      calendarAlerts.push([
         `🟠⚠️ <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
         `🕒 In ${Math.round(minutes)} min · لە ${Math.round(minutes)} خولەکدا`,
         ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
@@ -479,6 +480,7 @@ async function evaluateCalendar(): Promise<string[]> {
     if (ev.actual && minsSince >= 0 && minsSince <= 360 && !resulted.has(ev.key)) {
       resulted.add(ev.key);
 
+      // News block: result figures + market bias (no concrete Entry/TP/SL here).
       const lines: string[] = [
         `🏁 <b>RESULT / ئەنجامی هەواڵ</b>`,
         `📅 <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
@@ -499,6 +501,9 @@ async function evaluateCalendar(): Promise<string[]> {
             ? `🔴 USD stronger / دۆلار بەهێزتر → Gold bearish / ئاڵتوون دادەبەزێت`
             : `🟢 USD weaker / دۆلار لاوازتر → Gold bullish / ئاڵتوون بەرز دەبێتەوە`;
           lines.push(usdTxt);
+          lines.push(`🎯 تارگێتەکە بە پەیامێکی جیا دەنێردرێت / Trade target sent separately`);
+
+          // Concrete trade target → SEPARATE signal message (news-driven ⇒ important).
           const m = ASSET_META["XAU/USD"];
           if (goldPrice) {
             const isBuy = dir === "BUY";
@@ -506,14 +511,16 @@ async function evaluateCalendar(): Promise<string[]> {
             const sl = +(goldPrice * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
             const tpPips = toPips(tp - goldPrice, m.pip);
             const slPips = toPips(sl - goldPrice, m.pip);
-            lines.push(
-              `${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`,
-              `📍 Entry: <code>$${fmt(goldPrice)}</code>`,
-              `🎯🟢 TP: <code>$${fmt(tp)}</code> (${isBuy ? "+" : "-"}${tpPips} pips)`,
-              `🛑🔴 SL: <code>$${fmt(sl)}</code>`,
-            );
-          } else {
-            lines.push(`${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`);
+            signalAlerts.push({
+              important: true,
+              text: [
+                `📰 News-driven / بەهۆی هەواڵ: <b>${esc(ev.title)}</b>`,
+                `${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`,
+                `📍 Entry / دەستپێک: <code>$${fmt(goldPrice)}</code>`,
+                `🎯🟢 TP / تارگێت: <code>$${fmt(tp)}</code> (${isBuy ? "+" : "-"}${tpPips} pips)`,
+                `🛑🔴 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (${isBuy ? "-" : "+"}${slPips} pips)`,
+              ].join("\n"),
+            });
           }
         }
       } else if (a !== null && f !== null) {
@@ -521,7 +528,7 @@ async function evaluateCalendar(): Promise<string[]> {
         lines.push(beat ? `🟢 Beat forecast / باشتر لە پێشبینی` : miss ? `🔴 Below forecast / خراپتر لە پێشبینی` : `⚪️ As expected / وەک پێشبینی`);
       }
 
-      out.push(lines.join("\n"));
+      calendarAlerts.push(lines.join("\n"));
     }
   }
 
@@ -530,7 +537,7 @@ async function evaluateCalendar(): Promise<string[]> {
     alertedKeys: [...alerted].slice(-100),
     resultKeys: [...resulted].slice(-100),
   });
-  return out;
+  return { calendarAlerts, signalAlerts };
 }
 
 
