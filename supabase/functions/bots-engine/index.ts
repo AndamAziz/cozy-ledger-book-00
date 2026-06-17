@@ -40,15 +40,42 @@ const BREAKEVEN_TRIGGER_USD = 2.00;
 // immediately instead of waiting for the Stop Loss.
 const MAX_LOSS_USD = 5.00;
 
-// ───────────────────── trading sessions (UTC) ─────────────────────
-// Gold moves far less during the Asian session, so we automatically halve the
-// lot size in those hours. Sessions are also surfaced in the bot logs.
+// ───────────────────── daily limits (USD, per user, per UTC day) ─────────────────────
+// Stop trading for the rest of the day once the day's realized P/L crosses these.
+const DAILY_LOSS_LIMIT_USD = 20.00;   // pause at −$20 total for the day
+const DAILY_PROFIT_TARGET_USD = 50.00; // lock in profits at +$50 total for the day
+
+// ───────────────────── news filter ─────────────────────
+// High-impact USD / gold events freeze new entries and force-close open trades
+// when they are imminent. Times are minutes before the event.
+const NEWS_BLOCK_NEW_MIN = 60;   // no NEW trades within 60 min of a high-impact event
+const NEWS_CLOSE_OPEN_MIN = 10;  // CLOSE open trades within 10 min of the event
+const CALENDAR_URLS = [
+  "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
+];
+
+// ───────────────────── trading sessions / best-time filter (UTC) ─────────────────────
+// We ONLY open trades during the high-liquidity London & NY windows and skip the
+// Asian session entirely.
+const TRADE_WINDOWS_UTC: { start: number; end: number; label: string }[] = [
+  { start: 7, end: 11, label: "🌍 London open (07:00-11:00 UTC) - high volatility" },
+  { start: 13, end: 16, label: "🌎 NY open (13:00-16:00 UTC) - high volatility" },
+];
 function getSession(date = new Date()): { key: "asian" | "london" | "ny"; label: string; asian: boolean } {
   const h = date.getUTCHours();
   if (h >= 0 && h < 8) return { key: "asian", label: "🌏 Asian Session - lower volatility", asian: true };
   if (h >= 8 && h < 16) return { key: "london", label: "🌍 London Session - high volatility", asian: false };
   return { key: "ny", label: "🌎 NY Session - high volatility", asian: false };
 }
+// Returns the active trading window (or null when outside the allowed hours).
+function getTradeWindow(date = new Date()): { label: string } | null {
+  const h = date.getUTCHours();
+  for (const w of TRADE_WINDOWS_UTC) {
+    if (h >= w.start && h < w.end) return { label: w.label };
+  }
+  return null;
+}
+
 
 const CRYPTO_BINANCE: Record<string, string> = {
   "BTC/USD": "BTCUSDT", "ETH/USD": "ETHUSDT", "BNB/USD": "BNBUSDT",
