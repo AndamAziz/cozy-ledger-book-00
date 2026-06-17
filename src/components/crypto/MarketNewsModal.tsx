@@ -980,41 +980,77 @@ export function MarketNewsModal({ open, onClose }: Props) {
             </div>
           ) : (
             <div className="p-3 space-y-2">
+              {/* Category filter tabs */}
+              <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
+                {NEWS_FILTERS.map((f) => {
+                  const count = f.code === 'all' ? news.length : news.filter((n) => n.category === f.code).length;
+                  const lbl = f.code === 'all' ? bi('هەموو', 'All') : bi(CAT_LABEL[f.code]?.ku ?? f.code, CAT_LABEL[f.code]?.en ?? f.code);
+                  return (
+                    <button
+                      key={f.code}
+                      onClick={() => setNewsCat(f.code)}
+                      className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-full whitespace-nowrap transition-colors ${
+                        newsCat === f.code ? 'bg-[#f0b90b] text-black' : 'bg-[#1a1e2e] text-[#848e9c] hover:text-white'
+                      }`}
+                    >
+                      <span>{f.emoji}</span>
+                      {lbl}
+                      <span className={`text-[9px] ${newsCat === f.code ? 'text-black/70' : 'text-[#5b6472]'}`}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
               <p className="text-[10px] text-[#848e9c] px-1">
                 {bi('هەواڵی بازاڕ لە سەرچاوە متمانەپێکراوەکان (Investing.com، CNBC، MarketWatch).', 'Market news from trusted sources (Investing.com, CNBC, MarketWatch).')}
               </p>
-              {news.length === 0 ? (
-                <div className="text-center text-sm text-[#848e9c] py-10">{bi('هیچ هەواڵێک نییە.', 'No news.')}</div>
-              ) : news.map((n, i) => {
-                const cat = CAT_LABEL[n.category];
-                return (
-                  <a
-                    key={`${n.link}-${i}`}
-                    href={n.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block bg-[#0d1117] border border-[#1a1e2e] hover:border-[#2a2e3e] rounded-lg px-3 py-2.5 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      {cat && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ color: cat.color, backgroundColor: cat.color + '1a' }}>
-                          {bi(cat.ku, cat.en)}
+              {(() => {
+                const filtered = newsCat === 'all' ? news : news.filter((n) => n.category === newsCat);
+                if (filtered.length === 0) {
+                  return <div className="text-center text-sm text-[#848e9c] py-10">{bi('هیچ هەواڵێک نییە.', 'No news in this category.')}</div>;
+                }
+                return filtered.map((n, i) => {
+                  const cat = CAT_LABEL[n.category];
+                  const title = decodeHtml(n.title);
+                  const summary = decodeHtml(n.summary);
+                  return (
+                    <a
+                      key={`${n.link}-${i}`}
+                      href={n.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-[#0d1117] border border-[#1a1e2e] hover:border-[#2a2e3e] rounded-lg px-3 py-2.5 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        {cat && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1" style={{ color: cat.color, backgroundColor: cat.color + '1a' }}>
+                            <span>{cat.emoji}</span>{bi(cat.ku, cat.en)}
+                          </span>
+                        )}
+                        {/* Source badge with colored dot */}
+                        <span className="text-[10px] text-[#848e9c] inline-flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat?.color ?? '#848e9c' }} />
+                          {n.source}
                         </span>
-                      )}
-                      <span className="text-[10px] text-[#848e9c]">{n.source}</span>
-                      <span className="text-[10px] text-[#848e9c] ms-auto flex items-center gap-1">
-                        {newsTimeAgo(n.pubDate)}
-                        <ExternalLink className="h-3 w-3" />
-                      </span>
-                    </div>
-                    <div className="text-sm font-medium text-white leading-snug">{n.title}</div>
-                    {n.summary && <div className="text-[11px] text-[#848e9c] mt-1 line-clamp-2">{n.summary}</div>}
-                  </a>
-                );
-              })}
+                        <span className="text-[10px] text-[#848e9c] ms-auto flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {newsTimeAgo(n.pubDate)}
+                        </span>
+                      </div>
+                      <div className="text-sm font-medium text-white leading-snug">{title}</div>
+                      {summary && <div className="text-[11px] text-[#848e9c] mt-1 line-clamp-2">{summary}</div>}
+                      <div className="flex items-center justify-end mt-1.5">
+                        <span className="text-[10px] font-bold text-[#f0b90b] inline-flex items-center gap-1 group-hover:underline">
+                          {bi('کردنەوە', 'Read')}<ExternalLink className="h-3 w-3" />
+                        </span>
+                      </div>
+                    </a>
+                  );
+                });
+              })()}
             </div>
           )}
         </div>
+
 
         {/* Event detail popup */}
         {detailEvent && (() => {
