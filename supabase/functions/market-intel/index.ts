@@ -18,6 +18,12 @@ const BTC_THRESHOLD = 200;    // $200
 // Within how many minutes a high-impact event triggers an alert.
 const EVENT_ALERT_MIN = 30;
 
+// Anti-spam: only open a NEW signal when the day's move is clearly strong
+// (|change| >= this %) AND not within the cooldown window of the last signal
+// for that symbol. Quiet markets → no repeated signals.
+const SIGNAL_MIN_MOVE_PCT = 0.25;        // ignore weak/flat moves
+const SIGNAL_COOLDOWN_MS = 45 * 60_000;  // 45 min between signals per symbol
+
 // Internal price-scan loop: check prices every PRICE_INTERVAL_MS for up to
 // LOOP_WINDOW_MS, so the engine reacts ~every 5s while the cron fires once a
 // minute. News + calendar are checked once per invocation (≈60s cadence).
@@ -355,18 +361,24 @@ async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts
         delete openState[q.symbol];
       }
       // Only one active signal per symbol — never stack a second one.
-      priceState[q.symbol] = { price: q.price, signal: sig };
+      const prevOpen = priceState[q.symbol] as { lastSignalAt?: number } | undefined;
+      priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt: prevOpen?.lastSignalAt };
       continue;
     }
 
     // 2) No open position → consider opening a NEW signal when timing is right.
-    const prev = priceState[q.symbol] as { price?: number; signal?: Signal } | undefined;
+    const prev = priceState[q.symbol] as { price?: number; signal?: Signal; lastSignalAt?: number } | undefined;
     const actionable = sig === "BUY" || sig === "SELL";
     const timingOk = !m.requireSession || isMajorSessionOpen();
     // Avoid re-opening the same direction immediately; only fire when signal flips.
     const fresh = prev?.signal !== sig;
+    // Quiet-market guard: skip weak moves and respect a per-symbol cooldown so we
+    // don't spam repeated signals when the market is barely moving.
+    const strongMove = Math.abs(q.changePct) >= SIGNAL_MIN_MOVE_PCT;
+    const cooldownOk = !prev?.lastSignalAt || Date.now() - prev.lastSignalAt >= SIGNAL_COOLDOWN_MS;
 
-    if (actionable && timingOk && fresh) {
+    let lastSignalAt = prev?.lastSignalAt;
+    if (actionable && timingOk && fresh && strongMove && cooldownOk) {
       const isBuy = sig === "BUY";
       const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
       const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
@@ -382,9 +394,11 @@ async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts
 
       signalAlerts.push(newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session));
       openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
+      lastSignalAt = Date.now();
     }
-    priceState[q.symbol] = { price: q.price, signal: sig };
+    priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt };
   }
+
 
   await setState("prices", priceState);
   await setState("open_signals", openState);
