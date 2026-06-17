@@ -429,7 +429,8 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
         confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
       }).select("id").maybeSingle();
 
-      signalAlerts.push(newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session));
+      const important = confidence >= TARGET_IMPORTANT_CONFIDENCE || Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
+      signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important });
       openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
       lastSignalAt = Date.now();
     }
