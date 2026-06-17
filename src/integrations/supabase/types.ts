@@ -47,6 +47,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_signals: {
+        Row: {
+          asset: string
+          confidence: number | null
+          created_at: string
+          entry: number | null
+          id: string
+          signal: string
+          sl: number | null
+          tp: number | null
+        }
+        Insert: {
+          asset: string
+          confidence?: number | null
+          created_at?: string
+          entry?: number | null
+          id?: string
+          signal: string
+          sl?: number | null
+          tp?: number | null
+        }
+        Update: {
+          asset?: string
+          confidence?: number | null
+          created_at?: string
+          entry?: number | null
+          id?: string
+          signal?: string
+          sl?: number | null
+          tp?: number | null
+        }
+        Relationships: []
+      }
       bot_logs: {
         Row: {
           bot_id: string
@@ -342,6 +375,42 @@ export type Database = {
         }
         Relationships: []
       }
+      economic_events: {
+        Row: {
+          created_at: string
+          currency: string | null
+          event_time: string | null
+          ext_key: string | null
+          forecast: string | null
+          id: string
+          impact: string | null
+          previous: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          event_time?: string | null
+          ext_key?: string | null
+          forecast?: string | null
+          id?: string
+          impact?: string | null
+          previous?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          event_time?: string | null
+          ext_key?: string | null
+          forecast?: string | null
+          id?: string
+          impact?: string | null
+          previous?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -408,6 +477,96 @@ export type Database = {
         }
         Relationships: []
       }
+      market_alert_state: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      market_news: {
+        Row: {
+          assets: string[] | null
+          bias: string | null
+          created_at: string
+          hash: string | null
+          id: string
+          impact: string | null
+          published_at: string | null
+          source: string | null
+          summary: string | null
+          title: string
+          title_ku: string | null
+          url: string | null
+        }
+        Insert: {
+          assets?: string[] | null
+          bias?: string | null
+          created_at?: string
+          hash?: string | null
+          id?: string
+          impact?: string | null
+          published_at?: string | null
+          source?: string | null
+          summary?: string | null
+          title: string
+          title_ku?: string | null
+          url?: string | null
+        }
+        Update: {
+          assets?: string[] | null
+          bias?: string | null
+          created_at?: string
+          hash?: string | null
+          id?: string
+          impact?: string | null
+          published_at?: string | null
+          source?: string | null
+          summary?: string | null
+          title?: string
+          title_ku?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
+      market_prices: {
+        Row: {
+          change_pct: number
+          price: number
+          signal: string | null
+          symbol: string
+          trend: string | null
+          updated_at: string
+        }
+        Insert: {
+          change_pct?: number
+          price: number
+          signal?: string | null
+          symbol: string
+          trend?: string | null
+          updated_at?: string
+        }
+        Update: {
+          change_pct?: number
+          price?: number
+          signal?: string | null
+          symbol?: string
+          trend?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sales: {
         Row: {
           cigarette_id: string | null
@@ -457,6 +616,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      telegram_logs: {
+        Row: {
+          attempts: number
+          chat_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          kind: string | null
+          payload: Json | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          chat_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string | null
+          payload?: Json | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          chat_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string | null
+          payload?: Json | null
+          status?: string
+        }
+        Relationships: []
       }
       telegram_signals: {
         Row: {
