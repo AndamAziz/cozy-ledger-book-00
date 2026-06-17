@@ -138,7 +138,6 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
     const net = today?.net ?? 0;
     const anyRunning = bots.some((b) => b.status === "running");
     const anyAutoPaused = bots.some((b) => b.auto_paused);
-    const activeWindow = getActiveWindow(new Date(now));
 
     if (net <= -DAILY_LOSS_LIMIT_USD)
       return { dot: "🔴", text: "Paused", detail: "Daily loss limit reached", cls: "border-destructive/40 bg-destructive/10 text-destructive" };
@@ -148,17 +147,11 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
       return { dot: "🔴", text: "Paused", detail: "Loss streak — auto-paused", cls: "border-destructive/40 bg-destructive/10 text-destructive" };
     if (newsBlock)
       return { dot: "⛔", text: "Blocked", detail: `${newsBlock.title} in ${newsBlock.minutes}min`, cls: "border-orange-500/40 bg-orange-500/10 text-orange-500" };
-    if (anyRunning && activeWindow)
-      return { dot: "🟢", text: "Trading", detail: `${activeWindow.short} session`, cls: "border-success/40 bg-success/10 text-success" };
-    return { dot: "🟡", text: "Waiting", detail: "Between sessions", cls: "border-gold/40 bg-gold/10 text-gold" };
-  }, [bots, today, now, newsBlock]);
+    if (anyRunning)
+      return { dot: "🟢", text: "Trading", detail: "Scanning volatility 24/7", cls: "border-success/40 bg-success/10 text-success" };
+    return { dot: "🟡", text: "Waiting", detail: "Bot idle — press start", cls: "border-gold/40 bg-gold/10 text-gold" };
+  }, [bots, today, newsBlock]);
 
-  const next = useMemo(() => {
-    const active = getActiveWindow(new Date(now));
-    if (active) return { label: `${active.short} session is open now`, active: true };
-    const nw = nextWindowOpen(new Date(now));
-    return { label: `${nw.window.short} opens in ${formatCountdown(nw.at.getTime() - now)}`, active: false };
-  }, [now]);
 
   const maxAbs = Math.max(1, ...week.map((d) => Math.abs(d.pnl)));
 
@@ -194,8 +187,9 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
               <Stat label="Best Trade" value={`+$${fmtUsd(Math.max(0, today.best))}`} valueClass="text-success" />
               <Stat label="Worst Trade" value={`-$${fmtUsd(Math.abs(Math.min(0, today.worst)))}`} valueClass="text-destructive" />
               <Stat
-                label="Sessions"
-                value={today.sessions.length ? today.sessions.join(" / ") : "—"}
+                label="Avg/Trade"
+                value={`${today.trades && today.net < 0 ? "-" : "+"}$${fmtUsd(today.trades ? Math.abs(today.net / today.trades) : 0)}`}
+                valueClass={today.net >= 0 ? "text-success" : "text-destructive"}
               />
             </div>
           </>
