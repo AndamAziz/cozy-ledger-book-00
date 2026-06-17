@@ -204,11 +204,42 @@ async function sendTelegram(kind: string, text: string): Promise<boolean> {
 }
 
 // ───────────────────── message builders ─────────────────────
-const ASSET_META: Record<string, { emoji: string; name: string; threshold: number }> = {
-  "XAU/USD": { emoji: "🥇", name: "GOLD", threshold: GOLD_THRESHOLD },
-  "WTI/USD": { emoji: "🛢", name: "OIL", threshold: OIL_THRESHOLD },
-  "BTC/USD": { emoji: "₿", name: "BITCOIN", threshold: BTC_THRESHOLD },
+// pip       = price distance that equals "1 pip" for this asset (for pip counting)
+// tpPct/slPct = full target / stop-loss distance as % of entry price (R:R ~1.5)
+// requireSession = only open new signals while a major FX session is live (BTC = 24/7)
+const ASSET_META: Record<
+  string,
+  { emoji: string; name: string; threshold: number; pip: number; tpPct: number; slPct: number; requireSession: boolean }
+> = {
+  "XAU/USD": { emoji: "🥇", name: "GOLD", threshold: GOLD_THRESHOLD, pip: 0.1, tpPct: 0.6, slPct: 0.4, requireSession: true },
+  "WTI/USD": { emoji: "🛢", name: "OIL", threshold: OIL_THRESHOLD, pip: 0.01, tpPct: 0.8, slPct: 0.5, requireSession: true },
+  "BTC/USD": { emoji: "₿", name: "BITCOIN", threshold: BTC_THRESHOLD, pip: 1, tpPct: 1.2, slPct: 0.8, requireSession: false },
 };
+
+// Round pips to whole numbers for clean messaging.
+const toPips = (priceMove: number, pip: number) => Math.round(Math.abs(priceMove) / pip);
+
+// ───────────────────── market sessions (UTC) ─────────────────────
+interface SessionDef { name: string; ku: string; start: number; end: number; }
+const SESSIONS: SessionDef[] = [
+  { name: "Sydney", ku: "سیدنی", start: 21, end: 6 },
+  { name: "Tokyo", ku: "تۆکیۆ", start: 0, end: 9 },
+  { name: "London", ku: "لەندەن", start: 7, end: 16 },
+  { name: "New York", ku: "نیویۆرک", start: 12, end: 21 },
+];
+function openSessions(d = new Date()): SessionDef[] {
+  const h = d.getUTCHours();
+  return SESSIONS.filter((s) => (s.start <= s.end ? h >= s.start && h < s.end : h >= s.start || h < s.end));
+}
+// A "major" session (London / New York) means high liquidity → good entry timing.
+function isMajorSessionOpen(d = new Date()): boolean {
+  return openSessions(d).some((s) => s.name === "London" || s.name === "New York");
+}
+function sessionLabel(d = new Date()): string {
+  const open = openSessions(d);
+  if (open.length === 0) return "Closed / داخراو";
+  return open.map((s) => `${s.name} (${s.ku})`).join(" + ");
+}
 
 function priceLine(q: Quote, sig: Signal): string {
   const m = ASSET_META[q.symbol];
@@ -221,57 +252,138 @@ function priceLine(q: Quote, sig: Signal): string {
   ].join("\n");
 }
 
+const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+// Full BUY/SELL trade setup with entry, full target and stop loss.
+function newSignalLine(
+  q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, tpPips: number, slPips: number,
+  confidence: number, session: string,
+): string {
+  const m = ASSET_META[q.symbol];
+  return [
+    `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
+    `${sigEmoji(sig)} <b>${sig}</b> / ${sigKu(sig)}`,
+    `📍 Entry / دەستپێک: <code>$${fmt(q.price)}</code>`,
+    `🎯 TP / تارگێت: <code>$${fmt(tp)}</code> (+${tpPips} pips)`,
+    `🛑 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (-${slPips} pips)`,
+    `📊 Confidence / متمانە: <b>${confidence}%</b>`,
+    `🏙 Session / بازاڕ: ${session}`,
+  ].join("\n");
+}
+
+// Outcome message when a signal closes on TP or SL.
+function outcomeLine(
+  symbol: string, sig: "BUY" | "SELL", hit: "tp" | "sl",
+  entry: number, close: number, pips: number,
+): string {
+  const m = ASSET_META[symbol];
+  if (hit === "tp") {
+    return [
+      `✅ <b>TARGET HIT / تارگێت تەواوبوو</b> 🎉`,
+      `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
+      `📈 Result / ئەنجام: <b>+${pips} pips</b>`,
+      `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+      `سیگنالەکە سەرکەوتوو بوو ✅`,
+    ].join("\n");
+  }
+  return [
+    `❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
+    `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
+    `📉 Result / ئەنجام: <b>-${pips} pips</b>`,
+    `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+    `⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
+    `🚪 تکایە پۆزیشنەکە دابخە / Please close your position`,
+  ].join("\n");
+}
+
 function nowStamp(): string {
   return new Date().toUTCString();
 }
 
 // ───────────────────── core scan ─────────────────────
-async function evaluatePrices(): Promise<{ alerts: string[]; quotes: Quote[] }> {
+interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number; }
+
+async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts: string[]; quotes: Quote[] }> {
   const quotes = await getPrices();
-  const state = await getState("prices"); // { "XAU/USD": { price, signal } }
-  const alerts: string[] = [];
+  const priceState = await getState("prices");      // { "XAU/USD": { price, signal } }
+  const openState = await getState("open_signals"); // { "XAU/USD": OpenSig }
+  const signalAlerts: string[] = [];
+  const outcomeAlerts: string[] = [];
 
   for (const q of quotes) {
     const m = ASSET_META[q.symbol];
     if (!m) continue;
     const sig = ruleSignal(q.changePct);
-    const prev = state[q.symbol] as { price?: number; signal?: Signal } | undefined;
 
-    // Persist latest snapshot for the (future) dashboard.
+    // Persist latest snapshot for the dashboard.
     await admin.from("market_prices").upsert({
       symbol: q.symbol, price: q.price, change_pct: q.changePct,
       trend: q.changePct >= 0 ? "up" : "down", signal: sig, updated_at: new Date().toISOString(),
     });
 
-    let trigger = false;
-    // Trigger 1: price moved more than the asset threshold since last alert.
-    if (prev?.price != null && Math.abs(q.price - prev.price) >= m.threshold) trigger = true;
-    // Trigger 2: signal flipped (BUY↔SELL↔HOLD).
-    const signalChanged = prev?.signal != null && prev.signal !== sig;
-    if (signalChanged) trigger = true;
+    const open = openState[q.symbol] as OpenSig | undefined;
 
-    if (trigger) {
-      alerts.push(priceLine(q, sig));
-      // Record an AI signal row whenever the signal changes.
-      if (signalChanged || prev?.signal == null) {
-        const isBuy = sig === "BUY";
-        await admin.from("ai_signals").insert({
-          asset: m.name, signal: sig,
-          entry: q.price,
-          tp: sig === "HOLD" ? null : +(q.price * (isBuy ? 1.006 : 0.994)).toFixed(2),
-          sl: sig === "HOLD" ? null : +(q.price * (isBuy ? 0.996 : 1.004)).toFixed(2),
-          confidence: Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10)),
-        });
+    // 1) Manage an OPEN position → did price hit TP or SL?
+    if (open) {
+      const isBuy = open.signal === "BUY";
+      let hit: "tp" | "sl" | null = null;
+      if (isBuy) {
+        if (q.price >= open.tp) hit = "tp";
+        else if (q.price <= open.sl) hit = "sl";
+      } else {
+        if (q.price <= open.tp) hit = "tp";
+        else if (q.price >= open.sl) hit = "sl";
       }
-      state[q.symbol] = { price: q.price, signal: sig };
-    } else if (prev == null) {
-      // Seed state without alerting on first ever run.
-      state[q.symbol] = { price: q.price, signal: sig };
+      if (hit) {
+        const pips = toPips(q.price - open.entry, m.pip);
+        outcomeAlerts.push(outcomeLine(q.symbol, open.signal, hit, open.entry, q.price, pips));
+        if (open.id) {
+          await admin.from("ai_signals").update({
+            status: hit === "tp" ? "target_hit" : "stopped_out",
+            result_pips: hit === "tp" ? pips : -pips,
+            close_price: q.price,
+            closed_at: new Date().toISOString(),
+          }).eq("id", open.id);
+        }
+        delete openState[q.symbol];
+      }
+      // Only one active signal per symbol — never stack a second one.
+      priceState[q.symbol] = { price: q.price, signal: sig };
+      continue;
     }
+
+    // 2) No open position → consider opening a NEW signal when timing is right.
+    const prev = priceState[q.symbol] as { price?: number; signal?: Signal } | undefined;
+    const actionable = sig === "BUY" || sig === "SELL";
+    const timingOk = !m.requireSession || isMajorSessionOpen();
+    // Avoid re-opening the same direction immediately; only fire when signal flips.
+    const fresh = prev?.signal !== sig;
+
+    if (actionable && timingOk && fresh) {
+      const isBuy = sig === "BUY";
+      const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+      const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
+      const tpPips = toPips(tp - q.price, m.pip);
+      const slPips = toPips(sl - q.price, m.pip);
+      const confidence = Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
+      const session = sessionLabel();
+
+      const { data: ins } = await admin.from("ai_signals").insert({
+        asset: m.name, signal: sig, entry: q.price, tp, sl,
+        confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
+      }).select("id").maybeSingle();
+
+      signalAlerts.push(newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session));
+      openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
+    }
+    priceState[q.symbol] = { price: q.price, signal: sig };
   }
-  await setState("prices", state);
-  return { alerts, quotes };
+
+  await setState("prices", priceState);
+  await setState("open_signals", openState);
+  return { signalAlerts, outcomeAlerts, quotes };
 }
+
 
 async function evaluateCalendar(): Promise<string[]> {
   const events = await getHighImpactEvents();
@@ -469,6 +581,17 @@ Deno.serve(async (req) => {
     if (test) {
       const quotes = await getPrices();
       const priceBlock = quotes.map((q) => priceLine(q, ruleSignal(q.changePct)));
+
+      // Build a sample full trade signal + a sample TP outcome from live gold price.
+      const sample = quotes[0] ?? { symbol: "XAU/USD", price: 4275, changePct: 0.3 } as Quote;
+      const sm = ASSET_META[sample.symbol] ?? ASSET_META["XAU/USD"];
+      const sampleTp = +(sample.price * (1 + sm.tpPct / 100)).toFixed(2);
+      const sampleSl = +(sample.price * (1 - sm.slPct / 100)).toFixed(2);
+      const sTpPips = toPips(sampleTp - sample.price, sm.pip);
+      const sSlPips = toPips(sampleSl - sample.price, sm.pip);
+      const signalSample = newSignalLine(sample, "BUY", sampleTp, sampleSl, sTpPips, sSlPips, 78, sessionLabel());
+      const outcomeSample = outcomeLine(sample.symbol, "BUY", "tp", sample.price, sampleTp, sTpPips);
+
       const liveNews = (await fetchNews()).slice(0, 3);
       const kuTitles = await translateToKurdish(liveNews.map((n) => n.title));
       const newsBlock = liveNews.map((n, i) => newsLine(n.title, kuTitles[i] ?? "", n.summary, n.category, n.source));
@@ -477,6 +600,14 @@ Deno.serve(async (req) => {
         "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
         "<i>🧪 TEST / تاقیکردنەوە</i>",
         "━━━━━━━━━━━━━━━",
+        "",
+        "🚨 <b>New Signals / سیگنالی نوێ</b>",
+        "",
+        signalSample,
+        "",
+        "🏁 <b>Signal Results / ئەنجامی سیگنال</b>",
+        "",
+        outcomeSample,
         "",
         "📈 <b>Analysis / شیکاری بازاڕ</b>",
         "",
@@ -494,41 +625,64 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const priceAlerts: string[] = [];
+
+    const signalAlerts: string[] = [];
+    const outcomeAlerts: string[] = [];
     let lastQuotes: Quote[] = [];
 
     if (loop) {
       const start = Date.now();
       while (Date.now() - start < LOOP_WINDOW_MS) {
-        const { alerts, quotes } = await evaluatePrices();
-        priceAlerts.push(...alerts);
-        lastQuotes = quotes;
+        const r = await evaluatePrices();
+        signalAlerts.push(...r.signalAlerts);
+        outcomeAlerts.push(...r.outcomeAlerts);
+        lastQuotes = r.quotes;
         if (Date.now() - start + PRICE_INTERVAL_MS >= LOOP_WINDOW_MS) break;
         await sleep(PRICE_INTERVAL_MS);
       }
     } else {
-      const { alerts, quotes } = await evaluatePrices();
-      priceAlerts.push(...alerts);
-      lastQuotes = quotes;
+      const r = await evaluatePrices();
+      signalAlerts.push(...r.signalAlerts);
+      outcomeAlerts.push(...r.outcomeAlerts);
+      lastQuotes = r.quotes;
     }
 
     // Calendar + news once per invocation (≈60s cadence).
     const eventAlerts = await evaluateCalendar();
     const newsAlerts = await evaluateNews();
 
-    // Compose & send a single premium bilingual report if anything fired.
     let sent = false;
-    if (priceAlerts.length || eventAlerts.length || newsAlerts.length) {
+
+    // 1) Time-sensitive TRADE SIGNALS: outcomes (close now!) + fresh BUY/SELL setups.
+    if (signalAlerts.length || outcomeAlerts.length) {
+      const s: string[] = [
+        "📊 <b>CTP APP REPORTS</b>",
+        "<i>Trade Signals · سیگنالی بازرگانی</i>",
+        "━━━━━━━━━━━━━━━",
+        "",
+      ];
+      if (outcomeAlerts.length) {
+        s.push("🏁 <b>Signal Results / ئەنجامی سیگنال</b>", "");
+        s.push(outcomeAlerts.join("\n\n"), "");
+      }
+      if (signalAlerts.length) {
+        s.push("🚨 <b>New Signals / سیگنالی نوێ</b>", "");
+        s.push(signalAlerts.join("\n\n"), "");
+      }
+      s.push("━━━━━━━━━━━━━━━");
+      s.push(`<i>🕒 ${nowStamp()}</i>`);
+      s.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
+      sent = (await sendTelegram("ctp_signal", s.join("\n"))) || sent;
+    }
+
+    // 2) News + economic calendar report.
+    if (eventAlerts.length || newsAlerts.length) {
       const lines: string[] = [
         "📊 <b>CTP APP REPORTS</b>",
         "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
         "━━━━━━━━━━━━━━━",
         "",
       ];
-      if (priceAlerts.length) {
-        lines.push("📈 <b>Analysis / شیکاری بازاڕ</b>", "");
-        lines.push(priceAlerts.join("\n\n"), "");
-      }
       if (newsAlerts.length) {
         lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "");
         lines.push(newsAlerts.join("\n\n"), "");
@@ -540,13 +694,14 @@ Deno.serve(async (req) => {
       lines.push("━━━━━━━━━━━━━━━");
       lines.push(`<i>🕒 ${nowStamp()}</i>`);
       lines.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
-      sent = await sendTelegram("ctp_report", lines.join("\n"));
+      sent = (await sendTelegram("ctp_report", lines.join("\n"))) || sent;
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent, priceAlerts: priceAlerts.length, eventAlerts: eventAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
+      JSON.stringify({ ok: true, sent, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, eventAlerts: eventAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (e) {
     console.error("market-intel error", e);
     return new Response(JSON.stringify({ error: String(e) }), {
