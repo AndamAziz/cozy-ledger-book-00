@@ -89,12 +89,18 @@ function calcMACD(closes: number[]): { histogram: number } | null {
 }
 
 // ───────────────────── prices & candles ─────────────────────
+// Always bypass any HTTP cache so each 5s tick gets a genuinely fresh price.
+const NO_CACHE: RequestInit = {
+  cache: "no-store",
+  headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+};
 async function getPrice(symbol: string): Promise<number | null> {
+  const bust = `_=${Date.now()}`; // cache-busting timestamp
   try {
     if (CRYPTO_BINANCE[symbol]) {
       const res = await fetch(
-        `https://api.binance.com/api/v3/ticker/price?symbol=${CRYPTO_BINANCE[symbol]}`,
-        { signal: AbortSignal.timeout(8000) },
+        `https://api.binance.com/api/v3/ticker/price?symbol=${CRYPTO_BINANCE[symbol]}&${bust}`,
+        { ...NO_CACHE, signal: AbortSignal.timeout(8000) },
       );
       if (!res.ok) { await res.text(); return null; }
       const d = await res.json();
@@ -102,8 +108,10 @@ async function getPrice(symbol: string): Promise<number | null> {
       return Number.isFinite(p) && p > 0 ? p : null;
     }
     if (METAL_CODES[symbol]) {
-      const res = await fetch(`https://api.gold-api.com/price/${METAL_CODES[symbol]}`, {
-        headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000),
+      const res = await fetch(`https://api.gold-api.com/price/${METAL_CODES[symbol]}?${bust}`, {
+        ...NO_CACHE,
+        headers: { ...NO_CACHE.headers, Accept: "application/json" },
+        signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) { await res.text(); return null; }
       const d = await res.json();
@@ -117,8 +125,8 @@ async function getPrice(symbol: string): Promise<number | null> {
     const m = map[symbol];
     if (m) {
       const res = await fetch(
-        `https://api.frankfurter.app/latest?base=USD&symbols=${m[0]}`,
-        { signal: AbortSignal.timeout(8000) },
+        `https://api.frankfurter.app/latest?base=USD&symbols=${m[0]}&${bust}`,
+        { ...NO_CACHE, signal: AbortSignal.timeout(8000) },
       );
       if (!res.ok) { await res.text(); return null; }
       const d = await res.json();
