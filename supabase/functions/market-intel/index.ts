@@ -456,11 +456,9 @@ Deno.serve(async (req) => {
     if (test) {
       const quotes = await getPrices();
       const priceBlock = quotes.map((q) => priceLine(q, ruleSignal(q.changePct)));
-      const { data: news } = await admin.from("market_news")
-        .select("hash,title,title_ku,summary,impact,bias,source,published_at,created_at")
-        .order("published_at", { ascending: false, nullsFirst: false })
-        .limit(3);
-      const newsBlock = ((news ?? []) as NewsRow[]).map(newsLine);
+      const liveNews = (await fetchNews()).slice(0, 3);
+      const kuTitles = await translateToKurdish(liveNews.map((n) => n.title));
+      const newsBlock = liveNews.map((n, i) => newsLine(n.title, kuTitles[i] ?? "", n.summary, n.category, n.source));
       const lines: string[] = [
         "📊 <b>CTP APP REPORTS</b>",
         "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
