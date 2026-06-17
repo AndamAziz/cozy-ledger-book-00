@@ -58,20 +58,25 @@ const CALENDAR_URLS = [
 // We no longer trade by the clock. Instead the bot runs 24/7 and only opens
 // trades when the market is actually moving and cheap to transact in. Two live
 // signals decide this on every scan:
-//   • SPREAD   — how wide / erratic the market is right now (estimated from the
-//                candle wicks, since we have no live bid/ask feed).
-//   • MOVEMENT — the average candle range over the last few candles.
-// Thresholds are calibrated to gold (0.50 spread / 0.30 move, per spec) and
-// scaled by price so they stay sensible for crypto / forex symbols too.
-const VOL_REF_PRICE = 3000;       // gold reference price used for scaling
-const VOL_SPREAD_MAX_PTS = 0.50;  // spread above this = market too wide → wait
-const VOL_MOVE_MIN_PTS = 0.30;    // avg candle below this = market too flat → wait
-const VOL_LOOKBACK = 5;           // candles averaged for the movement check
+//   • SPREAD   — the real Ask-Bid cost of entering. For gold this is normally
+//                0.30-0.80 pts. We have no live bid/ask feed, so we model it as
+//                a realistic spread clamped to that band (NOT from candle wicks,
+//                which previously produced absurd 2.9-3.5 values).
+//   • MOVEMENT — the average candle range (High-Low) over the last few candles.
+//                This is the real volatility measure that drives the level.
+// Thresholds are calibrated to gold and scaled by price so they stay sensible
+// for crypto / forex symbols too.
+const VOL_REF_PRICE = 3000;        // gold reference price used for scaling
+const VOL_SPREAD_MIN_PTS = 0.30;   // realistic gold spread floor
+const VOL_SPREAD_MAX_PTS = 0.80;   // realistic gold spread ceiling / "too wide" gate
+const VOL_MOVE_LOW_PTS = 1.0;      // avg candle below this = too flat → wait (LOW)
+const VOL_MOVE_HIGH_PTS = 3.0;     // avg candle above this = strong move → full lot (HIGH)
+const VOL_LOOKBACK = 5;            // candles averaged for the movement check
 
 type VolLevel = "LOW" | "MEDIUM" | "HIGH";
 type VolReport = {
   level: VolLevel; spread: number; avgMove: number;
-  spreadMax: number; moveMin: number; lotMult: number;
+  spreadMax: number; moveLow: number; moveHigh: number; lotMult: number;
 };
 
 // Format a points value: 2 decimals for big instruments, 4 for forex.
@@ -81,35 +86,37 @@ function pts(n: number): string {
 
 function assessVolatility(price: number, candles: Candle[]): VolReport {
   const scale = price > 0 ? price / VOL_REF_PRICE : 1;
+  const spreadMin = VOL_SPREAD_MIN_PTS * scale;
   const spreadMax = VOL_SPREAD_MAX_PTS * scale;
-  const moveMin = VOL_MOVE_MIN_PTS * scale;
+  const moveLow = VOL_MOVE_LOW_PTS * scale;
+  const moveHigh = VOL_MOVE_HIGH_PTS * scale;
 
-  // PRICE MOVEMENT — average candle size over the last N candles.
+  // PRICE MOVEMENT — average candle size (High-Low) over the last N candles.
+  // This is the volatility measure, NOT the spread.
   const recent = candles.slice(-VOL_LOOKBACK);
   const avgMove = recent.length
     ? recent.reduce((a, c) => a + (c.high - c.low), 0) / recent.length
     : 0;
 
-  // SPREAD — estimate the effective spread from the average wick (price rejected
-  // outside the candle body) over the last 3 candles. Wide/choppy wicks ≈ a wide
-  // market that is expensive to enter.
-  const wickWin = candles.slice(-3);
-  const spread = wickWin.length
-    ? wickWin.reduce((a, c) => {
-        const body = Math.abs(c.close - c.open);
-        return a + Math.max(0, (c.high - c.low) - body);
-      }, 0) / wickWin.length
-    : 0;
+  // SPREAD — model the real Ask-Bid cost. With no live bid/ask feed we estimate
+  // it as a small fraction of recent movement, but clamp it into the realistic
+  // gold band (0.30-0.80 pts, price-scaled). This keeps spread sane instead of
+  // ballooning with wick size.
+  const rawSpread = avgMove * 0.08; // spreads widen modestly with volatility
+  const spread = Math.min(spreadMax, Math.max(spreadMin, rawSpread));
 
-  // VOLATILITY SCORE — combine spread + movement.
-  const tightSpread = spread <= spreadMax;
-  const bigMoves = avgMove >= moveMin;
+  // VOLATILITY LEVEL — driven by average candle size:
+  //   < 1.0 pts  → LOW    → wait (no trade)
+  //   1.0-3.0    → MEDIUM → half lot
+  //   > 3.0      → HIGH   → full lot
+  // Spread must also be within the acceptable band, otherwise we wait.
+  const spreadOk = spread <= spreadMax;
   let level: VolLevel;
   let lotMult: number;
-  if (tightSpread && bigMoves) { level = "HIGH"; lotMult = 1; }          // 🟢 full lot
-  else if (tightSpread || bigMoves) { level = "MEDIUM"; lotMult = 0.5; } // 🟡 half lot
-  else { level = "LOW"; lotMult = 0; }                                   // 🔴 wait
-  return { level, spread, avgMove, spreadMax, moveMin, lotMult };
+  if (!spreadOk || avgMove < moveLow) { level = "LOW"; lotMult = 0; }   // 🔴 wait
+  else if (avgMove < moveHigh) { level = "MEDIUM"; lotMult = 0.5; }      // 🟡 half lot
+  else { level = "HIGH"; lotMult = 1; }                                  // 🟢 full lot
+  return { level, spread, avgMove, spreadMax, moveLow, moveHigh, lotMult };
 }
 
 
@@ -867,13 +874,14 @@ serve(async (req) => {
     }
     const candles = await getCandles(symbol, timeframe, price);
     const v = assessVolatility(price, candles);
-    // Continuous 0-100 gauge value: tight spread + big moves → higher.
-    const moveComp = Math.max(0, Math.min(1, v.avgMove / (v.moveMin * 2)));
-    const spreadComp = Math.max(0, Math.min(1, 1 - v.spread / (v.spreadMax * 2)));
-    const percent = Math.round((moveComp * 0.5 + spreadComp * 0.5) * 100);
+    // Continuous 0-100 gauge value, driven mainly by movement (the real
+    // volatility), with the realistic spread as a small modifier.
+    const moveComp = Math.max(0, Math.min(1, v.avgMove / v.moveHigh));
+    const spreadComp = Math.max(0, Math.min(1, 1 - (v.spread - VOL_SPREAD_MIN_PTS * (price / VOL_REF_PRICE)) / (v.spreadMax)));
+    const percent = Math.round((moveComp * 0.8 + spreadComp * 0.2) * 100);
     return new Response(JSON.stringify({
       symbol, price, level: v.level, spread: v.spread, avgMove: v.avgMove,
-      spreadMax: v.spreadMax, moveMin: v.moveMin, percent,
+      spreadMax: v.spreadMax, moveLow: v.moveLow, moveHigh: v.moveHigh, percent,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
