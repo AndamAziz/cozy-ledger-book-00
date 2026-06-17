@@ -346,10 +346,26 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
     await log(botId, userId, "loss",
       `[${hhmmss()}] 🛑 Closed at loss: -$${fmt(Math.abs(pnl), symbol)} (-${Math.abs(pnlPct)}%) — ${reasonLabel} · ${dir.toUpperCase()} @ $${fmt(exitPrice, symbol)}`);
   }
-  // ⏱️ How long the trade was open.
-  await log(botId, userId, "info", `[${hhmmss()}] ⏱️ Trade was open for ${dur}`);
+  // 📋 TRADE REPORT — entry→exit, duration, result, running daily total.
+  const daily = await getDailyPnl(userId);
+  const dSign = daily.pnl >= 0 ? "+" : "-";
+  await log(botId, userId, "info",
+    `[${hhmmss()}] 📋 TRADE REPORT — ${dir.toUpperCase()} ${symbol} | Entry $${fmt(entry, symbol)} → Exit $${fmt(exitPrice, symbol)} | ${dur} | ${win ? "✅ WIN" : "❌ LOSS"} ${sign}$${fmt(Math.abs(pnl), symbol)} | 📊 Today: ${dSign}$${fmt(Math.abs(daily.pnl), symbol)} (${daily.trades} trades)`);
   await log(botId, userId, "info", `[${hhmmss()}] 🤖 Bot auto-stopped after trade close`);
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Balance updated: $${newBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+  // 🛑 Daily limits — pause for the rest of the day once a threshold is crossed.
+  if (daily.pnl <= -DAILY_LOSS_LIMIT_USD) {
+    await log(botId, userId, "loss",
+      `[${hhmmss()}] 🛑 Daily loss limit reached (${dSign}$${fmt(Math.abs(daily.pnl), symbol)}) - bot paused until tomorrow`);
+    await notify(userId, botId, "auto_pause", "🛑 Daily Loss Limit",
+      `Today's P/L hit ${dSign}$${fmt(Math.abs(daily.pnl), symbol)}. Bots paused until tomorrow to protect your balance.`, daily.pnl);
+  } else if (daily.pnl >= DAILY_PROFIT_TARGET_USD) {
+    await log(botId, userId, "win",
+      `[${hhmmss()}] 🎯 Daily target reached (+$${fmt(daily.pnl, symbol)})! Locking in profits.`);
+    await notify(userId, botId, "trade_win", "🎯 Daily Target Reached",
+      `Today's P/L hit +$${fmt(daily.pnl, symbol)}. Locking in profits — bots paused until tomorrow.`, daily.pnl);
+  }
 
   // 🔔 Notify the user the trade was closed (with result).
   const botName = (bot.name as string) || symbol;
