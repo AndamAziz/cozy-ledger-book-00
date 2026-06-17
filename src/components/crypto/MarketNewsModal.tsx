@@ -588,6 +588,25 @@ export function MarketNewsModal({ open, onClose }: Props) {
     [visibleEvents],
   );
 
+  // Special high-volatility event happening TODAY (FOMC / NFP / CPI) — drives the alert banner
+  const specialAlert = useMemo(() => {
+    const todays = visibleEvents.filter((e) => isToday(e.date) && (e.country === 'USD' || e.country === 'All'));
+    let best: { ev: CalendarEvent; meta: NonNullable<ReturnType<typeof matchSpecialEvent>> } | null = null;
+    for (const e of todays) {
+      const meta = matchSpecialEvent(e);
+      if (!meta) continue;
+      // Prefer the next upcoming match; otherwise keep the earliest one found
+      const t = Date.parse(e.date);
+      if (!best) { best = { ev: e, meta }; continue; }
+      const bt = Date.parse(best.ev.date);
+      const bestUpcoming = bt > now;
+      const curUpcoming = t > now;
+      if (curUpcoming && (!bestUpcoming || t < bt)) best = { ev: e, meta };
+      else if (!curUpcoming && !bestUpcoming && t > bt) best = { ev: e, meta };
+    }
+    return best;
+  }, [visibleEvents, now]);
+
   // Apply currency filter + dismissed hiding for the rendered list
   const displayEvents = useMemo(() => {
     return visibleEvents.filter((e) => {
