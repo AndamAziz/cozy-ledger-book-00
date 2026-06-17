@@ -127,7 +127,7 @@ async function getPrices(): Promise<Quote[]> {
 }
 
 // ───────────────────── economic calendar ─────────────────────
-interface CalEvent { key: string; title: string; currency: string; impact: string; time: number; forecast: string; previous: string; }
+interface CalEvent { key: string; title: string; currency: string; impact: string; time: number; forecast: string; previous: string; actual: string; }
 
 async function getHighImpactEvents(): Promise<CalEvent[]> {
   try {
@@ -148,11 +148,39 @@ async function getHighImpactEvents(): Promise<CalEvent[]> {
         time: t,
         forecast: String(e.forecast ?? ""),
         previous: String(e.previous ?? ""),
+        actual: String(e.actual ?? ""),
       });
     }
     return out;
   } catch { return []; }
 }
+
+// Parse a calendar figure like "3.2%", "215K", "-0.1", "1.2M" into a number.
+function parseFigure(s: string): number | null {
+  if (!s) return null;
+  const m = s.replace(/,/g, "").match(/-?\d+(\.\d+)?/);
+  if (!m) return null;
+  let n = parseFloat(m[0]);
+  if (/k/i.test(s)) n *= 1_000;
+  else if (/m/i.test(s)) n *= 1_000_000;
+  else if (/b/i.test(s)) n *= 1_000_000_000;
+  return Number.isFinite(n) ? n : null;
+}
+
+// Indicators where a HIGHER actual is BAD for the currency (invert the surprise).
+const INVERSE_RE = /(unemployment|jobless|claims|inflation expectation|deficit|misery)/i;
+
+// Decide gold direction from a USD data surprise.
+// Strong USD data → USD up → Gold down (SELL). Weak USD data → Gold up (BUY).
+function goldFromUsdSurprise(title: string, actual: number, forecast: number): {
+  dir: "BUY" | "SELL" | "HOLD"; usd: "stronger" | "weaker" | "in-line";
+} {
+  if (actual === forecast) return { dir: "HOLD", usd: "in-line" };
+  let usdStrong = actual > forecast;          // higher number usually = stronger USD
+  if (INVERSE_RE.test(title)) usdStrong = !usdStrong; // unemployment/claims: higher = weaker
+  return usdStrong ? { dir: "SELL", usd: "stronger" } : { dir: "BUY", usd: "weaker" };
+}
+
 
 // ───────────────────── alert state (dedupe) ─────────────────────
 async function getState(key: string): Promise<Record<string, unknown>> {
