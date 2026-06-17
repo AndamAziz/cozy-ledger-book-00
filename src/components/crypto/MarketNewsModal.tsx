@@ -299,6 +299,10 @@ export function MarketNewsModal({ open, onClose }: Props) {
   const [fromCache, setFromCache] = useState(false);
   const [now, setNow] = useState(Date.now());
 
+  // User-selected timezone (persisted in localStorage) + selector menu state
+  const { tz, setTz } = useTimezone();
+  const [tzMenuOpen, setTzMenuOpen] = useState(false);
+
   // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
   const [currency, setCurrency] = useState<string>('All');
   const [newsCat, setNewsCat] = useState<string>('all');
