@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { playWinSound, playLoseSound } from "./useTradeSounds";
 
 export interface BotNotification {
   id: string;
