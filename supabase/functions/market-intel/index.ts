@@ -409,7 +409,7 @@ async function translateToKurdish(titles: string[]): Promise<string[]> {
 
 function newsLine(title: string, titleKu: string, summary: string, category: string, source: string): string {
   const parts = [`• <b>${esc(title)}</b>`];
-  if (titleKu) parts.push(`  🇮🇶 ${esc(titleKu)}`);
+  if (titleKu) parts.push(`  🇹🇯 ${esc(titleKu)}`);
   if (summary) parts.push(`  <i>${esc(summary)}</i>`);
   const meta = [category ? `🏷 ${esc(category)}` : "", source ? esc(source) : ""].filter(Boolean).join(" · ");
   if (meta) parts.push(`  <i>${meta}</i>`);
