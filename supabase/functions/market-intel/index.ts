@@ -776,6 +776,61 @@ async function evaluateNews(): Promise<string[]> {
   return out;
 }
 
+// ───────────────────── market-open report (per region) ─────────────────────
+// Build an analysis card for a region that just opened: live prices, per-asset
+// signal, overall bias, and a "get ready to BUY/SELL" heads-up. No concrete
+// target here — targets are sent separately when the buy/sell moment arrives.
+function sessionOpenReport(region: Region, quotes: Quote[]): string {
+  const label = `${REGION_EMOJI[region]} ${region} (${REGION_KU[region]})`;
+  const sigs = quotes.map((q) => ruleSignal(q.changePct));
+  const buys = sigs.filter((s) => s === "BUY").length;
+  const sells = sigs.filter((s) => s === "SELL").length;
+  let bias = "🟡 Neutral / مامناوەند — چاوەڕێی جوڵە بکە";
+  if (buys > sells) bias = "🟢 Bullish bias / مەیلی کڕین — ئامادە بە بۆ BUY";
+  else if (sells > buys) bias = "🔴 Bearish bias / مەیلی فرۆشتن — ئامادە بە بۆ SELL";
+  const priceBlock = quotes.length
+    ? quotes.map((q) => priceLine(q, ruleSignal(q.changePct))).join("\n\n")
+    : "—";
+  return [
+    "🔔 <b>MARKET OPEN / بازاڕ کرایەوە</b>",
+    `🏙 Session / بازاڕ: ${label}`,
+    "━━━━━━━━━━━━━━━",
+    "",
+    "📈 <b>Analysis / شیکاری بازاڕ</b>",
+    "",
+    priceBlock,
+    "",
+    `📊 Overall bias / مەیلی گشتی: ${bias}`,
+    "",
+    "🟢🔴 ئامادە بە بۆ کڕین یان فرۆشتن — کاتێک وەختی هات تارگێت بە پەیامێکی جیا دەنێردرێت",
+    "Get ready to BUY/SELL — targets are sent separately when the moment arrives",
+    "",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
+
+// Detect regions that JUST opened (only ENABLED ones) and emit one report each.
+// State stores the set of currently-open regions so each region only reports once
+// per open; when it closes it is removed and can report again on its next open.
+async function evaluateSessionOpen(): Promise<string[]> {
+  const enabled = await getEnabledRegions();
+  const openRegions = [...new Set(openSessions().map((s) => s.region))].filter((r) => enabled.includes(r));
+  const state = await getState("session_open");
+  const reported = new Set((state.reported as string[]) ?? []);
+  const newlyOpen = openRegions.filter((r) => !reported.has(r));
+
+  const alerts: string[] = [];
+  if (newlyOpen.length) {
+    const quotes = await getPrices();
+    for (const region of newlyOpen) alerts.push(sessionOpenReport(region as Region, quotes));
+  }
+  // Persist only the regions still open so closed ones can re-trigger later.
+  await setState("session_open", { reported: openRegions });
+  return alerts;
+}
+
 // ───────────────────── HTTP ─────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
