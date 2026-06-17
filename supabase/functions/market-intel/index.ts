@@ -18,6 +18,12 @@ const BTC_THRESHOLD = 200;    // $200
 // Within how many minutes a high-impact event triggers an alert.
 const EVENT_ALERT_MIN = 30;
 
+// Anti-spam: only open a NEW signal when the day's move is clearly strong
+// (|change| >= this %) AND not within the cooldown window of the last signal
+// for that symbol. Quiet markets → no repeated signals.
+const SIGNAL_MIN_MOVE_PCT = 0.25;        // ignore weak/flat moves
+const SIGNAL_COOLDOWN_MS = 45 * 60_000;  // 45 min between signals per symbol
+
 // Internal price-scan loop: check prices every PRICE_INTERVAL_MS for up to
 // LOOP_WINDOW_MS, so the engine reacts ~every 5s while the cron fires once a
 // minute. News + calendar are checked once per invocation (≈60s cadence).
