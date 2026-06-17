@@ -22,7 +22,14 @@ const EVENT_ALERT_MIN = 30;
 // (|change| >= this %) AND not within the cooldown window of the last signal
 // for that symbol. Quiet markets → no repeated signals.
 const SIGNAL_MIN_MOVE_PCT = 0.25;        // ignore weak/flat moves
-const SIGNAL_COOLDOWN_MS = 45 * 60_000;  // 45 min between signals per symbol
+const SIGNAL_COOLDOWN_MS = 20 * 60_000;  // 20 min between signals per symbol
+
+// Target broadcast pacing: a "very important" target (high confidence / strong
+// move / news-driven) is sent immediately. Otherwise targets are throttled so we
+// broadcast at most one ordinary target every TARGET_MIN_GAP_MS (15–30 min band).
+const TARGET_MIN_GAP_MS = 18 * 60_000;   // ~18 min between ordinary targets (15–30 range)
+const TARGET_IMPORTANT_CONFIDENCE = 85;  // confidence ≥ this ⇒ send target now
+const TARGET_IMPORTANT_MOVE_PCT = 0.6;   // |change| ≥ this % ⇒ send target now
 
 // Internal price-scan loop: check prices every PRICE_INTERVAL_MS for up to
 // LOOP_WINDOW_MS, so the engine reacts ~every 5s while the cron fires once a
@@ -341,14 +348,32 @@ function nowStamp(): string {
   return new Date().toUTCString();
 }
 
+// Wrap a single trade target / outcome into its own standalone Telegram message.
+// Each target is sent separately and never bundled with other targets or news.
+function oneSignalMessage(subtitle: string, body: string): string {
+  return [
+    "📊 <b>CTP APP REPORTS</b>",
+    `<i>${subtitle}</i>`,
+    "━━━━━━━━━━━━━━━",
+    "",
+    body,
+    "",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
+
 // ───────────────────── core scan ─────────────────────
 interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number; }
+// A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
+interface SignalMsg { text: string; important: boolean; }
 
-async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts: string[]; quotes: Quote[] }> {
+async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAlerts: string[]; quotes: Quote[] }> {
   const quotes = await getPrices();
   const priceState = await getState("prices");      // { "XAU/USD": { price, signal } }
   const openState = await getState("open_signals"); // { "XAU/USD": OpenSig }
-  const signalAlerts: string[] = [];
+  const signalAlerts: SignalMsg[] = [];
   const outcomeAlerts: string[] = [];
 
   for (const q of quotes) {
@@ -420,7 +445,8 @@ async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts
         confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
       }).select("id").maybeSingle();
 
-      signalAlerts.push(newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session));
+      const important = confidence >= TARGET_IMPORTANT_CONFIDENCE || Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
+      signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important });
       openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
       lastSignalAt = Date.now();
     }
@@ -434,13 +460,14 @@ async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts
 }
 
 
-async function evaluateCalendar(): Promise<string[]> {
+async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAlerts: SignalMsg[] }> {
   const events = await getHighImpactEvents();
   const state = await getState("events"); // { alertedKeys: string[], resultKeys: string[] }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
   const resulted = new Set((state.resultKeys as string[]) ?? []);
   const now = Date.now();
-  const out: string[] = [];
+  const calendarAlerts: string[] = [];     // pure news / heads-up / result info (NO trade targets)
+  const signalAlerts: SignalMsg[] = [];    // news-driven trade targets (sent as separate messages)
   let goldPrice: number | null = null; // fetched lazily for USD-event gold bias
 
   for (const ev of events) {
@@ -452,10 +479,10 @@ async function evaluateCalendar(): Promise<string[]> {
 
     const minutes = (ev.time - now) / 60_000;
 
-    // 1) BEFORE the event → heads-up alert.
+    // 1) BEFORE the event → heads-up alert (news only).
     if (minutes >= 0 && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
       alerted.add(ev.key);
-      out.push([
+      calendarAlerts.push([
         `🟠⚠️ <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
         `🕒 In ${Math.round(minutes)} min · لە ${Math.round(minutes)} خولەکدا`,
         ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
@@ -469,6 +496,7 @@ async function evaluateCalendar(): Promise<string[]> {
     if (ev.actual && minsSince >= 0 && minsSince <= 360 && !resulted.has(ev.key)) {
       resulted.add(ev.key);
 
+      // News block: result figures + market bias (no concrete Entry/TP/SL here).
       const lines: string[] = [
         `🏁 <b>RESULT / ئەنجامی هەواڵ</b>`,
         `📅 <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
@@ -489,6 +517,9 @@ async function evaluateCalendar(): Promise<string[]> {
             ? `🔴 USD stronger / دۆلار بەهێزتر → Gold bearish / ئاڵتوون دادەبەزێت`
             : `🟢 USD weaker / دۆلار لاوازتر → Gold bullish / ئاڵتوون بەرز دەبێتەوە`;
           lines.push(usdTxt);
+          lines.push(`🎯 تارگێتەکە بە پەیامێکی جیا دەنێردرێت / Trade target sent separately`);
+
+          // Concrete trade target → SEPARATE signal message (news-driven ⇒ important).
           const m = ASSET_META["XAU/USD"];
           if (goldPrice) {
             const isBuy = dir === "BUY";
@@ -496,14 +527,16 @@ async function evaluateCalendar(): Promise<string[]> {
             const sl = +(goldPrice * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
             const tpPips = toPips(tp - goldPrice, m.pip);
             const slPips = toPips(sl - goldPrice, m.pip);
-            lines.push(
-              `${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`,
-              `📍 Entry: <code>$${fmt(goldPrice)}</code>`,
-              `🎯🟢 TP: <code>$${fmt(tp)}</code> (${isBuy ? "+" : "-"}${tpPips} pips)`,
-              `🛑🔴 SL: <code>$${fmt(sl)}</code>`,
-            );
-          } else {
-            lines.push(`${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`);
+            signalAlerts.push({
+              important: true,
+              text: [
+                `📰 News-driven / بەهۆی هەواڵ: <b>${esc(ev.title)}</b>`,
+                `${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`,
+                `📍 Entry / دەستپێک: <code>$${fmt(goldPrice)}</code>`,
+                `🎯🟢 TP / تارگێت: <code>$${fmt(tp)}</code> (${isBuy ? "+" : "-"}${tpPips} pips)`,
+                `🛑🔴 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (${isBuy ? "-" : "+"}${slPips} pips)`,
+              ].join("\n"),
+            });
           }
         }
       } else if (a !== null && f !== null) {
@@ -511,7 +544,7 @@ async function evaluateCalendar(): Promise<string[]> {
         lines.push(beat ? `🟢 Beat forecast / باشتر لە پێشبینی` : miss ? `🔴 Below forecast / خراپتر لە پێشبینی` : `⚪️ As expected / وەک پێشبینی`);
       }
 
-      out.push(lines.join("\n"));
+      calendarAlerts.push(lines.join("\n"));
     }
   }
 
@@ -520,7 +553,7 @@ async function evaluateCalendar(): Promise<string[]> {
     alertedKeys: [...alerted].slice(-100),
     resultKeys: [...resulted].slice(-100),
   });
-  return out;
+  return { calendarAlerts, signalAlerts };
 }
 
 
@@ -738,7 +771,7 @@ Deno.serve(async (req) => {
     }
 
 
-    const signalAlerts: string[] = [];
+    const signalAlerts: SignalMsg[] = [];
     const outcomeAlerts: string[] = [];
     let lastQuotes: Quote[] = [];
 
@@ -760,35 +793,39 @@ Deno.serve(async (req) => {
     }
 
     // Calendar + news once per invocation (≈60s cadence).
-    const eventAlerts = await evaluateCalendar();
+    const { calendarAlerts, signalAlerts: calSignals } = await evaluateCalendar();
     const newsAlerts = await evaluateNews();
 
-    let sent = false;
+    // News-driven targets join the price targets — all sent as separate messages.
+    signalAlerts.push(...calSignals);
 
-    // 1) Time-sensitive TRADE SIGNALS: outcomes (close now!) + fresh BUY/SELL setups.
-    if (signalAlerts.length || outcomeAlerts.length) {
-      const s: string[] = [
-        "📊 <b>CTP APP REPORTS</b>",
-        "<i>Trade Signals · سیگنالی بازرگانی</i>",
-        "━━━━━━━━━━━━━━━",
-        "",
-      ];
-      if (outcomeAlerts.length) {
-        s.push("🏁 <b>Signal Results / ئەنجامی سیگنال</b>", "");
-        s.push(outcomeAlerts.join("\n\n"), "");
-      }
-      if (signalAlerts.length) {
-        s.push("🚨 <b>New Signals / سیگنالی نوێ</b>", "");
-        s.push(signalAlerts.join("\n\n"), "");
-      }
-      s.push("━━━━━━━━━━━━━━━");
-      s.push(`<i>🕒 ${nowStamp()}</i>`);
-      s.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
-      sent = (await sendTelegram("ctp_signal", s.join("\n"))) || sent;
+    let sent = false;
+    let targetsSent = 0;
+
+    // 1) OUTCOMES (TP/SL hit) → always sent, each as its own message (must close now).
+    for (const o of outcomeAlerts) {
+      const ok = await sendTelegram("ctp_signal", oneSignalMessage("Signal Result · ئەنجامی سیگنال", o));
+      sent = ok || sent;
+      if (ok) targetsSent++;
     }
 
-    // 2) News + economic calendar report.
-    if (eventAlerts.length || newsAlerts.length) {
+    // 2) NEW TARGETS → one message each, throttled to ~15–30 min unless very important.
+    if (signalAlerts.length) {
+      const throttle = await getState("target_throttle");
+      let lastTargetAt = (throttle.lastAt as number) ?? 0;
+      for (const sig of signalAlerts) {
+        const gapOk = !lastTargetAt || Date.now() - lastTargetAt >= TARGET_MIN_GAP_MS;
+        // Skip ordinary targets while inside the throttle window; always send important ones.
+        if (!sig.important && !gapOk) continue;
+        const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text));
+        sent = ok || sent;
+        if (ok) { targetsSent++; lastTargetAt = Date.now(); }
+      }
+      await setState("target_throttle", { lastAt: lastTargetAt });
+    }
+
+    // 3) NEWS + economic calendar report — NEVER mixed with trade targets.
+    if (calendarAlerts.length || newsAlerts.length) {
       const lines: string[] = [
         "📊 <b>CTP APP REPORTS</b>",
         "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
@@ -799,9 +836,9 @@ Deno.serve(async (req) => {
         lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "");
         lines.push(newsAlerts.join("\n\n"), "");
       }
-      if (eventAlerts.length) {
+      if (calendarAlerts.length) {
         lines.push("🗓 <b>Economic Calendar / ساڵنامەی ئابووری</b>", "");
-        lines.push(eventAlerts.join("\n\n"), "");
+        lines.push(calendarAlerts.join("\n\n"), "");
       }
       lines.push("━━━━━━━━━━━━━━━");
       lines.push(`<i>🕒 ${nowStamp()}</i>`);
@@ -810,7 +847,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, eventAlerts: eventAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
+      JSON.stringify({ ok: true, sent, targetsSent, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
