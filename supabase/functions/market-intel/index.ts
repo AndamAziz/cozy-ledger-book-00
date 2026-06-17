@@ -4,6 +4,11 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 // ───────────────────── config ─────────────────────
 const TELEGRAM_GATEWAY = "https://connector-gateway.lovable.dev/telegram";
 const ADMIN_CHAT_ID = "144068979";
+// Public channel the bot posts reports/signals/news/calendar into.
+// Bot must be an admin of @goldmarketai (numeric id -1004481319450).
+const CHANNEL_CHAT_ID = "@goldmarketai";
+// Where reports get delivered (admin DM + public channel).
+const TARGET_CHAT_IDS = [ADMIN_CHAT_ID, CHANNEL_CHAT_ID];
 
 // Price-move thresholds that trigger a Telegram alert.
 const GOLD_THRESHOLD = 2;     // $2
