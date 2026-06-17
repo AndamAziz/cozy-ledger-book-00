@@ -7,6 +7,7 @@ import { NotificationBell } from "@/components/bots/NotificationBell";
 import { SoundSettingsPanel } from "@/components/bots/SoundSettingsPanel";
 import { LiveMonitorFeed } from "@/components/bots/LiveMonitorFeed";
 import { VolatilityMeter } from "@/components/bots/VolatilityMeter";
+import { BotStatusBanner } from "@/components/bots/BotStatusBanner";
 import { useBotPrices, callEngine } from "@/hooks/useBotPrices";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
