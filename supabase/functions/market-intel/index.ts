@@ -348,6 +348,39 @@ Deno.serve(async (req) => {
     let body: Record<string, unknown> = {};
     try { body = await req.json(); } catch { /* cron sends none */ }
     const loop = body.loop !== false; // default true; pass {loop:false} for a single pass
+    const test = body.test === true;  // pass {test:true} to force a sample report to Telegram
+
+    // Test mode: send a full bilingual CTP APP REPORTS sample right now so you can
+    // confirm it lands in the bot chat — bypasses the dedupe/trigger logic.
+    if (test) {
+      const quotes = await getPrices();
+      const priceBlock = quotes.map((q) => priceLine(q, ruleSignal(q.changePct)));
+      const { data: news } = await admin.from("market_news")
+        .select("hash,title,title_ku,summary,impact,bias,source,published_at,created_at")
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .limit(3);
+      const newsBlock = ((news ?? []) as NewsRow[]).map(newsLine);
+      const lines: string[] = [
+        "📊 <b>CTP APP REPORTS</b>",
+        "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
+        "<i>🧪 TEST / تاقیکردنەوە</i>",
+        "━━━━━━━━━━━━━━━",
+        "",
+        "📈 <b>Analysis / شیکاری بازاڕ</b>",
+        "",
+        priceBlock.length ? priceBlock.join("\n\n") : "—",
+        "",
+      ];
+      if (newsBlock.length) {
+        lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "", newsBlock.join("\n\n"), "");
+      }
+      lines.push("━━━━━━━━━━━━━━━");
+      lines.push(`<i>🕒 ${nowStamp()}</i>`);
+      lines.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
+      const ok = await sendTelegram("ctp_report_test", lines.join("\n"));
+      return new Response(JSON.stringify({ ok: true, sent: ok, mode: "test", quotes: quotes.length, news: newsBlock.length }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const priceAlerts: string[] = [];
     let lastQuotes: Quote[] = [];
