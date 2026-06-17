@@ -133,6 +133,10 @@ export default {
           "0%, 100%": { boxShadow: "0 0 0 0 rgba(240,185,11,0.55), 0 0 0 1px rgba(240,185,11,0.85) inset" },
           "50%": { boxShadow: "0 0 16px 3px rgba(240,185,11,0.65), 0 0 0 1px rgba(240,185,11,0.95) inset" },
         },
+        "alert-pulse": {
+          "0%, 100%": { boxShadow: "0 0 10px 0 rgba(220,38,38,0.45)" },
+          "50%": { boxShadow: "0 0 22px 5px rgba(249,115,22,0.7)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
