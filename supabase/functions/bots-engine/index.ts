@@ -659,6 +659,41 @@ async function processBot(bot: Record<string, unknown>) {
   const lastScan = bot.last_scan_at ? new Date(bot.last_scan_at as string).getTime() : 0;
   if (lastScan && Date.now() - lastScan < interval * 1000) return; // not time yet
 
+  // Mark scan time up-front so skip-guards below don't spam the log every tick.
+  await admin.from("bots").update({ last_scan_at: new Date().toISOString() }).eq("id", botId);
+
+  // GUARD A) DAILY LIMITS — stop opening new trades for the rest of the UTC day
+  // once the day's total P/L crosses the loss limit or the profit target.
+  const dayPnl = await getDailyPnl(userId);
+  if (dayPnl.pnl <= -DAILY_LOSS_LIMIT_USD) {
+    await log(botId, userId, "loss",
+      `[${hhmmss()}] 🛑 Daily loss limit reached (-$${fmt(Math.abs(dayPnl.pnl), symbol)}) - bot paused until tomorrow`);
+    return;
+  }
+  if (dayPnl.pnl >= DAILY_PROFIT_TARGET_USD) {
+    await log(botId, userId, "win",
+      `[${hhmmss()}] 🎯 Daily target reached (+$${fmt(dayPnl.pnl, symbol)})! Locking in profits.`);
+    return;
+  }
+
+  // GUARD B) BEST-TIME FILTER — only trade the London & NY windows; skip Asian.
+  const window = getTradeWindow();
+  if (!window) {
+    await log(botId, userId, "info",
+      `[${hhmmss()}] ⏰ Outside trading hours (${getSession().label}) - waiting for London (07:00) / NY (13:00) UTC`);
+    return;
+  }
+
+  // GUARD C) NEWS FILTER — no new trades within 60 min of a high-impact USD event.
+  if (!CRYPTO_BINANCE[symbol]) {
+    const ev = nextEventWithin(await getHighImpactUsdEvents(), NEWS_BLOCK_NEW_MIN);
+    if (ev) {
+      await log(botId, userId, "info",
+        `[${hhmmss()}] ⛔ No trade - ${ev.ev.title} in ${Math.round(ev.minutes)}min`);
+      return;
+    }
+  }
+
   // 3) Scan.
   const candles = await getCandles(symbol, timeframe, price);
   const closes = candles.map((c) => c.close);
