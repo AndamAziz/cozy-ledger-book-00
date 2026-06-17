@@ -79,8 +79,8 @@ export default function Bots() {
           </div>
         </div>
 
-        {/* Daily summary */}
-        <DailySummary />
+        {/* Bot dashboard */}
+        <BotDashboard bots={bots} />
 
         {/* Live markets */}
         <div className="mt-4">
