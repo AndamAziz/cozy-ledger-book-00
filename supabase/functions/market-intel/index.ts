@@ -289,6 +289,57 @@ async function evaluateCalendar(): Promise<string[]> {
   return out;
 }
 
+// ───────────────────── market news (bilingual) ─────────────────────
+interface NewsRow {
+  hash: string | null;
+  title: string;
+  title_ku: string | null;
+  summary: string | null;
+  impact: string | null;
+  bias: string | null;
+  source: string | null;
+  published_at: string | null;
+  created_at: string | null;
+}
+
+function newsLine(n: NewsRow): string {
+  const tags: string[] = [];
+  if (n.impact) tags.push(`🎯 ${esc(n.impact)}`);
+  if (n.bias) tags.push(`📊 ${esc(n.bias)}`);
+  const parts = [`• <b>${esc(n.title)}</b>`];
+  if (n.title_ku) parts.push(`  🇮🇶 ${esc(n.title_ku)}`);
+  if (n.summary) parts.push(`  <i>${esc(n.summary)}</i>`);
+  if (tags.length) parts.push(`  ${tags.join(" · ")}`);
+  if (n.source) parts.push(`  <i>${esc(n.source)}</i>`);
+  return parts.join("\n");
+}
+
+async function evaluateNews(): Promise<string[]> {
+  const { data } = await admin.from("market_news")
+    .select("hash,title,title_ku,summary,impact,bias,source,published_at,created_at")
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(20);
+  const rows = (data ?? []) as NewsRow[];
+
+  const state = await getState("news"); // { alertedHashes: string[] }
+  const alerted = new Set((state.alertedHashes as string[]) ?? []);
+  const out: string[] = [];
+
+  for (const n of rows) {
+    const key = n.hash || `${n.title}|${n.published_at ?? n.created_at ?? ""}`;
+    if (alerted.has(key)) continue;
+    alerted.add(key);
+    // Only push reasonably fresh news (last 60 min) so the first run just seeds state.
+    const tsRaw = n.published_at ?? n.created_at;
+    const ts = tsRaw ? new Date(tsRaw).getTime() : 0;
+    if (ts && Date.now() - ts > 60 * 60 * 1000) continue;
+    out.push(newsLine(n));
+  }
+  await setState("news", { alertedHashes: [...alerted].slice(-200) });
+  // Cap to the 5 most recent items to keep the message tidy.
+  return out.slice(0, 5);
+}
+
 // ───────────────────── HTTP ─────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
