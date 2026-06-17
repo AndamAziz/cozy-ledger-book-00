@@ -606,41 +606,63 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const priceAlerts: string[] = [];
+    const signalAlerts: string[] = [];
+    const outcomeAlerts: string[] = [];
     let lastQuotes: Quote[] = [];
 
     if (loop) {
       const start = Date.now();
       while (Date.now() - start < LOOP_WINDOW_MS) {
-        const { alerts, quotes } = await evaluatePrices();
-        priceAlerts.push(...alerts);
-        lastQuotes = quotes;
+        const r = await evaluatePrices();
+        signalAlerts.push(...r.signalAlerts);
+        outcomeAlerts.push(...r.outcomeAlerts);
+        lastQuotes = r.quotes;
         if (Date.now() - start + PRICE_INTERVAL_MS >= LOOP_WINDOW_MS) break;
         await sleep(PRICE_INTERVAL_MS);
       }
     } else {
-      const { alerts, quotes } = await evaluatePrices();
-      priceAlerts.push(...alerts);
-      lastQuotes = quotes;
+      const r = await evaluatePrices();
+      signalAlerts.push(...r.signalAlerts);
+      outcomeAlerts.push(...r.outcomeAlerts);
+      lastQuotes = r.quotes;
     }
 
     // Calendar + news once per invocation (≈60s cadence).
     const eventAlerts = await evaluateCalendar();
     const newsAlerts = await evaluateNews();
 
-    // Compose & send a single premium bilingual report if anything fired.
     let sent = false;
-    if (priceAlerts.length || eventAlerts.length || newsAlerts.length) {
+
+    // 1) Time-sensitive TRADE SIGNALS: outcomes (close now!) + fresh BUY/SELL setups.
+    if (signalAlerts.length || outcomeAlerts.length) {
+      const s: string[] = [
+        "📊 <b>CTP APP REPORTS</b>",
+        "<i>Trade Signals · سیگنالی بازرگانی</i>",
+        "━━━━━━━━━━━━━━━",
+        "",
+      ];
+      if (outcomeAlerts.length) {
+        s.push("🏁 <b>Signal Results / ئەنجامی سیگنال</b>", "");
+        s.push(outcomeAlerts.join("\n\n"), "");
+      }
+      if (signalAlerts.length) {
+        s.push("🚨 <b>New Signals / سیگنالی نوێ</b>", "");
+        s.push(signalAlerts.join("\n\n"), "");
+      }
+      s.push("━━━━━━━━━━━━━━━");
+      s.push(`<i>🕒 ${nowStamp()}</i>`);
+      s.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
+      sent = (await sendTelegram("ctp_signal", s.join("\n"))) || sent;
+    }
+
+    // 2) News + economic calendar report.
+    if (eventAlerts.length || newsAlerts.length) {
       const lines: string[] = [
         "📊 <b>CTP APP REPORTS</b>",
         "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
         "━━━━━━━━━━━━━━━",
         "",
       ];
-      if (priceAlerts.length) {
-        lines.push("📈 <b>Analysis / شیکاری بازاڕ</b>", "");
-        lines.push(priceAlerts.join("\n\n"), "");
-      }
       if (newsAlerts.length) {
         lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "");
         lines.push(newsAlerts.join("\n\n"), "");
@@ -652,13 +674,14 @@ Deno.serve(async (req) => {
       lines.push("━━━━━━━━━━━━━━━");
       lines.push(`<i>🕒 ${nowStamp()}</i>`);
       lines.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
-      sent = await sendTelegram("ctp_report", lines.join("\n"));
+      sent = (await sendTelegram("ctp_report", lines.join("\n"))) || sent;
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent, priceAlerts: priceAlerts.length, eventAlerts: eventAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
+      JSON.stringify({ ok: true, sent, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, eventAlerts: eventAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (e) {
     console.error("market-intel error", e);
     return new Response(JSON.stringify({ error: String(e) }), {
