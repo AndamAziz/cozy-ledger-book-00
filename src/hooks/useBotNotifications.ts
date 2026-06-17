@@ -36,6 +36,27 @@ function showToast(n: BotNotification) {
   }
 }
 
+// Persisted set of notification IDs we've already toasted, so a given alert
+// (e.g. "trade opened") surfaces ONCE only — even after the user leaves the
+// page and comes back, or fully reloads the app.
+const SEEN_KEY = "bot_notif_seen_ids";
+function loadSeenIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+function persistSeenIds(set: Set<string>) {
+  try {
+    // Keep the most recent 300 ids to bound storage.
+    localStorage.setItem(SEEN_KEY, JSON.stringify([...set].slice(-300)));
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Global trading-bot notifications: listens for new alerts (trade opened/closed,
  * auto-pause, daily summary) and surfaces them as toasts + browser notifications.
@@ -43,7 +64,7 @@ function showToast(n: BotNotification) {
  */
 export function useBotNotifications() {
   const [items, setItems] = useState<BotNotification[]>([]);
-  const seen = useRef<Set<string>>(new Set());
+  const seen = useRef<Set<string>>(loadSeenIds());
   const userIdRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
@@ -56,9 +77,14 @@ export function useBotNotifications() {
       .order("created_at", { ascending: false })
       .limit(50);
     const rows = (data as BotNotification[]) ?? [];
+    // Mark every already-existing alert as seen so re-entering the page never
+    // re-toasts an old notification (BUG 1). Only brand-new INSERTs will toast.
     rows.forEach((r) => seen.current.add(r.id));
+    persistSeenIds(seen.current);
     setItems(rows);
   }, []);
+
+
 
   const markAllRead = useCallback(async () => {
     const ids = items.filter((i) => !i.read).map((i) => i.id);
@@ -106,6 +132,7 @@ export function useBotNotifications() {
           const n = payload.new as BotNotification;
           if (seen.current.has(n.id)) return;
           seen.current.add(n.id);
+          persistSeenIds(seen.current);
           setItems((prev) => [n, ...prev].slice(0, 50));
           showToast(n);
           fireBrowserNotification(n);

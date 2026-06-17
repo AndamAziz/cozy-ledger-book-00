@@ -20,6 +20,22 @@ import { cn } from "@/lib/utils";
 
 const TF_SECONDS: Record<string, number> = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400 };
 
+// Persisted run-state per bot, so the page knows the bot is running the instant
+// the user returns — no flash of the START button while the DB loads (BUG 2).
+const runKey = (botId: string) => `botRunning:${botId}`;
+function readRunning(botId: string | undefined): boolean | null {
+  if (!botId) return null;
+  try {
+    const v = localStorage.getItem(runKey(botId));
+    return v === null ? null : v === "true";
+  } catch {
+    return null;
+  }
+}
+function writeRunning(botId: string, value: boolean) {
+  try { localStorage.setItem(runKey(botId), String(value)); } catch { /* ignore */ }
+}
+
 function duration(fromSec: number): string {
   const s = Math.max(0, Math.floor(Date.now() / 1000) - fromSec);
   const m = Math.floor(s / 60);
@@ -35,6 +51,8 @@ export default function BotDetail() {
   const { perf } = useBotPerformance(id);
   const [busy, setBusy] = useState(false);
   const [, force] = useState(0);
+  // Optimistic run-state seeded from localStorage; reconciled with the DB below.
+  const [pendingRunning, setPendingRunning] = useState<boolean | null>(() => readRunning(id));
 
   // Re-render every second for live durations / countdown.
   useEffect(() => {
@@ -54,6 +72,21 @@ export default function BotDetail() {
     const t = window.setInterval(tick, scalp ? 5000 : 6000);
     return () => window.clearInterval(t);
   }, [id, bot?.status, bot?.timeframe, openTrade?.id]);
+
+  // Reconcile run-state with the database once it loads: persist it to
+  // localStorage and clear the optimistic flag appropriately. A bot is
+  // considered "running" if its status is running OR it still has an open trade.
+  useEffect(() => {
+    if (!id || !bot) return;
+    const dbRunning = bot.status === "running" || !!openTrade;
+    writeRunning(id, dbRunning);
+    setPendingRunning((prev) => {
+      if (prev === null) return null;
+      if (prev === dbRunning) return null; // DB caught up with our optimistic value
+      if (!busy) return null;              // no action in flight → trust the DB
+      return prev;                         // keep optimistic value during a start/stop
+    });
+  }, [id, bot?.status, openTrade?.id, busy, bot]);
 
   const live = bot ? quotes[bot.symbol]?.price ?? null : null;
 
@@ -80,13 +113,21 @@ export default function BotDetail() {
 
   const a = getAsset(bot.symbol);
   const winRate = bot.trades_count > 0 ? Math.round((bot.wins_count / bot.trades_count) * 100) : 0;
-  const running = bot.status === "running";
+  // Prefer the optimistic flag (instant feedback / survives navigation) and fall
+  // back to the live DB state. An open trade always counts as running.
+  const dbRunning = bot.status === "running" || !!openTrade;
+  const running = pendingRunning !== null ? pendingRunning : dbRunning;
 
   const handleStartStop = async () => {
+    const next = !running;
+    setPendingRunning(next);          // optimistic: flip the button immediately
+    writeRunning(bot.id, next);       // persist so a quick navigation keeps state
     setBusy(true);
     try {
       await callEngine({ action: running ? "stop" : "start", botId: bot.id });
     } catch {
+      setPendingRunning(running);     // revert optimistic state on failure
+      writeRunning(bot.id, running);
       toast({ title: "Action failed", variant: "destructive" });
     } finally {
       setBusy(false);
@@ -130,6 +171,23 @@ export default function BotDetail() {
             </div>
           </div>
         </div>
+
+        {/* Persistent bot status bar — always reflects the current run state */}
+        <div className={cn(
+          "mt-3 flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-semibold",
+          running
+            ? "border-success/40 bg-success/10 text-success"
+            : "border-destructive/40 bg-destructive/10 text-destructive",
+        )}>
+          <span className="flex items-center gap-2">
+            <span className={cn("h-2.5 w-2.5 rounded-full", running ? "bg-success animate-pulse" : "bg-destructive")} />
+            {running ? "🟢 Bot Running" : "🔴 Bot Stopped"}
+          </span>
+          <span className="text-xs font-medium opacity-80">
+            {openTrade ? "Trade in progress" : running ? "Scanning the market" : "Idle"}
+          </span>
+        </div>
+
 
         {/* Bot card */}
         <div className={cn("mt-4 rounded-2xl border bg-card p-4", a.primary ? "border-gold/40" : "border-border")}>
