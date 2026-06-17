@@ -85,6 +85,14 @@ export function LiveMonitorFeed({ logs, active }: { logs: MonitorLog[]; active: 
         <span className="text-xs text-muted-foreground">Updated {agoLabel}</span>
       </div>
       <div className="mt-1 text-[10px] text-muted-foreground">Checking the open trade every 5 seconds</div>
+      {stale && (
+        <div
+          dir="ltr"
+          className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-2 py-1 text-left text-[11px] font-medium text-warning"
+        >
+          ⚠️ Price feed may be stale
+        </div>
+      )}
       <div
         ref={scrollRef}
         dir="ltr"
