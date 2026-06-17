@@ -172,6 +172,23 @@ export default function BotDetail() {
           </div>
         </div>
 
+        {/* Persistent bot status bar — always reflects the current run state */}
+        <div className={cn(
+          "mt-3 flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-semibold",
+          running
+            ? "border-success/40 bg-success/10 text-success"
+            : "border-destructive/40 bg-destructive/10 text-destructive",
+        )}>
+          <span className="flex items-center gap-2">
+            <span className={cn("h-2.5 w-2.5 rounded-full", running ? "bg-success animate-pulse" : "bg-destructive")} />
+            {running ? "🟢 Bot Running" : "🔴 Bot Stopped"}
+          </span>
+          <span className="text-xs font-medium opacity-80">
+            {openTrade ? "Trade in progress" : running ? "Scanning the market" : "Idle"}
+          </span>
+        </div>
+
+
         {/* Bot card */}
         <div className={cn("mt-4 rounded-2xl border bg-card p-4", a.primary ? "border-gold/40" : "border-border")}>
           <div className="flex items-start justify-between gap-2">
