@@ -278,6 +278,9 @@ export default function BotDetail() {
           </div>
         </div>
 
+        {/* Volatility meter */}
+        <VolatilityMeter symbol={bot.symbol} timeframe={bot.timeframe} />
+
         {/* Open trade */}
         {openTrade && (
           <div className={cn(
