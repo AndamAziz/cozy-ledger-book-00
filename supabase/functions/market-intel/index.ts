@@ -929,12 +929,20 @@ Deno.serve(async (req) => {
     // Calendar + news once per invocation (≈60s cadence).
     const { calendarAlerts, signalAlerts: calSignals } = await evaluateCalendar();
     const newsAlerts = await evaluateNews();
+    // Market-open reports for regions that just opened (analysis + get-ready heads-up).
+    const sessionOpenAlerts = await evaluateSessionOpen();
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
 
     let sent = false;
     let targetsSent = 0;
+
+    // 0) MARKET-OPEN reports → one standalone message per region that just opened.
+    for (const r of sessionOpenAlerts) {
+      sent = (await sendTelegram("ctp_session_open", r)) || sent;
+    }
+
 
     // 1) OUTCOMES (TP/SL hit) → always sent, each as its own message (must close now).
     for (const o of outcomeAlerts) {
