@@ -968,6 +968,38 @@ export function MarketNewsModal({ open, onClose }: Props) {
             </button>
           ) : tab === 'calendar' ? (
             <div className="p-3 space-y-4">
+              {/* 🚨 Special high-volatility alert banner (FOMC / NFP / CPI today) */}
+              {specialAlert && (() => {
+                const t = Date.parse(specialAlert.ev.date);
+                const upcoming = t > now;
+                return (
+                  <div
+                    className="rounded-xl p-3 text-white shadow-lg animate-next-glow"
+                    style={{
+                      background: 'linear-gradient(100deg,#b91c1c 0%,#dc2626 45%,#f97316 100%)',
+                      boxShadow: '0 0 18px rgba(220,38,38,0.55)',
+                    }}
+                  >
+                    <div className="flex items-center gap-2 font-extrabold text-sm">
+                      <span className="text-lg">🚨</span>
+                      <span>{bi(`ڕۆژی ${specialAlert.meta.code} — جوڵەی بەرز چاوەڕوانکراوە`, `${specialAlert.meta.code} DAY — High Volatility Expected`)}</span>
+                    </div>
+                    <div className="text-[12px] mt-1.5 leading-relaxed opacity-95">
+                      {bi(specialAlert.meta.ku, specialAlert.meta.en)}
+                      {upcoming
+                        ? <> {bi('لە', 'in')} <span className="font-bold">{fmtCountdown(t)}</span></>
+                        : <> · <span className="font-bold">{bi('ئێستا/تەواوبوو', 'now / released')}</span></>}
+                    </div>
+                    <div className="text-[12px] mt-1 leading-relaxed opacity-95">
+                      💰 {bi('زێڕ دەکرێت ±$٣٠-٥٠ بجوڵێت لە چەند خولەکێکدا', 'Gold could move ±$30-50 in minutes')}
+                    </div>
+                    <div className="text-[11px] mt-1.5 inline-flex items-center gap-1 bg-black/25 rounded-full px-2 py-0.5 font-bold">
+                      ⏸️ {bi('بۆت لە کاتی ڕووداوەکەدا ڕاگیراوە', 'Bot auto-paused during event window')}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <p className="text-[10px] px-1 leading-relaxed">
                 <span style={{ color: C_DOWN }} className="font-bold">{bi('سور = زێڕ بەرز (دۆلار نزم)', 'Red card = Gold up (USD down)')}</span>
                 {' · '}
