@@ -477,7 +477,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
       const tpPips = toPips(tp - q.price, m.pip);
       const slPips = toPips(sl - q.price, m.pip);
       const confidence = Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
-      const session = sessionLabel();
+      const session = sessionLabel(new Date(), enabledRegions);
 
       const { data: ins } = await admin.from("ai_signals").insert({
         asset: m.name, signal: sig, entry: q.price, tp, sl,
