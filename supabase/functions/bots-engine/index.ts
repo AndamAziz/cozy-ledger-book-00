@@ -32,6 +32,24 @@ const MIN_SCALP_PROFIT_PCT = 0.1;
 // gain: if price reverses back toward break-even we close in the green.
 const SCALP_LOCK_FRACTION = 0.5;
 
+// ───────────────────── risk protection (USD, per single trade) ─────────────────────
+// Once a trade is at least this much in profit, move the Stop Loss to break-even
+// (the entry price) so a winning trade can never turn into a loss.
+const BREAKEVEN_TRIGGER_USD = 2.00;
+// Hard max loss: if a single trade reaches this unrealized loss, close it
+// immediately instead of waiting for the Stop Loss.
+const MAX_LOSS_USD = 5.00;
+
+// ───────────────────── trading sessions (UTC) ─────────────────────
+// Gold moves far less during the Asian session, so we automatically halve the
+// lot size in those hours. Sessions are also surfaced in the bot logs.
+function getSession(date = new Date()): { key: "asian" | "london" | "ny"; label: string; asian: boolean } {
+  const h = date.getUTCHours();
+  if (h >= 0 && h < 8) return { key: "asian", label: "🌏 Asian Session - lower volatility", asian: true };
+  if (h >= 8 && h < 16) return { key: "london", label: "🌍 London Session - high volatility", asian: false };
+  return { key: "ny", label: "🌎 NY Session - high volatility", asian: false };
+}
+
 const CRYPTO_BINANCE: Record<string, string> = {
   "BTC/USD": "BTCUSDT", "ETH/USD": "ETHUSDT", "BNB/USD": "BNBUSDT",
   "SOL/USD": "SOLUSDT", "XRP/USD": "XRPUSDT",
@@ -222,7 +240,7 @@ async function applyBalance(userId: string, pnl: number): Promise<number> {
 // `kind` describes WHY we closed (for logs/notifications). It is mapped to the
 // DB enum (tp/sl/manual) so no migration is needed: every profit-taking scalp
 // exit is recorded as "tp", stop-loss as "sl".
-type CloseKind = "tp" | "sl" | "manual" | "scalp_profit" | "scalp_reversal" | "scalp_breakeven";
+type CloseKind = "tp" | "sl" | "manual" | "scalp_profit" | "scalp_reversal" | "scalp_breakeven" | "max_loss" | "breakeven";
 
 function fmtDuration(sec: number): string {
   if (sec < 60) return `${sec}s`;
@@ -251,7 +269,8 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
 
   // Map our rich reason to the DB enum.
   const dbReason: "tp" | "sl" | "manual" =
-    kind === "sl" ? "sl" : kind === "manual" ? "manual" : "tp";
+    (kind === "sl" || kind === "max_loss" || kind === "breakeven") ? "sl"
+      : kind === "manual" ? "manual" : "tp";
 
   await admin.from("bot_trades").update({
     status: "closed", exit_price: exitPrice, pnl, pnl_pct: pnlPct,
@@ -286,6 +305,8 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
     case "scalp_breakeven": reasonLabel = "protected winner near break-even"; break;
     case "tp": reasonLabel = "TP target hit"; break;
     case "sl": reasonLabel = "hit stop loss"; break;
+    case "max_loss": reasonLabel = `max loss protection (-$${MAX_LOSS_USD.toFixed(2)})`; break;
+    case "breakeven": reasonLabel = "break-even stop (winner protected)"; break;
     case "manual": reasonLabel = "manually closed"; break;
   }
 
@@ -447,6 +468,28 @@ async function processBot(bot: Record<string, unknown>) {
       else if (price >= sl) { hit = "sl"; exit = sl; }
     }
 
+    // 1a-MAX) MAX LOSS PROTECTION — if a single trade is down $5.00 or more,
+    // close immediately at the live price instead of waiting for the SL.
+    if (!hit && pnl <= -MAX_LOSS_USD) {
+      hit = "max_loss";
+      exit = price;
+      await log(botId, userId, "loss",
+        `[${hhmmss()}] 🚨 MAX LOSS hit (-$${fmt(Math.abs(pnl), symbol)}) — closing immediately to cap the loss`);
+    }
+
+    // 1a-BE) MIN PROFIT EXIT → BREAK-EVEN — once a trade is at least +$2.00,
+    // move the Stop Loss up to the entry price so a winner can't turn into a loss.
+    if (!hit && pnl >= BREAKEVEN_TRIGGER_USD) {
+      const atBreakeven = dir === "buy" ? sl >= entry : sl <= entry;
+      if (!atBreakeven) {
+        const beSl = +entry.toFixed(4);
+        await admin.from("bot_trades").update({ sl_price: beSl }).eq("id", openTrade.id as string);
+        openTrade.sl_price = beSl;
+        await log(botId, userId, "info",
+          `[${hhmmss()}] 🛡️ +$${fmt(pnl, symbol)} profit → Stop Loss moved to break-even @ $${fmt(entry, symbol)} (risk-free trade)`);
+      }
+    }
+
     // 1b) SCALP MODE (1m / 5m / 15m): close fast on minimum profit, never let a
     // winner turn into a loss, and lock half-target on reversals.
     if (!hit && scalp) {
@@ -515,6 +558,8 @@ async function processBot(bot: Record<string, unknown>) {
 
   await admin.from("bots").update({ last_scan_at: new Date().toISOString() }).eq("id", botId);
 
+  const session = getSession();
+  await log(botId, userId, "info", `[${hhmmss()}] ${session.label}`);
   await log(botId, userId, "info", `[${hhmmss()}] 📊 Analyzing ${symbol} on ${timeframe}...`);
   if (ema9 != null && ema21 != null) {
     await log(botId, userId, "info", `[${hhmmss()}] 📈 EMA9 (${fmt(ema9, symbol)}) ${ema9 > ema21 ? ">" : "<"} EMA21 (${fmt(ema21, symbol)}) → ${ema9 > ema21 ? "Uptrend ✓" : "Downtrend ✓"}`);
@@ -565,12 +610,20 @@ async function processBot(bot: Record<string, unknown>) {
   const tpPrice = direction === "buy" ? entry * (1 + tpPct) : entry * (1 - tpPct);
   const reasons = (direction === "buy" ? buyReasons : sellReasons).join(", ") || "signal threshold met";
 
+  // ASIAN SESSION PROTECTION — gold moves less in Asian hours, so halve the lot.
+  const baseAmount = Number(bot.amount);
+  const tradeAmount = session.asian ? +(baseAmount * 0.5).toFixed(2) : baseAmount;
+  if (session.asian) {
+    await log(botId, userId, "info",
+      `[${hhmmss()}] 🌏 Asian session → lot size reduced 50% ($${baseAmount.toFixed(2)} → $${tradeAmount.toFixed(2)})`);
+  }
+
   await log(botId, userId, "signal",
     `[${hhmmss()}] ✅ ${scalp ? "SCALP " : ""}Signal: ${direction.toUpperCase()} (Score ${score}/4) — Opening trade`);
   const { error: insErr } = await admin.from("bot_trades").insert({
     bot_id: botId, user_id: userId, symbol, direction,
     entry_price: +entry.toFixed(4), sl_price: +slPrice.toFixed(4), tp_price: +tpPrice.toFixed(4),
-    amount: Number(bot.amount), status: "open",
+    amount: tradeAmount, status: "open",
   });
   if (insErr) {
     // Unique index (one open trade per bot) — another concurrent run already
