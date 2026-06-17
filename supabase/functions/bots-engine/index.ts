@@ -712,13 +712,10 @@ async function processBot(bot: Record<string, unknown>) {
     return;
   }
 
-  // GUARD B) BEST-TIME FILTER — only trade the London & NY windows; skip Asian.
-  const window = getTradeWindow();
-  if (!window) {
-    await log(botId, userId, "info",
-      `[${hhmmss()}] ⏰ Outside trading hours (${getSession().label}) - waiting for London (07:00) / NY (13:00) UTC`);
-    return;
-  }
+  // (No time-of-day filter anymore — the bot trades 24/7 and gates on live
+  //  volatility instead, evaluated below once we have the latest candles.)
+
+
 
   // GUARD C) NEWS FILTER — no new trades within 60 min of a high-impact USD event.
   if (!CRYPTO_BINANCE[symbol]) {
@@ -744,8 +741,21 @@ async function processBot(bot: Record<string, unknown>) {
   const curVol = volumes[volumes.length - 1];
   const volSpike = curVol > avgVol * 1.5;
 
-  const session = getSession();
-  await log(botId, userId, "info", `[${hhmmss()}] ${session.label}`);
+  // GUARD B) VOLATILITY FILTER — only trade when the market is moving and the
+  // spread is tight. LOW → wait, MEDIUM → half lot, HIGH → full lot.
+  const vol = assessVolatility(price, candles);
+  if (vol.level === "LOW") {
+    await log(botId, userId, "info",
+      `[${hhmmss()}] ⏸️ Volatility: LOW - spread ${pts(vol.spread)}, avg move ${pts(vol.avgMove)}pts - waiting`);
+    return;
+  }
+  if (vol.level === "MEDIUM") {
+    await log(botId, userId, "info",
+      `[${hhmmss()}] 🟡 Volatility: MEDIUM - spread ${pts(vol.spread)}, avg move ${pts(vol.avgMove)}pts - trading smaller lot`);
+  } else {
+    await log(botId, userId, "signal",
+      `[${hhmmss()}] 📊 Volatility: HIGH - spread ${pts(vol.spread)}, avg move ${pts(vol.avgMove)}pts - entering trade`);
+  }
   await log(botId, userId, "info", `[${hhmmss()}] 📊 Analyzing ${symbol} on ${timeframe}...`);
   if (ema9 != null && ema21 != null) {
     await log(botId, userId, "info", `[${hhmmss()}] 📈 EMA9 (${fmt(ema9, symbol)}) ${ema9 > ema21 ? ">" : "<"} EMA21 (${fmt(ema21, symbol)}) → ${ema9 > ema21 ? "Uptrend ✓" : "Downtrend ✓"}`);
@@ -796,12 +806,12 @@ async function processBot(bot: Record<string, unknown>) {
   const tpPrice = direction === "buy" ? entry * (1 + tpPct) : entry * (1 - tpPct);
   const reasons = (direction === "buy" ? buyReasons : sellReasons).join(", ") || "signal threshold met";
 
-  // ASIAN SESSION PROTECTION — gold moves less in Asian hours, so halve the lot.
+  // VOLATILITY LOT SIZING — full lot on HIGH, half lot on MEDIUM.
   const baseAmount = Number(bot.amount);
-  const tradeAmount = session.asian ? +(baseAmount * 0.5).toFixed(2) : baseAmount;
-  if (session.asian) {
+  const tradeAmount = +(baseAmount * vol.lotMult).toFixed(2);
+  if (vol.lotMult < 1) {
     await log(botId, userId, "info",
-      `[${hhmmss()}] 🌏 Asian session → lot size reduced 50% ($${baseAmount.toFixed(2)} → $${tradeAmount.toFixed(2)})`);
+      `[${hhmmss()}] 🟡 ${vol.level} volatility → lot size ${Math.round(vol.lotMult * 100)}% ($${baseAmount.toFixed(2)} → $${tradeAmount.toFixed(2)})`);
   }
 
   await log(botId, userId, "signal",
