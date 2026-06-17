@@ -973,7 +973,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
                     {g.label}
                   </div>
                   <div className="space-y-1.5">
-                    {g.items.map((ev, i) => renderEventCard(ev, `${ev.title}-${ev.date}-${i}`))}
+                    {g.items.map((ev, i) => renderEventCard(ev, `${ev.title}-${ev.date}-${i}`, false, eventKey(ev) === nextEventKeyStr))}
                   </div>
                 </div>
               ))}
