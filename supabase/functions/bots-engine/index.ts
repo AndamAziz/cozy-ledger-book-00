@@ -40,15 +40,42 @@ const BREAKEVEN_TRIGGER_USD = 2.00;
 // immediately instead of waiting for the Stop Loss.
 const MAX_LOSS_USD = 5.00;
 
-// ───────────────────── trading sessions (UTC) ─────────────────────
-// Gold moves far less during the Asian session, so we automatically halve the
-// lot size in those hours. Sessions are also surfaced in the bot logs.
+// ───────────────────── daily limits (USD, per user, per UTC day) ─────────────────────
+// Stop trading for the rest of the day once the day's realized P/L crosses these.
+const DAILY_LOSS_LIMIT_USD = 20.00;   // pause at −$20 total for the day
+const DAILY_PROFIT_TARGET_USD = 50.00; // lock in profits at +$50 total for the day
+
+// ───────────────────── news filter ─────────────────────
+// High-impact USD / gold events freeze new entries and force-close open trades
+// when they are imminent. Times are minutes before the event.
+const NEWS_BLOCK_NEW_MIN = 60;   // no NEW trades within 60 min of a high-impact event
+const NEWS_CLOSE_OPEN_MIN = 10;  // CLOSE open trades within 10 min of the event
+const CALENDAR_URLS = [
+  "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
+];
+
+// ───────────────────── trading sessions / best-time filter (UTC) ─────────────────────
+// We ONLY open trades during the high-liquidity London & NY windows and skip the
+// Asian session entirely.
+const TRADE_WINDOWS_UTC: { start: number; end: number; label: string }[] = [
+  { start: 7, end: 11, label: "🌍 London open (07:00-11:00 UTC) - high volatility" },
+  { start: 13, end: 16, label: "🌎 NY open (13:00-16:00 UTC) - high volatility" },
+];
 function getSession(date = new Date()): { key: "asian" | "london" | "ny"; label: string; asian: boolean } {
   const h = date.getUTCHours();
   if (h >= 0 && h < 8) return { key: "asian", label: "🌏 Asian Session - lower volatility", asian: true };
   if (h >= 8 && h < 16) return { key: "london", label: "🌍 London Session - high volatility", asian: false };
   return { key: "ny", label: "🌎 NY Session - high volatility", asian: false };
 }
+// Returns the active trading window (or null when outside the allowed hours).
+function getTradeWindow(date = new Date()): { label: string } | null {
+  const h = date.getUTCHours();
+  for (const w of TRADE_WINDOWS_UTC) {
+    if (h >= w.start && h < w.end) return { label: w.label };
+  }
+  return null;
+}
+
 
 const CRYPTO_BINANCE: Record<string, string> = {
   "BTC/USD": "BTCUSDT", "ETH/USD": "ETHUSDT", "BNB/USD": "BNBUSDT",
@@ -240,7 +267,7 @@ async function applyBalance(userId: string, pnl: number): Promise<number> {
 // `kind` describes WHY we closed (for logs/notifications). It is mapped to the
 // DB enum (tp/sl/manual) so no migration is needed: every profit-taking scalp
 // exit is recorded as "tp", stop-loss as "sl".
-type CloseKind = "tp" | "sl" | "manual" | "scalp_profit" | "scalp_reversal" | "scalp_breakeven" | "max_loss" | "breakeven";
+type CloseKind = "tp" | "sl" | "manual" | "scalp_profit" | "scalp_reversal" | "scalp_breakeven" | "max_loss" | "breakeven" | "news";
 
 function fmtDuration(sec: number): string {
   if (sec < 60) return `${sec}s`;
@@ -307,6 +334,7 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
     case "sl": reasonLabel = "hit stop loss"; break;
     case "max_loss": reasonLabel = `max loss protection (-$${MAX_LOSS_USD.toFixed(2)})`; break;
     case "breakeven": reasonLabel = "break-even stop (winner protected)"; break;
+    case "news": reasonLabel = "closed before high-impact news"; break;
     case "manual": reasonLabel = "manually closed"; break;
   }
 
@@ -319,10 +347,26 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
     await log(botId, userId, "loss",
       `[${hhmmss()}] 🛑 Closed at loss: -$${fmt(Math.abs(pnl), symbol)} (-${Math.abs(pnlPct)}%) — ${reasonLabel} · ${dir.toUpperCase()} @ $${fmt(exitPrice, symbol)}`);
   }
-  // ⏱️ How long the trade was open.
-  await log(botId, userId, "info", `[${hhmmss()}] ⏱️ Trade was open for ${dur}`);
+  // 📋 TRADE REPORT — entry→exit, duration, result, running daily total.
+  const daily = await getDailyPnl(userId);
+  const dSign = daily.pnl >= 0 ? "+" : "-";
+  await log(botId, userId, "info",
+    `[${hhmmss()}] 📋 TRADE REPORT — ${dir.toUpperCase()} ${symbol} | Entry $${fmt(entry, symbol)} → Exit $${fmt(exitPrice, symbol)} | ${dur} | ${win ? "✅ WIN" : "❌ LOSS"} ${sign}$${fmt(Math.abs(pnl), symbol)} | 📊 Today: ${dSign}$${fmt(Math.abs(daily.pnl), symbol)} (${daily.trades} trades)`);
   await log(botId, userId, "info", `[${hhmmss()}] 🤖 Bot auto-stopped after trade close`);
   await log(botId, userId, "info", `[${hhmmss()}] 💰 Balance updated: $${newBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+  // 🛑 Daily limits — pause for the rest of the day once a threshold is crossed.
+  if (daily.pnl <= -DAILY_LOSS_LIMIT_USD) {
+    await log(botId, userId, "loss",
+      `[${hhmmss()}] 🛑 Daily loss limit reached (${dSign}$${fmt(Math.abs(daily.pnl), symbol)}) - bot paused until tomorrow`);
+    await notify(userId, botId, "auto_pause", "🛑 Daily Loss Limit",
+      `Today's P/L hit ${dSign}$${fmt(Math.abs(daily.pnl), symbol)}. Bots paused until tomorrow to protect your balance.`, daily.pnl);
+  } else if (daily.pnl >= DAILY_PROFIT_TARGET_USD) {
+    await log(botId, userId, "win",
+      `[${hhmmss()}] 🎯 Daily target reached (+$${fmt(daily.pnl, symbol)})! Locking in profits.`);
+    await notify(userId, botId, "trade_win", "🎯 Daily Target Reached",
+      `Today's P/L hit +$${fmt(daily.pnl, symbol)}. Locking in profits — bots paused until tomorrow.`, daily.pnl);
+  }
 
   // 🔔 Notify the user the trade was closed (with result).
   const botName = (bot.name as string) || symbol;
@@ -419,6 +463,66 @@ async function maybeLogScalpCheck(
     `[${hhmmss()}] ⏱️ Monitoring... ${symbol} $${fmt(price, symbol)} P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct).toFixed(2)}%) — ${verdict}`);
 }
 
+// ───────────────────── daily P/L (per user, current UTC day) ─────────────────────
+// Sums realized P/L from trades closed since 00:00 UTC today.
+async function getDailyPnl(userId: string): Promise<{ pnl: number; trades: number }> {
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const { data } = await admin
+    .from("bot_trades")
+    .select("pnl")
+    .eq("user_id", userId)
+    .eq("status", "closed")
+    .gte("closed_at", startOfDay.toISOString());
+  const rows = data ?? [];
+  const pnl = rows.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+  return { pnl: +pnl.toFixed(2), trades: rows.length };
+}
+
+// ───────────────────── economic calendar (news filter) ─────────────────────
+// Cached for 5 minutes across all bots processed in one sweep.
+type NewsEvent = { title: string; country: string; impact: string; time: number };
+let _newsCache: { at: number; events: NewsEvent[] } | null = null;
+
+async function getHighImpactUsdEvents(): Promise<NewsEvent[]> {
+  if (_newsCache && Date.now() - _newsCache.at < 5 * 60_000) return _newsCache.events;
+  const events: NewsEvent[] = [];
+  try {
+    for (const url of CALENDAR_URLS) {
+      const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(8000) });
+      if (!r.ok) { await r.text(); continue; }
+      const j = await r.json();
+      if (!Array.isArray(j)) continue;
+      for (const e of j as Record<string, string>[]) {
+        const impact = (e.impact || "").toLowerCase();
+        const country = (e.country || "").toUpperCase();
+        // Gold (XAU) is USD-driven → only USD high-impact events matter.
+        if (impact !== "high") continue;
+        if (country !== "USD") continue;
+        const t = e.date ? Date.parse(e.date) : NaN;
+        if (Number.isNaN(t)) continue;
+        events.push({ title: e.title ?? "Event", country, impact, time: t });
+      }
+    }
+  } catch (e) {
+    console.error("calendar fetch error", e);
+  }
+  _newsCache = { at: Date.now(), events };
+  return events;
+}
+
+// Finds the nearest upcoming high-impact USD event within `withinMin` minutes.
+function nextEventWithin(events: NewsEvent[], withinMin: number): { ev: NewsEvent; minutes: number } | null {
+  const now = Date.now();
+  let best: { ev: NewsEvent; minutes: number } | null = null;
+  for (const ev of events) {
+    const diffMin = (ev.time - now) / 60_000;
+    if (diffMin >= 0 && diffMin <= withinMin) {
+      if (!best || diffMin < best.minutes) best = { ev, minutes: diffMin };
+    }
+  }
+  return best;
+}
 
 async function processBot(bot: Record<string, unknown>) {
   const botId = bot.id as string;
@@ -456,6 +560,19 @@ async function processBot(bot: Record<string, unknown>) {
     const diffPct = dir === "buy" ? (price - entry) / entry : (entry - price) / entry;
     const pnlPct = diffPct * 100;
     const pnl = diffPct * amount;
+
+    // 1-NEWS) NEWS FILTER — force-close USD-sensitive trades when a high-impact
+    // USD/gold event is within 10 minutes (don't risk the spike).
+    const usdSensitive = !CRYPTO_BINANCE[symbol];
+    if (usdSensitive) {
+      const ev = nextEventWithin(await getHighImpactUsdEvents(), NEWS_CLOSE_OPEN_MIN);
+      if (ev) {
+        await log(botId, userId, "loss",
+          `[${hhmmss()}] ⛔ Closing trade - ${ev.ev.title} in ${Math.round(ev.minutes)}min (high-impact USD news)`);
+        await closeTrade(bot, openTrade, price, "news");
+        return;
+      }
+    }
 
     // 1a) Hard TP / SL — always enforced (instant, no waiting).
     let hit: CloseKind | null = null;
@@ -542,6 +659,41 @@ async function processBot(bot: Record<string, unknown>) {
   const lastScan = bot.last_scan_at ? new Date(bot.last_scan_at as string).getTime() : 0;
   if (lastScan && Date.now() - lastScan < interval * 1000) return; // not time yet
 
+  // Mark scan time up-front so skip-guards below don't spam the log every tick.
+  await admin.from("bots").update({ last_scan_at: new Date().toISOString() }).eq("id", botId);
+
+  // GUARD A) DAILY LIMITS — stop opening new trades for the rest of the UTC day
+  // once the day's total P/L crosses the loss limit or the profit target.
+  const dayPnl = await getDailyPnl(userId);
+  if (dayPnl.pnl <= -DAILY_LOSS_LIMIT_USD) {
+    await log(botId, userId, "loss",
+      `[${hhmmss()}] 🛑 Daily loss limit reached (-$${fmt(Math.abs(dayPnl.pnl), symbol)}) - bot paused until tomorrow`);
+    return;
+  }
+  if (dayPnl.pnl >= DAILY_PROFIT_TARGET_USD) {
+    await log(botId, userId, "win",
+      `[${hhmmss()}] 🎯 Daily target reached (+$${fmt(dayPnl.pnl, symbol)})! Locking in profits.`);
+    return;
+  }
+
+  // GUARD B) BEST-TIME FILTER — only trade the London & NY windows; skip Asian.
+  const window = getTradeWindow();
+  if (!window) {
+    await log(botId, userId, "info",
+      `[${hhmmss()}] ⏰ Outside trading hours (${getSession().label}) - waiting for London (07:00) / NY (13:00) UTC`);
+    return;
+  }
+
+  // GUARD C) NEWS FILTER — no new trades within 60 min of a high-impact USD event.
+  if (!CRYPTO_BINANCE[symbol]) {
+    const ev = nextEventWithin(await getHighImpactUsdEvents(), NEWS_BLOCK_NEW_MIN);
+    if (ev) {
+      await log(botId, userId, "info",
+        `[${hhmmss()}] ⛔ No trade - ${ev.ev.title} in ${Math.round(ev.minutes)}min`);
+      return;
+    }
+  }
+
   // 3) Scan.
   const candles = await getCandles(symbol, timeframe, price);
   const closes = candles.map((c) => c.close);
@@ -555,8 +707,6 @@ async function processBot(bot: Record<string, unknown>) {
   const avgVol = volumes.slice(-21, -1).reduce((a, b) => a + b, 0) / 20;
   const curVol = volumes[volumes.length - 1];
   const volSpike = curVol > avgVol * 1.5;
-
-  await admin.from("bots").update({ last_scan_at: new Date().toISOString() }).eq("id", botId);
 
   const session = getSession();
   await log(botId, userId, "info", `[${hhmmss()}] ${session.label}`);
