@@ -8,9 +8,8 @@ import { cn } from "@/lib/utils";
 import type { Bot } from "@/hooks/useBots";
 import {
   DAILY_LOSS_LIMIT_USD, DAILY_PROFIT_TARGET_USD, NEWS_BLOCK_NEW_MIN,
-  getActiveWindow, nextWindowOpen, formatCountdown, sessionForHour,
 } from "@/lib/tradingSessions";
-import { LayoutDashboard, Clock } from "lucide-react";
+import { LayoutDashboard, Activity } from "lucide-react";
 
 interface TradeRow {
   pnl: number | null;
