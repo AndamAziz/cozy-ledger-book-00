@@ -21,6 +21,22 @@ function resumeIfSuspended() {
   }
 }
 
+/** Read current sound settings from localStorage (must stay in sync with useSoundSettings). */
+function readSettings(): { enabled: boolean; winVolume: number; loseVolume: number } {
+  try {
+    const raw = localStorage.getItem("bot_sound_settings");
+    if (!raw) return { enabled: true, winVolume: 0.8, loseVolume: 0.8 };
+    const parsed = JSON.parse(raw);
+    return {
+      enabled: parsed.enabled ?? true,
+      winVolume: parsed.winVolume ?? 0.8,
+      loseVolume: parsed.loseVolume ?? 0.8,
+    };
+  } catch {
+    return { enabled: true, winVolume: 0.8, loseVolume: 0.8 };
+  }
+}
+
 /** Pleasant ascending chime for a winning trade. */
 export function playWinSound() {
   try {
