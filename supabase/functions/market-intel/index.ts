@@ -447,7 +447,13 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
       }).select("id").maybeSingle();
 
       const important = confidence >= TARGET_IMPORTANT_CONFIDENCE || Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
-      signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important });
+      const highConf = confidence >= TARGET_IMPORTANT_CONFIDENCE;
+      const strongMove = Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
+      let reason = "⏱ Cooldown passed / throttle finished · کاتژمێری کۆتایی هات";
+      if (highConf && strongMove) reason = "🔥 Very important: high confidence + strong move · زۆر گرنگ: متمانە بەرز + جوڵە بەهێز";
+      else if (highConf) reason = "🔥 Very important: high confidence · زۆر گرنگ: متمانە بەرز";
+      else if (strongMove) reason = "🔥 Very important: strong move · زۆر گرنگ: جوڵە بەهێز";
+      signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important, reason });
       openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
       lastSignalAt = Date.now();
     }
