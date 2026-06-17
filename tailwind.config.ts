@@ -149,6 +149,7 @@ export default {
         "tab-bounce": "tab-bounce 0.35s ease-out",
         "tab-slide": "tab-slide 0.28s ease-out",
         "next-glow": "next-glow 1.6s ease-in-out infinite",
+        "alert-pulse": "alert-pulse 1.6s ease-in-out infinite",
       },
     },
   },
