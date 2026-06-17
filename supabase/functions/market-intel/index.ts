@@ -15,8 +15,10 @@ const GOLD_THRESHOLD = 2;     // $2
 const OIL_THRESHOLD = 1;      // $1
 const BTC_THRESHOLD = 200;    // $200
 
-// Within how many minutes a high-impact event triggers an alert.
+// Within how many minutes a high-impact event triggers the first heads-up alert.
 const EVENT_ALERT_MIN = 30;
+// Final "5 minutes left" reminder window before a high-impact event releases.
+const EVENT_REMINDER_MIN = 5;
 
 // Anti-spam: only open a NEW signal when the day's move is clearly strong
 // (|change| >= this %) AND not within the cooldown window of the last signal
