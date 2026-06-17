@@ -32,13 +32,37 @@ const FLAGS: Record<string, string> = {
   AUD: '🇦🇺', NZD: '🇳🇿', CNY: '🇨🇳', All: '🌐',
 };
 
-const CAT_LABEL: Record<string, { ku: string; en: string; color: string }> = {
-  forex: { ku: 'دراو', en: 'Forex', color: '#2962ff' },
-  crypto: { ku: 'کریپتۆ', en: 'Crypto', color: '#f0b90b' },
-  commodities: { ku: 'کاڵا', en: 'Commodities', color: '#d4af37' },
-  economy: { ku: 'ئابووری', en: 'Economy', color: '#0ecb81' },
-  markets: { ku: 'بازاڕ', en: 'Markets', color: '#a78bfa' },
+const CAT_LABEL: Record<string, { ku: string; en: string; color: string; emoji: string }> = {
+  gold: { ku: 'زێڕ', en: 'Gold', color: '#d4af37', emoji: '🥇' },
+  forex: { ku: 'دراو', en: 'Forex', color: '#2962ff', emoji: '💱' },
+  markets: { ku: 'بازاڕ', en: 'Markets', color: '#a78bfa', emoji: '📈' },
+  oil: { ku: 'نەوت', en: 'Oil', color: '#ff7a00', emoji: '🛢️' },
+  crypto: { ku: 'کریپتۆ', en: 'Crypto', color: '#f0b90b', emoji: '₿' },
+  commodities: { ku: 'کاڵا', en: 'Commodities', color: '#d4af37', emoji: '🥇' },
+  economy: { ku: 'ئابووری', en: 'Economy', color: '#0ecb81', emoji: '📊' },
 };
+
+// News category filter tabs
+const NEWS_FILTERS: { code: string; emoji: string }[] = [
+  { code: 'all', emoji: '🗞️' },
+  { code: 'gold', emoji: '🥇' },
+  { code: 'forex', emoji: '💱' },
+  { code: 'markets', emoji: '📈' },
+  { code: 'oil', emoji: '🛢️' },
+  { code: 'crypto', emoji: '₿' },
+];
+
+// Decode any leftover HTML entities client-side (defense-in-depth)
+function decodeHtml(s: string): string {
+  if (!s || (!s.includes('&') )) return s;
+  try {
+    const el = document.createElement('textarea');
+    el.innerHTML = s;
+    return el.value;
+  } catch {
+    return s;
+  }
+}
 
 // Direction colors
 const C_UP = '#0ecb81';   // stronger USD => green
@@ -264,6 +288,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
 
   // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
   const [currency, setCurrency] = useState<string>('All');
+  const [newsCat, setNewsCat] = useState<string>('all');
   const [dismissed, setDismissed] = useState<Set<string>>(() => {
     try {
       const raw = localStorage.getItem(DISMISS_KEY);
@@ -467,11 +492,11 @@ export function MarketNewsModal({ open, onClose }: Props) {
     }
   }, [bi, events.length]);
 
-  // Initial load + auto-refresh every 5 minutes while open
+  // Initial load + auto-refresh every 10 minutes while open
   useEffect(() => {
     if (!open) return;
     if (!loaded) load();
-    const id = setInterval(() => load(), 5 * 60 * 1000);
+    const id = setInterval(() => load(), 10 * 60 * 1000);
     return () => clearInterval(id);
   }, [open, loaded, load]);
 
@@ -533,6 +558,12 @@ export function MarketNewsModal({ open, onClose }: Props) {
   // Next upcoming high-impact event (any country)
   const nextHighImpact = useMemo(() => {
     return visibleEvents.find((e) => (e.impact || '').toLowerCase() === 'high' && Date.parse(e.date) > now) || null;
+  }, [visibleEvents, now]);
+
+  // Next upcoming event of ANY impact (used to highlight with a glowing border)
+  const nextEventKeyStr = useMemo(() => {
+    const ev = visibleEvents.find((e) => Date.parse(e.date) > now);
+    return ev ? eventKey(ev) : null;
   }, [visibleEvents, now]);
 
   // Pinned: next high-impact USD (red dot) event
@@ -626,7 +657,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
     return i === 'high' ? '#f6465d' : i === 'medium' ? '#f0b90b' : '#848e9c';
   };
 
-  const renderEventCard = (ev: CalendarEvent, key: string, pinned = false) => {
+  const renderEventCard = (ev: CalendarEvent, key: string, pinned = false, isNext = false) => {
     const a = analyzeEvent(ev);
     const isUSD = ev.country === 'USD';
     const col = dirColor(a.usdUp);
@@ -636,6 +667,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
     const goldRel = isGoldRelevant(ev.country);
     const t = Date.parse(ev.date);
     const upcoming = !Number.isNaN(t) && t > now;
+    const passed = !Number.isNaN(t) && t <= now;
     const isHigh = (ev.impact || '').toLowerCase() === 'high';
 
     // Card background tint: gold up => red, gold down => green
@@ -646,26 +678,46 @@ export function MarketNewsModal({ open, onClose }: Props) {
         ? 'rgba(212,175,55,0.55)'
         : T.cardBorder;
 
+    // Result-based gold note (shown once the actual figure prints)
     const goldNote = a.usdUp === true
       ? bi('زێڕ ↓ دادەبەزێت', 'Gold ↓ down')
       : a.usdUp === false
         ? bi('زێڕ ↑ بەرز دەبێتەوە', 'Gold ↑ up')
         : bi('زێڕ ⟷ چاوەڕوان', 'Gold ⟷ wait');
 
+    // Forecast-based gold impact explanation (shown for upcoming events, before the result)
+    const goldForecastNote = goldUp === true
+      ? bi('📈 ئەگەری بەرزبوونەوەی زێڕ ئەگەر خراپتر بێت لە پێشبینی', '📈 Gold likely UP if worse than expected')
+      : goldUp === false
+        ? bi('📉 ئەگەری دابەزینی زێڕ ئەگەر باشتر بێت لە پێشبینی', '📉 Gold likely DOWN if better than expected')
+        : bi('⟷ چاوەڕێی ئەنجامەکە بکە', '⟷ Wait for the result');
+
     return (
       <SwipeCard key={key} onDismiss={pinned ? undefined : () => dismissEvent(eventKey(ev))} light={light}>
         <div
-          className="flex items-center gap-2 rounded-lg px-3 py-2 border cursor-pointer select-none"
-          style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: goldRel || pinned ? 1.5 : 1 }}
+          className={`flex items-center gap-2 rounded-lg px-3 py-2 border cursor-pointer select-none ${isNext ? 'animate-next-glow' : ''}`}
+          style={{
+            backgroundColor: cardBg,
+            borderColor: isNext ? '#f0b90b' : cardBorder,
+            borderWidth: goldRel || pinned || isNext ? 1.5 : 1,
+            opacity: passed ? 0.5 : 1,
+            filter: passed ? 'grayscale(0.7)' : 'none',
+          }}
           onClick={() => setDetailEvent(ev)}
           title={bi('کرتە بکە بۆ وردەکاری', 'Tap for details')}
         >
-          <span className="text-lg shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
+          <span className="text-lg shrink-0">{passed ? '✓' : (FLAGS[ev.country] ?? '🏳️')}</span>
           <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: impactColor(ev.impact) }} />
             <span className="text-[11px] font-bold text-[#848e9c]">{ev.country}</span>
             <span className="text-[10px] text-[#848e9c]">{eventTime(ev.date)}</span>
+            {passed && (
+              <span className="text-[9px] font-bold text-[#0ecb81] inline-flex items-center gap-0.5">✓ {bi('تەواوبوو', 'Done')}</span>
+            )}
+            {isNext && (
+              <span className="text-[9px] font-bold text-black bg-[#f0b90b] px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5 animate-pulse">⏭ {bi('دواتر', 'Next')}</span>
+            )}
             {/* Gold impact score bars */}
             <span className="inline-flex items-center gap-0.5 shrink-0" title={bi('کاریگەری زێڕ', 'Gold impact')}>
               {[1, 2, 3].map((n) => (
@@ -707,6 +759,16 @@ export function MarketNewsModal({ open, onClose }: Props) {
               </span>
             )}
           </div>
+          {upcoming && !a.hasResult && goldUp !== null && (
+            <div className="mt-0.5">
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+                style={{ color: goldUp ? C_UP : C_DOWN, backgroundColor: (goldUp ? C_UP : C_DOWN) + '14' }}
+              >
+                {goldForecastNote}
+              </span>
+            </div>
+          )}
           {isUSD && a.hasResult && (
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               {pctStr && (
@@ -911,48 +973,84 @@ export function MarketNewsModal({ open, onClose }: Props) {
                     {g.label}
                   </div>
                   <div className="space-y-1.5">
-                    {g.items.map((ev, i) => renderEventCard(ev, `${ev.title}-${ev.date}-${i}`))}
+                    {g.items.map((ev, i) => renderEventCard(ev, `${ev.title}-${ev.date}-${i}`, false, eventKey(ev) === nextEventKeyStr))}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="p-3 space-y-2">
+              {/* Category filter tabs */}
+              <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
+                {NEWS_FILTERS.map((f) => {
+                  const count = f.code === 'all' ? news.length : news.filter((n) => n.category === f.code).length;
+                  const lbl = f.code === 'all' ? bi('هەموو', 'All') : bi(CAT_LABEL[f.code]?.ku ?? f.code, CAT_LABEL[f.code]?.en ?? f.code);
+                  return (
+                    <button
+                      key={f.code}
+                      onClick={() => setNewsCat(f.code)}
+                      className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-full whitespace-nowrap transition-colors ${
+                        newsCat === f.code ? 'bg-[#f0b90b] text-black' : 'bg-[#1a1e2e] text-[#848e9c] hover:text-white'
+                      }`}
+                    >
+                      <span>{f.emoji}</span>
+                      {lbl}
+                      <span className={`text-[9px] ${newsCat === f.code ? 'text-black/70' : 'text-[#5b6472]'}`}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
               <p className="text-[10px] text-[#848e9c] px-1">
                 {bi('هەواڵی بازاڕ لە سەرچاوە متمانەپێکراوەکان (Investing.com، CNBC، MarketWatch).', 'Market news from trusted sources (Investing.com, CNBC, MarketWatch).')}
               </p>
-              {news.length === 0 ? (
-                <div className="text-center text-sm text-[#848e9c] py-10">{bi('هیچ هەواڵێک نییە.', 'No news.')}</div>
-              ) : news.map((n, i) => {
-                const cat = CAT_LABEL[n.category];
-                return (
-                  <a
-                    key={`${n.link}-${i}`}
-                    href={n.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block bg-[#0d1117] border border-[#1a1e2e] hover:border-[#2a2e3e] rounded-lg px-3 py-2.5 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      {cat && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ color: cat.color, backgroundColor: cat.color + '1a' }}>
-                          {bi(cat.ku, cat.en)}
+              {(() => {
+                const filtered = newsCat === 'all' ? news : news.filter((n) => n.category === newsCat);
+                if (filtered.length === 0) {
+                  return <div className="text-center text-sm text-[#848e9c] py-10">{bi('هیچ هەواڵێک نییە.', 'No news in this category.')}</div>;
+                }
+                return filtered.map((n, i) => {
+                  const cat = CAT_LABEL[n.category];
+                  const title = decodeHtml(n.title);
+                  const summary = decodeHtml(n.summary);
+                  return (
+                    <a
+                      key={`${n.link}-${i}`}
+                      href={n.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-[#0d1117] border border-[#1a1e2e] hover:border-[#2a2e3e] rounded-lg px-3 py-2.5 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        {cat && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded inline-flex items-center gap-1" style={{ color: cat.color, backgroundColor: cat.color + '1a' }}>
+                            <span>{cat.emoji}</span>{bi(cat.ku, cat.en)}
+                          </span>
+                        )}
+                        {/* Source badge with colored dot */}
+                        <span className="text-[10px] text-[#848e9c] inline-flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat?.color ?? '#848e9c' }} />
+                          {n.source}
                         </span>
-                      )}
-                      <span className="text-[10px] text-[#848e9c]">{n.source}</span>
-                      <span className="text-[10px] text-[#848e9c] ms-auto flex items-center gap-1">
-                        {newsTimeAgo(n.pubDate)}
-                        <ExternalLink className="h-3 w-3" />
-                      </span>
-                    </div>
-                    <div className="text-sm font-medium text-white leading-snug">{n.title}</div>
-                    {n.summary && <div className="text-[11px] text-[#848e9c] mt-1 line-clamp-2">{n.summary}</div>}
-                  </a>
-                );
-              })}
+                        <span className="text-[10px] text-[#848e9c] ms-auto flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {newsTimeAgo(n.pubDate)}
+                        </span>
+                      </div>
+                      <div className="text-sm font-medium text-white leading-snug">{title}</div>
+                      {summary && <div className="text-[11px] text-[#848e9c] mt-1 line-clamp-2">{summary}</div>}
+                      <div className="flex items-center justify-end mt-1.5">
+                        <span className="text-[10px] font-bold text-[#f0b90b] inline-flex items-center gap-1 group-hover:underline">
+                          {bi('کردنەوە', 'Read')}<ExternalLink className="h-3 w-3" />
+                        </span>
+                      </div>
+                    </a>
+                  );
+                });
+              })()}
             </div>
           )}
         </div>
+
 
         {/* Event detail popup */}
         {detailEvent && (() => {

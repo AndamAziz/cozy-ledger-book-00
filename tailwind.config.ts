@@ -129,6 +129,10 @@ export default {
           from: { opacity: "0", transform: "translateX(14px)" },
           to: { opacity: "1", transform: "translateX(0)" },
         },
+        "next-glow": {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(240,185,11,0.55), 0 0 0 1px rgba(240,185,11,0.85) inset" },
+          "50%": { boxShadow: "0 0 16px 3px rgba(240,185,11,0.65), 0 0 0 1px rgba(240,185,11,0.95) inset" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -140,6 +144,7 @@ export default {
         "flash-blink": "flash-blink 0.9s ease-in-out infinite",
         "tab-bounce": "tab-bounce 0.35s ease-out",
         "tab-slide": "tab-slide 0.28s ease-out",
+        "next-glow": "next-glow 1.6s ease-in-out infinite",
       },
     },
   },
