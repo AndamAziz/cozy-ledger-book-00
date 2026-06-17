@@ -80,9 +80,12 @@ export function playWinSound() {
 /** Lower descending buzz for a losing trade. */
 export function playLoseSound() {
   try {
+    const s = readSettings();
+    if (!s.enabled) return;
     resumeIfSuspended();
     const c = getCtx();
     const t = c.currentTime;
+    const vol = Math.max(0, Math.min(1, s.loseVolume));
 
     // Descending womp tone
     const o1 = c.createOscillator();
@@ -90,7 +93,7 @@ export function playLoseSound() {
     o1.type = "sawtooth";
     o1.frequency.setValueAtTime(300, t);
     o1.frequency.exponentialRampToValueAtTime(80, t + 0.35);
-    g1.gain.setValueAtTime(0.15, t);
+    g1.gain.setValueAtTime(0.15 * vol, t);
     g1.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
     o1.connect(g1);
     g1.connect(c.destination);
@@ -103,7 +106,7 @@ export function playLoseSound() {
     o2.type = "triangle";
     o2.frequency.setValueAtTime(150, t + 0.05);
     o2.frequency.exponentialRampToValueAtTime(40, t + 0.35);
-    g2.gain.setValueAtTime(0.12, t + 0.05);
+    g2.gain.setValueAtTime(0.12 * vol, t + 0.05);
     g2.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
     o2.connect(g2);
     g2.connect(c.destination);

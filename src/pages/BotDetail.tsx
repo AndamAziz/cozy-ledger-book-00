@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { useBotDetail, useDemoBalance, useBotPerformance } from "@/hooks/useBots";
 import { BotPerformanceChart } from "@/components/bots/BotPerformanceChart";
 import { NotificationBell } from "@/components/bots/NotificationBell";
+import { SoundSettingsPanel } from "@/components/bots/SoundSettingsPanel";
 import { LiveMonitorFeed } from "@/components/bots/LiveMonitorFeed";
 import { VolatilityMeter } from "@/components/bots/VolatilityMeter";
 import { useBotPrices, callEngine } from "@/hooks/useBotPrices";
