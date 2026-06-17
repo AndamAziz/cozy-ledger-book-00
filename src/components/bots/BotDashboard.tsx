@@ -229,14 +229,11 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
         <div className="mt-1 text-center text-[10px] text-muted-foreground">Scale ±${fmtUsd(maxAbs)}</div>
       </div>
 
-      {/* Next trade window */}
-      <div className={cn(
-        "flex items-center gap-2 rounded-2xl border p-3 text-sm",
-        next.active ? "border-success/40 bg-success/5 text-success" : "border-border bg-card text-foreground",
-      )}>
-        <Clock className="h-4 w-4 shrink-0" />
-        <span className="font-medium">Next trading window:</span>
-        <span className="ml-auto font-semibold tabular-nums">{next.label}</span>
+      {/* Trading mode */}
+      <div className="flex items-center gap-2 rounded-2xl border border-border bg-card p-3 text-sm text-foreground">
+        <Activity className="h-4 w-4 shrink-0 text-success" />
+        <span className="font-medium">Trading mode:</span>
+        <span className="ml-auto font-semibold">24/7 · volatility-based</span>
       </div>
     </div>
   );
