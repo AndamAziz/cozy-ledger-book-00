@@ -409,22 +409,25 @@ async function maybeLogScalpCheck(
   pnl: number, pnlPct: number, scalp: boolean, verdict: string, force: boolean,
 ) {
   if (!scalp) return;
-  if (!force) {
-    const { data: last } = await admin
-      .from("bot_logs")
-      .select("created_at")
-      .eq("bot_id", botId)
-      .eq("level", "advice")
-      .order("created_at", { ascending: false })
-      .limit(1);
-    if (last && last.length) {
-      const age = Date.now() - new Date(last[0].created_at as string).getTime();
-      if (age < 4_500) return; // ~every 5 seconds
-    }
+  // Always read the last advice line: it provides the throttle window AND the
+  // previous price we diff against to show the live price move.
+  const { data: last } = await admin
+    .from("bot_logs")
+    .select("created_at, message")
+    .eq("bot_id", botId)
+    .eq("level", "advice")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const lastRow = last && last.length ? last[0] : null;
+  if (!force && lastRow) {
+    const age = Date.now() - new Date(lastRow.created_at as string).getTime();
+    if (age < 4_500) return; // ~every 5 seconds
   }
+  const prev = extractLoggedPrice(lastRow?.message as string | undefined);
+  const move = priceMoveSegment(symbol, prev, price);
   const sign = pnl >= 0 ? "+" : "-";
   await log(botId, userId, "advice",
-    `[${hhmmss()}] ⏱️ Monitoring... ${symbol} $${fmt(price, symbol)} P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct).toFixed(2)}%) — ${verdict}`);
+    `[${hhmmss()}] ⏱️ ${move} | P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct).toFixed(2)}%) — ${verdict}`);
 }
 
 
