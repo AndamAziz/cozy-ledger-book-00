@@ -269,7 +269,8 @@ async function closeTrade(bot: Record<string, unknown>, trade: Record<string, un
 
   // Map our rich reason to the DB enum.
   const dbReason: "tp" | "sl" | "manual" =
-    kind === "sl" ? "sl" : kind === "manual" ? "manual" : "tp";
+    (kind === "sl" || kind === "max_loss" || kind === "breakeven") ? "sl"
+      : kind === "manual" ? "manual" : "tp";
 
   await admin.from("bot_trades").update({
     status: "closed", exit_price: exitPrice, pnl, pnl_pct: pnlPct,
