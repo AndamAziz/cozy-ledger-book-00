@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { playWinSound, playLoseSound } from "./useTradeSounds";
 
 export interface BotNotification {
   id: string;
@@ -29,8 +30,10 @@ function showToast(n: BotNotification) {
   const opts = { description: n.message } as const;
   if (n.type === "trade_win" || (n.pnl != null && n.pnl >= 0 && n.type !== "auto_pause")) {
     toast.success(n.title, opts);
+    if (n.type === "trade_win") playWinSound();
   } else if (n.type === "trade_loss" || n.type === "auto_pause") {
     toast.error(n.title, opts);
+    if (n.type === "trade_loss") playLoseSound();
   } else {
     toast(n.title, opts);
   }
