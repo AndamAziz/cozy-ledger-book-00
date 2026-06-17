@@ -410,7 +410,7 @@ async function evaluateCalendar(): Promise<string[]> {
     if (minutes >= 0 && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
       alerted.add(ev.key);
       out.push([
-        `⚠️ <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
+        `🟠⚠️ <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
         `🕒 In ${Math.round(minutes)} min · لە ${Math.round(minutes)} خولەکدا`,
         ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
       ].filter(Boolean).join("\n"));
