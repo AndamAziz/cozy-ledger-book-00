@@ -50,33 +50,54 @@ export type Database = {
       ai_signals: {
         Row: {
           asset: string
+          close_price: number | null
+          closed_at: string | null
           confidence: number | null
           created_at: string
           entry: number | null
           id: string
+          market_session: string | null
+          result_pips: number | null
           signal: string
           sl: number | null
+          sl_pips: number | null
+          status: string
           tp: number | null
+          tp_pips: number | null
         }
         Insert: {
           asset: string
+          close_price?: number | null
+          closed_at?: string | null
           confidence?: number | null
           created_at?: string
           entry?: number | null
           id?: string
+          market_session?: string | null
+          result_pips?: number | null
           signal: string
           sl?: number | null
+          sl_pips?: number | null
+          status?: string
           tp?: number | null
+          tp_pips?: number | null
         }
         Update: {
           asset?: string
+          close_price?: number | null
+          closed_at?: string | null
           confidence?: number | null
           created_at?: string
           entry?: number | null
           id?: string
+          market_session?: string | null
+          result_pips?: number | null
           signal?: string
           sl?: number | null
+          sl_pips?: number | null
+          status?: string
           tp?: number | null
+          tp_pips?: number | null
         }
         Relationships: []
       }
