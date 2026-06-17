@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef, useMemo, type ReactNode } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Newspaper, CalendarClock, Loader2, RefreshCw, ExternalLink, AlertCircle, TrendingUp, TrendingDown, Pin, Clock, Share2, Sun, Moon, X, Bell } from 'lucide-react';
+import { Newspaper, CalendarClock, Loader2, RefreshCw, ExternalLink, AlertCircle, TrendingUp, TrendingDown, Pin, Clock, Share2, Sun, Moon, X, Bell, Globe, Check } from 'lucide-react';
+import { useTimezone, formatInTimezone, formatDayInTimezone, TZ_OPTIONS } from '@/hooks/useTimezone';
 
 interface CalendarEvent {
   title: string;
@@ -298,6 +299,10 @@ export function MarketNewsModal({ open, onClose }: Props) {
   const [fromCache, setFromCache] = useState(false);
   const [now, setNow] = useState(Date.now());
 
+  // User-selected timezone (persisted in localStorage) + selector menu state
+  const { tz, setTz } = useTimezone();
+  const [tzMenuOpen, setTzMenuOpen] = useState(false);
+
   // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
   const [currency, setCurrency] = useState<string>('All');
   const [newsCat, setNewsCat] = useState<string>('all');
@@ -531,11 +536,8 @@ export function MarketNewsModal({ open, onClose }: Props) {
   };
 
   const eventTime = (iso: string): string => {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleString(language === 'en' || language === 'tr' ? 'en-US' : 'en-GB', {
-      weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
-    });
+    const locale = language === 'en' || language === 'tr' ? 'en-US' : 'en-GB';
+    return formatInTimezone(iso, tz, locale);
   };
 
   // Format a countdown like "2h 35m" / "45m" / "30s"
@@ -622,7 +624,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
     const d = new Date(ev.date);
     const label = Number.isNaN(d.getTime())
       ? '—'
-      : d.toLocaleDateString(language === 'en' || language === 'tr' ? 'en-US' : 'en-GB', { weekday: 'long', month: 'short', day: 'numeric' });
+      : formatDayInTimezone(d, tz, language === 'en' || language === 'tr' ? 'en-US' : 'en-GB');
     const last = grouped[grouped.length - 1];
     if (last && last.label === label) last.items.push(ev);
     else grouped.push({ label, isToday: isToday(ev.date), items: [ev] });
@@ -844,7 +846,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
     );
   };
 
-  const todayLabel = new Date().toLocaleDateString(language === 'en' || language === 'tr' ? 'en-US' : 'en-GB', { weekday: 'long', month: 'short', day: 'numeric' });
+  const todayLabel = formatDayInTimezone(new Date(now), tz, language === 'en' || language === 'tr' ? 'en-US' : 'en-GB');
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -857,6 +859,48 @@ export function MarketNewsModal({ open, onClose }: Props) {
             <Newspaper className="h-5 w-5 text-[#f0b90b]" />
             {bi('هەواڵی بازاڕ', 'Market News')}
             <div className="ms-auto flex items-center gap-1">
+              {/* Timezone selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setTzMenuOpen((o) => !o)}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
+                  aria-label={bi('کاتی ناوچەیی', 'Timezone')}
+                  title={bi('هەڵبژاردنی کاتی ناوچەیی', 'Select timezone')}
+                >
+                  <Globe className="h-4 w-4" />
+                  <span className="text-[10px] font-bold">
+                    {TZ_OPTIONS.find((o) => o.id === tz)?.flag} {TZ_OPTIONS.find((o) => o.id === tz)?.city}
+                  </span>
+                </button>
+                {tzMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-[70]" onClick={() => setTzMenuOpen(false)} />
+                    <div
+                      className="absolute end-0 mt-1 z-[80] w-48 rounded-xl border bg-[#0f1421] border-[#1a1e2e] shadow-xl overflow-hidden py-1"
+                    >
+                      <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-wide text-[#848e9c]">
+                        {bi('کاتی ناوچەیی', 'Timezone')}
+                      </div>
+                      {TZ_OPTIONS.map((o) => (
+                        <button
+                          key={o.id}
+                          onClick={() => { setTz(o.id); setTzMenuOpen(false); }}
+                          className={`flex items-center gap-2 w-full px-3 py-2 text-left transition-colors hover:bg-[#1a1e2e] ${
+                            tz === o.id ? 'text-[#f0b90b]' : 'text-white'
+                          }`}
+                        >
+                          <span className="text-base">{o.flag}</span>
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-xs font-bold leading-tight">{o.city}</span>
+                            <span className="block text-[9px] text-[#848e9c] leading-tight">{o.hint}</span>
+                          </span>
+                          {tz === o.id && <Check className="h-3.5 w-3.5 shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <button
                 onClick={toggleSound}
                 className={`p-1.5 rounded-lg hover:bg-[#1a1e2e] transition-colors ${soundOn ? 'text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'}`}
