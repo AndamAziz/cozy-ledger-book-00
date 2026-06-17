@@ -301,52 +301,89 @@ function nowStamp(): string {
 }
 
 // ───────────────────── core scan ─────────────────────
-async function evaluatePrices(): Promise<{ alerts: string[]; quotes: Quote[] }> {
+interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number; }
+
+async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts: string[]; quotes: Quote[] }> {
   const quotes = await getPrices();
-  const state = await getState("prices"); // { "XAU/USD": { price, signal } }
-  const alerts: string[] = [];
+  const priceState = await getState("prices");      // { "XAU/USD": { price, signal } }
+  const openState = await getState("open_signals"); // { "XAU/USD": OpenSig }
+  const signalAlerts: string[] = [];
+  const outcomeAlerts: string[] = [];
 
   for (const q of quotes) {
     const m = ASSET_META[q.symbol];
     if (!m) continue;
     const sig = ruleSignal(q.changePct);
-    const prev = state[q.symbol] as { price?: number; signal?: Signal } | undefined;
 
-    // Persist latest snapshot for the (future) dashboard.
+    // Persist latest snapshot for the dashboard.
     await admin.from("market_prices").upsert({
       symbol: q.symbol, price: q.price, change_pct: q.changePct,
       trend: q.changePct >= 0 ? "up" : "down", signal: sig, updated_at: new Date().toISOString(),
     });
 
-    let trigger = false;
-    // Trigger 1: price moved more than the asset threshold since last alert.
-    if (prev?.price != null && Math.abs(q.price - prev.price) >= m.threshold) trigger = true;
-    // Trigger 2: signal flipped (BUY↔SELL↔HOLD).
-    const signalChanged = prev?.signal != null && prev.signal !== sig;
-    if (signalChanged) trigger = true;
+    const open = openState[q.symbol] as OpenSig | undefined;
 
-    if (trigger) {
-      alerts.push(priceLine(q, sig));
-      // Record an AI signal row whenever the signal changes.
-      if (signalChanged || prev?.signal == null) {
-        const isBuy = sig === "BUY";
-        await admin.from("ai_signals").insert({
-          asset: m.name, signal: sig,
-          entry: q.price,
-          tp: sig === "HOLD" ? null : +(q.price * (isBuy ? 1.006 : 0.994)).toFixed(2),
-          sl: sig === "HOLD" ? null : +(q.price * (isBuy ? 0.996 : 1.004)).toFixed(2),
-          confidence: Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10)),
-        });
+    // 1) Manage an OPEN position → did price hit TP or SL?
+    if (open) {
+      const isBuy = open.signal === "BUY";
+      let hit: "tp" | "sl" | null = null;
+      if (isBuy) {
+        if (q.price >= open.tp) hit = "tp";
+        else if (q.price <= open.sl) hit = "sl";
+      } else {
+        if (q.price <= open.tp) hit = "tp";
+        else if (q.price >= open.sl) hit = "sl";
       }
-      state[q.symbol] = { price: q.price, signal: sig };
-    } else if (prev == null) {
-      // Seed state without alerting on first ever run.
-      state[q.symbol] = { price: q.price, signal: sig };
+      if (hit) {
+        const pips = toPips(q.price - open.entry, m.pip);
+        outcomeAlerts.push(outcomeLine(q.symbol, open.signal, hit, open.entry, q.price, pips));
+        if (open.id) {
+          await admin.from("ai_signals").update({
+            status: hit === "tp" ? "target_hit" : "stopped_out",
+            result_pips: hit === "tp" ? pips : -pips,
+            close_price: q.price,
+            closed_at: new Date().toISOString(),
+          }).eq("id", open.id);
+        }
+        delete openState[q.symbol];
+      }
+      // Only one active signal per symbol — never stack a second one.
+      priceState[q.symbol] = { price: q.price, signal: sig };
+      continue;
     }
+
+    // 2) No open position → consider opening a NEW signal when timing is right.
+    const prev = priceState[q.symbol] as { price?: number; signal?: Signal } | undefined;
+    const actionable = sig === "BUY" || sig === "SELL";
+    const timingOk = !m.requireSession || isMajorSessionOpen();
+    // Avoid re-opening the same direction immediately; only fire when signal flips.
+    const fresh = prev?.signal !== sig;
+
+    if (actionable && timingOk && fresh) {
+      const isBuy = sig === "BUY";
+      const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+      const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
+      const tpPips = toPips(tp - q.price, m.pip);
+      const slPips = toPips(sl - q.price, m.pip);
+      const confidence = Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
+      const session = sessionLabel();
+
+      const { data: ins } = await admin.from("ai_signals").insert({
+        asset: m.name, signal: sig, entry: q.price, tp, sl,
+        confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
+      }).select("id").maybeSingle();
+
+      signalAlerts.push(newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session));
+      openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
+    }
+    priceState[q.symbol] = { price: q.price, signal: sig };
   }
-  await setState("prices", state);
-  return { alerts, quotes };
+
+  await setState("prices", priceState);
+  await setState("open_signals", openState);
+  return { signalAlerts, outcomeAlerts, quotes };
 }
+
 
 async function evaluateCalendar(): Promise<string[]> {
   const events = await getHighImpactEvents();
