@@ -89,12 +89,18 @@ function calcMACD(closes: number[]): { histogram: number } | null {
 }
 
 // ───────────────────── prices & candles ─────────────────────
+// Always bypass any HTTP cache so each 5s tick gets a genuinely fresh price.
+const NO_CACHE: RequestInit = {
+  cache: "no-store",
+  headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+};
 async function getPrice(symbol: string): Promise<number | null> {
+  const bust = `_=${Date.now()}`; // cache-busting timestamp
   try {
     if (CRYPTO_BINANCE[symbol]) {
       const res = await fetch(
-        `https://api.binance.com/api/v3/ticker/price?symbol=${CRYPTO_BINANCE[symbol]}`,
-        { signal: AbortSignal.timeout(8000) },
+        `https://api.binance.com/api/v3/ticker/price?symbol=${CRYPTO_BINANCE[symbol]}&${bust}`,
+        { ...NO_CACHE, signal: AbortSignal.timeout(8000) },
       );
       if (!res.ok) { await res.text(); return null; }
       const d = await res.json();
@@ -102,8 +108,10 @@ async function getPrice(symbol: string): Promise<number | null> {
       return Number.isFinite(p) && p > 0 ? p : null;
     }
     if (METAL_CODES[symbol]) {
-      const res = await fetch(`https://api.gold-api.com/price/${METAL_CODES[symbol]}`, {
-        headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000),
+      const res = await fetch(`https://api.gold-api.com/price/${METAL_CODES[symbol]}?${bust}`, {
+        ...NO_CACHE,
+        headers: { ...NO_CACHE.headers, Accept: "application/json" },
+        signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) { await res.text(); return null; }
       const d = await res.json();
@@ -117,8 +125,8 @@ async function getPrice(symbol: string): Promise<number | null> {
     const m = map[symbol];
     if (m) {
       const res = await fetch(
-        `https://api.frankfurter.app/latest?base=USD&symbols=${m[0]}`,
-        { signal: AbortSignal.timeout(8000) },
+        `https://api.frankfurter.app/latest?base=USD&symbols=${m[0]}&${bust}`,
+        { ...NO_CACHE, signal: AbortSignal.timeout(8000) },
       );
       if (!res.ok) { await res.text(); return null; }
       const d = await res.json();
@@ -194,6 +202,27 @@ async function notify(
 function fmt(n: number, symbol: string): string {
   const dec = symbol === "USD/JPY" ? 3 : 2;
   return n.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+// Pull the "current" price out of a previous monitoring/advice log line so the
+// next line can show the price MOVE (e.g. "$4,340.30 → $4,341.50"). Prefers the
+// number after "→" (the latest price) and falls back to the first $ amount.
+function extractLoggedPrice(message: string | null | undefined): number | null {
+  if (!message) return null;
+  const arrow = message.match(/→\s*\$([\d,]+\.\d+)/);
+  const m = arrow ?? message.match(/\$([\d,]+\.\d+)/);
+  if (!m) return null;
+  const n = Number(m[1].replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+// Build a "XAU $4,340.30 → $4,341.50 (+$1.20)" style price-move segment.
+function priceMoveSegment(symbol: string, prev: number | null, price: number): string {
+  const short = symbol.split("/")[0];
+  if (prev == null) return `${short} $${fmt(price, symbol)}`;
+  const delta = price - prev;
+  const dsign = delta >= 0 ? "+" : "-";
+  return `${short} $${fmt(prev, symbol)} → $${fmt(price, symbol)} (${dsign}$${fmt(Math.abs(delta), symbol)})`;
 }
 
 // ───────────────────── balance ─────────────────────
@@ -380,22 +409,25 @@ async function maybeLogScalpCheck(
   pnl: number, pnlPct: number, scalp: boolean, verdict: string, force: boolean,
 ) {
   if (!scalp) return;
-  if (!force) {
-    const { data: last } = await admin
-      .from("bot_logs")
-      .select("created_at")
-      .eq("bot_id", botId)
-      .eq("level", "advice")
-      .order("created_at", { ascending: false })
-      .limit(1);
-    if (last && last.length) {
-      const age = Date.now() - new Date(last[0].created_at as string).getTime();
-      if (age < 4_500) return; // ~every 5 seconds
-    }
+  // Always read the last advice line: it provides the throttle window AND the
+  // previous price we diff against to show the live price move.
+  const { data: last } = await admin
+    .from("bot_logs")
+    .select("created_at, message")
+    .eq("bot_id", botId)
+    .eq("level", "advice")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const lastRow = last && last.length ? last[0] : null;
+  if (!force && lastRow) {
+    const age = Date.now() - new Date(lastRow.created_at as string).getTime();
+    if (age < 4_500) return; // ~every 5 seconds
   }
+  const prev = extractLoggedPrice(lastRow?.message as string | undefined);
+  const move = priceMoveSegment(symbol, prev, price);
   const sign = pnl >= 0 ? "+" : "-";
   await log(botId, userId, "advice",
-    `[${hhmmss()}] ⏱️ Monitoring... ${symbol} $${fmt(price, symbol)} P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct).toFixed(2)}%) — ${verdict}`);
+    `[${hhmmss()}] ⏱️ ${move} | P/L: ${sign}$${fmt(Math.abs(pnl), symbol)} (${sign}${Math.abs(pnlPct).toFixed(2)}%) — ${verdict}`);
 }
 
 
