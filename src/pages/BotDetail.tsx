@@ -5,6 +5,7 @@ import { useBotDetail, useDemoBalance, useBotPerformance } from "@/hooks/useBots
 import { BotPerformanceChart } from "@/components/bots/BotPerformanceChart";
 import { NotificationBell } from "@/components/bots/NotificationBell";
 import { LiveMonitorFeed } from "@/components/bots/LiveMonitorFeed";
+import { VolatilityMeter } from "@/components/bots/VolatilityMeter";
 import { useBotPrices, callEngine } from "@/hooks/useBotPrices";
 import { getAsset, fmtPrice, fmtUsd } from "@/lib/botAssets";
 import { supabase } from "@/integrations/supabase/client";
@@ -276,6 +277,9 @@ export default function BotDetail() {
         )}
           </div>
         </div>
+
+        {/* Volatility meter */}
+        <VolatilityMeter symbol={bot.symbol} timeframe={bot.timeframe} />
 
         {/* Open trade */}
         {openTrade && (

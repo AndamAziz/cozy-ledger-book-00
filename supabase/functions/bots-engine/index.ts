@@ -856,6 +856,27 @@ serve(async (req) => {
   const action = (body.action as string) || "tick";
   const botId = body.botId as string | undefined;
 
+  // Public: live volatility snapshot for a symbol (powers the UI meter).
+  if (action === "volatility") {
+    const symbol = (body.symbol as string) || "XAU/USD";
+    const timeframe = (body.timeframe as string) || "5m";
+    const price = await getPrice(symbol);
+    if (!price) {
+      return new Response(JSON.stringify({ error: "price unavailable" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const candles = await getCandles(symbol, timeframe, price);
+    const v = assessVolatility(price, candles);
+    // Continuous 0-100 gauge value: tight spread + big moves → higher.
+    const moveComp = Math.max(0, Math.min(1, v.avgMove / (v.moveMin * 2)));
+    const spreadComp = Math.max(0, Math.min(1, 1 - v.spread / (v.spreadMax * 2)));
+    const percent = Math.round((moveComp * 0.5 + spreadComp * 0.5) * 100);
+    return new Response(JSON.stringify({
+      symbol, price, level: v.level, spread: v.spread, avgMove: v.avgMove,
+      spreadMax: v.spreadMax, moveMin: v.moveMin, percent,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
   // Identify caller (optional). User-scoped actions require a valid JWT.
   let userId: string | null = null;
   const authHeader = req.headers.get("Authorization");
