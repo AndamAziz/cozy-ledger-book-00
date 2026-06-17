@@ -39,8 +39,12 @@ function esc(s: string): string {
 }
 
 type Signal = "BUY" | "SELL" | "HOLD";
+// Rich color indicators: 🟢 BUY · 🔴 SELL · 🟡 HOLD (with extra colored squares for emphasis).
 const sigEmoji = (s: Signal) => (s === "BUY" ? "🟢" : s === "SELL" ? "🔴" : "🟡");
+const sigBadge = (s: Signal) => (s === "BUY" ? "🟢🟩" : s === "SELL" ? "🔴🟥" : "🟡🟧");
 const sigKu = (s: Signal) => (s === "BUY" ? "کڕین" : s === "SELL" ? "فرۆشتن" : "هەڵگرتن");
+// Colored dot for % change: green up / red down / yellow flat.
+const changeDot = (pct: number) => (pct > 0 ? "🟢" : pct < 0 ? "🔴" : "🟡");
 
 // Rule-based signal from the day's % change.
 function ruleSignal(changePct: number): Signal {
