@@ -91,8 +91,8 @@ export function BotDashboard({ bots }: { bots: Bot[] }) {
     setWeek(days);
 
     // ---- Today's summary ----
-    const todayKey = new Date().toISOString().slice(0, 10);
-    const todayRows = rows.filter((r) => r.closed_at && new Date(r.closed_at).toISOString().slice(0, 10) === todayKey);
+    const todayKey = fmtDateKey(new Date());
+    const todayRows = rows.filter((r) => r.closed_at && fmtDateKey(new Date(r.closed_at)) === todayKey);
     const pnls = todayRows.map((r) => Number(r.pnl ?? 0));
     const wins = todayRows.filter((r) => r.result === "win").length;
     setToday({
