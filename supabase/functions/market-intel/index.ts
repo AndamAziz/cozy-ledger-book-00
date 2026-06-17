@@ -204,11 +204,42 @@ async function sendTelegram(kind: string, text: string): Promise<boolean> {
 }
 
 // ───────────────────── message builders ─────────────────────
-const ASSET_META: Record<string, { emoji: string; name: string; threshold: number }> = {
-  "XAU/USD": { emoji: "🥇", name: "GOLD", threshold: GOLD_THRESHOLD },
-  "WTI/USD": { emoji: "🛢", name: "OIL", threshold: OIL_THRESHOLD },
-  "BTC/USD": { emoji: "₿", name: "BITCOIN", threshold: BTC_THRESHOLD },
+// pip       = price distance that equals "1 pip" for this asset (for pip counting)
+// tpPct/slPct = full target / stop-loss distance as % of entry price (R:R ~1.5)
+// requireSession = only open new signals while a major FX session is live (BTC = 24/7)
+const ASSET_META: Record<
+  string,
+  { emoji: string; name: string; threshold: number; pip: number; tpPct: number; slPct: number; requireSession: boolean }
+> = {
+  "XAU/USD": { emoji: "🥇", name: "GOLD", threshold: GOLD_THRESHOLD, pip: 0.1, tpPct: 0.6, slPct: 0.4, requireSession: true },
+  "WTI/USD": { emoji: "🛢", name: "OIL", threshold: OIL_THRESHOLD, pip: 0.01, tpPct: 0.8, slPct: 0.5, requireSession: true },
+  "BTC/USD": { emoji: "₿", name: "BITCOIN", threshold: BTC_THRESHOLD, pip: 1, tpPct: 1.2, slPct: 0.8, requireSession: false },
 };
+
+// Round pips to whole numbers for clean messaging.
+const toPips = (priceMove: number, pip: number) => Math.round(Math.abs(priceMove) / pip);
+
+// ───────────────────── market sessions (UTC) ─────────────────────
+interface SessionDef { name: string; ku: string; start: number; end: number; }
+const SESSIONS: SessionDef[] = [
+  { name: "Sydney", ku: "سیدنی", start: 21, end: 6 },
+  { name: "Tokyo", ku: "تۆکیۆ", start: 0, end: 9 },
+  { name: "London", ku: "لەندەن", start: 7, end: 16 },
+  { name: "New York", ku: "نیویۆرک", start: 12, end: 21 },
+];
+function openSessions(d = new Date()): SessionDef[] {
+  const h = d.getUTCHours();
+  return SESSIONS.filter((s) => (s.start <= s.end ? h >= s.start && h < s.end : h >= s.start || h < s.end));
+}
+// A "major" session (London / New York) means high liquidity → good entry timing.
+function isMajorSessionOpen(d = new Date()): boolean {
+  return openSessions(d).some((s) => s.name === "London" || s.name === "New York");
+}
+function sessionLabel(d = new Date()): string {
+  const open = openSessions(d);
+  if (open.length === 0) return "Closed / داخراو";
+  return open.map((s) => `${s.name} (${s.ku})`).join(" + ");
+}
 
 function priceLine(q: Quote, sig: Signal): string {
   const m = ASSET_META[q.symbol];
@@ -218,6 +249,50 @@ function priceLine(q: Quote, sig: Signal): string {
     `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
     `Price: <code>$${q.price.toLocaleString("en-US")}</code> ${arrow} ${pct}`,
     `Signal: ${sigEmoji(sig)} <b>${sig}</b> · کاریگەری: ${sigKu(sig)}`,
+  ].join("\n");
+}
+
+const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+// Full BUY/SELL trade setup with entry, full target and stop loss.
+function newSignalLine(
+  q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, tpPips: number, slPips: number,
+  confidence: number, session: string,
+): string {
+  const m = ASSET_META[q.symbol];
+  return [
+    `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
+    `${sigEmoji(sig)} <b>${sig}</b> / ${sigKu(sig)}`,
+    `📍 Entry / دەستپێک: <code>$${fmt(q.price)}</code>`,
+    `🎯 TP / تارگێت: <code>$${fmt(tp)}</code> (+${tpPips} pips)`,
+    `🛑 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (-${slPips} pips)`,
+    `📊 Confidence / متمانە: <b>${confidence}%</b>`,
+    `🏙 Session / بازاڕ: ${session}`,
+  ].join("\n");
+}
+
+// Outcome message when a signal closes on TP or SL.
+function outcomeLine(
+  symbol: string, sig: "BUY" | "SELL", hit: "tp" | "sl",
+  entry: number, close: number, pips: number,
+): string {
+  const m = ASSET_META[symbol];
+  if (hit === "tp") {
+    return [
+      `✅ <b>TARGET HIT / تارگێت تەواوبوو</b> 🎉`,
+      `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
+      `📈 Result / ئەنجام: <b>+${pips} pips</b>`,
+      `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+      `سیگنالەکە سەرکەوتوو بوو ✅`,
+    ].join("\n");
+  }
+  return [
+    `❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
+    `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
+    `📉 Result / ئەنجام: <b>-${pips} pips</b>`,
+    `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+    `⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
+    `🚪 تکایە پۆزیشنەکە دابخە / Please close your position`,
   ].join("\n");
 }
 
