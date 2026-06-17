@@ -22,7 +22,14 @@ const EVENT_ALERT_MIN = 30;
 // (|change| >= this %) AND not within the cooldown window of the last signal
 // for that symbol. Quiet markets → no repeated signals.
 const SIGNAL_MIN_MOVE_PCT = 0.25;        // ignore weak/flat moves
-const SIGNAL_COOLDOWN_MS = 45 * 60_000;  // 45 min between signals per symbol
+const SIGNAL_COOLDOWN_MS = 20 * 60_000;  // 20 min between signals per symbol
+
+// Target broadcast pacing: a "very important" target (high confidence / strong
+// move / news-driven) is sent immediately. Otherwise targets are throttled so we
+// broadcast at most one ordinary target every TARGET_MIN_GAP_MS (15–30 min band).
+const TARGET_MIN_GAP_MS = 18 * 60_000;   // ~18 min between ordinary targets (15–30 range)
+const TARGET_IMPORTANT_CONFIDENCE = 85;  // confidence ≥ this ⇒ send target now
+const TARGET_IMPORTANT_MOVE_PCT = 0.6;   // |change| ≥ this % ⇒ send target now
 
 // Internal price-scan loop: check prices every PRICE_INTERVAL_MS for up to
 // LOOP_WINDOW_MS, so the engine reacts ~every 5s while the cron fires once a
