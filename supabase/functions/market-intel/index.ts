@@ -536,6 +536,7 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
             const slPips = toPips(sl - goldPrice, m.pip);
             signalAlerts.push({
               important: true,
+              reason: "📰 High-impact news / هەواڵی کاریگەری بەرز",
               text: [
                 `📰 News-driven / بەهۆی هەواڵ: <b>${esc(ev.title)}</b>`,
                 `${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`,
