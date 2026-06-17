@@ -92,6 +92,18 @@ function eventKey(ev: CalendarEvent): string {
   return `${ev.country}|${ev.title}|${ev.date}`;
 }
 
+// High-volatility "special" events that warrant a top alert banner
+const SPECIAL_EVENTS: { re: RegExp; code: string; ku: string; en: string }[] = [
+  { re: /\b(fomc|federal funds rate|fed interest rate|rate decision|fed press conf|fed chair|powell)\b/i, code: 'FOMC', ku: 'بڕیاری ڕێژەی سوودی فێد', en: 'Federal Funds Rate decision' },
+  { re: /\b(non[- ]?farm|nfp|nonfarm payroll)\b/i, code: 'NFP', ku: 'ئامارەکانی کار (NFP)', en: 'Non-Farm Payrolls release' },
+  { re: /\b(cpi|consumer price index|inflation rate)\b/i, code: 'CPI', ku: 'ئامارەکانی هەڵاوسان (CPI)', en: 'Consumer Price Index release' },
+];
+
+function matchSpecialEvent(ev: CalendarEvent) {
+  const t = ev.title || '';
+  return SPECIAL_EVENTS.find((s) => s.re.test(t)) || null;
+}
+
 // Subtle "ding" using the Web Audio API (no asset needed)
 function playDing() {
   try {
@@ -576,6 +588,25 @@ export function MarketNewsModal({ open, onClose }: Props) {
     [visibleEvents],
   );
 
+  // Special high-volatility event happening TODAY (FOMC / NFP / CPI) — drives the alert banner
+  const specialAlert = useMemo(() => {
+    const todays = visibleEvents.filter((e) => isToday(e.date) && (e.country === 'USD' || e.country === 'All'));
+    let best: { ev: CalendarEvent; meta: NonNullable<ReturnType<typeof matchSpecialEvent>> } | null = null;
+    for (const e of todays) {
+      const meta = matchSpecialEvent(e);
+      if (!meta) continue;
+      // Prefer the next upcoming match; otherwise keep the earliest one found
+      const t = Date.parse(e.date);
+      if (!best) { best = { ev: e, meta }; continue; }
+      const bt = Date.parse(best.ev.date);
+      const bestUpcoming = bt > now;
+      const curUpcoming = t > now;
+      if (curUpcoming && (!bestUpcoming || t < bt)) best = { ev: e, meta };
+      else if (!curUpcoming && !bestUpcoming && t > bt) best = { ev: e, meta };
+    }
+    return best;
+  }, [visibleEvents, now]);
+
   // Apply currency filter + dismissed hiding for the rendered list
   const displayEvents = useMemo(() => {
     return visibleEvents.filter((e) => {
@@ -937,6 +968,37 @@ export function MarketNewsModal({ open, onClose }: Props) {
             </button>
           ) : tab === 'calendar' ? (
             <div className="p-3 space-y-4">
+              {/* 🚨 Special high-volatility alert banner (FOMC / NFP / CPI today) */}
+              {specialAlert && (() => {
+                const t = Date.parse(specialAlert.ev.date);
+                const upcoming = t > now;
+                return (
+                  <div
+                    className="rounded-xl p-3 text-white shadow-lg animate-alert-pulse"
+                    style={{
+                      background: 'linear-gradient(100deg,#b91c1c 0%,#dc2626 45%,#f97316 100%)',
+                    }}
+                  >
+                    <div className="flex items-center gap-2 font-extrabold text-sm">
+                      <span className="text-lg">🚨</span>
+                      <span>{bi(`ڕۆژی ${specialAlert.meta.code} — جوڵەی بەرز چاوەڕوانکراوە`, `${specialAlert.meta.code} DAY — High Volatility Expected`)}</span>
+                    </div>
+                    <div className="text-[12px] mt-1.5 leading-relaxed opacity-95">
+                      {bi(specialAlert.meta.ku, specialAlert.meta.en)}
+                      {upcoming
+                        ? <> {bi('لە', 'in')} <span className="font-bold">{fmtCountdown(t)}</span></>
+                        : <> · <span className="font-bold">{bi('ئێستا/تەواوبوو', 'now / released')}</span></>}
+                    </div>
+                    <div className="text-[12px] mt-1 leading-relaxed opacity-95">
+                      💰 {bi('زێڕ دەکرێت ±$٣٠-٥٠ بجوڵێت لە چەند خولەکێکدا', 'Gold could move ±$30-50 in minutes')}
+                    </div>
+                    <div className="text-[11px] mt-1.5 inline-flex items-center gap-1 bg-black/25 rounded-full px-2 py-0.5 font-bold">
+                      ⏸️ {bi('بۆت لە کاتی ڕووداوەکەدا ڕاگیراوە', 'Bot auto-paused during event window')}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <p className="text-[10px] px-1 leading-relaxed">
                 <span style={{ color: C_DOWN }} className="font-bold">{bi('سور = زێڕ بەرز (دۆلار نزم)', 'Red card = Gold up (USD down)')}</span>
                 {' · '}
