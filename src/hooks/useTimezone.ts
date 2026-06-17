@@ -13,7 +13,7 @@ export interface TzOption {
 
 export const TZ_OPTIONS: TzOption[] = [
   { id: 'Europe/London', flag: '🇬🇧', city: 'London', hint: 'BST/GMT' },
-  { id: 'Asia/Baghdad', flag: '🇮🇶', city: 'Baghdad', hint: 'UTC+3' },
+  { id: 'Asia/Baghdad', flag: '🇹🇯', city: 'Baghdad', hint: 'UTC+3' },
   { id: 'America/New_York', flag: '🇺🇸', city: 'New York', hint: 'EST/EDT' },
   { id: 'UTC', flag: '🌍', city: 'UTC', hint: 'UTC' },
 ];
