@@ -40,9 +40,12 @@ function readSettings(): { enabled: boolean; winVolume: number; loseVolume: numb
 /** Pleasant ascending chime for a winning trade. */
 export function playWinSound() {
   try {
+    const s = readSettings();
+    if (!s.enabled) return;
     resumeIfSuspended();
     const c = getCtx();
     const t = c.currentTime;
+    const vol = Math.max(0, Math.min(1, s.winVolume));
 
     // First tone (higher, brighter)
     const o1 = c.createOscillator();
@@ -50,7 +53,7 @@ export function playWinSound() {
     o1.type = "sine";
     o1.frequency.setValueAtTime(880, t); // A5
     o1.frequency.exponentialRampToValueAtTime(1760, t + 0.15); // A6
-    g1.gain.setValueAtTime(0.25, t);
+    g1.gain.setValueAtTime(0.25 * vol, t);
     g1.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
     o1.connect(g1);
     g1.connect(c.destination);
@@ -63,7 +66,7 @@ export function playWinSound() {
     o2.type = "sine";
     o2.frequency.setValueAtTime(1100, t + 0.08);
     o2.frequency.exponentialRampToValueAtTime(2200, t + 0.23);
-    g2.gain.setValueAtTime(0.15, t + 0.08);
+    g2.gain.setValueAtTime(0.15 * vol, t + 0.08);
     g2.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
     o2.connect(g2);
     g2.connect(c.destination);
