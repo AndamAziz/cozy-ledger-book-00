@@ -367,25 +367,39 @@ Deno.serve(async (req) => {
       lastQuotes = quotes;
     }
 
-    // Calendar once per invocation (≈60s cadence).
+    // Calendar + news once per invocation (≈60s cadence).
     const eventAlerts = await evaluateCalendar();
+    const newsAlerts = await evaluateNews();
 
-    // Compose & send a single premium alert if anything fired.
+    // Compose & send a single premium bilingual report if anything fired.
     let sent = false;
-    if (priceAlerts.length || eventAlerts.length) {
-      const lines: string[] = ["🔥 <b>MARKET ALERT</b>", ""];
-      if (priceAlerts.length) lines.push(priceAlerts.join("\n\n"), "");
+    if (priceAlerts.length || eventAlerts.length || newsAlerts.length) {
+      const lines: string[] = [
+        "📊 <b>CTP APP REPORTS</b>",
+        "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
+        "━━━━━━━━━━━━━━━",
+        "",
+      ];
+      if (priceAlerts.length) {
+        lines.push("📈 <b>Analysis / شیکاری بازاڕ</b>", "");
+        lines.push(priceAlerts.join("\n\n"), "");
+      }
+      if (newsAlerts.length) {
+        lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "");
+        lines.push(newsAlerts.join("\n\n"), "");
+      }
       if (eventAlerts.length) {
-        lines.push("📰 <b>Economic Calendar / ساڵنامەی ئابووری</b>", "");
+        lines.push("🗓 <b>Economic Calendar / ساڵنامەی ئابووری</b>", "");
         lines.push(eventAlerts.join("\n\n"), "");
       }
+      lines.push("━━━━━━━━━━━━━━━");
       lines.push(`<i>🕒 ${nowStamp()}</i>`);
       lines.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
-      sent = await sendTelegram("market_alert", lines.join("\n"));
+      sent = await sendTelegram("ctp_report", lines.join("\n"));
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent, priceAlerts: priceAlerts.length, eventAlerts: eventAlerts.length, quotes: lastQuotes.length }),
+      JSON.stringify({ ok: true, sent, priceAlerts: priceAlerts.length, eventAlerts: eventAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
