@@ -275,6 +275,25 @@ const SESSIONS: SessionDef[] = [
 // Kurdish names per region for the report.
 const REGION_KU: Record<string, string> = { Asia: "ئاسیا", London: "لەندەن", "New York": "نیویۆرک" };
 const REGION_EMOJI: Record<string, string> = { Asia: "🌏", London: "🇬🇧", "New York": "🇺🇸" };
+type Region = "Asia" | "London" | "New York";
+const ALL_REGIONS: Region[] = ["Asia", "London", "New York"];
+
+// Which market regions are allowed to open NEW targets. Configurable & stored in
+// market_alert_state["session_config"].regions. Empty/missing ⇒ all regions on.
+async function getEnabledRegions(): Promise<Region[]> {
+  const cfg = await getState("session_config");
+  const r = cfg.regions as string[] | undefined;
+  if (!Array.isArray(r) || r.length === 0) return [...ALL_REGIONS];
+  const filtered = r.filter((x): x is Region => (ALL_REGIONS as string[]).includes(x));
+  return filtered.length ? filtered : [...ALL_REGIONS];
+}
+async function setEnabledRegions(regions: string[]): Promise<Region[]> {
+  const clean = [...new Set(regions)].filter((x): x is Region => (ALL_REGIONS as string[]).includes(x));
+  const value = clean.length ? clean : [...ALL_REGIONS];
+  await setState("session_config", { regions: value });
+  return value;
+}
+
 function openSessions(d = new Date()): SessionDef[] {
   const h = d.getUTCHours();
   return SESSIONS.filter((s) => (s.start <= s.end ? h >= s.start && h < s.end : h >= s.start || h < s.end));
@@ -283,16 +302,22 @@ function openSessions(d = new Date()): SessionDef[] {
 function isMajorSessionOpen(d = new Date()): boolean {
   return openSessions(d).some((s) => s.name === "London" || s.name === "New York");
 }
-// The active trading region — London / New York take priority (highest liquidity), else Asia.
-function activeRegion(d = new Date()): string | null {
-  const open = openSessions(d);
+// Is any ENABLED region currently open? (gates new targets per user config)
+function enabledSessionOpen(enabled: Region[], d = new Date()): boolean {
+  return openSessions(d).some((s) => enabled.includes(s.region));
+}
+// The active trading region — New York / London take priority (highest liquidity),
+// else Asia. When `enabled` is given, only consider those regions.
+function activeRegion(d = new Date(), enabled?: Region[]): Region | null {
+  let open = openSessions(d);
+  if (enabled) open = open.filter((s) => enabled.includes(s.region));
   if (open.length === 0) return null;
   if (open.some((s) => s.region === "New York")) return "New York";
   if (open.some((s) => s.region === "London")) return "London";
   return "Asia";
 }
-function sessionLabel(d = new Date()): string {
-  const region = activeRegion(d);
+function sessionLabel(d = new Date(), enabled?: Region[]): string {
+  const region = activeRegion(d, enabled);
   if (!region) return "Closed / داخراو";
   return `${REGION_EMOJI[region]} ${region} (${REGION_KU[region]})`;
 }
@@ -385,6 +410,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
   const quotes = await getPrices();
   const priceState = await getState("prices");      // { "XAU/USD": { price, signal } }
   const openState = await getState("open_signals"); // { "XAU/USD": OpenSig }
+  const enabledRegions = await getEnabledRegions(); // which markets may open new targets
   const signalAlerts: SignalMsg[] = [];
   const outcomeAlerts: string[] = [];
 
@@ -434,7 +460,8 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
     // 2) No open position → consider opening a NEW signal when timing is right.
     const prev = priceState[q.symbol] as { price?: number; signal?: Signal; lastSignalAt?: number } | undefined;
     const actionable = sig === "BUY" || sig === "SELL";
-    const timingOk = !m.requireSession || isMajorSessionOpen();
+    // requireSession assets only open while an ENABLED region is live (user-configurable).
+    const timingOk = !m.requireSession || enabledSessionOpen(enabledRegions);
     // Avoid re-opening the same direction immediately; only fire when signal flips.
     const fresh = prev?.signal !== sig;
     // Quiet-market guard: skip weak moves and respect a per-symbol cooldown so we
@@ -450,7 +477,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
       const tpPips = toPips(tp - q.price, m.pip);
       const slPips = toPips(sl - q.price, m.pip);
       const confidence = Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
-      const session = sessionLabel();
+      const session = sessionLabel(new Date(), enabledRegions);
 
       const { data: ins } = await admin.from("ai_signals").insert({
         asset: m.name, signal: sig, entry: q.price, tp, sl,
@@ -739,6 +766,20 @@ Deno.serve(async (req) => {
     try { body = await req.json(); } catch { /* cron sends none */ }
     const loop = body.loop !== false; // default true; pass {loop:false} for a single pass
     const test = body.test === true;  // pass {test:true} to force a sample report to Telegram
+
+    // Config mode: read or set which market regions may open new targets.
+    //   {"getConfig": true}                       → returns current enabled regions
+    //   {"setRegions": ["Asia","London"]}         → updates enabled regions (empty ⇒ all)
+    if (body.getConfig === true) {
+      const regions = await getEnabledRegions();
+      return new Response(JSON.stringify({ ok: true, regions, all: ALL_REGIONS, openNow: activeRegion(new Date(), regions) }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (Array.isArray(body.setRegions)) {
+      const regions = await setEnabledRegions(body.setRegions as string[]);
+      return new Response(JSON.stringify({ ok: true, regions, all: ALL_REGIONS }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Test mode: send a full bilingual CTP APP REPORTS sample right now so you can
     // confirm it lands in the bot chat — bypasses the dedupe/trigger logic.
