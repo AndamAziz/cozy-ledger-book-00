@@ -247,12 +247,13 @@ function sessionLabel(d = new Date()): string {
 
 function priceLine(q: Quote, sig: Signal): string {
   const m = ASSET_META[q.symbol];
-  const arrow = q.changePct >= 0 ? "▲" : "▼";
-  const pct = `${q.changePct >= 0 ? "+" : ""}${q.changePct.toFixed(2)}%`;
+  const up = q.changePct >= 0;
+  const arrow = up ? "🟢▲" : "🔴▼";
+  const pct = `${up ? "+" : ""}${q.changePct.toFixed(2)}%`;
   return [
     `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
     `Price: <code>$${q.price.toLocaleString("en-US")}</code> ${arrow} ${pct}`,
-    `Signal: ${sigEmoji(sig)} <b>${sig}</b> · کاریگەری: ${sigKu(sig)}`,
+    `Signal: ${sigBadge(sig)} <b>${sig}</b> · کاریگەری: ${sigKu(sig)}`,
   ].join("\n");
 }
 
@@ -264,13 +265,15 @@ function newSignalLine(
   confidence: number, session: string,
 ): string {
   const m = ASSET_META[q.symbol];
+  // Yellow/orange for medium confidence, green for high.
+  const confDot = confidence >= 80 ? "🟢" : confidence >= 70 ? "🟡" : "🟠";
   return [
     `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
-    `${sigEmoji(sig)} <b>${sig}</b> / ${sigKu(sig)}`,
+    `${sigBadge(sig)} <b>${sig}</b> / ${sigKu(sig)}`,
     `📍 Entry / دەستپێک: <code>$${fmt(q.price)}</code>`,
-    `🎯 TP / تارگێت: <code>$${fmt(tp)}</code> (+${tpPips} pips)`,
-    `🛑 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (-${slPips} pips)`,
-    `📊 Confidence / متمانە: <b>${confidence}%</b>`,
+    `🎯🟢 TP / تارگێت: <code>$${fmt(tp)}</code> (+${tpPips} pips)`,
+    `🛑🔴 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (-${slPips} pips)`,
+    `📊 Confidence / متمانە: ${confDot} <b>${confidence}%</b>`,
     `🏙 Session / بازاڕ: ${session}`,
   ].join("\n");
 }
@@ -283,19 +286,19 @@ function outcomeLine(
   const m = ASSET_META[symbol];
   if (hit === "tp") {
     return [
-      `✅ <b>TARGET HIT / تارگێت تەواوبوو</b> 🎉`,
+      `🟢✅ <b>TARGET HIT / تارگێت تەواوبوو</b> 🎉`,
       `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
-      `📈 Result / ئەنجام: <b>+${pips} pips</b>`,
+      `📈🟢 Result / ئەنجام: <b>+${pips} pips</b>`,
       `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
-      `سیگنالەکە سەرکەوتوو بوو ✅`,
+      `سیگنالەکە سەرکەوتوو بوو 🟢✅`,
     ].join("\n");
   }
   return [
-    `❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
+    `🔴❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
     `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
-    `📉 Result / ئەنجام: <b>-${pips} pips</b>`,
+    `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
     `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
-    `⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
+    `🟠⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
     `🚪 تکایە پۆزیشنەکە دابخە / Please close your position`,
   ].join("\n");
 }
