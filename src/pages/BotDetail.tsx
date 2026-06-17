@@ -307,12 +307,13 @@ export default function BotDetail() {
             <span className="text-sm font-semibold text-foreground">📋 Bot Logs</span>
             <span className="text-xs text-muted-foreground">{logs.length} entries</span>
           </div>
-          <div className="mt-2 max-h-80 space-y-1 overflow-y-auto font-mono text-[11px] leading-relaxed">
+          <div dir="ltr" className="mt-2 max-h-80 space-y-1 overflow-y-auto text-left font-mono text-[11px] leading-relaxed">
             {logs.length === 0 ? (
               <div className="py-6 text-center text-muted-foreground">No activity yet.</div>
             ) : (
               logs.map((l) => (
                 <div key={l.id} className={cn(
+                  "text-left",
                   l.level === "win" ? "text-success" : l.level === "loss" ? "text-destructive" : l.level === "signal" ? "text-gold" : l.level === "advice" ? "text-foreground" : "text-muted-foreground",
                 )}>
                   {l.message}
