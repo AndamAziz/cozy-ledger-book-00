@@ -974,10 +974,9 @@ export function MarketNewsModal({ open, onClose }: Props) {
                 const upcoming = t > now;
                 return (
                   <div
-                    className="rounded-xl p-3 text-white shadow-lg animate-next-glow"
+                    className="rounded-xl p-3 text-white shadow-lg animate-alert-pulse"
                     style={{
                       background: 'linear-gradient(100deg,#b91c1c 0%,#dc2626 45%,#f97316 100%)',
-                      boxShadow: '0 0 18px rgba(220,38,38,0.55)',
                     }}
                   >
                     <div className="flex items-center gap-2 font-extrabold text-sm">
