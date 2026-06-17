@@ -350,10 +350,10 @@ function nowStamp(): string {
 
 // Wrap a single trade target / outcome into its own standalone Telegram message.
 // Each target is sent separately and never bundled with other targets or news.
-function oneSignalMessage(subtitle: string, body: string): string {
+function oneSignalMessage(subtitle: string, body: string, reason?: string): string {
   return [
     "📊 <b>CTP APP REPORTS</b>",
-    `<i>${subtitle}</i>`,
+    reason ? `<i>${subtitle}</i> · <b>${reason}</b>` : `<i>${subtitle}</i>`,
     "━━━━━━━━━━━━━━━",
     "",
     body,
