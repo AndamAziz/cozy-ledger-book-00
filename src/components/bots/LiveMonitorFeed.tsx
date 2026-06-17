@@ -14,13 +14,22 @@ export interface MonitorLog {
  * in via realtime; this panel highlights them with a live pulse, a rolling
  * "last updated" timestamp, and auto-scroll to the newest check.
  */
+/** Pull the latest price from a log line ("→ $X" preferred, else first "$X"). */
+function extractLoggedPrice(message: string): number | null {
+  const arrow = message.match(/→\s*\$([\d,]+\.\d+)/);
+  const m = arrow ?? message.match(/\$([\d,]+\.\d+)/);
+  if (!m) return null;
+  const n = Number(m[1].replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
 export function LiveMonitorFeed({ logs, active }: { logs: MonitorLog[]; active: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [, tick] = useState(0);
+  const [tickN, setTick] = useState(0);
 
   // Keep the relative "last updated" label fresh.
   useEffect(() => {
-    const t = window.setInterval(() => tick((n) => n + 1), 1000);
+    const t = window.setInterval(() => setTick((n) => n + 1), 1000);
     return () => window.clearInterval(t);
   }, []);
 
@@ -33,6 +42,23 @@ export function LiveMonitorFeed({ logs, active }: { logs: MonitorLog[]; active: 
   }, [logs]);
 
   const latest = monitorLogs[monitorLogs.length - 1];
+
+  // Detect a stale price feed: if the most recent price hasn't changed across
+  // the last checks for >30s, surface a warning.
+  const stale = useMemo(() => {
+    const pts = monitorLogs
+      .map((l) => ({ price: extractLoggedPrice(l.message), t: new Date(l.created_at).getTime() }))
+      .filter((p): p is { price: number; t: number } => p.price != null);
+    if (pts.length < 2) return false;
+    const current = pts[pts.length - 1];
+    let firstSamePriceTime = current.t;
+    for (let i = pts.length - 1; i >= 0; i--) {
+      if (pts[i].price === current.price) firstSamePriceTime = pts[i].t;
+      else break;
+    }
+    return Date.now() - firstSamePriceTime > 30_000;
+    // tickN keeps this re-evaluating every second.
+  }, [monitorLogs, tickN]);
 
   // Auto-scroll to the newest entry whenever the feed grows.
   useEffect(() => {
