@@ -289,55 +289,156 @@ async function evaluateCalendar(): Promise<string[]> {
   return out;
 }
 
-// ───────────────────── market news (bilingual) ─────────────────────
-interface NewsRow {
-  hash: string | null;
-  title: string;
-  title_ku: string | null;
-  summary: string | null;
-  impact: string | null;
-  bias: string | null;
-  source: string | null;
-  published_at: string | null;
-  created_at: string | null;
+// ───────────────────── market news (live fetch + bilingual) ─────────────────────
+interface NewsItem { title: string; link: string; source: string; category: string; pubDate: string; summary: string; }
+
+const NEWS_SOURCES: { url: string; source: string; category: string }[] = [
+  { url: "https://www.investing.com/rss/news_1.rss", source: "Investing.com", category: "forex" },
+  { url: "https://www.investing.com/rss/news_11.rss", source: "Investing.com", category: "commodities" },
+  { url: "https://www.investing.com/rss/news_301.rss", source: "Investing.com", category: "crypto" },
+  { url: "https://www.cnbc.com/id/20910258/device/rss/rss.html", source: "CNBC", category: "economy" },
+  { url: "https://feeds.content.dowjones.io/public/rss/mw_topstories", source: "MarketWatch", category: "markets" },
+];
+
+const RELEVANT_RE = /\b(gold|silver|xau|bullion|precious metal|oil|crude|brent|wti|opec|natural gas|energy|forex|fx|currency|currencies|dollar|euro|yen|pound|sterling|usd|eur|gbp|jpy|exchange rate|fed|federal reserve|fomc|ecb|boe|boj|central bank|rate cut|rate hike|interest rate|inflation|cpi|ppi|gdp|jobs report|payroll|nonfarm|unemployment|treasury|bond|yield|stock|stocks|equities|market|markets|index|s&p|nasdaq|dow|wall street|commodity|commodities|bitcoin|btc|ethereum|crypto|recession|economy|economic|tariff|trade war|earnings|powell)\b/i;
+const IRRELEVANT_RE = /(\bmy plumber\b|should i quit|quit my job|retire(ment| early)|i'?m \d+ (and|with|years)|personal finance|my (husband|wife|mom|dad|son|daughter|kid|family)|dear (penny|abby)|suze orman|dave ramsey|here'?s how (much|i)|how i (saved|retired|paid|built|became)|i regret|side hustle|frugal|coupon|credit card (debt|rewards|points)|net worth at|millionaire next door|budget(ing)? tips|grocery|honeymoon|wedding|inheritance from)/i;
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/<!\[CDATA\[(.*?)\]\]>/gs, "$1")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&nbsp;/g, " ")
+    .replace(/&hellip;/g, "\u2026").replace(/&mdash;/g, "\u2014").replace(/&ndash;/g, "\u2013")
+    .replace(/&lsquo;/g, "\u2018").replace(/&rsquo;/g, "\u2019").replace(/&ldquo;/g, "\u201C").replace(/&rdquo;/g, "\u201D")
+    .replace(/&#[xX]([0-9a-fA-F]+);/g, (_, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch { return ""; } })
+    .replace(/&#(\d+);/g, (_, d) => { try { return String.fromCodePoint(parseInt(d, 10)); } catch { return ""; } })
+    .replace(/\s+/g, " ").trim();
+}
+function pickTag(block: string, tag: string): string {
+  const m = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i"));
+  return m ? decodeEntities(m[1]) : "";
+}
+function categorize(text: string): string {
+  const t = text.toLowerCase();
+  if (/\b(gold|xau|bullion|silver|precious metal)\b/.test(t)) return "GOLD";
+  if (/\b(oil|crude|brent|wti|opec|natural gas)\b/.test(t)) return "OIL";
+  if (/\b(bitcoin|btc|ethereum|eth|crypto|blockchain)\b/.test(t)) return "CRYPTO";
+  if (/\b(forex|fx|currency|currencies|dollar|euro|yen|pound|sterling|usd|eur|gbp|jpy)\b/.test(t)) return "FOREX";
+  return "MARKETS";
+}
+function firstSentence(s: string): string {
+  if (!s) return "";
+  const m = s.match(/^.*?[.!?](\s|$)/);
+  let out = (m ? m[0] : s).trim();
+  if (out.length > 160) out = out.slice(0, 157) + "...";
+  return out;
+}
+function parseRss(xml: string, source: string, fallbackCategory: string): NewsItem[] {
+  const items: NewsItem[] = [];
+  const blocks = xml.match(/<item[\s\S]*?<\/item>/gi) ?? [];
+  for (const block of blocks) {
+    const title = pickTag(block, "title");
+    if (!title) continue;
+    const link = pickTag(block, "link");
+    const pubDate = pickTag(block, "pubDate") || pickTag(block, "dc:date");
+    const rawSummary = pickTag(block, "description");
+    const combined = `${title} ${rawSummary}`;
+    if (IRRELEVANT_RE.test(combined) || !RELEVANT_RE.test(combined)) continue;
+    items.push({ title, link, source, category: categorize(combined) || fallbackCategory, pubDate, summary: firstSentence(rawSummary) });
+  }
+  return items;
+}
+async function fetchNews(): Promise<NewsItem[]> {
+  const results = await Promise.allSettled(
+    NEWS_SOURCES.map(async (s) => {
+      const r = await fetch(s.url, { headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(8000) });
+      if (!r.ok) { await r.text(); return [] as NewsItem[]; }
+      return parseRss(await r.text(), s.source, s.category).slice(0, 10);
+    }),
+  );
+  let all: NewsItem[] = [];
+  for (const r of results) if (r.status === "fulfilled") all = all.concat(r.value);
+  const seen = new Set<string>();
+  all = all.filter((n) => { const k = (n.link || n.title).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+  all.sort((a, b) => (Date.parse(b.pubDate) || 0) - (Date.parse(a.pubDate) || 0));
+  return all;
 }
 
-function newsLine(n: NewsRow): string {
-  const tags: string[] = [];
-  if (n.impact) tags.push(`🎯 ${esc(n.impact)}`);
-  if (n.bias) tags.push(`📊 ${esc(n.bias)}`);
-  const parts = [`• <b>${esc(n.title)}</b>`];
-  if (n.title_ku) parts.push(`  🇮🇶 ${esc(n.title_ku)}`);
-  if (n.summary) parts.push(`  <i>${esc(n.summary)}</i>`);
-  if (tags.length) parts.push(`  ${tags.join(" · ")}`);
-  if (n.source) parts.push(`  <i>${esc(n.source)}</i>`);
+// Translate a batch of English headlines to Kurdish (Sorani) in a single AI call.
+async function translateToKurdish(titles: string[]): Promise<string[]> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY || titles.length === 0) return titles.map(() => "");
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: "You are a financial news translator. Translate each English market headline into clear, natural Kurdish (Sorani / کوردیی ناوەندی). Reply ONLY with a JSON array of strings, same order, same length. No extra text." },
+          { role: "user", content: JSON.stringify(titles) },
+        ],
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) { await res.text(); return titles.map(() => ""); }
+    const d = await res.json();
+    let content = String(d?.choices?.[0]?.message?.content ?? "").trim();
+    content = content.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+    const arr = JSON.parse(content);
+    if (Array.isArray(arr) && arr.length === titles.length) return arr.map((x) => String(x ?? ""));
+  } catch (e) {
+    console.error("translateToKurdish failed", e);
+  }
+  return titles.map(() => "");
+}
+
+function newsLine(title: string, titleKu: string, summary: string, category: string, source: string): string {
+  const parts = [`• <b>${esc(title)}</b>`];
+  if (titleKu) parts.push(`  🇮🇶 ${esc(titleKu)}`);
+  if (summary) parts.push(`  <i>${esc(summary)}</i>`);
+  const meta = [category ? `🏷 ${esc(category)}` : "", source ? esc(source) : ""].filter(Boolean).join(" · ");
+  if (meta) parts.push(`  <i>${meta}</i>`);
   return parts.join("\n");
 }
 
 async function evaluateNews(): Promise<string[]> {
-  const { data } = await admin.from("market_news")
-    .select("hash,title,title_ku,summary,impact,bias,source,published_at,created_at")
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(20);
-  const rows = (data ?? []) as NewsRow[];
+  const news = await fetchNews();
+  const state = await getState("news"); // { alertedKeys: string[] }
+  const alerted = new Set((state.alertedKeys as string[]) ?? []);
+  const now = Date.now();
 
-  const state = await getState("news"); // { alertedHashes: string[] }
-  const alerted = new Set((state.alertedHashes as string[]) ?? []);
-  const out: string[] = [];
-
-  for (const n of rows) {
-    const key = n.hash || `${n.title}|${n.published_at ?? n.created_at ?? ""}`;
+  // Pick up to 4 new, fresh (≤90 min old) items we have not alerted yet.
+  const fresh: NewsItem[] = [];
+  for (const n of news) {
+    const key = (n.link || n.title).toLowerCase();
     if (alerted.has(key)) continue;
     alerted.add(key);
-    // Only push reasonably fresh news (last 60 min) so the first run just seeds state.
-    const tsRaw = n.published_at ?? n.created_at;
-    const ts = tsRaw ? new Date(tsRaw).getTime() : 0;
-    if (ts && Date.now() - ts > 60 * 60 * 1000) continue;
-    out.push(newsLine(n));
+    const ts = Date.parse(n.pubDate) || 0;
+    if (ts && now - ts > 90 * 60 * 1000) continue;
+    fresh.push(n);
+    if (fresh.length >= 4) break;
   }
-  await setState("news", { alertedHashes: [...alerted].slice(-200) });
-  // Cap to the 5 most recent items to keep the message tidy.
-  return out.slice(0, 5);
+  await setState("news", { alertedKeys: [...alerted].slice(-300) });
+  if (fresh.length === 0) return [];
+
+  const kuTitles = await translateToKurdish(fresh.map((n) => n.title));
+
+  // Persist for the dashboard (best-effort).
+  const out: string[] = [];
+  for (let i = 0; i < fresh.length; i++) {
+    const n = fresh[i];
+    const ku = kuTitles[i] ?? "";
+    const hash = (n.link || n.title).toLowerCase();
+    await admin.from("market_news").upsert({
+      hash, title: n.title, title_ku: ku || null, summary: n.summary || null,
+      impact: n.category, bias: null, source: n.source, url: n.link,
+      published_at: n.pubDate ? new Date(n.pubDate).toISOString() : null,
+    }, { onConflict: "hash" });
+    out.push(newsLine(n.title, ku, n.summary, n.category, n.source));
+  }
+  return out;
 }
 
 // ───────────────────── HTTP ─────────────────────
