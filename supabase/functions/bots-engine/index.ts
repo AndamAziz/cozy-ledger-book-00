@@ -1,5 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  type Candle,
+  type VolLevel,
+  type VolReport,
+  VOL_REF_PRICE,
+  VOL_SPREAD_MIN_PTS,
+  VOL_SPREAD_MAX_PTS,
+  VOL_MOVE_LOW_PTS,
+  VOL_MOVE_HIGH_PTS,
+  VOL_LOOKBACK,
+  pts,
+  assessVolatility,
+  volatilityPercent,
+} from "./volatility.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
