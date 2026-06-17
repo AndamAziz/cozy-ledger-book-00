@@ -767,6 +767,20 @@ Deno.serve(async (req) => {
     const loop = body.loop !== false; // default true; pass {loop:false} for a single pass
     const test = body.test === true;  // pass {test:true} to force a sample report to Telegram
 
+    // Config mode: read or set which market regions may open new targets.
+    //   {"getConfig": true}                       → returns current enabled regions
+    //   {"setRegions": ["Asia","London"]}         → updates enabled regions (empty ⇒ all)
+    if (body.getConfig === true) {
+      const regions = await getEnabledRegions();
+      return new Response(JSON.stringify({ ok: true, regions, all: ALL_REGIONS, openNow: activeRegion(new Date(), regions) }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (Array.isArray(body.setRegions)) {
+      const regions = await setEnabledRegions(body.setRegions as string[]);
+      return new Response(JSON.stringify({ ok: true, regions, all: ALL_REGIONS }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Test mode: send a full bilingual CTP APP REPORTS sample right now so you can
     // confirm it lands in the bot chat — bypasses the dedupe/trigger logic.
     if (test) {
