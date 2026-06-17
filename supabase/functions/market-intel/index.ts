@@ -366,13 +366,18 @@ async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts
     }
 
     // 2) No open position → consider opening a NEW signal when timing is right.
-    const prev = priceState[q.symbol] as { price?: number; signal?: Signal } | undefined;
+    const prev = priceState[q.symbol] as { price?: number; signal?: Signal; lastSignalAt?: number } | undefined;
     const actionable = sig === "BUY" || sig === "SELL";
     const timingOk = !m.requireSession || isMajorSessionOpen();
     // Avoid re-opening the same direction immediately; only fire when signal flips.
     const fresh = prev?.signal !== sig;
+    // Quiet-market guard: skip weak moves and respect a per-symbol cooldown so we
+    // don't spam repeated signals when the market is barely moving.
+    const strongMove = Math.abs(q.changePct) >= SIGNAL_MIN_MOVE_PCT;
+    const cooldownOk = !prev?.lastSignalAt || Date.now() - prev.lastSignalAt >= SIGNAL_COOLDOWN_MS;
 
-    if (actionable && timingOk && fresh) {
+    let lastSignalAt = prev?.lastSignalAt;
+    if (actionable && timingOk && fresh && strongMove && cooldownOk) {
       const isBuy = sig === "BUY";
       const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
       const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
@@ -388,9 +393,11 @@ async function evaluatePrices(): Promise<{ signalAlerts: string[]; outcomeAlerts
 
       signalAlerts.push(newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session));
       openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
+      lastSignalAt = Date.now();
     }
-    priceState[q.symbol] = { price: q.price, signal: sig };
+    priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt };
   }
+
 
   await setState("prices", priceState);
   await setState("open_signals", openState);
