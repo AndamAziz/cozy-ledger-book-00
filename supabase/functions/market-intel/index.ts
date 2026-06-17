@@ -348,6 +348,22 @@ function nowStamp(): string {
   return new Date().toUTCString();
 }
 
+// Wrap a single trade target / outcome into its own standalone Telegram message.
+// Each target is sent separately and never bundled with other targets or news.
+function oneSignalMessage(subtitle: string, body: string): string {
+  return [
+    "📊 <b>CTP APP REPORTS</b>",
+    `<i>${subtitle}</i>`,
+    "━━━━━━━━━━━━━━━",
+    "",
+    body,
+    "",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
+
 // ───────────────────── core scan ─────────────────────
 interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number; }
 // A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
