@@ -350,10 +350,10 @@ function nowStamp(): string {
 
 // Wrap a single trade target / outcome into its own standalone Telegram message.
 // Each target is sent separately and never bundled with other targets or news.
-function oneSignalMessage(subtitle: string, body: string): string {
+function oneSignalMessage(subtitle: string, body: string, reason?: string): string {
   return [
     "📊 <b>CTP APP REPORTS</b>",
-    `<i>${subtitle}</i>`,
+    reason ? `<i>${subtitle}</i> · <b>${reason}</b>` : `<i>${subtitle}</i>`,
     "━━━━━━━━━━━━━━━",
     "",
     body,
@@ -367,7 +367,8 @@ function oneSignalMessage(subtitle: string, body: string): string {
 // ───────────────────── core scan ─────────────────────
 interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number; }
 // A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
-interface SignalMsg { text: string; important: boolean; }
+// `reason` tells the user why this specific target was sent (very important, cooldown, news, etc.).
+interface SignalMsg { text: string; important: boolean; reason: string; }
 
 async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAlerts: string[]; quotes: Quote[] }> {
   const quotes = await getPrices();
@@ -446,7 +447,13 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
       }).select("id").maybeSingle();
 
       const important = confidence >= TARGET_IMPORTANT_CONFIDENCE || Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
-      signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important });
+      const highConf = confidence >= TARGET_IMPORTANT_CONFIDENCE;
+      const strongMove = Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
+      let reason = "⏱ Cooldown passed / throttle finished · کاتژمێری کۆتایی هات";
+      if (highConf && strongMove) reason = "🔥 Very important: high confidence + strong move · زۆر گرنگ: متمانە بەرز + جوڵە بەهێز";
+      else if (highConf) reason = "🔥 Very important: high confidence · زۆر گرنگ: متمانە بەرز";
+      else if (strongMove) reason = "🔥 Very important: strong move · زۆر گرنگ: جوڵە بەهێز";
+      signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important, reason });
       openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
       lastSignalAt = Date.now();
     }
@@ -529,6 +536,7 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
             const slPips = toPips(sl - goldPrice, m.pip);
             signalAlerts.push({
               important: true,
+              reason: "📰 High-impact news / هەواڵی کاریگەری بەرز",
               text: [
                 `📰 News-driven / بەهۆی هەواڵ: <b>${esc(ev.title)}</b>`,
                 `${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`,
@@ -804,7 +812,7 @@ Deno.serve(async (req) => {
 
     // 1) OUTCOMES (TP/SL hit) → always sent, each as its own message (must close now).
     for (const o of outcomeAlerts) {
-      const ok = await sendTelegram("ctp_signal", oneSignalMessage("Signal Result · ئەنجامی سیگنال", o));
+      const ok = await sendTelegram("ctp_signal", oneSignalMessage("Signal Result · ئەنجامی سیگنال", o, "⚡ Immediate alert (TP/SL hit) · ئاگادارکردنەوەی خێرا"));
       sent = ok || sent;
       if (ok) targetsSent++;
     }
@@ -817,7 +825,7 @@ Deno.serve(async (req) => {
         const gapOk = !lastTargetAt || Date.now() - lastTargetAt >= TARGET_MIN_GAP_MS;
         // Skip ordinary targets while inside the throttle window; always send important ones.
         if (!sig.important && !gapOk) continue;
-        const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text));
+        const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason));
         sent = ok || sent;
         if (ok) { targetsSent++; lastTargetAt = Date.now(); }
       }
