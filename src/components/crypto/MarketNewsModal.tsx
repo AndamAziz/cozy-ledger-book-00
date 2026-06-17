@@ -92,6 +92,18 @@ function eventKey(ev: CalendarEvent): string {
   return `${ev.country}|${ev.title}|${ev.date}`;
 }
 
+// High-volatility "special" events that warrant a top alert banner
+const SPECIAL_EVENTS: { re: RegExp; code: string; ku: string; en: string }[] = [
+  { re: /\b(fomc|federal funds rate|fed interest rate|rate decision|fed press conf|fed chair|powell)\b/i, code: 'FOMC', ku: 'بڕیاری ڕێژەی سوودی فێد', en: 'Federal Funds Rate decision' },
+  { re: /\b(non[- ]?farm|nfp|nonfarm payroll)\b/i, code: 'NFP', ku: 'ئامارەکانی کار (NFP)', en: 'Non-Farm Payrolls release' },
+  { re: /\b(cpi|consumer price index|inflation rate)\b/i, code: 'CPI', ku: 'ئامارەکانی هەڵاوسان (CPI)', en: 'Consumer Price Index release' },
+];
+
+function matchSpecialEvent(ev: CalendarEvent) {
+  const t = ev.title || '';
+  return SPECIAL_EVENTS.find((s) => s.re.test(t)) || null;
+}
+
 // Subtle "ding" using the Web Audio API (no asset needed)
 function playDing() {
   try {
