@@ -15,8 +15,10 @@ const GOLD_THRESHOLD = 2;     // $2
 const OIL_THRESHOLD = 1;      // $1
 const BTC_THRESHOLD = 200;    // $200
 
-// Within how many minutes a high-impact event triggers an alert.
+// Within how many minutes a high-impact event triggers the first heads-up alert.
 const EVENT_ALERT_MIN = 30;
+// Final "5 minutes left" reminder window before a high-impact event releases.
+const EVENT_REMINDER_MIN = 5;
 
 // Anti-spam: only open a NEW signal when the day's move is clearly strong
 // (|change| >= this %) AND not within the cooldown window of the last signal
@@ -507,8 +509,9 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 
 async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAlerts: SignalMsg[] }> {
   const events = await getHighImpactEvents();
-  const state = await getState("events"); // { alertedKeys: string[], resultKeys: string[] }
+  const state = await getState("events"); // { alertedKeys, remindKeys, resultKeys }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
+  const reminded = new Set((state.remindKeys as string[]) ?? []);
   const resulted = new Set((state.resultKeys as string[]) ?? []);
   const now = Date.now();
   const calendarAlerts: string[] = [];     // pure news / heads-up / result info (NO trade targets)
@@ -524,16 +527,31 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
 
     const minutes = (ev.time - now) / 60_000;
 
-    // 1) BEFORE the event → heads-up alert (news only).
-    if (minutes >= 0 && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
+    // 1) EARLY heads-up → fired once between the 5-min reminder window and EVENT_ALERT_MIN.
+    if (minutes > EVENT_REMINDER_MIN && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
       alerted.add(ev.key);
       calendarAlerts.push([
         `🟠⚠️ <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
         `🕒 In ${Math.round(minutes)} min · لە ${Math.round(minutes)} خولەکدا`,
         ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
+        `ئامادە بە — تارگێت دوای دەرچوونی هەواڵەکە دەنێردرێت`,
       ].filter(Boolean).join("\n"));
-      continue;
     }
+
+    // 2) FINAL 5-minute reminder → fired once inside the last EVENT_REMINDER_MIN minutes.
+    if (minutes >= 0 && minutes <= EVENT_REMINDER_MIN && !reminded.has(ev.key)) {
+      reminded.add(ev.key);
+      const left = Math.max(0, Math.round(minutes));
+      calendarAlerts.push([
+        `🔔⏰ <b>بیرهێنانەوە / REMINDER</b>`,
+        `🟠 <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
+        `🕒 ${left} min left · ${left} خولەک ماوە بۆ دەرچوونی هەواڵەکە`,
+        ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
+        `🟢🔴 ئامادە بە بۆ کڕین یان فرۆشتن / Get ready to BUY or SELL`,
+      ].filter(Boolean).join("\n"));
+    }
+
+
 
     // 2) AFTER the event releases → post the RESULT + market reaction/bias.
     // Only when an actual figure exists, event is in the past but recent (<=6h), and not yet posted.
@@ -597,6 +615,7 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
   // Keep last 100 keys of each kind.
   await setState("events", {
     alertedKeys: [...alerted].slice(-100),
+    remindKeys: [...reminded].slice(-100),
     resultKeys: [...resulted].slice(-100),
   });
   return { calendarAlerts, signalAlerts };
@@ -757,6 +776,61 @@ async function evaluateNews(): Promise<string[]> {
   return out;
 }
 
+// ───────────────────── market-open report (per region) ─────────────────────
+// Build an analysis card for a region that just opened: live prices, per-asset
+// signal, overall bias, and a "get ready to BUY/SELL" heads-up. No concrete
+// target here — targets are sent separately when the buy/sell moment arrives.
+function sessionOpenReport(region: Region, quotes: Quote[]): string {
+  const label = `${REGION_EMOJI[region]} ${region} (${REGION_KU[region]})`;
+  const sigs = quotes.map((q) => ruleSignal(q.changePct));
+  const buys = sigs.filter((s) => s === "BUY").length;
+  const sells = sigs.filter((s) => s === "SELL").length;
+  let bias = "🟡 Neutral / مامناوەند — چاوەڕێی جوڵە بکە";
+  if (buys > sells) bias = "🟢 Bullish bias / مەیلی کڕین — ئامادە بە بۆ BUY";
+  else if (sells > buys) bias = "🔴 Bearish bias / مەیلی فرۆشتن — ئامادە بە بۆ SELL";
+  const priceBlock = quotes.length
+    ? quotes.map((q) => priceLine(q, ruleSignal(q.changePct))).join("\n\n")
+    : "—";
+  return [
+    "🔔 <b>MARKET OPEN / بازاڕ کرایەوە</b>",
+    `🏙 Session / بازاڕ: ${label}`,
+    "━━━━━━━━━━━━━━━",
+    "",
+    "📈 <b>Analysis / شیکاری بازاڕ</b>",
+    "",
+    priceBlock,
+    "",
+    `📊 Overall bias / مەیلی گشتی: ${bias}`,
+    "",
+    "🟢🔴 ئامادە بە بۆ کڕین یان فرۆشتن — کاتێک وەختی هات تارگێت بە پەیامێکی جیا دەنێردرێت",
+    "Get ready to BUY/SELL — targets are sent separately when the moment arrives",
+    "",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
+
+// Detect regions that JUST opened (only ENABLED ones) and emit one report each.
+// State stores the set of currently-open regions so each region only reports once
+// per open; when it closes it is removed and can report again on its next open.
+async function evaluateSessionOpen(): Promise<string[]> {
+  const enabled = await getEnabledRegions();
+  const openRegions = [...new Set(openSessions().map((s) => s.region))].filter((r) => enabled.includes(r));
+  const state = await getState("session_open");
+  const reported = new Set((state.reported as string[]) ?? []);
+  const newlyOpen = openRegions.filter((r) => !reported.has(r));
+
+  const alerts: string[] = [];
+  if (newlyOpen.length) {
+    const quotes = await getPrices();
+    for (const region of newlyOpen) alerts.push(sessionOpenReport(region as Region, quotes));
+  }
+  // Persist only the regions still open so closed ones can re-trigger later.
+  await setState("session_open", { reported: openRegions });
+  return alerts;
+}
+
 // ───────────────────── HTTP ─────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -855,12 +929,20 @@ Deno.serve(async (req) => {
     // Calendar + news once per invocation (≈60s cadence).
     const { calendarAlerts, signalAlerts: calSignals } = await evaluateCalendar();
     const newsAlerts = await evaluateNews();
+    // Market-open reports for regions that just opened (analysis + get-ready heads-up).
+    const sessionOpenAlerts = await evaluateSessionOpen();
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
 
     let sent = false;
     let targetsSent = 0;
+
+    // 0) MARKET-OPEN reports → one standalone message per region that just opened.
+    for (const r of sessionOpenAlerts) {
+      sent = (await sendTelegram("ctp_session_open", r)) || sent;
+    }
+
 
     // 1) OUTCOMES (TP/SL hit) → always sent, each as its own message (must close now).
     for (const o of outcomeAlerts) {
@@ -907,7 +989,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent, targetsSent, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
+      JSON.stringify({ ok: true, sent, targetsSent, sessionOpenAlerts: sessionOpenAlerts.length, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
