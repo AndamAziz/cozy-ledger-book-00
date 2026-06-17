@@ -275,6 +275,25 @@ const SESSIONS: SessionDef[] = [
 // Kurdish names per region for the report.
 const REGION_KU: Record<string, string> = { Asia: "ئاسیا", London: "لەندەن", "New York": "نیویۆرک" };
 const REGION_EMOJI: Record<string, string> = { Asia: "🌏", London: "🇬🇧", "New York": "🇺🇸" };
+type Region = "Asia" | "London" | "New York";
+const ALL_REGIONS: Region[] = ["Asia", "London", "New York"];
+
+// Which market regions are allowed to open NEW targets. Configurable & stored in
+// market_alert_state["session_config"].regions. Empty/missing ⇒ all regions on.
+async function getEnabledRegions(): Promise<Region[]> {
+  const cfg = await getState("session_config");
+  const r = cfg.regions as string[] | undefined;
+  if (!Array.isArray(r) || r.length === 0) return [...ALL_REGIONS];
+  const filtered = r.filter((x): x is Region => (ALL_REGIONS as string[]).includes(x));
+  return filtered.length ? filtered : [...ALL_REGIONS];
+}
+async function setEnabledRegions(regions: string[]): Promise<Region[]> {
+  const clean = [...new Set(regions)].filter((x): x is Region => (ALL_REGIONS as string[]).includes(x));
+  const value = clean.length ? clean : [...ALL_REGIONS];
+  await setState("session_config", { regions: value });
+  return value;
+}
+
 function openSessions(d = new Date()): SessionDef[] {
   const h = d.getUTCHours();
   return SESSIONS.filter((s) => (s.start <= s.end ? h >= s.start && h < s.end : h >= s.start || h < s.end));
@@ -283,16 +302,22 @@ function openSessions(d = new Date()): SessionDef[] {
 function isMajorSessionOpen(d = new Date()): boolean {
   return openSessions(d).some((s) => s.name === "London" || s.name === "New York");
 }
-// The active trading region — London / New York take priority (highest liquidity), else Asia.
-function activeRegion(d = new Date()): string | null {
-  const open = openSessions(d);
+// Is any ENABLED region currently open? (gates new targets per user config)
+function enabledSessionOpen(enabled: Region[], d = new Date()): boolean {
+  return openSessions(d).some((s) => enabled.includes(s.region));
+}
+// The active trading region — New York / London take priority (highest liquidity),
+// else Asia. When `enabled` is given, only consider those regions.
+function activeRegion(d = new Date(), enabled?: Region[]): Region | null {
+  let open = openSessions(d);
+  if (enabled) open = open.filter((s) => enabled.includes(s.region));
   if (open.length === 0) return null;
   if (open.some((s) => s.region === "New York")) return "New York";
   if (open.some((s) => s.region === "London")) return "London";
   return "Asia";
 }
-function sessionLabel(d = new Date()): string {
-  const region = activeRegion(d);
+function sessionLabel(d = new Date(), enabled?: Region[]): string {
+  const region = activeRegion(d, enabled);
   if (!region) return "Closed / داخراو";
   return `${REGION_EMOJI[region]} ${region} (${REGION_KU[region]})`;
 }
