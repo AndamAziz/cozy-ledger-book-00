@@ -708,8 +708,6 @@ async function processBot(bot: Record<string, unknown>) {
   const curVol = volumes[volumes.length - 1];
   const volSpike = curVol > avgVol * 1.5;
 
-  await admin.from("bots").update({ last_scan_at: new Date().toISOString() }).eq("id", botId);
-
   const session = getSession();
   await log(botId, userId, "info", `[${hhmmss()}] ${session.label}`);
   await log(botId, userId, "info", `[${hhmmss()}] 📊 Analyzing ${symbol} on ${timeframe}...`);
