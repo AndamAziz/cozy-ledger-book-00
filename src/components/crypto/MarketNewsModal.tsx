@@ -624,7 +624,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
     const d = new Date(ev.date);
     const label = Number.isNaN(d.getTime())
       ? '—'
-      : d.toLocaleDateString(language === 'en' || language === 'tr' ? 'en-US' : 'en-GB', { weekday: 'long', month: 'short', day: 'numeric' });
+      : formatDayInTimezone(d, tz, language === 'en' || language === 'tr' ? 'en-US' : 'en-GB');
     const last = grouped[grouped.length - 1];
     if (last && last.label === label) last.items.push(ev);
     else grouped.push({ label, isToday: isToday(ev.date), items: [ev] });
