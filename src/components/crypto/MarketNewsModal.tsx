@@ -657,7 +657,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
     return i === 'high' ? '#f6465d' : i === 'medium' ? '#f0b90b' : '#848e9c';
   };
 
-  const renderEventCard = (ev: CalendarEvent, key: string, pinned = false) => {
+  const renderEventCard = (ev: CalendarEvent, key: string, pinned = false, isNext = false) => {
     const a = analyzeEvent(ev);
     const isUSD = ev.country === 'USD';
     const col = dirColor(a.usdUp);
@@ -667,6 +667,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
     const goldRel = isGoldRelevant(ev.country);
     const t = Date.parse(ev.date);
     const upcoming = !Number.isNaN(t) && t > now;
+    const passed = !Number.isNaN(t) && t <= now;
     const isHigh = (ev.impact || '').toLowerCase() === 'high';
 
     // Card background tint: gold up => red, gold down => green
@@ -677,26 +678,46 @@ export function MarketNewsModal({ open, onClose }: Props) {
         ? 'rgba(212,175,55,0.55)'
         : T.cardBorder;
 
+    // Result-based gold note (shown once the actual figure prints)
     const goldNote = a.usdUp === true
       ? bi('زێڕ ↓ دادەبەزێت', 'Gold ↓ down')
       : a.usdUp === false
         ? bi('زێڕ ↑ بەرز دەبێتەوە', 'Gold ↑ up')
         : bi('زێڕ ⟷ چاوەڕوان', 'Gold ⟷ wait');
 
+    // Forecast-based gold impact explanation (shown for upcoming events, before the result)
+    const goldForecastNote = goldUp === true
+      ? bi('📈 ئەگەری بەرزبوونەوەی زێڕ ئەگەر خراپتر بێت لە پێشبینی', '📈 Gold likely UP if worse than expected')
+      : goldUp === false
+        ? bi('📉 ئەگەری دابەزینی زێڕ ئەگەر باشتر بێت لە پێشبینی', '📉 Gold likely DOWN if better than expected')
+        : bi('⟷ چاوەڕێی ئەنجامەکە بکە', '⟷ Wait for the result');
+
     return (
       <SwipeCard key={key} onDismiss={pinned ? undefined : () => dismissEvent(eventKey(ev))} light={light}>
         <div
-          className="flex items-center gap-2 rounded-lg px-3 py-2 border cursor-pointer select-none"
-          style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: goldRel || pinned ? 1.5 : 1 }}
+          className={`flex items-center gap-2 rounded-lg px-3 py-2 border cursor-pointer select-none ${isNext ? 'animate-next-glow' : ''}`}
+          style={{
+            backgroundColor: cardBg,
+            borderColor: isNext ? '#f0b90b' : cardBorder,
+            borderWidth: goldRel || pinned || isNext ? 1.5 : 1,
+            opacity: passed ? 0.5 : 1,
+            filter: passed ? 'grayscale(0.7)' : 'none',
+          }}
           onClick={() => setDetailEvent(ev)}
           title={bi('کرتە بکە بۆ وردەکاری', 'Tap for details')}
         >
-          <span className="text-lg shrink-0">{FLAGS[ev.country] ?? '🏳️'}</span>
+          <span className="text-lg shrink-0">{passed ? '✓' : (FLAGS[ev.country] ?? '🏳️')}</span>
           <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: impactColor(ev.impact) }} />
             <span className="text-[11px] font-bold text-[#848e9c]">{ev.country}</span>
             <span className="text-[10px] text-[#848e9c]">{eventTime(ev.date)}</span>
+            {passed && (
+              <span className="text-[9px] font-bold text-[#0ecb81] inline-flex items-center gap-0.5">✓ {bi('تەواوبوو', 'Done')}</span>
+            )}
+            {isNext && (
+              <span className="text-[9px] font-bold text-black bg-[#f0b90b] px-1.5 py-0.5 rounded-full inline-flex items-center gap-0.5 animate-pulse">⏭ {bi('دواتر', 'Next')}</span>
+            )}
             {/* Gold impact score bars */}
             <span className="inline-flex items-center gap-0.5 shrink-0" title={bi('کاریگەری زێڕ', 'Gold impact')}>
               {[1, 2, 3].map((n) => (
