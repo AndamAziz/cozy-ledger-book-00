@@ -2436,6 +2436,9 @@ Deno.serve(async (req) => {
     try { body = await req.json(); } catch { /* cron sends none */ }
     const loop = body.loop !== false; // default true; pass {loop:false} for a single pass
     const test = body.test === true;  // pass {test:true} to force a sample report to Telegram
+    // Force mode: immediately broadcast a first signal for the given assets (default GOLD/OIL/BITCOIN),
+    // bypassing the freshness / cooldown / strong-move guards. Seeds state so the cascade + continuous flow keep running.
+    const force = body.force === true || Array.isArray(body.force);
 
     // Config mode: read or set which market regions may open new targets.
     //   {"getConfig": true}                       → returns current enabled regions
@@ -2604,6 +2607,88 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, sent: ok, mode: "test", quotes: quotes.length, news: newsBlock.length, newsSent }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // Force mode: send a fresh first signal NOW for the requested assets (default GOLD/OIL/BITCOIN).
+    if (force) {
+      const wanted: string[] = Array.isArray(body.force) && body.force.length
+        ? (body.force as unknown[]).map((x) => String(x).toUpperCase())
+        : ["GOLD", "OIL", "BITCOIN"];
+      // Map friendly names → asset symbols (BITCOIN/BTC → BTC/USD, GOLD → XAU/USD, OIL → WTI/USD).
+      const nameToSymbol: Record<string, string> = {};
+      for (const [symbol, meta] of Object.entries(ASSET_META)) {
+        nameToSymbol[meta.name.toUpperCase()] = symbol;
+        nameToSymbol[symbol.toUpperCase()] = symbol;
+      }
+      const aliases: Record<string, string> = { BITCOIN: "BTC/USD", BTC: "BTC/USD", GOLD: "XAU/USD", OIL: "WTI/USD", CRUDE: "WTI/USD", WTI: "WTI/USD" };
+
+      const quotes = await getPrices();
+      const priceState = await getState("prices");
+      const openState = await getState("open_signals");
+      const tfQueue = ((await getState("tf_queue")).items as TfQueueItem[]) ?? [];
+      const enabledRegions = await getEnabledRegions();
+      const forcedAlerts: SignalMsg[] = [];
+      const forcedSymbols: string[] = [];
+
+      for (const name of wanted) {
+        const symbol = aliases[name] ?? nameToSymbol[name];
+        if (!symbol) continue;
+        const m = ASSET_META[symbol];
+        if (!m) continue;
+        const q = quotes.find((x) => x.symbol === symbol);
+        if (!q) continue;
+
+        // Direction from latest move; default to BUY when flat.
+        const sig: "BUY" | "SELL" = q.changePct < 0 ? "SELL" : "BUY";
+        const isBuy = sig === "BUY";
+        const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+        const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
+        const tpPips = toPips(tp - q.price, m.pip);
+        const slPips = toPips(sl - q.price, m.pip);
+        const confidence = Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
+        const session = sessionLabel(new Date(), enabledRegions);
+
+        const { data: ins } = await admin.from("ai_signals").insert({
+          asset: m.name, signal: sig, entry: q.price, tp, sl,
+          confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
+        }).select("id").maybeSingle();
+
+        const reason = "🚀 First signal (manual start) · یەکەم سیگنال (دەستپێکی دەستی)";
+        const now = Date.now();
+        for (const tfDef of TIMEFRAME_CASCADE) {
+          const tpPctTf = m.tpPct * tfDef.tpMult;
+          const slPctTf = m.slPct * tfDef.slMult;
+          const tpTf = +(q.price * (isBuy ? 1 + tpPctTf / 100 : 1 - tpPctTf / 100)).toFixed(2);
+          const slTf = +(q.price * (isBuy ? 1 - slPctTf / 100 : 1 + slPctTf / 100)).toFixed(2);
+          const tpPipsTf = toPips(tpTf - q.price, m.pip);
+          const slPipsTf = toPips(slTf - q.price, m.pip);
+          const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
+          const text = newSignalLine(q, sig, tpTf, slTf, tpPipsTf, slPipsTf, confidence, session, tfDef.tf);
+          if (tfDef.delayMs === 0) forcedAlerts.push({ text, important: true, reason: tfReason });
+          else tfQueue.push({ dueAt: now + tfDef.delayMs, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
+        }
+
+        openState[symbol] = { id: ins?.id as string | undefined, signal: sig, entry: q.price, tp, sl };
+        priceState[symbol] = { price: q.price, signal: sig, lastSignalAt: now, lastSignalDir: sig, lastAuditKey: "sent:fresh" };
+        await admin.from("signal_audit_log").insert({
+          symbol: m.name, signal: sig, price: q.price, change_pct: q.changePct, outcome: "sent", reason: "forced",
+        });
+        forcedSymbols.push(m.name);
+      }
+
+      await setState("prices", priceState);
+      await setState("open_signals", openState);
+      await setState("tf_queue", { items: tfQueue.slice(-200) });
+
+      let forcedSent = 0;
+      for (const sig of forcedAlerts) {
+        if (await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason))) forcedSent++;
+      }
+
+      return new Response(JSON.stringify({ ok: true, mode: "force", assets: forcedSymbols, sent: forcedSent, scheduled: tfQueue.length }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+
 
 
     const signalAlerts: SignalMsg[] = [];
