@@ -678,6 +678,9 @@ interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: numb
 // A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
 // `reason` tells the user why this specific target was sent (very important, cooldown, news, etc.).
 interface SignalMsg { text: string; important: boolean; reason: string; }
+// A queued higher-timeframe signal waiting for its scheduled send time.
+interface TfQueueItem { dueAt: number; text: string; reason: string; symbol: string; tf: string; }
+
 
 async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAlerts: string[]; quotes: Quote[] }> {
   const quotes = await getPrices();
