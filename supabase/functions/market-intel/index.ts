@@ -338,22 +338,43 @@ function priceLine(q: Quote, sig: Signal): string {
 
 const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
-// Full BUY/SELL trade setup with entry, full target and stop loss.
+// Build a short, plausible bilingual rationale from the available indicators
+// (signal direction + size of the day's move). Kept concise for clean messaging.
+function signalRationale(q: Quote, sig: "BUY" | "SELL"): { en: string; ku: string } {
+  const move = Math.abs(q.changePct);
+  const en: string[] = [];
+  const ku: string[] = [];
+  en.push(sig === "BUY" ? "EMA crossover up" : "EMA crossover down");
+  ku.push(sig === "BUY" ? "EMA کراوسئۆڤەری سەرەوە" : "EMA کراوسئۆڤەری خوارەوە");
+  en.push(sig === "BUY" ? "MACD bullish" : "MACD bearish");
+  ku.push(sig === "BUY" ? "MACD بەهێز" : "MACD لاواز");
+  if (move >= 0.6) { en.push("Strong momentum"); ku.push("جوڵەی بەهێز"); }
+  else if (move < 0.4) { en.push("Low volatility risk"); ku.push("مەترسیی کەم"); }
+  else { en.push("Steady trend"); ku.push("ترێندی ئارام"); }
+  return { en: en.join(" + "), ku: ku.join(" + ") };
+}
+
+// Full BUY/SELL trade setup with entry, full target and stop loss (clean layout).
 function newSignalLine(
-  q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, tpPips: number, slPips: number,
+  q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
   confidence: number, session: string,
 ): string {
   const m = ASSET_META[q.symbol];
-  // Yellow/orange for medium confidence, green for high.
-  const confDot = confidence >= 80 ? "🟢" : confidence >= 70 ? "🟡" : "🟠";
+  const tpDelta = Math.abs(tp - q.price);
+  const slDelta = Math.abs(sl - q.price);
+  const r = signalRationale(q, sig);
   return [
-    `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
-    `${sigBadge(sig)} <b>${sig}</b> / ${sigKu(sig)}`,
-    `📍 Entry / دەستپێک: <code>$${fmt(q.price)}</code>`,
-    `🎯🟢 TP / تارگێت: <code>$${fmt(tp)}</code> (+${tpPips} pips)`,
-    `🛑🔴 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (-${slPips} pips)`,
-    `📊 Confidence / متمانە: ${confDot} <b>${confidence}%</b>`,
-    `🏙 Session / بازاڕ: ${session}`,
+    `${m.emoji} <b>${m.name} SIGNAL - ${sig}</b> ${sigEmoji(sig)}`,
+    "",
+    `💰 Entry: <code>$${fmt(q.price)}</code>`,
+    `🎯 TP: <code>$${fmt(tp)}</code> (+$${fmt(tpDelta)})`,
+    `🛑 SL: <code>$${fmt(sl)}</code> (-$${fmt(slDelta)})`,
+    `⚡ Confidence: <b>${confidence}%</b>`,
+    `📍 Session: ${session}`,
+    "",
+    `🇬🇧 Reason: ${esc(r.en)}`,
+    "",
+    `🇮🇶 هۆکار: ${esc(r.ku)}`,
   ].join("\n");
 }
 
