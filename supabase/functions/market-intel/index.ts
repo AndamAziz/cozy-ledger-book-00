@@ -1340,14 +1340,17 @@ Deno.serve(async (req) => {
         priceBlock.length ? priceBlock.join("\n\n") : "—",
         "",
       ];
-      if (newsBlock.length) {
-        lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "", newsBlock.join("\n\n━━━━━━━━━━━━━━━\n\n"), "");
-      }
       lines.push("━━━━━━━━━━━━━━━");
       lines.push(`<i>🕒 ${nowStamp()}</i>`);
       lines.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
       const ok = await sendTelegram("ctp_report_test", lines.join("\n"));
-      return new Response(JSON.stringify({ ok: true, sent: ok, mode: "test", quotes: quotes.length, news: newsBlock.length }),
+      // News goes out as separate messages (each rich block can exceed Telegram's
+      // 4096-char limit if bundled), matching the production news flow.
+      let newsSent = 0;
+      for (const block of newsBlock) {
+        if (await sendTelegram("ctp_news", oneNewsMessage(block))) newsSent++;
+      }
+      return new Response(JSON.stringify({ ok: true, sent: ok, mode: "test", quotes: quotes.length, news: newsBlock.length, newsSent }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
