@@ -1151,7 +1151,7 @@ function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
   return parts.join("\n");
 }
 
-interface NewsOut { block: string; headline: string; hash: string }
+interface NewsOut { block: string; headline: string; hash: string; asset: string; event: string; urgency: Urgency }
 
 async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
   const priceBySymbol: Record<string, number> = {};
@@ -1161,9 +1161,9 @@ async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
   const now = Date.now();
 
-  // Pick up to 4 new, fresh (≤90 min old) items we have not alerted yet, AND
-  // whose exact headline was NOT already posted in the last 2 hours (DB-backed
-  // dedupe — the single source of truth that stops duplicate news).
+  // Gather fresh (≤90 min old) candidates we have not alerted yet AND whose exact
+  // headline was NOT already posted in the last 2 hours. We collect a wider pool
+  // (up to 12) so we can later pick the single most important item per asset.
   const fresh: NewsItem[] = [];
   for (const n of news) {
     const key = (n.link || n.title).toLowerCase();
@@ -1172,18 +1172,18 @@ async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
     const ts = Date.parse(n.pubDate) || 0;
     if (ts && now - ts > 90 * 60 * 1000) continue;
     // Skip if this EXACT headline was already sent in the last 2 hours.
-    const headlineHash = contentHash(n.title);
-    if (await wasRecentlySent(headlineHash, NEWS_DEDUPE_MS)) continue;
+    if (await wasRecentlySent(contentHash(n.title), NEWS_DEDUPE_MS)) continue;
     fresh.push(n);
-    if (fresh.length >= 4) break;
+    if (fresh.length >= 12) break;
   }
   await setState("news", { alertedKeys: [...alerted].slice(-300) });
   if (fresh.length === 0) return [];
 
   const enriched = await enrichNews(fresh, priceBySymbol);
 
-  // Persist for the dashboard (best-effort).
-  const out: NewsOut[] = [];
+  // Build candidates with asset + event keyword + urgency, persist for the dashboard.
+  interface Cand { n: NewsItem; e: NewsEnrich; asset: string; event: string; urgency: Urgency; ts: number }
+  const candidates: Cand[] = [];
   for (let i = 0; i < fresh.length; i++) {
     const n = fresh[i];
     const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" };
@@ -1193,10 +1193,41 @@ async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
       impact: n.category, bias: e.impact, source: n.source, url: n.link,
       published_at: n.pubDate ? new Date(n.pubDate).toISOString() : null,
     }, { onConflict: "hash" });
-    out.push({ block: newsBlockItem(n, e), headline: n.title, hash: contentHash(n.title) });
+    candidates.push({
+      n, e,
+      asset: n.category,
+      event: extractEvent(`${n.title} ${n.summary}`),
+      urgency: e.urgency,
+      ts: Date.parse(n.pubDate) || now,
+    });
+  }
+
+  // MAX 1 news per asset per cycle: among same-asset items pick the most important
+  // (urgency rank, then newest). This collapses e.g. two Oil stories into one.
+  const bestByAsset = new Map<string, Cand>();
+  for (const c of candidates) {
+    const cur = bestByAsset.get(c.asset);
+    if (!cur) { bestByAsset.set(c.asset, c); continue; }
+    const better =
+      (URGENCY_RANK[c.urgency] ?? 1) - (URGENCY_RANK[cur.urgency] ?? 1) ||
+      c.ts - cur.ts;
+    if (better > 0) bestByAsset.set(c.asset, c);
+  }
+
+  const out: NewsOut[] = [];
+  for (const c of bestByAsset.values()) {
+    out.push({
+      block: newsBlockItem(c.n, c.e),
+      headline: c.n.title,
+      hash: contentHash(c.n.title),
+      asset: c.asset,
+      event: c.event,
+      urgency: c.urgency,
+    });
   }
   return out;
 }
+
 
 // ───────────────────── market-open report (per region) ─────────────────────
 // Build an analysis card for a region that just opened: live prices, per-asset
