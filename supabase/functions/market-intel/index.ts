@@ -689,13 +689,14 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
     }
   }
 
-  // Keep last 100 keys of each kind.
+  // Keep last 100 keys of each kind (+ pending pre-event gold snapshots).
   await setState("events", {
     alertedKeys: [...alerted].slice(-100),
     remindKeys: [...reminded].slice(-100),
     resultKeys: [...resulted].slice(-100),
+    preGold,
   });
-  return { calendarAlerts, signalAlerts };
+  return { calendarAlerts, signalAlerts, specialAlerts };
 }
 
 
