@@ -927,20 +927,20 @@ async function evaluateNews(): Promise<string[]> {
   await setState("news", { alertedKeys: [...alerted].slice(-300) });
   if (fresh.length === 0) return [];
 
-  const kuTitles = await translateToKurdish(fresh.map((n) => n.title));
+  const enriched = await enrichNews(fresh);
 
   // Persist for the dashboard (best-effort).
   const out: string[] = [];
   for (let i = 0; i < fresh.length; i++) {
     const n = fresh[i];
-    const ku = kuTitles[i] ?? "";
+    const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact };
     const hash = (n.link || n.title).toLowerCase();
     await admin.from("market_news").upsert({
-      hash, title: n.title, title_ku: ku || null, summary: n.summary || null,
-      impact: n.category, bias: null, source: n.source, url: n.link,
+      hash, title: n.title, title_ku: e.titleKu || null, summary: e.summaryEn || n.summary || null,
+      impact: n.category, bias: e.impact, source: n.source, url: n.link,
       published_at: n.pubDate ? new Date(n.pubDate).toISOString() : null,
     }, { onConflict: "hash" });
-    out.push(newsLine(n.title, ku, n.summary, n.category, n.source));
+    out.push(newsBlockItem(n, e));
   }
   return out;
 }
