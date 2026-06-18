@@ -1160,6 +1160,21 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Daily report preview/send.
+    //   {"dailyPreview": true}  → build & RETURN the report (does NOT post to Telegram)
+    //   {"dailySend": true}     → build the report and post it to the channel now
+    if (body.dailyPreview === true || body.dailySend === true) {
+      const report = await evaluateDailySummary([], { force: true });
+      let sent = false;
+      if (body.dailySend === true && report) {
+        sent = await sendTelegram("ctp_daily", report);
+      }
+      return new Response(JSON.stringify({ ok: true, sent, report }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+
+
     // Test mode: send a full bilingual CTP APP REPORTS sample right now so you can
     // confirm it lands in the bot chat — bypasses the dedupe/trigger logic.
     if (test) {
