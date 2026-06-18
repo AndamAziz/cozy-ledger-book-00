@@ -762,8 +762,9 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
       signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important, reason });
       openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
       lastSignalAt = Date.now();
+      lastSignalDir = sig; // remember the direction we actually broadcast
     }
-    priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt };
+    priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt, lastSignalDir };
   }
 
 
