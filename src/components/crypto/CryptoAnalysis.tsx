@@ -442,7 +442,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   };
 
   const fetchSummary = async () => {
-    const resp = await fetch(fnUrl, {
+    const resp = await fetch(aiFnUrl, {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify({ ...buildBody(), mode: 'summary' }),
@@ -458,10 +458,11 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     const j = await resp.json();
     setTradeSummary(j.summary as TradeSummary);
     setGeneratedAt(j.generatedAt as string);
+    return { summary: j.summary as TradeSummary, generatedAt: j.generatedAt as string };
   };
 
   const streamNarrative = async () => {
-    const resp = await fetch(fnUrl, {
+    const resp = await fetch(aiFnUrl, {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify(buildBody()),
@@ -504,6 +505,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         }
       }
     }
+    return acc;
   };
 
   const runAiAnalysis = async () => {
@@ -513,9 +515,20 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     setTradeSummary(null);
     setGeneratedAt(null);
     try {
+      // Serve a cached result if it is fresh (< 5 min) to respect Groq's free rate limit.
+      const cached = readAiCache();
+      if (cached) {
+        setTradeSummary(cached.summary);
+        setGeneratedAt(cached.generatedAt);
+        if (cached.text) setAiText(cached.text);
+        return;
+      }
       // First the fast structured summary, then the detailed narrative
-      await fetchSummary();
-      await streamNarrative();
+      const { summary, generatedAt } = await fetchSummary();
+      const text = await streamNarrative();
+      try {
+        localStorage.setItem(aiCacheKey, JSON.stringify({ summary, generatedAt, text }));
+      } catch { /* ignore quota errors */ }
     } catch (e) {
       setAiError(e instanceof Error ? e.message : biLabel('هەڵەیەک ڕوویدا.', 'Something went wrong.'));
     } finally {
