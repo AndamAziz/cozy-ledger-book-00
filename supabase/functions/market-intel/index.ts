@@ -955,9 +955,64 @@ function dailyPriceLine(q: Quote): string {
   return `${m.emoji} <b>${m.name}</b>: <code>$${fmt(q.price)}</code> ${dot}${arrow} ${pct}`;
 }
 
-// End-of-day report: market closes + today's bot performance. Fires once per day
-// during the 21:00 UTC hour; deduped by calendar date in market_alert_state.
-async function evaluateDailySummary(quotes: Quote[]): Promise<string | null> {
+// Convert pips → an approximate dollar P/L (0.01-lot convention: $0.10 per pip).
+function pipsToDollars(pips: number): number {
+  return pips * 0.1;
+}
+function plStr(dollars: number): string {
+  return `${dollars >= 0 ? "+" : "-"}$${fmt(Math.abs(dollars))}`;
+}
+function pipsStr(pips: number): string {
+  return `${pips >= 0 ? "+" : ""}${Math.round(pips)}`;
+}
+
+interface DailyRow {
+  asset: string;
+  signal: string;
+  entry: number;
+  close_price: number;
+  status: string;
+  result_pips: number;
+  market_session: string;
+}
+
+// Which region a stored session label belongs to.
+function rowRegion(label: string): Region | null {
+  if (!label) return null;
+  if (label.includes("New York")) return "New York";
+  if (label.includes("London")) return "London";
+  if (label.includes("Asia")) return "Asia";
+  return null;
+}
+
+// Pips for a row: prefer the stored result_pips, else derive from entry/close.
+function rowPips(r: DailyRow): number {
+  if (Number.isFinite(r.result_pips) && r.result_pips !== 0) return Number(r.result_pips);
+  const meta = ASSET_META[r.asset];
+  const pip = meta?.pip ?? 0.1;
+  const entry = Number(r.entry) || 0;
+  const close = Number(r.close_price) || 0;
+  if (!entry || !close) return 0;
+  const diff = r.signal === "SELL" ? entry - close : close - entry;
+  return toPips(diff, pip);
+}
+
+function sessionRegionBlock(region: Region, rows: DailyRow[]): string {
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const lost = rows.filter((r) => r.status === "stopped_out").length;
+  const pips = rows.reduce((s, r) => s + rowPips(r), 0);
+  const pl = pipsToDollars(pips);
+  const plDot = pl >= 0 ? "🟢" : "🔴";
+  return [
+    `${REGION_EMOJI[region]} <b>${region.toUpperCase()} SESSION</b>`,
+    `✅ Won: ${won}  ❌ Lost: ${lost}`,
+    `📈 Pips: ${pipsStr(pips)}  💰 P/L: ${plDot} ${plStr(pl)}`,
+  ].join("\n");
+}
+
+// End-of-day report with per-session breakdown, win-rates, and best/worst signal.
+// Fires once per day during the 21:00 UTC (22:00 BST) hour; deduped by calendar date.
+async function evaluateDailySummary(_quotes: Quote[]): Promise<string | null> {
   const now = new Date();
   if (now.getUTCHours() !== DAILY_SUMMARY_UTC_HOUR) return null;
   const day = now.toISOString().slice(0, 10);
@@ -965,50 +1020,124 @@ async function evaluateDailySummary(quotes: Quote[]): Promise<string | null> {
   if (state.lastDay === day) return null;
   await setState("daily_summary", { lastDay: day });
 
-  const priceQuotes = quotes.length ? quotes : await getPrices();
   const dateLabel = now.toLocaleDateString("en-GB", {
-    weekday: "long", month: "short", day: "numeric", timeZone: "Europe/London",
+    weekday: "long", month: "short", day: "numeric", year: "numeric", timeZone: "Europe/London",
   });
 
-  // Today's closed signals → trade count, wins/losses, dollar P/L.
+  const header = [
+    "━━━━━━━━━━━━━━━━━━━━━",
+    "📊 <b>CTP DAILY REPORT</b>",
+    "<i>یەکەمین پلاتفۆرمی ترەیدینگی کوردی</i>",
+    "━━━━━━━━━━━━━━━━━━━━━",
+    `📅 ${esc(dateLabel)}`,
+    "",
+  ];
+  const footer = [
+    "━━━━━━━━━━━━━━━━━━━━━",
+    "📱 <b>بچۆ بۆ چەنالەکە</b>",
+    "https://t.me/goldmarketai",
+    "━━━━━━━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    "<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>",
+  ];
+
+  // Today's closed signals (target_hit / stopped_out).
   const startUtc = new Date(`${day}T00:00:00.000Z`).toISOString();
   const { data: closed } = await admin.from("ai_signals")
-    .select("signal, entry, close_price, status, closed_at")
+    .select("asset, signal, entry, close_price, status, result_pips, market_session, closed_at")
     .gte("closed_at", startUtc)
     .in("status", ["target_hit", "stopped_out"]);
-  const rows = (closed ?? []) as { signal: string; entry: number; close_price: number; status: string }[];
+  const rows = (closed ?? []) as DailyRow[];
+
+  // No signals today → still send a summary.
+  if (rows.length === 0) {
+    return [
+      ...header,
+      "😴 <b>No signals generated today</b>",
+      "<i>هیچ سیگناڵێک ئەمڕۆ نەنێردرا</i>",
+      "",
+      ...footer,
+    ].join("\n");
+  }
+
+  // Group by region.
+  const byRegion: Record<Region, DailyRow[]> = { Asia: [], London: [], "New York": [] };
+  for (const r of rows) {
+    const reg = rowRegion(r.market_session);
+    if (reg) byRegion[reg].push(r);
+  }
+
+  // Totals.
   const trades = rows.length;
   const won = rows.filter((r) => r.status === "target_hit").length;
   const lost = rows.filter((r) => r.status === "stopped_out").length;
-  let pl = 0;
-  for (const r of rows) {
+  const winRate = trades ? Math.round((won / trades) * 100) : 0;
+  const totalPips = rows.reduce((s, r) => s + rowPips(r), 0);
+  const netPl = pipsToDollars(totalPips);
+  const netDot = netPl >= 0 ? "🟢" : "🔴";
+
+  // Best winning signal & worst losing signal.
+  const winners = rows.filter((r) => r.status === "target_hit").sort((a, b) => rowPips(b) - rowPips(a));
+  const losers = rows.filter((r) => r.status === "stopped_out").sort((a, b) => rowPips(a) - rowPips(b));
+  const best = winners[0];
+  const worst = losers[0];
+
+  const sigText = (r: DailyRow) => {
+    const meta = ASSET_META[r.asset] ?? { emoji: "🥇", name: r.asset };
     const entry = Number(r.entry) || 0;
     const close = Number(r.close_price) || 0;
-    if (!entry || !close) continue;
-    pl += r.signal === "SELL" ? entry - close : close - entry;
+    const delta = r.signal === "SELL" ? entry - close : close - entry;
+    return { meta, entry, close, delta };
+  };
+
+  const lines: string[] = [
+    ...header,
+    "🌍 <b>SESSION BREAKDOWN:</b>",
+    "<i>سەرکەوتنی هەر سێشنێک</i>",
+    "",
+    sessionRegionBlock("Asia", byRegion.Asia),
+    "",
+    sessionRegionBlock("London", byRegion.London),
+    "",
+    sessionRegionBlock("New York", byRegion["New York"]),
+    "",
+    "━━━━━━━━━━━━━━━━━━━━━",
+    "📊 <b>TOTAL TODAY</b>",
+    "━━━━━━━━━━━━━━━━━━━━━",
+    `🥇 Signals: <b>${trades}</b> total`,
+    `✅ Won: <b>${won}</b> (${winRate}% win rate)`,
+    `❌ Lost: <b>${lost}</b>`,
+    `📈 Total Pips: <b>${pipsStr(totalPips)}</b>`,
+    `💰 Net P/L: ${netDot} <b>${plStr(netPl)}</b>`,
+    "",
+    "━━━━━━━━━━━━━━━━━━━━━",
+  ];
+
+  if (best) {
+    const b = sigText(best);
+    lines.push(
+      "🏆 <b>BEST SIGNAL TODAY</b>",
+      `${b.meta.emoji} ${b.meta.name} ${best.signal} @ <code>$${fmt(b.entry)}</code>`,
+      `✅ Hit TP: <code>$${fmt(b.close)}</code> (${b.delta >= 0 ? "+" : "-"}$${fmt(Math.abs(b.delta))})`,
+      `📈 ${pipsStr(rowPips(best))} pips`,
+      "",
+    );
   }
-  const plStr = `${pl >= 0 ? "+" : "-"}$${fmt(Math.abs(pl))}`;
-  const plDot = pl >= 0 ? "🟢" : "🔴";
+  if (worst) {
+    const w = sigText(worst);
+    lines.push(
+      "❌ <b>MISSED SIGNAL</b>",
+      `${w.meta.emoji} ${w.meta.name} ${worst.signal} @ <code>$${fmt(w.entry)}</code>`,
+      `🛑 Hit SL: <code>$${fmt(w.close)}</code> (${w.delta >= 0 ? "+" : "-"}$${fmt(Math.abs(w.delta))})`,
+      `📉 ${pipsStr(rowPips(worst))} pips`,
+      "",
+    );
+  }
 
-  const priceBlock = priceQuotes.length ? priceQuotes.map(dailyPriceLine).join("\n") : "—";
-
-  return [
-    "━━━━━━━━━━━━━━━",
-    `📈 <b>Daily Report - ${esc(dateLabel)}</b>`,
-    "━━━━━━━━━━━━━━━",
-    "",
-    priceBlock,
-    "",
-    "📊 <b>Bot Performance Today / ئەنجامی ئەمڕۆ:</b>",
-    `• Trades / مامەڵە: <b>${trades}</b>`,
-    `• Won / بردنەوە: <b>${won}</b> | Lost / دۆڕان: <b>${lost}</b>`,
-    `• P/L / قازانج: ${plDot} <b>${plStr}</b>`,
-    "",
-    "━━━━━━━━━━━━━━━",
-    `<i>🕒 ${nowStamp()}</i>`,
-    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
-  ].join("\n");
+  lines.push(...footer);
+  return lines.join("\n");
 }
+
 
 
 Deno.serve(async (req) => {
