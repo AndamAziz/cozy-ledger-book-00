@@ -2656,6 +2656,13 @@ Deno.serve(async (req) => {
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
 
+    // Higher-timeframe cascade: any 15M/30M/1H signals whose staggered send time
+    // has arrived are added now (important ⇒ bypass throttle so they always post).
+    const dueTfSignals = await drainDueTimeframeSignals();
+    for (const item of dueTfSignals) {
+      signalAlerts.push({ text: item.text, important: true, reason: item.reason });
+    }
+
     let sent = false;
     let targetsSent = 0;
 
