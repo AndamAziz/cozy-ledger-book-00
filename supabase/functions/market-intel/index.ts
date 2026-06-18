@@ -1719,6 +1719,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, sent, report }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // Session post preview/send (bypasses the time + dedupe gates):
     //   {"sessionPreview": "open"|"close"}  → build & RETURN all 3 region messages
     //   {"sessionSend": "open"|"close"}     → also post them to Telegram now
     const sp = (body.sessionPreview ?? body.sessionSend) as string | undefined;
