@@ -148,7 +148,7 @@ const TRADE_SUMMARY_TOOL = {
         "recommendation", "confidence", "headline", "headlineEn", "entry",
         "targets", "stopLoss", "horizonDays", "riskLevel", "reasoning", "reasoningEn",
       ],
-      additionalProperties: false,
+      additionalProperties: true,
     },
   },
 };
