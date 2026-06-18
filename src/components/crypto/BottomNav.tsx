@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import {
   Newspaper, CandlestickChart, Coins, Brain, Menu, Home,
-  Bitcoin, DollarSign, Scale, Bot, ArrowRightLeft, X,
+  Bitcoin, DollarSign, Scale, Bot, ArrowRightLeft, X, UserPlus,
 } from 'lucide-react';
+import { InviteFriendsModal } from '@/components/InviteFriendsModal';
+import { TELEGRAM_BLUE } from '@/lib/telegram';
 
 export type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
 
