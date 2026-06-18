@@ -812,43 +812,98 @@ async function fetchNews(): Promise<NewsItem[]> {
   return all;
 }
 
-// Translate a batch of English headlines to Kurdish (Sorani) in a single AI call.
-async function translateToKurdish(titles: string[]): Promise<string[]> {
+// Asset / impact label maps for the bilingual news block.
+const ASSET_LABEL: Record<string, { en: string; ku: string }> = {
+  GOLD: { en: "Gold", ku: "زێڕ" },
+  OIL: { en: "Oil", ku: "نەوت" },
+  CRYPTO: { en: "BTC", ku: "بیتکۆین" },
+  FOREX: { en: "USD", ku: "دۆلار" },
+  MARKETS: { en: "Market", ku: "بازاڕ" },
+};
+const IMPACT_META: Record<string, { emoji: string; ku: string }> = {
+  BULLISH: { emoji: "🟢", ku: "بەرزبوونەوە" },
+  BEARISH: { emoji: "🔴", ku: "داکشان" },
+  NEUTRAL: { emoji: "🟡", ku: "جێگیر" },
+};
+
+type Impact = "BULLISH" | "BEARISH" | "NEUTRAL";
+interface NewsEnrich { titleKu: string; summaryEn: string; summaryKu: string; impact: Impact; }
+
+// Enrich a batch of news items in one AI call: Kurdish title, a full 3-4 sentence
+// English summary, its Kurdish (Sorani) translation, and the expected impact on
+// the relevant asset. NO URLs / source names are ever produced.
+async function enrichNews(items: NewsItem[]): Promise<NewsEnrich[]> {
+  const fallback: NewsEnrich[] = items.map((n) => ({ titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" }));
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY || titles.length === 0) return titles.map(() => "");
+  if (!LOVABLE_API_KEY || items.length === 0) return fallback;
   try {
+    const payload = items.map((n) => ({
+      title: n.title,
+      summary: n.summary,
+      asset: (ASSET_LABEL[n.category] ?? { en: "Market" }).en,
+    }));
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "You are a financial news translator. Translate each English market headline into clear, natural Kurdish (Sorani / کوردیی ناوەندی). Reply ONLY with a JSON array of strings, same order, same length. No extra text." },
-          { role: "user", content: JSON.stringify(titles) },
+          {
+            role: "system",
+            content:
+              "You are a bilingual financial news editor (English + Kurdish Sorani / کوردیی ناوەندی). " +
+              "For each item return an object with EXACTLY these keys: " +
+              "title_ku (natural Kurdish translation of the title), " +
+              "summary_en (a clear 3-4 sentence English summary built from the title and provided text; NEVER include URLs, links, or source/website names), " +
+              "summary_ku (natural Kurdish Sorani translation of summary_en), " +
+              "impact (one of BULLISH, BEARISH, NEUTRAL — the expected effect of this news on the given asset). " +
+              "Reply ONLY with a JSON array of objects, same order and same length as the input. No markdown, no extra text.",
+          },
+          { role: "user", content: JSON.stringify(payload) },
         ],
       }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(20000),
     });
-    if (!res.ok) { await res.text(); return titles.map(() => ""); }
+    if (!res.ok) { await res.text(); return fallback; }
     const d = await res.json();
     let content = String(d?.choices?.[0]?.message?.content ?? "").trim();
     content = content.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
     const arr = JSON.parse(content);
-    if (Array.isArray(arr) && arr.length === titles.length) return arr.map((x) => String(x ?? ""));
+    if (Array.isArray(arr) && arr.length === items.length) {
+      return arr.map((x, i) => {
+        const impRaw = String(x?.impact ?? "").toUpperCase();
+        const impact: Impact = impRaw === "BULLISH" || impRaw === "BEARISH" ? impRaw : "NEUTRAL";
+        return {
+          titleKu: String(x?.title_ku ?? ""),
+          summaryEn: String(x?.summary_en ?? items[i].summary ?? ""),
+          summaryKu: String(x?.summary_ku ?? ""),
+          impact,
+        };
+      });
+    }
   } catch (e) {
-    console.error("translateToKurdish failed", e);
+    console.error("enrichNews failed", e);
   }
-  return titles.map(() => "");
+  return fallback;
 }
 
 const CAT_EMOJI: Record<string, string> = { GOLD: "🟡", OIL: "🟠", CRYPTO: "🟣", FOREX: "🔵", MARKETS: "🟢" };
-function newsLine(title: string, titleKu: string, summary: string, category: string, source: string): string {
-  const dot = CAT_EMOJI[category] ?? "🔹";
-  const parts = [`${dot} <b>${esc(title)}</b>`];
-  if (titleKu) parts.push(`  🇹🇯 ${esc(titleKu)}`);
-  if (summary) parts.push(`  <i>${esc(summary)}</i>`);
-  const meta = [category ? `🏷 ${esc(category)}` : "", source ? esc(source) : ""].filter(Boolean).join(" · ");
-  if (meta) parts.push(`  <i>${meta}</i>`);
+
+// Build one bilingual news block — NO external links / sources.
+function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
+  const dot = CAT_EMOJI[n.category] ?? "🔹";
+  const al = ASSET_LABEL[n.category] ?? { en: n.category, ku: n.category };
+  const im = IMPACT_META[e.impact] ?? IMPACT_META.NEUTRAL;
+  const summaryEn = (e.summaryEn || n.summary || "").trim();
+  const parts: string[] = [`${dot} <b>${esc(n.category)}</b>`];
+  if (e.titleKu) parts.push(esc(e.titleKu));
+  if (summaryEn) parts.push("", "📝 <b>English:</b>", esc(summaryEn));
+  if (e.summaryKu) parts.push("", "📝 <b>کوردی:</b>", esc(e.summaryKu));
+  parts.push(
+    "",
+    `🎯 ${esc(al.en)} Impact: ${e.impact} ${im.emoji}`,
+    `کاریگەری بۆ ${esc(al.ku)}: ${im.ku}`,
+  );
   return parts.join("\n");
 }
 
