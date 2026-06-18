@@ -223,15 +223,16 @@ The stop-loss MUST be derived from a specific level (EMA9/EMA21/EMA50, Bollinger
 For gold, factor in macro drivers (US Dollar/DXY, Fed/rates, CPI/PPI/NFP, geopolitics). If a "LIVE ECONOMIC CALENDAR" block is provided, base the USD judgement on those real events.
 Set validForMinutes based on the timeframe and confidence honestly (0-100). This is educational, not financial advice.`;
 
-      const callGroq = () =>
-        fetch(GROQ_URL, {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      const callLLM = (url: string, key: string, model: string) =>
+        fetch(url, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${GROQ_API_KEY}`,
+            Authorization: `Bearer ${key}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: GROQ_MODEL,
+            model,
             temperature: 0.4,
             max_tokens: 1200, // cap output to avoid repetition loops
             messages: [
@@ -243,6 +244,8 @@ Set validForMinutes based on the timeframe and confidence honestly (0-100). This
           }),
         });
 
+      const callGroq = () => callLLM(GROQ_URL, GROQ_API_KEY, GROQ_MODEL);
+
       // 8B model occasionally emits a malformed tool call -> retry once.
       let resp = await callGroq();
       if (resp.status === 400) {
@@ -250,10 +253,23 @@ Set validForMinutes based on the timeframe and confidence honestly (0-100). This
         resp = await callGroq();
       }
 
+      // Groq rate limited (30/min) -> serve stale cache, else fall back to Lovable AI Gateway.
+      if ((resp.status === 429 || resp.status === 402)) {
+        await resp.text().catch(() => "");
+        if (cached) {
+          return new Response(JSON.stringify(cached.payload), {
+            headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "STALE" },
+          });
+        }
+        if (LOVABLE_API_KEY) {
+          resp = await callLLM(GATEWAY_URL, LOVABLE_API_KEY, GATEWAY_MODEL);
+        }
+      }
+
       if (!resp.ok) {
         if (resp.status === 429 || resp.status === 402) return rateLimitResponse(resp.status);
         const t = await resp.text();
-        console.error("Groq error (summary):", resp.status, t);
+        console.error("LLM error (summary):", resp.status, t);
         return new Response(JSON.stringify({ error: "هەڵە لە دروستکردنی پوختە." }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
