@@ -417,10 +417,28 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     },
   });
 
+  // Image analysis still uses the vision model (crypto-analysis).
   const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crypto-analysis`;
+  // Text analysis now runs on the free Groq API (groq-analysis).
+  const aiFnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/groq-analysis`;
   const authHeaders = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+  };
+
+  // ---- 5 minute response cache (Groq free tier = 30 req/min) ----
+  const aiCacheKey = `groq-ai:${symbol}:${tfLabel}:${langMode}`;
+  const readAiCache = (): { summary: TradeSummary; generatedAt: string; text: string } | null => {
+    try {
+      const raw = localStorage.getItem(aiCacheKey);
+      if (!raw) return null;
+      const c = JSON.parse(raw);
+      if (!c?.generatedAt) return null;
+      if (Date.now() - new Date(c.generatedAt).getTime() > 5 * 60 * 1000) return null;
+      return c;
+    } catch {
+      return null;
+    }
   };
 
   const fetchSummary = async () => {
