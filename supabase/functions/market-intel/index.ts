@@ -1730,7 +1730,62 @@ async function evaluateWeeklySummary(opts?: { force?: boolean }): Promise<string
   return lines.join("\n");
 }
 
-// ───────────────────── monthly report (1st of month 09:00 BST) ─────────────────────
+// ───────────────────── pinned message + channel description (Monday 08:00 BST) ─────────────────────
+// Computes the last 7 days' signal stats and refreshes BOTH the channel's pinned
+// stats message and its public description/bio. Deduped per week via
+// market_alert_state["pin_update"].lastWeek. Runs alongside the weekly report.
+async function evaluatePinnedAndDescription(opts?: { force?: boolean }): Promise<{ pinned: boolean; description: boolean } | null> {
+  const now = new Date();
+  const lon = new Date(now.toLocaleString("en-US", { timeZone: "Europe/London" }));
+  const weekKey = (() => {
+    const d = new Date(lon);
+    const diff = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - diff);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  if (!opts?.force) {
+    if (lon.getDay() !== 1 || lon.getHours() !== 8) return null; // Monday 08:00 BST/GMT
+    const state = await getState("pin_update");
+    if (state.lastWeek === weekKey) return null;
+    await setState("pin_update", { lastWeek: weekKey });
+  }
+
+  // Last 7 days of closed signals → total + win rate.
+  const sinceUtc = new Date(Date.now() - 7 * 24 * 60 * 60_000).toISOString();
+  const { data: closed } = await admin.from("ai_signals")
+    .select("status")
+    .gte("closed_at", sinceUtc)
+    .in("status", ["target_hit", "stopped_out"]);
+  const rows = (closed ?? []) as { status: string }[];
+  const total = rows.length;
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const winRate = total ? Math.round((won / total) * 100) : 0;
+  const subs = await getChannelMemberCount();
+  const subsLine = subs !== null ? `👥 ${subs.toLocaleString("en-US")} subscribers` : "";
+
+  // 1) Pinned stats message.
+  const pinText = [
+    "📌 <b>CTP Gold Signals</b>",
+    `This week: ${total} signals | ${winRate}% win rate`,
+    "Join: t.me/goldmarketai",
+  ].join("\n");
+  const pinned = await pinChannelMessage("ctp_pin", pinText);
+
+  // 2) Channel description / bio (Telegram caps at 255 chars).
+  const descText = [
+    "🥇 CTP Gold Signals",
+    `Last week: ${winRate}% win rate`,
+    "Signals: Gold|Oil|BTC",
+    "Free | Real-time | Kurdish+English",
+    subsLine,
+  ].filter(Boolean).join("\n");
+  const description = await setChannelDescription(descText);
+
+  return { pinned, description };
+}
+
+
 // Summarizes the previous calendar month: gold range, bot performance, best week,
 // signal of the month, and the next month's key events. Deduped per month via
 // market_alert_state["monthly_summary"].monthKey.
