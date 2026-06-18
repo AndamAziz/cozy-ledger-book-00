@@ -2339,18 +2339,34 @@ Deno.serve(async (req) => {
       sent = ok || sent;
     }
 
-    // 4) NEWS → ONLY news, each item as its own standalone message. Exact-headline
-    //    deduped against sent_news_log (2h window) so the same news never repeats.
+    // 4) NEWS → ONLY news, each item its own standalone message. Smart dedupe:
+    //    a) exact-headline (2h)  b) same asset+event topic (3h)
+    //    c) per-asset rate limit by urgency: 🔴 Breaking always · 🟡 Important
+    //       only if asset quiet 60m · 🟢 Info only if asset quiet 2h.
     if (newsAlerts.length) {
       let anyNews = false;
       for (const item of newsAlerts) {
+        // a) exact same headline already sent recently → skip
         if (await wasRecentlySent(item.hash, NEWS_DEDUPE_MS)) continue;
+        // b) same asset + same event topic already covered (different wording) → skip
+        if (await wasAssetEventSentWithin(item.asset, item.event, TOPIC_DEDUPE_MS)) continue;
+        // c) urgency-based per-asset throttle (Breaking bypasses the hourly cap)
+        if (item.urgency !== "BREAKING") {
+          const window = item.urgency === "IMPORTANT" ? ASSET_HOUR_MS : URGENCY_INFO_MS;
+          if (await wasAssetNewsSentWithin(item.asset, window)) continue;
+        }
         const ok = await sendTelegram("ctp_news", oneNewsMessage(item.block));
-        if (ok) { anyNews = true; await recordSent(item.hash, item.headline, "news"); }
+        if (ok) {
+          anyNews = true;
+          await recordSent(item.hash, item.headline, "news", {
+            asset: item.asset, event: item.event, urgency: item.urgency,
+          });
+        }
       }
       sent = anyNews || sent;
       if (anyNews) await setState("news_throttle", { lastAt: Date.now() });
     }
+
 
     return new Response(
       JSON.stringify({ ok: true, sent, targetsSent, sessionPosts: sessionPosts.length, specialAlerts: specialAlerts.length, dailySummary: dailySummary ? 1 : 0, weeklySummary: weeklySummary ? 1 : 0, monthlySummary: monthlySummary ? 1 : 0, pinUpdate: pinUpdate ? 1 : 0, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
