@@ -1141,9 +1141,8 @@ const CAT_EMOJI: Record<string, string> = { GOLD: "🟡", OIL: "🟠", CRYPTO: "
 
 // Build one bilingual news block — NO external links / sources.
 // Count words in a string (used for the news content-quality gate).
-function wordCount(s: string): number {
-  return String(s || "").trim().split(/\s+/).filter(Boolean).length;
-}
+// wordCount, passesNewsQualityGate and the length thresholds live in a shared
+// module so the automated tests validate the exact same rules used here.
 
 // Clean bilingual news card: asset header, headline, EN + KU summary, impact + tip.
 function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
