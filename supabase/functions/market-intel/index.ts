@@ -945,15 +945,7 @@ async function evaluateSessionOpen(): Promise<string[]> {
 // ───────────────────── daily summary (22:00 BST = 21:00 UTC) ─────────────────────
 const DAILY_SUMMARY_UTC_HOUR = 21; // 22:00 London time (BST)
 
-// Per-asset arrow + colored % for the daily prices block.
-function dailyPriceLine(q: Quote): string {
-  const m = ASSET_META[q.symbol];
-  const up = q.changePct >= 0;
-  const arrow = up ? "▲" : "▼";
-  const dot = up ? "🟢" : "🔴";
-  const pct = `${up ? "+" : ""}${q.changePct.toFixed(1)}%`;
-  return `${m.emoji} <b>${m.name}</b>: <code>$${fmt(q.price)}</code> ${dot}${arrow} ${pct}`;
-}
+
 
 // Convert pips → an approximate dollar P/L (0.01-lot convention: $0.10 per pip).
 function pipsToDollars(pips: number): number {
