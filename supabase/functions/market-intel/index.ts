@@ -1923,7 +1923,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent, targetsSent, sessionPosts: sessionPosts.length, specialAlerts: specialAlerts.length, dailySummary: dailySummary ? 1 : 0, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
+      JSON.stringify({ ok: true, sent, targetsSent, sessionPosts: sessionPosts.length, specialAlerts: specialAlerts.length, dailySummary: dailySummary ? 1 : 0, weeklySummary: weeklySummary ? 1 : 0, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
