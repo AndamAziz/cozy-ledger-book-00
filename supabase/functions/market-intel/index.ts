@@ -779,12 +779,21 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
       }
 
       // Persist the audit record (best-effort — never block signal flow on logging).
-      await admin.from("signal_audit_log").insert({
-        symbol: m.name, signal: sig, price: q.price, change_pct: q.changePct,
-        outcome: auditOutcome, reason: auditReason,
-      });
+      // The scan loop ticks ~every 5s, so to avoid flooding we log every SENT signal,
+      // but only log a SKIPPED attempt when its reason CHANGES from the last logged one
+      // for this symbol (so each distinct fresh/cooldown/market-closed/weak-move state
+      // transition is recorded exactly once).
+      const auditKey = `${auditOutcome}:${auditReason}`;
+      if (auditOutcome === "sent" || prev?.lastAuditKey !== auditKey) {
+        await admin.from("signal_audit_log").insert({
+          symbol: m.name, signal: sig, price: q.price, change_pct: q.changePct,
+          outcome: auditOutcome, reason: auditReason,
+        });
+      }
+      priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt, lastSignalDir, lastAuditKey: auditKey };
+    } else {
+      priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt, lastSignalDir, lastAuditKey: prev?.lastAuditKey };
     }
-    priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt, lastSignalDir };
   }
 
 
