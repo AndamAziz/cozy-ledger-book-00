@@ -648,6 +648,43 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
         lines.push(beat ? `🟢 Beat forecast / باشتر لە پێشبینی` : miss ? `🔴 Below forecast / خراپتر لە پێشبینی` : `⚪️ As expected / وەک پێشبینی`);
       }
 
+      // Dedicated 🚨 alert for tier-1 events (FOMC / NFP / rate decisions).
+      if (isFomcNfp(ev.title)) {
+        if (goldPrice === null) { const g = await fetchGold(); goldPrice = g?.price ?? null; }
+        const pre = preGold[ev.key];
+        const reaction = (goldPrice != null && pre != null) ? goldPrice - pre : null;
+        const isNfp = /non[- ]?farm|\bnfp\b|payroll/i.test(ev.title);
+        const sLines: string[] = [specialEventHead(ev.title)];
+        if (isNfp) {
+          sLines.push(`📊 Jobs: <b>${esc(ev.actual)}</b> (forecast ${esc(ev.forecast || "—")})`);
+        } else {
+          const held = !!ev.previous && !!ev.actual && ev.actual.trim() === ev.previous.trim();
+          sLines.push(`🏦 Rate: <b>${held ? "Held" : "Changed"} ${esc(ev.actual)}</b> ${held ? "✓" : "❗"}`);
+        }
+        let goldDir: "BUY" | "SELL" | null = null;
+        if (reaction != null) {
+          const sign = reaction >= 0 ? "+" : "-";
+          const arrow = reaction >= 0 ? "🟢▲" : "🔴▼";
+          sLines.push(`🥇 Gold reaction: ${arrow} ${sign}$${fmt(Math.abs(reaction))} in ${Math.max(1, Math.round(minsSince))}min`);
+          if (Math.abs(reaction) >= 1) goldDir = reaction > 0 ? "BUY" : "SELL";
+        }
+        if (!goldDir && a !== null && f !== null) {
+          const sd = goldFromUsdSurprise(ev.title, a, f).dir;
+          if (sd !== "HOLD") goldDir = sd;
+        }
+        if (goldDir && goldPrice) {
+          const m = ASSET_META["XAU/USD"];
+          const isBuy = goldDir === "BUY";
+          const tp = +(goldPrice * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+          sLines.push(`📈 Signal: ${sigEmoji(goldDir)} <b>${goldDir}</b> → Target <code>$${fmt(tp)}</code>`);
+          sLines.push(`📈 سیگنال: ${sigKu(goldDir)} → تارگێت <code>$${fmt(tp)}</code>`);
+        } else {
+          sLines.push(`⚪️ Muted reaction / کاریگەری کەم — چاوەڕێ بکە`);
+        }
+        delete preGold[ev.key];
+        specialAlerts.push(sLines.join("\n"));
+      }
+
       calendarAlerts.push(lines.join("\n"));
     }
   }
