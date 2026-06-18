@@ -576,6 +576,11 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
     // 2) FINAL 5-minute reminder → fired once inside the last EVENT_REMINDER_MIN minutes.
     if (minutes >= 0 && minutes <= EVENT_REMINDER_MIN && !reminded.has(ev.key)) {
       reminded.add(ev.key);
+      // Snapshot gold just before a tier-1 USD release so we can measure the reaction.
+      if (isFomcNfp(ev.title) && ev.currency.toUpperCase() === "USD" && preGold[ev.key] == null) {
+        if (goldPrice === null) { const g = await fetchGold(); goldPrice = g?.price ?? null; }
+        if (goldPrice) preGold[ev.key] = goldPrice;
+      }
       const left = Math.max(0, Math.round(minutes));
       calendarAlerts.push([
         `🔔⏰ <b>بیرهێنانەوە / REMINDER</b>`,
