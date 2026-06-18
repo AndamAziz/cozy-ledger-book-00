@@ -2019,6 +2019,8 @@ Deno.serve(async (req) => {
     const dailySummary = await evaluateDailySummary(lastQuotes);
     // Weekly report (only fires Monday 08:00 BST, deduped per week).
     const weeklySummary = await evaluateWeeklySummary();
+    // Monthly report (only fires 1st of month 09:00 BST, deduped per month).
+    const monthlySummary = await evaluateMonthlySummary();
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
