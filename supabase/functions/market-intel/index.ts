@@ -39,6 +39,9 @@ const TARGET_IMPORTANT_MOVE_PCT = 0.6;   // |change| ≥ this % ⇒ send target 
 const PRICE_INTERVAL_MS = 5_000;
 const LOOP_WINDOW_MS = 50_000;
 
+// News is broadcast at most once per 60 minutes (its own standalone message).
+const NEWS_MIN_GAP_MS = 60 * 60_000;
+
 const CALENDAR_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
 
 const admin = createClient(
@@ -412,12 +415,42 @@ function nowStamp(): string {
 function oneSignalMessage(subtitle: string, body: string, reason?: string): string {
   return [
     "━━━━━━━━━━━━━━━",
-    "📊 <b>CTP APP REPORTS</b>",
+    "📊 <b>CTP SIGNALS</b>",
     "━━━━━━━━━━━━━━━",
     "",
     body,
     "",
     reason ? `<i>ℹ️ ${subtitle} · ${reason}</i>` : `<i>ℹ️ ${subtitle}</i>`,
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
+
+// Standalone CALENDAR-only message (economic events only — no signals, no news).
+function oneCalendarMessage(body: string): string {
+  return [
+    "━━━━━━━━━━━━━━━",
+    "🗓 <b>CTP CALENDAR</b>",
+    "━━━━━━━━━━━━━━━",
+    "",
+    body,
+    "",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
+
+// Standalone NEWS-only message (market news only — no signals, no calendar).
+function oneNewsMessage(body: string): string {
+  return [
+    "━━━━━━━━━━━━━━━",
+    "📰 <b>CTP NEWS</b>",
+    "━━━━━━━━━━━━━━━",
+    "",
+    body,
+    "",
     "━━━━━━━━━━━━━━━",
     `<i>🕒 ${nowStamp()}</i>`,
     `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
@@ -1072,9 +1105,14 @@ Deno.serve(async (req) => {
       lastQuotes = r.quotes;
     }
 
-    // Calendar + news once per invocation (≈60s cadence).
+    // Calendar once per invocation (≈60s cadence).
     const { calendarAlerts, signalAlerts: calSignals, specialAlerts } = await evaluateCalendar();
-    const newsAlerts = await evaluateNews();
+    // News only when the 60-min window is open — otherwise skip fetch so items
+    // are not marked "alerted" and lost (they'll be picked up next window).
+    const newsThrottle = await getState("news_throttle");
+    const lastNewsAt = (newsThrottle.lastAt as number) ?? 0;
+    const newsWindowOpen = !lastNewsAt || Date.now() - lastNewsAt >= NEWS_MIN_GAP_MS;
+    const newsAlerts = newsWindowOpen ? await evaluateNews() : [];
     // Market-open reports for regions that just opened (analysis + get-ready heads-up).
     const sessionOpenAlerts = await evaluateSessionOpen();
     // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
@@ -1126,26 +1164,19 @@ Deno.serve(async (req) => {
       await setState("target_throttle", { lastAt: lastTargetAt });
     }
 
-    // 3) NEWS + economic calendar report — NEVER mixed with trade targets.
-    if (calendarAlerts.length || newsAlerts.length) {
-      const lines: string[] = [
-        "📊 <b>CTP APP REPORTS</b>",
-        "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
-        "━━━━━━━━━━━━━━━",
-        "",
-      ];
-      if (newsAlerts.length) {
-        lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "");
-        lines.push(newsAlerts.join("\n\n"), "");
-      }
-      if (calendarAlerts.length) {
-        lines.push("🗓 <b>Economic Calendar / ساڵنامەی ئابووری</b>", "");
-        lines.push(calendarAlerts.join("\n\n"), "");
-      }
-      lines.push("━━━━━━━━━━━━━━━");
-      lines.push(`<i>🕒 ${nowStamp()}</i>`);
-      lines.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
-      sent = (await sendTelegram("ctp_report", lines.join("\n"))) || sent;
+    // 3) CALENDAR → its own standalone message (economic events only).
+    //    Calendar alerts are already gated to fire ~30min before each event.
+    if (calendarAlerts.length) {
+      const ok = await sendTelegram("ctp_calendar", oneCalendarMessage(calendarAlerts.join("\n\n")));
+      sent = ok || sent;
+    }
+
+    // 4) NEWS → its own standalone message (market news only). The 60-min window
+    //    was already checked above (newsWindowOpen) before fetching.
+    if (newsAlerts.length) {
+      const ok = await sendTelegram("ctp_news", oneNewsMessage(newsAlerts.join("\n\n")));
+      sent = ok || sent;
+      if (ok) await setState("news_throttle", { lastAt: Date.now() });
     }
 
     return new Response(
