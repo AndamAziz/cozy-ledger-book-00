@@ -662,6 +662,30 @@ export type Database = {
         }
         Relationships: []
       }
+      session_posts_log: {
+        Row: {
+          id: string
+          kind: string
+          posted_at: string
+          region: string
+          session_date: string
+        }
+        Insert: {
+          id?: string
+          kind: string
+          posted_at?: string
+          region: string
+          session_date: string
+        }
+        Update: {
+          id?: string
+          kind?: string
+          posted_at?: string
+          region?: string
+          session_date?: string
+        }
+        Relationships: []
+      }
       telegram_logs: {
         Row: {
           attempts: number
