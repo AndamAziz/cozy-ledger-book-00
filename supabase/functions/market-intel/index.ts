@@ -600,6 +600,15 @@ function outcomeLine(
       `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
       `سیگنالەکە سەرکەوتوو بوو 🟢✅`,
     ].join("\n");
+  }
+  return [
+    `🔴❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
+    `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
+    `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
+    `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+    `🟠⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
+    `🚪 تکایە پۆزیشنەکە دابخە / Please close your position`,
+  ].join("\n");
 }
 
 // Standalone SIGNAL RESULT-only message (TP/SL outcomes only — no signals, no news).
@@ -614,15 +623,6 @@ function oneResultMessage(body: string): string {
     "━━━━━━━━━━━━━━━",
     `<i>🕒 ${nowStamp()}</i>`,
     `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
-  ].join("\n");
-}
-  return [
-    `🔴❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
-    `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
-    `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
-    `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
-    `🟠⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
-    `🚪 تکایە پۆزیشنەکە دابخە / Please close your position`,
   ].join("\n");
 }
 
