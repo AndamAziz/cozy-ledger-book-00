@@ -1689,7 +1689,33 @@ function sessionRegionBlock(region: Region, rows: DailyRow[]): string {
 // Fires once per day during the 21:00 UTC (22:00 BST) hour; deduped by calendar date.
 // Pass { force: true } to build the report regardless of the time/dedupe gates
 // (used by the preview/test handler — does not touch the dedupe state).
-async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }): Promise<string | null> {
+// Daily performance line: "🥇 Gold: $4,290 🔴▼ -$63 (-1.5%)"
+function dailyPerfLine(q: Quote | undefined, emoji: string, name: string): string {
+  if (!q) return `${emoji} ${name}: —`;
+  const up = q.changePct >= 0;
+  const arrow = up ? "🟢▲" : "🔴▼";
+  const delta = q.price * (q.changePct / 100);
+  const sign = delta >= 0 ? "+" : "-";
+  return `${emoji} ${name}: <code>$${fmt(q.price)}</code> ${arrow} ${sign}$${fmt(Math.abs(delta))} (${up ? "+" : ""}${q.changePct.toFixed(2)}%)`;
+}
+
+// Tomorrow's high-impact events as "🕐 12:30 BST · Philly Fed 🇺🇸" lines.
+async function tomorrowKeyEventLines(): Promise<string[]> {
+  const events = await getHighImpactEvents();
+  const t = new Date();
+  t.setUTCDate(t.getUTCDate() + 1);
+  const day = t.toISOString().slice(0, 10);
+  return events
+    .filter((e) => new Date(e.time).toISOString().slice(0, 10) === day)
+    .sort((a, b) => a.time - b.time)
+    .slice(0, 6)
+    .map((e) => {
+      const tl = new Date(e.time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
+      return `🕐 ${tl} BST · ${esc(e.title)} ${ccyFlag(e.currency)}`;
+    });
+}
+
+async function evaluateDailySummary(quotes: Quote[], opts?: { force?: boolean }): Promise<string | null> {
   const now = new Date();
   const day = now.toISOString().slice(0, 10);
   if (!opts?.force) {
@@ -1699,10 +1725,16 @@ async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }
     await setState("daily_summary", { lastDay: day });
   }
 
-
   const dateLabel = now.toLocaleDateString("en-GB", {
     weekday: "long", month: "short", day: "numeric", year: "numeric", timeZone: "Europe/London",
   });
+
+  // Live market performance (use passed quotes; fall back to a fresh fetch).
+  const q = (quotes && quotes.length) ? quotes : await getPrices();
+  const { gold, oil, btc } = q3(q);
+
+  // Tomorrow's key events.
+  const tomorrow = await tomorrowKeyEventLines();
 
   const header = [
     "━━━━━━━━━━━━━━━━━━━━━",
@@ -1711,13 +1743,21 @@ async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }
     "━━━━━━━━━━━━━━━━━━━━━",
     `📅 ${esc(dateLabel)}`,
     "",
+    "💰 <b>Market Performance:</b>",
+    dailyPerfLine(gold, "🥇", "Gold"),
+    dailyPerfLine(oil, "🛢", "Oil"),
+    dailyPerfLine(btc, "₿", "BTC"),
+    "",
+  ];
+  const tomorrowBlock = [
+    "📊 <b>Tomorrow's Key Events / ئیڤێنتی سبەی:</b>",
+    tomorrow.length ? tomorrow.join("\n") : "🕐 No high-impact events · هیچ ئیڤێنتێک نییە",
+    "",
   ];
   const footer = [
     "━━━━━━━━━━━━━━━━━━━━━",
-    "📱 <b>بچۆ بۆ چەنالەکە</b>",
-    "https://t.me/goldmarketai",
+    "📱 t.me/goldmarketai",
     "━━━━━━━━━━━━━━━━━━━━━",
-    `<i>🕒 ${nowStamp()}</i>`,
     "<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>",
   ];
 
@@ -1729,22 +1769,25 @@ async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }
     .in("status", ["target_hit", "stopped_out"]);
   const rows = (closed ?? []) as DailyRow[];
 
-  // No signals today → still send a summary.
+  const sigText = (r: DailyRow) => {
+    const meta = ASSET_META[r.asset] ?? { emoji: "🥇", name: r.asset };
+    const entry = Number(r.entry) || 0;
+    const close = Number(r.close_price) || 0;
+    const delta = r.signal === "SELL" ? entry - close : close - entry;
+    return { meta, entry, close, delta };
+  };
+
+  // No closed signals today → still send a full report (prices + tomorrow events).
   if (rows.length === 0) {
     return [
       ...header,
-      "😴 <b>No signals generated today</b>",
-      "<i>هیچ سیگناڵێک ئەمڕۆ نەنێردرا</i>",
+      "🤖 <b>Bot Results:</b>",
+      "Total Signals: 0",
+      "<i>هیچ سیگناڵێک ئەمڕۆ نەداخرا</i>",
       "",
+      ...tomorrowBlock,
       ...footer,
     ].join("\n");
-  }
-
-  // Group by region.
-  const byRegion: Record<Region, DailyRow[]> = { Asia: [], London: [], "New York": [] };
-  for (const r of rows) {
-    const reg = rowRegion(r.market_session);
-    if (reg) byRegion[reg].push(r);
   }
 
   // Totals.
@@ -1761,60 +1804,31 @@ async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }
   const losers = rows.filter((r) => r.status === "stopped_out").sort((a, b) => rowPips(a) - rowPips(b));
   const best = winners[0];
   const worst = losers[0];
-
-  const sigText = (r: DailyRow) => {
-    const meta = ASSET_META[r.asset] ?? { emoji: "🥇", name: r.asset };
-    const entry = Number(r.entry) || 0;
-    const close = Number(r.close_price) || 0;
-    const delta = r.signal === "SELL" ? entry - close : close - entry;
-    return { meta, entry, close, delta };
-  };
+  const bestPl = best ? pipsToDollars(rowPips(best)) : 0;
+  const worstPl = worst ? pipsToDollars(rowPips(worst)) : 0;
 
   const lines: string[] = [
     ...header,
-    "🌍 <b>SESSION BREAKDOWN:</b>",
-    "<i>سەرکەوتنی هەر سێشنێک</i>",
+    "🤖 <b>Bot Results:</b>",
+    `Total Signals: ${trades}`,
+    `✅ Won: ${won} (${winRate}% win rate)`,
+    `❌ Lost: ${lost}`,
+    `💰 Total P/L: ${netDot} ${plStr(netPl)}`,
+    `📈 Best: ${plStr(bestPl)} · 📉 Worst: ${plStr(worstPl)}`,
     "",
-    sessionRegionBlock("Asia", byRegion.Asia),
-    "",
-    sessionRegionBlock("London", byRegion.London),
-    "",
-    sessionRegionBlock("New York", byRegion["New York"]),
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━",
-    "📊 <b>TOTAL TODAY</b>",
-    "━━━━━━━━━━━━━━━━━━━━━",
-    `🥇 Signals: <b>${trades}</b> total`,
-    `✅ Won: <b>${won}</b> (${winRate}% win rate)`,
-    `❌ Lost: <b>${lost}</b>`,
-    `📈 Total Pips: <b>${pipsStr(totalPips)}</b>`,
-    `💰 Net P/L: ${netDot} <b>${plStr(netPl)}</b>`,
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━",
   ];
 
   if (best) {
     const b = sigText(best);
     lines.push(
-      "🏆 <b>BEST SIGNAL TODAY</b>",
-      `${b.meta.emoji} ${b.meta.name} ${best.signal} @ <code>$${fmt(b.entry)}</code>`,
-      `✅ Hit TP: <code>$${fmt(b.close)}</code> (${b.delta >= 0 ? "+" : "-"}$${fmt(Math.abs(b.delta))})`,
-      `📈 ${pipsStr(rowPips(best))} pips`,
-      "",
-    );
-  }
-  if (worst) {
-    const w = sigText(worst);
-    lines.push(
-      "❌ <b>MISSED SIGNAL</b>",
-      `${w.meta.emoji} ${w.meta.name} ${worst.signal} @ <code>$${fmt(w.entry)}</code>`,
-      `🛑 Hit SL: <code>$${fmt(w.close)}</code> (${w.delta >= 0 ? "+" : "-"}$${fmt(Math.abs(w.delta))})`,
-      `📉 ${pipsStr(rowPips(worst))} pips`,
+      "🏆 <b>Signal of the Day / سیگناڵی ڕۆژ:</b>",
+      `${b.meta.name} ${best.signal} $${fmt(b.entry)} → $${fmt(b.close)}`,
+      `${plStr(bestPl)} · ${pipsStr(rowPips(best))} pips ✅`,
       "",
     );
   }
 
-  lines.push(...footer);
+  lines.push(...tomorrowBlock, ...footer);
   return lines.join("\n");
 }
 
