@@ -945,11 +945,26 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
 interface NewsItem { title: string; link: string; source: string; category: string; pubDate: string; summary: string; }
 
 const NEWS_SOURCES: { url: string; source: string; category: string }[] = [
+  // Investing.com — broad + per-asset categories (fastest general market wire).
   { url: "https://www.investing.com/rss/news_1.rss", source: "Investing.com", category: "forex" },
   { url: "https://www.investing.com/rss/news_11.rss", source: "Investing.com", category: "commodities" },
-  { url: "https://www.investing.com/rss/news_301.rss", source: "Investing.com", category: "crypto" },
+  { url: "https://www.investing.com/rss/news_25.rss", source: "Investing.com", category: "commodities" }, // Gold/metals
+  { url: "https://www.investing.com/rss/news_8.rss", source: "Investing.com", category: "commodities" },  // Oil/energy
+  { url: "https://www.investing.com/rss/news_301.rss", source: "Investing.com", category: "crypto" },     // Crypto
+  // CNBC — economy + markets/finance wire.
   { url: "https://www.cnbc.com/id/20910258/device/rss/rss.html", source: "CNBC", category: "economy" },
+  { url: "https://www.cnbc.com/id/100003114/device/rss/rss.html", source: "CNBC", category: "markets" },
+  // MarketWatch top stories.
   { url: "https://feeds.content.dowjones.io/public/rss/mw_topstories", source: "MarketWatch", category: "markets" },
+  // MarketWatch real-time market pulse (faster breaking headlines).
+  { url: "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain", source: "MarketWatch", category: "markets" },
+  // ForexFactory — macro / FX news & analysis.
+  { url: "https://www.forexfactory.com/rss.php", source: "ForexFactory", category: "forex" },
+  // Reuters business/markets (may be intermittent — failures are ignored gracefully).
+  { url: "https://feeds.reuters.com/reuters/businessNews", source: "Reuters", category: "markets" },
+  { url: "https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best", source: "Reuters", category: "markets" },
+  // Bloomberg markets free RSS (may be intermittent — failures are ignored gracefully).
+  { url: "https://feeds.bloomberg.com/markets/news.rss", source: "Bloomberg", category: "markets" },
 ];
 
 const RELEVANT_RE = /\b(gold|silver|xau|bullion|precious metal|oil|crude|brent|wti|opec|natural gas|energy|forex|fx|currency|currencies|dollar|euro|yen|pound|sterling|usd|eur|gbp|jpy|exchange rate|fed|federal reserve|fomc|ecb|boe|boj|central bank|rate cut|rate hike|interest rate|inflation|cpi|ppi|gdp|jobs report|payroll|nonfarm|unemployment|treasury|bond|yield|stock|stocks|equities|market|markets|index|s&p|nasdaq|dow|wall street|commodity|commodities|bitcoin|btc|ethereum|crypto|recession|economy|economic|tariff|trade war|earnings|powell)\b/i;
@@ -989,15 +1004,31 @@ function firstSentence(s: string): string {
   if (out.length > 480) out = out.slice(0, 477).trim() + "...";
   return out;
 }
+// Minutes elapsed since a pubDate string (returns a large number if unparseable).
+function minAgo(pubDate: string): number {
+  const ts = Date.parse(pubDate) || 0;
+  if (!ts) return 9999;
+  return Math.max(0, Math.round((Date.now() - ts) / 60000));
+}
+// Freshness-based urgency from how old the story is:
+//   🔴 BREAKING  < 5 min · 🟡 IMPORTANT 5–30 min · 🟢 INFO otherwise.
+function freshnessUrgency(ageMin: number): Urgency {
+  if (ageMin < 5) return "BREAKING";
+  if (ageMin <= 30) return "IMPORTANT";
+  return "INFO";
+}
 function parseRss(xml: string, source: string, fallbackCategory: string): NewsItem[] {
   const items: NewsItem[] = [];
-  const blocks = xml.match(/<item[\s\S]*?<\/item>/gi) ?? [];
+  // Support both RSS <item> and Atom <entry> feeds (Reuters/Bloomberg vary).
+  const blocks = (xml.match(/<item[\s\S]*?<\/item>/gi) ?? [])
+    .concat(xml.match(/<entry[\s\S]*?<\/entry>/gi) ?? []);
   for (const block of blocks) {
     const title = pickTag(block, "title");
     if (!title) continue;
-    const link = pickTag(block, "link");
-    const pubDate = pickTag(block, "pubDate") || pickTag(block, "dc:date");
-    const rawSummary = pickTag(block, "description");
+    let link = pickTag(block, "link");
+    if (!link) { const m = block.match(/<link[^>]*href="([^"]+)"/i); if (m) link = m[1]; }
+    const pubDate = pickTag(block, "pubDate") || pickTag(block, "dc:date") || pickTag(block, "published") || pickTag(block, "updated");
+    const rawSummary = pickTag(block, "description") || pickTag(block, "summary") || pickTag(block, "content");
     const combined = `${title} ${rawSummary}`;
     if (IRRELEVANT_RE.test(combined) || !RELEVANT_RE.test(combined)) continue;
     items.push({ title, link, source, category: categorize(combined) || fallbackCategory, pubDate, summary: firstSentence(rawSummary) });
@@ -1046,6 +1077,9 @@ interface NewsEnrich {
   summaryEn: string;
   summaryKu: string;
   impact: Impact;
+  impactGold: Impact;
+  impactOil: Impact;
+  impactBtc: Impact;
   urgency: Urgency;
   tipEn: string;
   tipKu: string;
@@ -1064,6 +1098,7 @@ const CAT_SYMBOL: Record<string, string> = {
 async function enrichNews(items: NewsItem[], priceBySymbol: Record<string, number> = {}): Promise<NewsEnrich[]> {
   const fallback: NewsEnrich[] = items.map((n) => ({
     titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL",
+    impactGold: "NEUTRAL", impactOil: "NEUTRAL", impactBtc: "NEUTRAL",
     urgency: "INFO", tipEn: "", tipKu: "", relatedEn: "", relatedKu: "",
   }));
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -1096,6 +1131,7 @@ async function enrichNews(items: NewsItem[], priceBySymbol: Record<string, numbe
               "summary_en (a clear 3-4 sentence English summary built from the title and provided text; NEVER include URLs, links, or source/website names), " +
               "summary_ku (a natural, journalist-style Kurdish version of summary_en — fluent, not literal), " +
               "impact (one of BULLISH, BEARISH, NEUTRAL — expected effect on the given asset), " +
+              "impact_gold, impact_oil, impact_btc (each one of BULLISH, BEARISH, NEUTRAL — expected effect of THIS news on Gold, Oil and Bitcoin respectively; use NEUTRAL if the news has no clear effect on that asset), " +
               "urgency (one of BREAKING, IMPORTANT, INFO — how time-sensitive this news is for a trader), " +
               "tip_en (one short actionable trader tip with concrete price levels using current_price when provided, e.g. 'If gold is bullish, consider BUY above 4320 with SL 4305'), " +
               "tip_ku (the same trader tip written naturally in Kurdish Sorani), " +
@@ -1115,8 +1151,11 @@ async function enrichNews(items: NewsItem[], priceBySymbol: Record<string, numbe
     const arr = JSON.parse(content);
     if (Array.isArray(arr) && arr.length === items.length) {
       return arr.map((x, i) => {
-        const impRaw = String(x?.impact ?? "").toUpperCase();
-        const impact: Impact = impRaw === "BULLISH" || impRaw === "BEARISH" ? impRaw : "NEUTRAL";
+        const toImpact = (v: unknown): Impact => {
+          const r = String(v ?? "").toUpperCase();
+          return r === "BULLISH" || r === "BEARISH" ? r : "NEUTRAL";
+        };
+        const impact = toImpact(x?.impact);
         const urgRaw = String(x?.urgency ?? "").toUpperCase();
         const urgency: Urgency = urgRaw === "BREAKING" || urgRaw === "IMPORTANT" ? urgRaw : "INFO";
         return {
@@ -1124,6 +1163,9 @@ async function enrichNews(items: NewsItem[], priceBySymbol: Record<string, numbe
           summaryEn: String(x?.summary_en ?? items[i].summary ?? ""),
           summaryKu: String(x?.summary_ku ?? ""),
           impact,
+          impactGold: toImpact(x?.impact_gold),
+          impactOil: toImpact(x?.impact_oil),
+          impactBtc: toImpact(x?.impact_btc),
           urgency,
           tipEn: String(x?.tip_en ?? ""),
           tipKu: String(x?.tip_ku ?? ""),
@@ -1146,28 +1188,59 @@ const CAT_EMOJI: Record<string, string> = { GOLD: "🟡", OIL: "🟠", CRYPTO: "
 // module so the automated tests validate the exact same rules used here.
 
 // Clean bilingual news card: asset header, headline, EN + KU summary, impact + tip.
+// Rich bilingual BREAKING-news card: urgency banner, source + age, asset header,
+// EN + KU headline, EN + KU summary, cross-asset impact, trader action, source.
+const URGENCY_BANNER: Record<Urgency, { line: string }> = {
+  BREAKING: { line: "🔴 BREAKING · خەبەری تازە" },
+  IMPORTANT: { line: "🟡 IMPORTANT · گرنگ" },
+  INFO: { line: "🟢 INFO · زانیاری" },
+};
+function impactLine(label: string, imp: Impact): string {
+  const m = IMPACT_META[imp] ?? IMPACT_META.NEUTRAL;
+  return `${label} ${imp} ${m.emoji}`;
+}
 function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
   const dot = CAT_EMOJI[n.category] ?? "🔹";
   const al = ASSET_LABEL[n.category] ?? { en: n.category, ku: n.category };
-  const im = IMPACT_META[e.impact] ?? IMPACT_META.NEUTRAL;
+  const urgency: Urgency = e.urgency ?? "INFO";
+  const banner = URGENCY_BANNER[urgency] ?? URGENCY_BANNER.INFO;
   const summaryEn = (e.summaryEn || n.summary || "").trim();
-  const headline = (e.titleKu || n.title || "").trim();
+  const headlineEn = (n.title || e.titleKu || "").trim();
+  const headlineKu = (e.titleKu || "").trim();
+  const ageMin = minAgo(n.pubDate);
+  const ageLabel = ageMin >= 9999 ? "" : ` · ${ageMin} min ago`;
+
   const parts: string[] = [
-    `${dot} <b>${esc(al.en.toUpperCase())} · ${esc(al.ku)}</b>`,
+    `<b>${banner.line}</b>`,
+    `⚡ ${esc(n.source)}${ageLabel}`,
     "",
-    `📌 ${esc(headline)}`,
+    `${dot} <b>${esc(al.en.toUpperCase())} / ${esc(al.ku)}</b>`,
+    "",
+    `📌 ${esc(headlineEn)}`,
   ];
+  if (headlineKu && headlineKu !== headlineEn) parts.push(esc(headlineKu));
   if (summaryEn) parts.push("", `🇬🇧 ${esc(summaryEn)}`);
   if (e.summaryKu) parts.push("", `🇮🇶 ${esc(e.summaryKu)}`);
-  parts.push("", `📊 کاریگەری: ${e.impact} ${im.emoji} ${im.ku}`);
-  if (e.tipKu) parts.push(`💡 ${esc(e.tipKu)}`);
-  else if (e.tipEn) parts.push(`💡 ${esc(e.tipEn)}`);
+  parts.push(
+    "",
+    "📊 Impact / کاریگەری:",
+    impactLine("🥇 Gold:", e.impactGold),
+    impactLine("🛢 Oil:", e.impactOil),
+    impactLine("₿ BTC:", e.impactBtc),
+  );
+  if (e.tipEn || e.tipKu) {
+    parts.push("", "💡 Trader Action / کردەوەی ترەیدەر:");
+    if (e.tipEn) parts.push(esc(e.tipEn));
+    if (e.tipKu) parts.push(esc(e.tipKu));
+  }
+  parts.push("", `🔗 Source: ${esc(n.source)}`);
   return parts.join("\n");
 }
 
-interface NewsOut { block: string; headline: string; hash: string; asset: string; event: string; urgency: Urgency }
+interface NewsOut { block: string; headline: string; hash: string; asset: string; event: string; urgency: Urgency; source: string; ageMin: number }
 
-async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
+async function evaluateNews(quotes: Quote[] = [], opts?: { breakingOnly?: boolean }): Promise<NewsOut[]> {
+  const breakingOnly = opts?.breakingOnly === true;
   const priceBySymbol: Record<string, number> = {};
   for (const q of quotes) priceBySymbol[q.symbol] = q.price;
   const news = await fetchNews();
@@ -1178,10 +1251,14 @@ async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
   // Gather fresh (≤90 min old) candidates we have not alerted yet AND whose exact
   // headline was NOT already posted in the last 2 hours. We collect a wider pool
   // (up to 12) so we can later pick the single most important item per asset.
+  // In breakingOnly mode we ONLY keep genuinely breaking items (<5 min old) so
+  // the AI enrichment cost is spent only when there is real breaking news.
   const fresh: NewsItem[] = [];
   for (const n of news) {
     const key = (n.link || n.title).toLowerCase();
     if (alerted.has(key)) continue;
+    const ageMin = minAgo(n.pubDate);
+    if (breakingOnly && ageMin >= 5) continue; // only breaking items between digests
     alerted.add(key);
     const ts = Date.parse(n.pubDate) || 0;
     if (ts && now - ts > 90 * 60 * 1000) continue;
@@ -1200,18 +1277,22 @@ async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
   const candidates: Cand[] = [];
   for (let i = 0; i < fresh.length; i++) {
     const n = fresh[i];
-    const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" };
+    const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, impactGold: "NEUTRAL" as Impact, impactOil: "NEUTRAL" as Impact, impactBtc: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" };
     const hash = (n.link || n.title).toLowerCase();
     await admin.from("market_news").upsert({
       hash, title: n.title, title_ku: e.titleKu || null, summary: e.summaryEn || n.summary || null,
       impact: n.category, bias: e.impact, source: n.source, url: n.link,
       published_at: n.pubDate ? new Date(n.pubDate).toISOString() : null,
     }, { onConflict: "hash" });
+    // Final urgency = the more urgent of AI judgement vs freshness (age).
+    const freshU = freshnessUrgency(minAgo(n.pubDate));
+    const finalUrgency: Urgency = (URGENCY_RANK[freshU] ?? 1) >= (URGENCY_RANK[e.urgency] ?? 1) ? freshU : e.urgency;
+    e.urgency = finalUrgency; // so the card banner matches the final urgency
     candidates.push({
       n, e,
       asset: n.category,
       event: extractEvent(`${n.title} ${n.summary}`),
-      urgency: e.urgency,
+      urgency: finalUrgency,
       ts: Date.parse(n.pubDate) || now,
     });
   }
@@ -1242,9 +1323,51 @@ async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
       asset: c.asset,
       event: c.event,
       urgency: c.urgency,
+      source: c.n.source,
+      ageMin: minAgo(c.n.pubDate),
     });
   }
   return out;
+}
+
+// ───────────────────── speed competition (fastest news source) ─────────────────────
+// Each time we POST a story we log which source delivered it and how stale it was
+// when we caught it (ageMin). The "fastest source" is the one whose stories are,
+// on average, the freshest when we post them. Kept as a rolling window.
+interface SpeedStory { source: string; ageMin: number; ts: number }
+async function recordSourceSpeed(source: string, ageMin: number) {
+  if (!source || ageMin >= 9999) return;
+  const state = await getState("source_speed");
+  const stories = ((state.stories as SpeedStory[]) ?? []).slice();
+  stories.push({ source, ageMin, ts: Date.now() });
+  // Keep the last 60 stories (covers "last 10" tracking + the weekly window).
+  await setState("source_speed", { stories: stories.slice(-60) });
+}
+// Compute the fastest source over the last `windowMs` (default: this week).
+function fastestSource(stories: SpeedStory[], windowMs = 7 * 24 * 60 * 60_000): { source: string; avgMin: number; count: number } | null {
+  const cutoff = Date.now() - windowMs;
+  const recent = stories.filter((s) => s.ts >= cutoff);
+  if (recent.length === 0) return null;
+  const agg: Record<string, { total: number; count: number }> = {};
+  for (const s of recent) {
+    (agg[s.source] ??= { total: 0, count: 0 });
+    agg[s.source].total += s.ageMin;
+    agg[s.source].count += 1;
+  }
+  let best: { source: string; avgMin: number; count: number } | null = null;
+  for (const [source, v] of Object.entries(agg)) {
+    const avgMin = v.total / v.count;
+    if (!best || avgMin < best.avgMin) best = { source, avgMin: Math.round(avgMin), count: v.count };
+  }
+  return best;
+}
+// Bilingual "fastest source this week" line for the weekly report (null if no data).
+async function fastestSourceLine(): Promise<string | null> {
+  const state = await getState("source_speed");
+  const stories = (state.stories as SpeedStory[]) ?? [];
+  const best = fastestSource(stories);
+  if (!best) return null;
+  return `⚡ Fastest source this week: <b>${esc(best.source)}</b> (avg ${best.avgMin} min)\n<i>خێراترین سەرچاوەی هەفتە: ${esc(best.source)}</i>`;
 }
 
 
@@ -1975,6 +2098,10 @@ async function evaluateWeeklySummary(opts?: { force?: boolean }): Promise<string
     );
   }
 
+  // Speed competition: which news source was fastest this week.
+  const speedLine = await fastestSourceLine();
+  if (speedLine) lines.push("⚡ <b>SPEED COMPETITION:</b>", speedLine, "");
+
   lines.push(...footer);
   return lines.join("\n");
 }
@@ -2306,7 +2433,32 @@ Deno.serve(async (req) => {
 
 
 
+    // News preview: fetch ALL sources live, show coverage + the rendered cards
+    // (new BREAKING format) WITHOUT posting or touching dedupe/state.
+    //   {"newsPreview": true}
+    if (body.newsPreview === true) {
+      const quotes = await getPrices();
+      const priceBySymbol: Record<string, number> = {};
+      for (const q of quotes) priceBySymbol[q.symbol] = q.price;
+      const news = await fetchNews();
+      // Source coverage counts.
+      const coverage: Record<string, number> = {};
+      for (const n of news) coverage[n.source] = (coverage[n.source] ?? 0) + 1;
+      const top = news.slice(0, 5);
+      const enriched = await enrichNews(top, priceBySymbol);
+      const cards = top.map((n, i) => {
+        const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, impactGold: "NEUTRAL" as Impact, impactOil: "NEUTRAL" as Impact, impactBtc: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" };
+        const freshU = freshnessUrgency(minAgo(n.pubDate));
+        e.urgency = (URGENCY_RANK[freshU] ?? 1) >= (URGENCY_RANK[e.urgency] ?? 1) ? freshU : e.urgency;
+        return { source: n.source, ageMin: minAgo(n.pubDate), urgency: e.urgency, card: newsBlockItem(n, e) };
+      });
+      const speed = await fastestSourceLine();
+      return new Response(JSON.stringify({ ok: true, totalItems: news.length, sources: NEWS_SOURCES.length, coverage, fastestSource: speed, cards }, null, 2),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Test mode: send a full bilingual CTP APP REPORTS sample right now so you can
+
     // confirm it lands in the bot chat — bypasses the dedupe/trigger logic.
     if (test) {
       const quotes = await getPrices();
@@ -2326,7 +2478,7 @@ Deno.serve(async (req) => {
       const testPriceBySymbol: Record<string, number> = {};
       for (const q of quotes) testPriceBySymbol[q.symbol] = q.price;
       const newsEnriched = await enrichNews(liveNews, testPriceBySymbol);
-      const newsBlock = liveNews.map((n, i) => newsBlockItem(n, newsEnriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" }));
+      const newsBlock = liveNews.map((n, i) => newsBlockItem(n, newsEnriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, impactGold: "NEUTRAL" as Impact, impactOil: "NEUTRAL" as Impact, impactBtc: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" }));
       const lines: string[] = [
         "📊 <b>CTP APP REPORTS</b>",
         "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
@@ -2384,12 +2536,18 @@ Deno.serve(async (req) => {
 
     // Calendar once per invocation (≈60s cadence).
     const { calendarAlerts, signalAlerts: calSignals, specialAlerts } = await evaluateCalendar();
-    // News only when the 60-min window is open — otherwise skip fetch so items
-    // are not marked "alerted" and lost (they'll be picked up next window).
+    // News cadence:
+    //  • When the 60-min digest window is open → full evaluation (BREAKING +
+    //    IMPORTANT + INFO digest items).
+    //  • Between digests (every ~minute cron) → BREAKING-only fast path so
+    //    genuinely fresh (<5 min) breaking news is posted immediately without
+    //    waiting for the hourly window, while INFO stays in the digest.
     const newsThrottle = await getState("news_throttle");
     const lastNewsAt = (newsThrottle.lastAt as number) ?? 0;
     const newsWindowOpen = !lastNewsAt || Date.now() - lastNewsAt >= NEWS_MIN_GAP_MS;
-    const newsAlerts = newsWindowOpen ? await evaluateNews(lastQuotes) : [];
+    const newsAlerts = newsWindowOpen
+      ? await evaluateNews(lastQuotes)
+      : await evaluateNews(lastQuotes, { breakingOnly: true });
     // Scheduled session OPEN / CLOSE posts (fire at exact UTC session hours).
     const sessionPosts = await evaluateSessionPosts();
     // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
@@ -2502,13 +2660,17 @@ Deno.serve(async (req) => {
         const ok = await sendTelegram("ctp_news", oneNewsMessage(item.block));
         if (ok) {
           anyNews = true;
+          // Speed competition: record which source delivered this story + how fresh.
+          await recordSourceSpeed(item.source, item.ageMin);
           await recordSent(item.hash, item.headline, "news", {
             asset: item.asset, event: item.event, urgency: item.urgency,
           });
         }
       }
       sent = anyNews || sent;
-      if (anyNews) await setState("news_throttle", { lastAt: Date.now() });
+      // Only the full hourly digest run resets the digest timer. Breaking-only
+      // posts between digests must NOT delay the next INFO digest.
+      if (anyNews && newsWindowOpen) await setState("news_throttle", { lastAt: Date.now() });
     }
 
 
