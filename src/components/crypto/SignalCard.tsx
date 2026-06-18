@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, Clock, Target, Shield } from 'lucide-react';
 import type { AssetSignal } from '@/lib/signalEngine';
+import { TelegramShareButton } from '@/components/TelegramShareButton';
 
 const C_BUY = '#0ecb81';
 const C_SELL = '#f6465d';
