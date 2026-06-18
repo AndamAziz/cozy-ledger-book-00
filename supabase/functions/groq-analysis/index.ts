@@ -148,7 +148,7 @@ const TRADE_SUMMARY_TOOL = {
         "recommendation", "confidence", "headline", "headlineEn", "entry",
         "targets", "stopLoss", "horizonDays", "riskLevel", "reasoning", "reasoningEn",
       ],
-      additionalProperties: false,
+      additionalProperties: true,
     },
   },
 };
@@ -219,23 +219,32 @@ The stop-loss MUST be derived from a specific level (EMA9/EMA21/EMA50, Bollinger
 For gold, factor in macro drivers (US Dollar/DXY, Fed/rates, CPI/PPI/NFP, geopolitics). If a "LIVE ECONOMIC CALENDAR" block is provided, base the USD judgement on those real events.
 Set validForMinutes based on the timeframe and confidence honestly (0-100). This is educational, not financial advice.`;
 
-      const resp = await fetch(GROQ_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: GROQ_MODEL,
-          temperature: 0.4,
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: `${baseContext}\n\nProduce a structured trade summary by calling trade_summary.` },
-          ],
-          tools: [TRADE_SUMMARY_TOOL],
-          tool_choice: { type: "function", function: { name: "trade_summary" } },
-        }),
-      });
+      const callGroq = () =>
+        fetch(GROQ_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${GROQ_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: GROQ_MODEL,
+            temperature: 0.4,
+            max_tokens: 1200, // cap output to avoid repetition loops
+            messages: [
+              { role: "system", content: sysPrompt },
+              { role: "user", content: `${baseContext}\n\nProduce a structured trade summary by calling trade_summary.` },
+            ],
+            tools: [TRADE_SUMMARY_TOOL],
+            tool_choice: { type: "function", function: { name: "trade_summary" } },
+          }),
+        });
+
+      // 8B model occasionally emits a malformed tool call -> retry once.
+      let resp = await callGroq();
+      if (resp.status === 400) {
+        await resp.text().catch(() => "");
+        resp = await callGroq();
+      }
 
       if (!resp.ok) {
         if (resp.status === 429 || resp.status === 402) return rateLimitResponse(resp.status);
