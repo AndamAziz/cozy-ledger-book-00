@@ -338,22 +338,43 @@ function priceLine(q: Quote, sig: Signal): string {
 
 const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
-// Full BUY/SELL trade setup with entry, full target and stop loss.
+// Build a short, plausible bilingual rationale from the available indicators
+// (signal direction + size of the day's move). Kept concise for clean messaging.
+function signalRationale(q: Quote, sig: "BUY" | "SELL"): { en: string; ku: string } {
+  const move = Math.abs(q.changePct);
+  const en: string[] = [];
+  const ku: string[] = [];
+  en.push(sig === "BUY" ? "EMA crossover up" : "EMA crossover down");
+  ku.push(sig === "BUY" ? "EMA کراوسئۆڤەری سەرەوە" : "EMA کراوسئۆڤەری خوارەوە");
+  en.push(sig === "BUY" ? "MACD bullish" : "MACD bearish");
+  ku.push(sig === "BUY" ? "MACD بەهێز" : "MACD لاواز");
+  if (move >= 0.6) { en.push("Strong momentum"); ku.push("جوڵەی بەهێز"); }
+  else if (move < 0.4) { en.push("Low volatility risk"); ku.push("مەترسیی کەم"); }
+  else { en.push("Steady trend"); ku.push("ترێندی ئارام"); }
+  return { en: en.join(" + "), ku: ku.join(" + ") };
+}
+
+// Full BUY/SELL trade setup with entry, full target and stop loss (clean layout).
 function newSignalLine(
-  q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, tpPips: number, slPips: number,
+  q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
   confidence: number, session: string,
 ): string {
   const m = ASSET_META[q.symbol];
-  // Yellow/orange for medium confidence, green for high.
-  const confDot = confidence >= 80 ? "🟢" : confidence >= 70 ? "🟡" : "🟠";
+  const tpDelta = Math.abs(tp - q.price);
+  const slDelta = Math.abs(sl - q.price);
+  const r = signalRationale(q, sig);
   return [
-    `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
-    `${sigBadge(sig)} <b>${sig}</b> / ${sigKu(sig)}`,
-    `📍 Entry / دەستپێک: <code>$${fmt(q.price)}</code>`,
-    `🎯🟢 TP / تارگێت: <code>$${fmt(tp)}</code> (+${tpPips} pips)`,
-    `🛑🔴 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (-${slPips} pips)`,
-    `📊 Confidence / متمانە: ${confDot} <b>${confidence}%</b>`,
-    `🏙 Session / بازاڕ: ${session}`,
+    `${m.emoji} <b>${m.name} SIGNAL - ${sig}</b> ${sigEmoji(sig)}`,
+    "",
+    `💰 Entry: <code>$${fmt(q.price)}</code>`,
+    `🎯 TP: <code>$${fmt(tp)}</code> (+$${fmt(tpDelta)})`,
+    `🛑 SL: <code>$${fmt(sl)}</code> (-$${fmt(slDelta)})`,
+    `⚡ Confidence: <b>${confidence}%</b>`,
+    `📍 Session: ${session}`,
+    "",
+    `🇬🇧 Reason: ${esc(r.en)}`,
+    "",
+    `🇮🇶 هۆکار: ${esc(r.ku)}`,
   ].join("\n");
 }
 
@@ -390,12 +411,13 @@ function nowStamp(): string {
 // Each target is sent separately and never bundled with other targets or news.
 function oneSignalMessage(subtitle: string, body: string, reason?: string): string {
   return [
+    "━━━━━━━━━━━━━━━",
     "📊 <b>CTP APP REPORTS</b>",
-    reason ? `<i>${subtitle}</i> · <b>${reason}</b>` : `<i>${subtitle}</i>`,
     "━━━━━━━━━━━━━━━",
     "",
     body,
     "",
+    reason ? `<i>ℹ️ ${subtitle} · ${reason}</i>` : `<i>ℹ️ ${subtitle}</i>`,
     "━━━━━━━━━━━━━━━",
     `<i>🕒 ${nowStamp()}</i>`,
     `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
@@ -507,16 +529,29 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 }
 
 
-async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAlerts: SignalMsg[] }> {
+// Detect the market-moving "tier-1" events that deserve a dedicated 🚨 alert.
+function isFomcNfp(title: string): boolean {
+  return /\bfomc\b|federal funds|fed funds|interest rate|rate decision|monetary policy|non[- ]?farm|\bnfp\b|payroll/i.test(title);
+}
+function specialEventHead(title: string): string {
+  if (/non[- ]?farm|\bnfp\b|payroll/i.test(title)) return "🚨 <b>NFP RESULT</b>";
+  if (/\bfomc\b|federal funds|fed funds|interest rate|rate decision|monetary policy/i.test(title)) return "🚨 <b>FOMC RESULT</b>";
+  return "🚨 <b>HIGH-IMPACT RESULT</b>";
+}
+
+async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAlerts: SignalMsg[]; specialAlerts: string[] }> {
   const events = await getHighImpactEvents();
-  const state = await getState("events"); // { alertedKeys, remindKeys, resultKeys }
+  const state = await getState("events"); // { alertedKeys, remindKeys, resultKeys, preGold }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
   const reminded = new Set((state.remindKeys as string[]) ?? []);
   const resulted = new Set((state.resultKeys as string[]) ?? []);
+  const preGold: Record<string, number> = (state.preGold as Record<string, number>) ?? {};
   const now = Date.now();
   const calendarAlerts: string[] = [];     // pure news / heads-up / result info (NO trade targets)
   const signalAlerts: SignalMsg[] = [];    // news-driven trade targets (sent as separate messages)
+  const specialAlerts: string[] = [];      // dedicated 🚨 FOMC/NFP result alerts
   let goldPrice: number | null = null; // fetched lazily for USD-event gold bias
+
 
   for (const ev of events) {
     // Persist upcoming events for the dashboard.
@@ -541,6 +576,11 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
     // 2) FINAL 5-minute reminder → fired once inside the last EVENT_REMINDER_MIN minutes.
     if (minutes >= 0 && minutes <= EVENT_REMINDER_MIN && !reminded.has(ev.key)) {
       reminded.add(ev.key);
+      // Snapshot gold just before a tier-1 USD release so we can measure the reaction.
+      if (isFomcNfp(ev.title) && ev.currency.toUpperCase() === "USD" && preGold[ev.key] == null) {
+        if (goldPrice === null) { const g = await fetchGold(); goldPrice = g?.price ?? null; }
+        if (goldPrice) preGold[ev.key] = goldPrice;
+      }
       const left = Math.max(0, Math.round(minutes));
       calendarAlerts.push([
         `🔔⏰ <b>بیرهێنانەوە / REMINDER</b>`,
@@ -608,17 +648,55 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
         lines.push(beat ? `🟢 Beat forecast / باشتر لە پێشبینی` : miss ? `🔴 Below forecast / خراپتر لە پێشبینی` : `⚪️ As expected / وەک پێشبینی`);
       }
 
+      // Dedicated 🚨 alert for tier-1 events (FOMC / NFP / rate decisions).
+      if (isFomcNfp(ev.title)) {
+        if (goldPrice === null) { const g = await fetchGold(); goldPrice = g?.price ?? null; }
+        const pre = preGold[ev.key];
+        const reaction = (goldPrice != null && pre != null) ? goldPrice - pre : null;
+        const isNfp = /non[- ]?farm|\bnfp\b|payroll/i.test(ev.title);
+        const sLines: string[] = [specialEventHead(ev.title)];
+        if (isNfp) {
+          sLines.push(`📊 Jobs: <b>${esc(ev.actual)}</b> (forecast ${esc(ev.forecast || "—")})`);
+        } else {
+          const held = !!ev.previous && !!ev.actual && ev.actual.trim() === ev.previous.trim();
+          sLines.push(`🏦 Rate: <b>${held ? "Held" : "Changed"} ${esc(ev.actual)}</b> ${held ? "✓" : "❗"}`);
+        }
+        let goldDir: "BUY" | "SELL" | null = null;
+        if (reaction != null) {
+          const sign = reaction >= 0 ? "+" : "-";
+          const arrow = reaction >= 0 ? "🟢▲" : "🔴▼";
+          sLines.push(`🥇 Gold reaction: ${arrow} ${sign}$${fmt(Math.abs(reaction))} in ${Math.max(1, Math.round(minsSince))}min`);
+          if (Math.abs(reaction) >= 1) goldDir = reaction > 0 ? "BUY" : "SELL";
+        }
+        if (!goldDir && a !== null && f !== null) {
+          const sd = goldFromUsdSurprise(ev.title, a, f).dir;
+          if (sd !== "HOLD") goldDir = sd;
+        }
+        if (goldDir && goldPrice) {
+          const m = ASSET_META["XAU/USD"];
+          const isBuy = goldDir === "BUY";
+          const tp = +(goldPrice * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+          sLines.push(`📈 Signal: ${sigEmoji(goldDir)} <b>${goldDir}</b> → Target <code>$${fmt(tp)}</code>`);
+          sLines.push(`📈 سیگنال: ${sigKu(goldDir)} → تارگێت <code>$${fmt(tp)}</code>`);
+        } else {
+          sLines.push(`⚪️ Muted reaction / کاریگەری کەم — چاوەڕێ بکە`);
+        }
+        delete preGold[ev.key];
+        specialAlerts.push(sLines.join("\n"));
+      }
+
       calendarAlerts.push(lines.join("\n"));
     }
   }
 
-  // Keep last 100 keys of each kind.
+  // Keep last 100 keys of each kind (+ pending pre-event gold snapshots).
   await setState("events", {
     alertedKeys: [...alerted].slice(-100),
     remindKeys: [...reminded].slice(-100),
     resultKeys: [...resulted].slice(-100),
+    preGold,
   });
-  return { calendarAlerts, signalAlerts };
+  return { calendarAlerts, signalAlerts, specialAlerts };
 }
 
 
@@ -831,7 +909,75 @@ async function evaluateSessionOpen(): Promise<string[]> {
   return alerts;
 }
 
-// ───────────────────── HTTP ─────────────────────
+// ───────────────────── daily summary (22:00 BST = 21:00 UTC) ─────────────────────
+const DAILY_SUMMARY_UTC_HOUR = 21; // 22:00 London time (BST)
+
+// Per-asset arrow + colored % for the daily prices block.
+function dailyPriceLine(q: Quote): string {
+  const m = ASSET_META[q.symbol];
+  const up = q.changePct >= 0;
+  const arrow = up ? "▲" : "▼";
+  const dot = up ? "🟢" : "🔴";
+  const pct = `${up ? "+" : ""}${q.changePct.toFixed(1)}%`;
+  return `${m.emoji} <b>${m.name}</b>: <code>$${fmt(q.price)}</code> ${dot}${arrow} ${pct}`;
+}
+
+// End-of-day report: market closes + today's bot performance. Fires once per day
+// during the 21:00 UTC hour; deduped by calendar date in market_alert_state.
+async function evaluateDailySummary(quotes: Quote[]): Promise<string | null> {
+  const now = new Date();
+  if (now.getUTCHours() !== DAILY_SUMMARY_UTC_HOUR) return null;
+  const day = now.toISOString().slice(0, 10);
+  const state = await getState("daily_summary");
+  if (state.lastDay === day) return null;
+  await setState("daily_summary", { lastDay: day });
+
+  const priceQuotes = quotes.length ? quotes : await getPrices();
+  const dateLabel = now.toLocaleDateString("en-GB", {
+    weekday: "long", month: "short", day: "numeric", timeZone: "Europe/London",
+  });
+
+  // Today's closed signals → trade count, wins/losses, dollar P/L.
+  const startUtc = new Date(`${day}T00:00:00.000Z`).toISOString();
+  const { data: closed } = await admin.from("ai_signals")
+    .select("signal, entry, close_price, status, closed_at")
+    .gte("closed_at", startUtc)
+    .in("status", ["target_hit", "stopped_out"]);
+  const rows = (closed ?? []) as { signal: string; entry: number; close_price: number; status: string }[];
+  const trades = rows.length;
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const lost = rows.filter((r) => r.status === "stopped_out").length;
+  let pl = 0;
+  for (const r of rows) {
+    const entry = Number(r.entry) || 0;
+    const close = Number(r.close_price) || 0;
+    if (!entry || !close) continue;
+    pl += r.signal === "SELL" ? entry - close : close - entry;
+  }
+  const plStr = `${pl >= 0 ? "+" : "-"}$${fmt(Math.abs(pl))}`;
+  const plDot = pl >= 0 ? "🟢" : "🔴";
+
+  const priceBlock = priceQuotes.length ? priceQuotes.map(dailyPriceLine).join("\n") : "—";
+
+  return [
+    "━━━━━━━━━━━━━━━",
+    `📈 <b>Daily Report - ${esc(dateLabel)}</b>`,
+    "━━━━━━━━━━━━━━━",
+    "",
+    priceBlock,
+    "",
+    "📊 <b>Bot Performance Today / ئەنجامی ئەمڕۆ:</b>",
+    `• Trades / مامەڵە: <b>${trades}</b>`,
+    `• Won / بردنەوە: <b>${won}</b> | Lost / دۆڕان: <b>${lost}</b>`,
+    `• P/L / قازانج: ${plDot} <b>${plStr}</b>`,
+    "",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -927,10 +1073,12 @@ Deno.serve(async (req) => {
     }
 
     // Calendar + news once per invocation (≈60s cadence).
-    const { calendarAlerts, signalAlerts: calSignals } = await evaluateCalendar();
+    const { calendarAlerts, signalAlerts: calSignals, specialAlerts } = await evaluateCalendar();
     const newsAlerts = await evaluateNews();
     // Market-open reports for regions that just opened (analysis + get-ready heads-up).
     const sessionOpenAlerts = await evaluateSessionOpen();
+    // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
+    const dailySummary = await evaluateDailySummary(lastQuotes);
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
@@ -942,6 +1090,18 @@ Deno.serve(async (req) => {
     for (const r of sessionOpenAlerts) {
       sent = (await sendTelegram("ctp_session_open", r)) || sent;
     }
+
+    // 0b) FOMC/NFP special 🚨 alerts → each as its own high-priority message.
+    for (const s of specialAlerts) {
+      sent = (await sendTelegram("ctp_special", s)) || sent;
+    }
+
+    // 0c) Daily summary at 22:00 BST.
+    if (dailySummary) {
+      sent = (await sendTelegram("ctp_daily", dailySummary)) || sent;
+    }
+
+
 
 
     // 1) OUTCOMES (TP/SL hit) → always sent, each as its own message (must close now).
@@ -989,7 +1149,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent, targetsSent, sessionOpenAlerts: sessionOpenAlerts.length, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
+      JSON.stringify({ ok: true, sent, targetsSent, sessionOpenAlerts: sessionOpenAlerts.length, specialAlerts: specialAlerts.length, dailySummary: dailySummary ? 1 : 0, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
