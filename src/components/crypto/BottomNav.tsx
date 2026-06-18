@@ -114,6 +114,7 @@ export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, o
       <nav className="shrink-0 z-50 flex items-stretch border-t border-[#1a1e2e] bg-[#0d1117]/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
         {mainItems.map((item) => {
           const Icon = item.icon;
+          const isTelegram = item.key === 'telegram';
           return (
             <button
               key={item.key}
@@ -123,10 +124,21 @@ export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, o
               }`}
               aria-current={item.active ? 'page' : undefined}
             >
-              <Icon
-                className={`h-[22px] w-[22px] transition-transform ${tapped === item.key ? 'animate-tab-bounce' : ''} ${item.active ? 'fill-current' : ''}`}
+              <span
+                className={`relative inline-flex transition-transform ${tapped === item.key ? 'animate-tab-bounce' : ''}`}
                 onAnimationEnd={() => setTapped(null)}
-              />
+              >
+                <Icon
+                  size={22}
+                  className={item.active ? 'fill-current' : ''}
+                  style={isTelegram ? { color: TELEGRAM_BLUE } : undefined}
+                />
+                {isTelegram && subs != null && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-1 flex items-center justify-center rounded-full bg-[#ff3b30] text-[9px] font-bold text-white leading-none">
+                    {formatSubs(subs)}
+                  </span>
+                )}
+              </span>
               <span className={`text-[10px] leading-none ${item.active ? 'font-bold' : 'font-medium'}`}>
                 {item.label}
               </span>
