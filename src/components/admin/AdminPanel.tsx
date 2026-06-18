@@ -43,6 +43,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TelegramHealthCard } from './TelegramHealthCard';
 
 interface UserApproval {
   id: string;
@@ -722,7 +723,10 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           </div>
         </div>
-        
+
+        {/* Telegram Bot Health */}
+        <TelegramHealthCard />
+
         {/* Active Filter Indicator */}
         {activeFilter !== 'all' && (
           <div className="mb-4 flex items-center gap-2">
