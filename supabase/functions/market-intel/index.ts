@@ -1013,7 +1013,9 @@ function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
   return parts.join("\n");
 }
 
-async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
+interface NewsOut { block: string; headline: string; hash: string }
+
+async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
   const priceBySymbol: Record<string, number> = {};
   for (const q of quotes) priceBySymbol[q.symbol] = q.price;
   const news = await fetchNews();
@@ -1021,7 +1023,9 @@ async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
   const now = Date.now();
 
-  // Pick up to 4 new, fresh (≤90 min old) items we have not alerted yet.
+  // Pick up to 4 new, fresh (≤90 min old) items we have not alerted yet, AND
+  // whose exact headline was NOT already posted in the last 2 hours (DB-backed
+  // dedupe — the single source of truth that stops duplicate news).
   const fresh: NewsItem[] = [];
   for (const n of news) {
     const key = (n.link || n.title).toLowerCase();
@@ -1029,6 +1033,9 @@ async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
     alerted.add(key);
     const ts = Date.parse(n.pubDate) || 0;
     if (ts && now - ts > 90 * 60 * 1000) continue;
+    // Skip if this EXACT headline was already sent in the last 2 hours.
+    const headlineHash = contentHash(n.title);
+    if (await wasRecentlySent(headlineHash, NEWS_DEDUPE_MS)) continue;
     fresh.push(n);
     if (fresh.length >= 4) break;
   }
@@ -1038,7 +1045,7 @@ async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
   const enriched = await enrichNews(fresh, priceBySymbol);
 
   // Persist for the dashboard (best-effort).
-  const out: string[] = [];
+  const out: NewsOut[] = [];
   for (let i = 0; i < fresh.length; i++) {
     const n = fresh[i];
     const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" };
@@ -1048,7 +1055,7 @@ async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
       impact: n.category, bias: e.impact, source: n.source, url: n.link,
       published_at: n.pubDate ? new Date(n.pubDate).toISOString() : null,
     }, { onConflict: "hash" });
-    out.push(newsBlockItem(n, e));
+    out.push({ block: newsBlockItem(n, e), headline: n.title, hash: contentHash(n.title) });
   }
   return out;
 }
