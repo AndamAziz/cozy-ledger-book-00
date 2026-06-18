@@ -1159,26 +1159,22 @@ Deno.serve(async (req) => {
       await setState("target_throttle", { lastAt: lastTargetAt });
     }
 
-    // 3) NEWS + economic calendar report — NEVER mixed with trade targets.
-    if (calendarAlerts.length || newsAlerts.length) {
-      const lines: string[] = [
-        "📊 <b>CTP APP REPORTS</b>",
-        "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
-        "━━━━━━━━━━━━━━━",
-        "",
-      ];
-      if (newsAlerts.length) {
-        lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "");
-        lines.push(newsAlerts.join("\n\n"), "");
+    // 3) CALENDAR → its own standalone message (economic events only).
+    //    Calendar alerts are already gated to fire ~30min before each event.
+    if (calendarAlerts.length) {
+      const ok = await sendTelegram("ctp_calendar", oneCalendarMessage(calendarAlerts.join("\n\n")));
+      sent = ok || sent;
+    }
+
+    // 4) NEWS → its own standalone message (market news only), at most once / 60 min.
+    if (newsAlerts.length) {
+      const throttle = await getState("news_throttle");
+      const lastNewsAt = (throttle.lastAt as number) ?? 0;
+      if (!lastNewsAt || Date.now() - lastNewsAt >= NEWS_MIN_GAP_MS) {
+        const ok = await sendTelegram("ctp_news", oneNewsMessage(newsAlerts.join("\n\n")));
+        sent = ok || sent;
+        if (ok) await setState("news_throttle", { lastAt: Date.now() });
       }
-      if (calendarAlerts.length) {
-        lines.push("🗓 <b>Economic Calendar / ساڵنامەی ئابووری</b>", "");
-        lines.push(calendarAlerts.join("\n\n"), "");
-      }
-      lines.push("━━━━━━━━━━━━━━━");
-      lines.push(`<i>🕒 ${nowStamp()}</i>`);
-      lines.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
-      sent = (await sendTelegram("ctp_report", lines.join("\n"))) || sent;
     }
 
     return new Response(
