@@ -1835,6 +1835,8 @@ Deno.serve(async (req) => {
     const sessionPosts = await evaluateSessionPosts();
     // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
     const dailySummary = await evaluateDailySummary(lastQuotes);
+    // Weekly report (only fires Monday 08:00 BST, deduped per week).
+    const weeklySummary = await evaluateWeeklySummary();
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
