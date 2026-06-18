@@ -987,13 +987,13 @@ async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
   await setState("news", { alertedKeys: [...alerted].slice(-300) });
   if (fresh.length === 0) return [];
 
-  const enriched = await enrichNews(fresh);
+  const enriched = await enrichNews(fresh, priceBySymbol);
 
   // Persist for the dashboard (best-effort).
   const out: string[] = [];
   for (let i = 0; i < fresh.length; i++) {
     const n = fresh[i];
-    const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact };
+    const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" };
     const hash = (n.link || n.title).toLowerCase();
     await admin.from("market_news").upsert({
       hash, title: n.title, title_ku: e.titleKu || null, summary: e.summaryEn || n.summary || null,
