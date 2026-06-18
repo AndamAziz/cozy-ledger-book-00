@@ -776,59 +776,65 @@ function specialEventHead(title: string): string {
 
 async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAlerts: SignalMsg[]; specialAlerts: string[] }> {
   const events = await getHighImpactEvents();
-  const state = await getState("events"); // { alertedKeys, remindKeys, resultKeys, preGold }
+  const state = await getState("events"); // { alertedKeys, resultKeys, preGold }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
-  const reminded = new Set((state.remindKeys as string[]) ?? []);
   const resulted = new Set((state.resultKeys as string[]) ?? []);
   const preGold: Record<string, number> = (state.preGold as Record<string, number>) ?? {};
   const now = Date.now();
-  const calendarAlerts: string[] = [];     // pure news / heads-up / result info (NO trade targets)
-  const signalAlerts: SignalMsg[] = [];    // news-driven trade targets (sent as separate messages)
+  const calendarAlerts: string[] = [];     // heads-up + result info (NO trade targets)
+  const signalAlerts: SignalMsg[] = [];    // news-driven trade targets (sent separately)
   const specialAlerts: string[] = [];      // dedicated 🚨 FOMC/NFP result alerts
-  let goldPrice: number | null = null; // fetched lazily for USD-event gold bias
+  let goldPrice: number | null = null;     // fetched lazily for USD-event gold bias
 
-
+  // Persist all upcoming high-impact events for the dashboard.
   for (const ev of events) {
-    // Persist upcoming events for the dashboard.
     await admin.from("economic_events").upsert({
       ext_key: ev.key, title: ev.title, currency: ev.currency, impact: ev.impact,
       event_time: new Date(ev.time).toISOString(), forecast: ev.forecast, previous: ev.previous,
     }, { onConflict: "ext_key" });
+  }
 
-    const minutes = (ev.time - now) / 60_000;
-
-    // 1) EARLY heads-up → fired once between the 5-min reminder window and EVENT_ALERT_MIN.
-    if (minutes > EVENT_REMINDER_MIN && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
-      alerted.add(ev.key);
-      calendarAlerts.push([
-        `🟠⚠️ <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
-        `🕒 In ${Math.round(minutes)} min · لە ${Math.round(minutes)} خولەکدا`,
-        ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
-        `ئامادە بە — تارگێت دوای دەرچوونی هەواڵەکە دەنێردرێت`,
-      ].filter(Boolean).join("\n"));
-    }
-
-    // 2) FINAL 5-minute reminder → fired once inside the last EVENT_REMINDER_MIN minutes.
-    if (minutes >= 0 && minutes <= EVENT_REMINDER_MIN && !reminded.has(ev.key)) {
-      reminded.add(ev.key);
-      // Snapshot gold just before a tier-1 USD release so we can measure the reaction.
-      if (isFomcNfp(ev.title) && ev.currency.toUpperCase() === "USD" && preGold[ev.key] == null) {
-        if (goldPrice === null) { const g = await fetchGold(); goldPrice = g?.price ?? null; }
-        if (goldPrice) preGold[ev.key] = goldPrice;
+  // ── ALERT 1 of 2: ONE combined heads-up ≤30 min before release. Events firing
+  // at the SAME time are merged into a single message (grouped by currency, shown
+  // as a "PACKAGE" when one currency has 2+ events at that time). No 5-min spam.
+  {
+    const upcoming = events
+      .filter((ev) => { const m = (ev.time - now) / 60_000; return m > 0 && m <= EVENT_ALERT_MIN && !alerted.has(ev.key); })
+      .sort((a, b) => a.time - b.time);
+    if (upcoming.length) {
+      for (const ev of upcoming) {
+        alerted.add(ev.key);
+        // Snapshot gold before a tier-1 USD release so we can measure the reaction later.
+        if (isFomcNfp(ev.title) && ev.currency.toUpperCase() === "USD" && preGold[ev.key] == null) {
+          if (goldPrice === null) { const g = await fetchGold(); goldPrice = g?.price ?? null; }
+          if (goldPrice) preGold[ev.key] = goldPrice;
+        }
       }
-      const left = Math.max(0, Math.round(minutes));
-      calendarAlerts.push([
-        `🔔⏰ <b>بیرهێنانەوە / REMINDER</b>`,
-        `🟠 <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
-        `🕒 ${left} min left · ${left} خولەک ماوە بۆ دەرچوونی هەواڵەکە`,
-        ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
-        `🟢🔴 ئامادە بە بۆ کڕین یان فرۆشتن / Get ready to BUY or SELL`,
-      ].filter(Boolean).join("\n"));
+      const minsTo = Math.max(1, Math.round((upcoming[0].time - now) / 60_000));
+      const head = [
+        `⚠️ ${upcoming.length} High-Impact Event${upcoming.length > 1 ? "s" : ""} in ${minsTo} min`,
+        `${upcoming.length} ئیڤێنتی گرنگ لە ${minsTo} خولەکدا`,
+      ];
+      const byTime = new Map<number, CalEvent[]>();
+      for (const ev of upcoming) { const a = byTime.get(ev.time) ?? []; a.push(ev); byTime.set(ev.time, a); }
+      const blocks: string[] = [];
+      for (const [time, evs] of [...byTime.entries()].sort((a, b) => a[0] - b[0])) {
+        const tLabel = new Date(time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
+        const byCcy = new Map<string, CalEvent[]>();
+        for (const ev of evs) { const a = byCcy.get(ev.currency) ?? []; a.push(ev); byCcy.set(ev.currency, a); }
+        for (const [ccy, list] of byCcy.entries()) {
+          const isPkg = list.length > 1;
+          const title = `${ccyFlag(ccy)} <b>${esc(ccy)}${isPkg ? " PACKAGE" : ""}</b> · ${tLabel} UTC`;
+          const items = list.map((ev) => `• ${esc(ev.title)}${ev.forecast ? `: Fcst ${esc(ev.forecast)}` : ""}`);
+          blocks.push([title, ...items, "", goldImpactLine(ccy)].join("\n"));
+        }
+      }
+      calendarAlerts.push([...head, "", blocks.join("\n\n")].join("\n"));
     }
+  }
 
-
-
-    // 2) AFTER the event releases → post the RESULT + market reaction/bias.
+  for (const ev of events) {
+    // ── ALERT 2 of 2: AFTER the event releases → post the RESULT + market reaction.
     // Only when an actual figure exists, event is in the past but recent (<=6h), and not yet posted.
     const minsSince = (now - ev.time) / 60_000;
     if (ev.actual && minsSince >= 0 && minsSince <= 360 && !resulted.has(ev.key)) {
