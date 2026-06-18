@@ -1666,6 +1666,175 @@ async function evaluateWeeklySummary(opts?: { force?: boolean }): Promise<string
   return lines.join("\n");
 }
 
+// ───────────────────── monthly report (1st of month 09:00 BST) ─────────────────────
+// Summarizes the previous calendar month: gold range, bot performance, best week,
+// signal of the month, and the next month's key events. Deduped per month via
+// market_alert_state["monthly_summary"].monthKey.
+async function evaluateMonthlySummary(opts?: { force?: boolean }): Promise<string | null> {
+  const now = new Date();
+  const lon = new Date(now.toLocaleString("en-US", { timeZone: "Europe/London" }));
+  // Key of the month we are reporting ON (the previous calendar month).
+  const monthKey = (() => {
+    const y = lon.getFullYear();
+    const m = lon.getMonth(); // 0-based current month
+    const prev = new Date(Date.UTC(y, m - 1, 1));
+    return prev.toISOString().slice(0, 7); // YYYY-MM of previous month
+  })();
+
+  if (!opts?.force) {
+    // Fire on the 1st of the month at 09:00 London time.
+    if (lon.getDate() !== 1 || lon.getHours() !== 9) return null;
+    const state = await getState("monthly_summary");
+    if (state.lastMonth === monthKey) return null;
+    await setState("monthly_summary", { lastMonth: monthKey });
+  }
+
+  // Previous calendar month window (UTC): [firstOfPrev, firstOfThis).
+  const todayUtc = new Date(`${now.toISOString().slice(0, 10)}T00:00:00.000Z`);
+  const firstOfThis = new Date(Date.UTC(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth(), 1));
+  const firstOfPrev = new Date(Date.UTC(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth() - 1, 1));
+  const startUtc = firstOfPrev.toISOString();
+  const endUtc = firstOfThis.toISOString();
+  const monthLabel = firstOfPrev.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  const nextMonthLabel = firstOfThis.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+
+  const header = [
+    "━━━━━━━━━━━━━━━",
+    "📊 <b>CTP MONTHLY REPORT</b>",
+    "<i>ڕاپۆرتی مانگانەی CTP</i>",
+    "━━━━━━━━━━━━━━━",
+    `📅 ${monthLabel} Summary`,
+    "",
+  ];
+  const footer = [
+    "📱 t.me/goldmarketai",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    "<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>",
+  ];
+
+  // Build the "Next Month Outlook" from upcoming high-impact events regardless of
+  // whether any signals closed last month.
+  const outlookBlock = await (async (): Promise<string[]> => {
+    const { data: ev } = await admin.from("economic_events")
+      .select("title, currency, impact, event_time")
+      .gte("event_time", endUtc)
+      .lt("event_time", new Date(Date.UTC(firstOfThis.getUTCFullYear(), firstOfThis.getUTCMonth() + 1, 1)).toISOString())
+      .order("event_time", { ascending: true });
+    const highImpact = (ev ?? []).filter((e) =>
+      String(e.impact ?? "").toLowerCase().includes("high") || String(e.impact ?? "") === "3");
+    const picks = (highImpact.length ? highImpact : (ev ?? [])).slice(0, 4);
+    const block: string[] = ["📊 <b>Next Month Outlook:</b>", `<i>ئاراستەی ${nextMonthLabel}</i>`];
+    if (picks.length) {
+      for (const e of picks) {
+        const d = new Date(e.event_time as string);
+        const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+        block.push(`• ${day} — ${esc(String(e.title))} (${esc(String(e.currency))})`);
+      }
+    } else {
+      block.push("• Watch FOMC, NFP & CPI releases · چاودێری ڕووداوە گرنگەکان بکە");
+    }
+    return block;
+  })();
+
+  const { data: closed } = await admin.from("ai_signals")
+    .select("asset, signal, entry, close_price, status, result_pips, market_session, closed_at")
+    .gte("closed_at", startUtc)
+    .lt("closed_at", endUtc)
+    .in("status", ["target_hit", "stopped_out"]);
+  const rows = (closed ?? []) as (DailyRow & { closed_at: string })[];
+
+  if (rows.length === 0) {
+    return [
+      ...header,
+      "😴 <b>No signals closed last month</b>",
+      "<i>هیچ سیگناڵێک مانگی ڕابردوو نەهاتە تەواوبوون</i>",
+      "",
+      ...outlookBlock,
+      "",
+      ...footer,
+    ].join("\n");
+  }
+
+  // Gold performance.
+  const goldRows = rows.filter((r) => r.asset === "XAU/USD");
+  const goldPrices = goldRows.flatMap((r) => [Number(r.entry), Number(r.close_price)]).filter((n) => Number.isFinite(n) && n > 0);
+  let goldBlock: string[] = [];
+  if (goldPrices.length) {
+    const high = Math.max(...goldPrices);
+    const low = Math.min(...goldPrices);
+    const first = Number(goldRows[0]?.entry) || goldPrices[0];
+    const last = Number(goldRows[goldRows.length - 1]?.close_price) || goldPrices[goldPrices.length - 1];
+    const chg = last - first;
+    const chgPct = first ? (chg / first) * 100 : 0;
+    const sign = chgPct >= 0 ? "+" : "-";
+    goldBlock = [
+      "🥇 <b>GOLD:</b>",
+      `Monthly High: <code>$${fmt(high)}</code>`,
+      `Monthly Low: <code>$${fmt(low)}</code>`,
+      `Monthly Change: ${sign}${Math.abs(chgPct).toFixed(1)}%`,
+      "",
+    ];
+  }
+
+  // Bot stats.
+  const trades = rows.length;
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const winRate = trades ? Math.round((won / trades) * 100) : 0;
+  const totalPips = rows.reduce((s, r) => s + rowPips(r), 0);
+  const netPl = pipsToDollars(totalPips);
+  const netDot = netPl >= 0 ? "🟢" : "🔴";
+
+  // Best week of the month: group by ISO-week (Monday) and pick the highest P/L.
+  const weekPl = new Map<string, number>();
+  for (const r of rows) {
+    const d = new Date(r.closed_at);
+    const diff = (d.getUTCDay() + 6) % 7;
+    const monday = new Date(d);
+    monday.setUTCDate(monday.getUTCDate() - diff);
+    const key = monday.toISOString().slice(0, 10);
+    weekPl.set(key, (weekPl.get(key) ?? 0) + pipsToDollars(rowPips(r)));
+  }
+  const sortedWeeks = [...weekPl.entries()].sort((a, b) => b[1] - a[1]);
+  let bestWeekLine = "";
+  if (sortedWeeks.length) {
+    const [bestMonday, bestPl] = sortedWeeks[0];
+    // Week number within the month (1-based).
+    const weekNum = Math.floor((new Date(bestMonday).getUTCDate() - 1) / 7) + 1;
+    bestWeekLine = `Best Week: Week ${weekNum} (${plStr(bestPl)})`;
+  }
+
+  // Signal of the month (highest pips winner).
+  const winners = rows.filter((r) => r.status === "target_hit").sort((a, b) => rowPips(b) - rowPips(a));
+  const best = winners[0];
+
+  const lines: string[] = [
+    ...header,
+    ...goldBlock,
+    "🤖 <b>BOT STATS:</b>",
+    `Total Signals: ${trades}`,
+    `Win Rate: ${winRate}%`,
+  ];
+  if (bestWeekLine) lines.push(bestWeekLine);
+  lines.push(`Total P/L: ${netDot} ${plStr(netPl)}`, "");
+
+  if (best) {
+    const meta = ASSET_META[best.asset] ?? { emoji: "🥇", name: best.asset };
+    const entry = Number(best.entry) || 0;
+    const close = Number(best.close_price) || 0;
+    const delta = best.signal === "SELL" ? entry - close : close - entry;
+    lines.push(
+      "🏆 <b>Signal of the Month:</b>",
+      `${meta.emoji} ${meta.name} ${best.signal} @ <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+      `${delta >= 0 ? "+" : "-"}$${fmt(Math.abs(delta))} | ${pipsStr(rowPips(best))} pips ✅`,
+      "",
+    );
+  }
+
+  lines.push(...outlookBlock, "", ...footer);
+  return lines.join("\n");
+}
+
 // (channel-growth milestones + weekly stats removed)
 
 
