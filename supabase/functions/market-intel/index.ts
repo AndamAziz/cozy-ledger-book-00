@@ -556,16 +556,16 @@ function newSignalLine(
   const rsi = Math.max(20, Math.min(80, Math.round(50 + q.changePct * 6)));
   const reasonLines = isBuy
     ? [
-        "EMA9 > EMA21 ✅ کراوسئۆڤەری بەرز",
+        "EMA9 &gt; EMA21 ✅ کراوسئۆڤەری بەرز",
         "MACD Bullish ✅ بەهێز",
         `RSI: ${rsi} ✅ ناوەند`,
-        "Price > EMA50 ✅ بەرز",
+        "Price &gt; EMA50 ✅ بەرز",
       ]
     : [
-        "EMA9 < EMA21 ✅ کراوسئۆڤەری خوار",
+        "EMA9 &lt; EMA21 ✅ کراوسئۆڤەری خوار",
         "MACD Bearish ✅ بەهێز",
         `RSI: ${rsi} ✅ ناوەند`,
-        "Price < EMA50 ✅ خوار",
+        "Price &lt; EMA50 ✅ خوار",
       ];
   return [
     `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
