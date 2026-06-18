@@ -428,7 +428,22 @@ function outcomeLine(
       `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
       `سیگنالەکە سەرکەوتوو بوو 🟢✅`,
     ].join("\n");
-  }
+}
+
+// Standalone SIGNAL RESULT-only message (TP/SL outcomes only — no signals, no news).
+function oneResultMessage(body: string): string {
+  return [
+    "━━━━━━━━━━━━━━━",
+    "🏁 <b>CTP SIGNAL RESULT</b>",
+    "━━━━━━━━━━━━━━━",
+    "",
+    body,
+    "",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
   return [
     `🔴❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
     `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
