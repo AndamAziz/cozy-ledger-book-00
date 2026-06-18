@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.telegram-stats]
 verify_jwt = false
+
+[functions.groq-analysis]
+verify_jwt = false
