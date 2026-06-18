@@ -544,7 +544,7 @@ function signalRationale(q: Quote, sig: "BUY" | "SELL"): { en: string; ku: strin
 // Full BUY/SELL trade setup with entry, full target and stop loss (clean RTL layout).
 function newSignalLine(
   q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
-  confidence: number, session: string,
+  confidence: number, session: string, tf?: string,
 ): string {
   const m = ASSET_META[q.symbol];
   const tpDelta = Math.abs(tp - q.price);
@@ -569,6 +569,7 @@ function newSignalLine(
       ];
   return [
     `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
+    tf ? `⏱ <b>Timeframe: ${tf}</b> · چوارچێوەی کات` : "",
     "",
     `💰 <code>$${fmt(q.price)}</code> :نرخی چوونەژوورەوە`,
     `🎯 <code>$${fmt(tp)}</code> :تارگێت (+$${fmt(tpDelta)})`,
