@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Send, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Activity } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Send, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Activity, Zap } from 'lucide-react';
 
 type Health = 'healthy' | 'degraded' | 'down' | 'idle' | 'unknown';
 
@@ -154,8 +155,27 @@ const healthStyles: Record<Health, string> = {
 export function TelegramHealthCard() {
   const { language } = useLanguage();
   const tl = L[language as keyof typeof L] ?? L.en;
+  const { toast } = useToast();
+  const rl = language === 'ku' ? {
+    title: 'ناردنەوەی سیگنال',
+    gold: '🥇 Gold',
+    oil: '🛢️ Oil',
+    btc: '₿ Bitcoin',
+    success: 'سیگنال نێدرا بۆ چەنال',
+    error: 'ناردن سەرکەوتوو نەبوو',
+    sending: 'چاوەڕوان بە...',
+  } : {
+    title: 'Resend Signal',
+    gold: '🥇 Gold',
+    oil: '🛢️ Oil',
+    btc: '₿ Bitcoin',
+    success: 'Signal sent to channel',
+    error: 'Send failed',
+    sending: 'Sending...',
+  };
   const [data, setData] = useState<HealthData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [resending, setResending] = useState<string | null>(null);
 
   const fmtTime = useCallback(
     (iso: string | null) => {
@@ -224,6 +244,25 @@ export function TelegramHealthCard() {
       setIsLoading(false);
     }
   }, []);
+
+  const handleResend = async (name: string) => {
+    setResending(name);
+    try {
+      const { data: res, error } = await supabase.functions.invoke('market-intel', {
+        body: { force: [name] },
+      });
+      if (error) throw error;
+      if (res?.ok) {
+        toast({ title: rl.success, description: `${name} · ${res.sent} sent · ${res.scheduled} scheduled` });
+      } else {
+        toast({ title: rl.error, description: String(res?.error ?? 'Unknown'), variant: 'destructive' });
+      }
+    } catch (e) {
+      toast({ title: rl.error, description: e instanceof Error ? e.message : String(e), variant: 'destructive' });
+    } finally {
+      setResending(null);
+    }
+  };
 
   useEffect(() => {
     fetchHealth();
@@ -299,6 +338,29 @@ export function TelegramHealthCard() {
       <div className="flex flex-col sm:flex-row gap-2.5">
         <StatBlock label={tl.reports} stat={data?.reports ?? emptyStat()} health={reportsHealth} />
         <StatBlock label={tl.signals} stat={data?.signals ?? emptyStat()} health={signalsHealth} />
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-border/40">
+        <p className="text-[11px] font-medium text-muted-foreground mb-2">{rl.title}</p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: 'GOLD', label: rl.gold, cls: 'bg-gold/10 text-gold border-gold/30 hover:bg-gold/20' },
+            { key: 'OIL', label: rl.oil, cls: 'bg-accent/10 text-accent border-accent/30 hover:bg-accent/20' },
+            { key: 'BITCOIN', label: rl.btc, cls: 'bg-warning/10 text-warning border-warning/30 hover:bg-warning/20' },
+          ].map((a) => (
+            <Button
+              key={a.key}
+              variant="outline"
+              size="sm"
+              disabled={!!resending}
+              onClick={() => handleResend(a.key)}
+              className={`rounded-lg text-xs font-bold px-3 py-2 h-auto ${a.cls}`}
+            >
+              <Zap className={`h-3.5 w-3.5 mr-1.5 ${resending === a.key ? 'animate-pulse' : ''}`} />
+              {resending === a.key ? rl.sending : a.label}
+            </Button>
+          ))}
+        </div>
       </div>
     </div>
   );
