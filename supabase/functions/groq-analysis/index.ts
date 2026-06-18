@@ -245,6 +245,8 @@ Set validForMinutes based on the timeframe and confidence honestly (0-100). This
         });
 
       const callGroq = () => callLLM(GROQ_URL, GROQ_API_KEY, GROQ_MODEL);
+      const callGateway = () =>
+        LOVABLE_API_KEY ? callLLM(GATEWAY_URL, LOVABLE_API_KEY, GATEWAY_MODEL) : null;
 
       // 8B model occasionally emits a malformed tool call -> retry once.
       let resp = await callGroq();
@@ -253,17 +255,17 @@ Set validForMinutes based on the timeframe and confidence honestly (0-100). This
         resp = await callGroq();
       }
 
-      // Groq rate limited (30/min) -> serve stale cache, else fall back to Lovable AI Gateway.
-      if ((resp.status === 429 || resp.status === 402)) {
+      // Persistent Groq failure (malformed tool call 400, or rate limit 429/402)
+      // -> serve stale cache if we have it, else fall back to the Lovable AI Gateway.
+      if (resp.status === 400 || resp.status === 429 || resp.status === 402) {
         await resp.text().catch(() => "");
         if (cached) {
           return new Response(JSON.stringify(cached.payload), {
             headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "STALE" },
           });
         }
-        if (LOVABLE_API_KEY) {
-          resp = await callLLM(GATEWAY_URL, LOVABLE_API_KEY, GATEWAY_MODEL);
-        }
+        const gw = callGateway();
+        if (gw) resp = await gw;
       }
 
       if (!resp.ok) {
