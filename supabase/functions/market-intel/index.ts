@@ -39,6 +39,9 @@ const TARGET_IMPORTANT_MOVE_PCT = 0.6;   // |change| ≥ this % ⇒ send target 
 const PRICE_INTERVAL_MS = 5_000;
 const LOOP_WINDOW_MS = 50_000;
 
+// News is broadcast at most once per 60 minutes (its own standalone message).
+const NEWS_MIN_GAP_MS = 60 * 60_000;
+
 const CALENDAR_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
 
 const admin = createClient(
