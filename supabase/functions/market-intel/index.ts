@@ -203,6 +203,39 @@ async function setState(key: string, value: Record<string, unknown>) {
   await admin.from("market_alert_state").upsert({ key, value, updated_at: new Date().toISOString() });
 }
 
+// ───────────────────── content dedupe (sent_news_log) ─────────────────────
+// Stable content hash (djb2) of the normalized text — used to detect when the
+// EXACT same content was already posted recently so we never spam duplicates.
+function contentHash(s: string): string {
+  const norm = s.toLowerCase().replace(/\s+/g, " ").trim();
+  let h = 5381;
+  for (let i = 0; i < norm.length; i++) h = ((h << 5) + h + norm.charCodeAt(i)) >>> 0;
+  return h.toString(16);
+}
+
+// True if the same content hash was sent within the given window (ms).
+async function wasRecentlySent(hash: string, withinMs: number): Promise<boolean> {
+  const since = new Date(Date.now() - withinMs).toISOString();
+  const { data } = await admin
+    .from("sent_news_log")
+    .select("id")
+    .eq("content_hash", hash)
+    .gte("sent_at", since)
+    .limit(1)
+    .maybeSingle();
+  return !!data;
+}
+
+// Record that a piece of content was sent (for future dedupe checks).
+async function recordSent(hash: string, headline: string, kind: string) {
+  await admin.from("sent_news_log").insert({ content_hash: hash, headline: headline.slice(0, 300), kind });
+}
+
+// Dedupe windows for each message type.
+const NEWS_DEDUPE_MS = 2 * 60 * 60_000;   // 2 hours — never repeat the same headline
+const SIGNAL_DEDUPE_MS = 15 * 60_000;     // 15 min — never repeat the exact same signal
+const RESULT_DEDUPE_MS = 60 * 60_000;     // 1 hour — never repeat the exact same result
+
 // ───────────────────── Telegram (retry + backoff) ─────────────────────
 async function sendToChat(chatId: string, kind: string, text: string): Promise<boolean> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
