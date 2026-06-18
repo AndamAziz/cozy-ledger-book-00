@@ -1,4 +1,4 @@
-interface Props {
+import type { CSSProperties } from 'react';
   className?: string;
   size?: number;
   style?: React.CSSProperties;
