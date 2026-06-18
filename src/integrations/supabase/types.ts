@@ -638,6 +638,30 @@ export type Database = {
           },
         ]
       }
+      sent_news_log: {
+        Row: {
+          content_hash: string
+          headline: string | null
+          id: string
+          kind: string
+          sent_at: string
+        }
+        Insert: {
+          content_hash: string
+          headline?: string | null
+          id?: string
+          kind?: string
+          sent_at?: string
+        }
+        Update: {
+          content_hash?: string
+          headline?: string | null
+          id?: string
+          kind?: string
+          sent_at?: string
+        }
+        Relationships: []
+      }
       telegram_logs: {
         Row: {
           attempts: number

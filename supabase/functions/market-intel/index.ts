@@ -203,6 +203,39 @@ async function setState(key: string, value: Record<string, unknown>) {
   await admin.from("market_alert_state").upsert({ key, value, updated_at: new Date().toISOString() });
 }
 
+// ───────────────────── content dedupe (sent_news_log) ─────────────────────
+// Stable content hash (djb2) of the normalized text — used to detect when the
+// EXACT same content was already posted recently so we never spam duplicates.
+function contentHash(s: string): string {
+  const norm = s.toLowerCase().replace(/\s+/g, " ").trim();
+  let h = 5381;
+  for (let i = 0; i < norm.length; i++) h = ((h << 5) + h + norm.charCodeAt(i)) >>> 0;
+  return h.toString(16);
+}
+
+// True if the same content hash was sent within the given window (ms).
+async function wasRecentlySent(hash: string, withinMs: number): Promise<boolean> {
+  const since = new Date(Date.now() - withinMs).toISOString();
+  const { data } = await admin
+    .from("sent_news_log")
+    .select("id")
+    .eq("content_hash", hash)
+    .gte("sent_at", since)
+    .limit(1)
+    .maybeSingle();
+  return !!data;
+}
+
+// Record that a piece of content was sent (for future dedupe checks).
+async function recordSent(hash: string, headline: string, kind: string) {
+  await admin.from("sent_news_log").insert({ content_hash: hash, headline: headline.slice(0, 300), kind });
+}
+
+// Dedupe windows for each message type.
+const NEWS_DEDUPE_MS = 2 * 60 * 60_000;   // 2 hours — never repeat the same headline
+const SIGNAL_DEDUPE_MS = 15 * 60_000;     // 15 min — never repeat the exact same signal
+const RESULT_DEDUPE_MS = 60 * 60_000;     // 1 hour — never repeat the exact same result
+
 // ───────────────────── Telegram (retry + backoff) ─────────────────────
 async function sendToChat(chatId: string, kind: string, text: string): Promise<boolean> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -395,7 +428,22 @@ function outcomeLine(
       `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
       `سیگنالەکە سەرکەوتوو بوو 🟢✅`,
     ].join("\n");
-  }
+}
+
+// Standalone SIGNAL RESULT-only message (TP/SL outcomes only — no signals, no news).
+function oneResultMessage(body: string): string {
+  return [
+    "━━━━━━━━━━━━━━━",
+    "🏁 <b>CTP SIGNAL RESULT</b>",
+    "━━━━━━━━━━━━━━━",
+    "",
+    body,
+    "",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
   return [
     `🔴❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
     `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
@@ -965,7 +1013,9 @@ function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
   return parts.join("\n");
 }
 
-async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
+interface NewsOut { block: string; headline: string; hash: string }
+
+async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
   const priceBySymbol: Record<string, number> = {};
   for (const q of quotes) priceBySymbol[q.symbol] = q.price;
   const news = await fetchNews();
@@ -973,7 +1023,9 @@ async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
   const now = Date.now();
 
-  // Pick up to 4 new, fresh (≤90 min old) items we have not alerted yet.
+  // Pick up to 4 new, fresh (≤90 min old) items we have not alerted yet, AND
+  // whose exact headline was NOT already posted in the last 2 hours (DB-backed
+  // dedupe — the single source of truth that stops duplicate news).
   const fresh: NewsItem[] = [];
   for (const n of news) {
     const key = (n.link || n.title).toLowerCase();
@@ -981,6 +1033,9 @@ async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
     alerted.add(key);
     const ts = Date.parse(n.pubDate) || 0;
     if (ts && now - ts > 90 * 60 * 1000) continue;
+    // Skip if this EXACT headline was already sent in the last 2 hours.
+    const headlineHash = contentHash(n.title);
+    if (await wasRecentlySent(headlineHash, NEWS_DEDUPE_MS)) continue;
     fresh.push(n);
     if (fresh.length >= 4) break;
   }
@@ -990,7 +1045,7 @@ async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
   const enriched = await enrichNews(fresh, priceBySymbol);
 
   // Persist for the dashboard (best-effort).
-  const out: string[] = [];
+  const out: NewsOut[] = [];
   for (let i = 0; i < fresh.length; i++) {
     const n = fresh[i];
     const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" };
@@ -1000,7 +1055,7 @@ async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
       impact: n.category, bias: e.impact, source: n.source, url: n.link,
       published_at: n.pubDate ? new Date(n.pubDate).toISOString() : null,
     }, { onConflict: "hash" });
-    out.push(newsBlockItem(n, e));
+    out.push({ block: newsBlockItem(n, e), headline: n.title, hash: contentHash(n.title) });
   }
   return out;
 }
@@ -1416,14 +1471,18 @@ Deno.serve(async (req) => {
 
 
 
-    // 1) OUTCOMES (TP/SL hit) → always sent, each as its own message (must close now).
+    // 1) SIGNAL RESULTS (TP/SL hit) → ONLY the result, each as its own message.
+    //    Content-hash deduped so the exact same result never repeats within 1h.
     for (const o of outcomeAlerts) {
-      const ok = await sendTelegram("ctp_signal", oneSignalMessage("Signal Result · ئەنجامی سیگنال", o, "⚡ Immediate alert (TP/SL hit) · ئاگادارکردنەوەی خێرا"));
+      const h = contentHash(o);
+      if (await wasRecentlySent(h, RESULT_DEDUPE_MS)) continue;
+      const ok = await sendTelegram("ctp_result", oneResultMessage(o));
       sent = ok || sent;
-      if (ok) targetsSent++;
+      if (ok) { targetsSent++; await recordSent(h, o.slice(0, 120), "result"); }
     }
 
-    // 2) NEW TARGETS → one message each, throttled to ~15–30 min unless very important.
+    // 2) SIGNALS → ONLY signal data, one message each, throttled to ~15–30 min
+    //    unless very important. Content-hash deduped (no duplicate signals in 15m).
     if (signalAlerts.length) {
       const throttle = await getState("target_throttle");
       let lastTargetAt = (throttle.lastAt as number) ?? 0;
@@ -1431,9 +1490,11 @@ Deno.serve(async (req) => {
         const gapOk = !lastTargetAt || Date.now() - lastTargetAt >= TARGET_MIN_GAP_MS;
         // Skip ordinary targets while inside the throttle window; always send important ones.
         if (!sig.important && !gapOk) continue;
+        const h = contentHash(sig.text);
+        if (await wasRecentlySent(h, SIGNAL_DEDUPE_MS)) continue;
         const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason));
         sent = ok || sent;
-        if (ok) { targetsSent++; lastTargetAt = Date.now(); }
+        if (ok) { targetsSent++; lastTargetAt = Date.now(); await recordSent(h, sig.text.slice(0, 120), "signal"); }
       }
       await setState("target_throttle", { lastAt: lastTargetAt });
     }
@@ -1445,13 +1506,14 @@ Deno.serve(async (req) => {
       sent = ok || sent;
     }
 
-    // 4) NEWS → each item as its own standalone message (market news only). Sent
-    //    separately so the rich bilingual blocks never hit Telegram's 4096 limit.
+    // 4) NEWS → ONLY news, each item as its own standalone message. Exact-headline
+    //    deduped against sent_news_log (2h window) so the same news never repeats.
     if (newsAlerts.length) {
       let anyNews = false;
-      for (const block of newsAlerts) {
-        const ok = await sendTelegram("ctp_news", oneNewsMessage(block));
-        anyNews = ok || anyNews;
+      for (const item of newsAlerts) {
+        if (await wasRecentlySent(item.hash, NEWS_DEDUPE_MS)) continue;
+        const ok = await sendTelegram("ctp_news", oneNewsMessage(item.block));
+        if (ok) { anyNews = true; await recordSent(item.hash, item.headline, "news"); }
       }
       sent = anyNews || sent;
       if (anyNews) await setState("news_throttle", { lastAt: Date.now() });
