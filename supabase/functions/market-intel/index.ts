@@ -965,7 +965,9 @@ function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
   return parts.join("\n");
 }
 
-async function evaluateNews(): Promise<string[]> {
+async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
+  const priceBySymbol: Record<string, number> = {};
+  for (const q of quotes) priceBySymbol[q.symbol] = q.price;
   const news = await fetchNews();
   const state = await getState("news"); // { alertedKeys: string[] }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
