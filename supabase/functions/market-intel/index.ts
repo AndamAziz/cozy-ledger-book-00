@@ -1649,8 +1649,8 @@ Deno.serve(async (req) => {
     const lastNewsAt = (newsThrottle.lastAt as number) ?? 0;
     const newsWindowOpen = !lastNewsAt || Date.now() - lastNewsAt >= NEWS_MIN_GAP_MS;
     const newsAlerts = newsWindowOpen ? await evaluateNews(lastQuotes) : [];
-    // Market-open reports for regions that just opened (analysis + get-ready heads-up).
-    const sessionOpenAlerts = await evaluateSessionOpen();
+    // Scheduled session OPEN / CLOSE posts (fire at exact UTC session hours).
+    const sessionPosts = await evaluateSessionPosts();
     // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
     const dailySummary = await evaluateDailySummary(lastQuotes);
 
@@ -1660,10 +1660,13 @@ Deno.serve(async (req) => {
     let sent = false;
     let targetsSent = 0;
 
-    // 0) MARKET-OPEN reports → one standalone message per region that just opened.
-    for (const r of sessionOpenAlerts) {
-      sent = (await sendTelegram("ctp_session_open", r)) || sent;
+    // 0) SESSION OPEN / CLOSE posts → one standalone message each, logged per day.
+    for (const p of sessionPosts) {
+      const ok = await sendTelegram(`ctp_session_${p.kind}`, p.text);
+      sent = ok || sent;
+      if (ok) await recordSessionPost(p.region, p.kind, new Date().toISOString().slice(0, 10));
     }
+
 
     // 0b) FOMC/NFP special 🚨 alerts → each as its own high-priority message.
     for (const s of specialAlerts) {
