@@ -1471,14 +1471,18 @@ Deno.serve(async (req) => {
 
 
 
-    // 1) OUTCOMES (TP/SL hit) → always sent, each as its own message (must close now).
+    // 1) SIGNAL RESULTS (TP/SL hit) → ONLY the result, each as its own message.
+    //    Content-hash deduped so the exact same result never repeats within 1h.
     for (const o of outcomeAlerts) {
-      const ok = await sendTelegram("ctp_signal", oneSignalMessage("Signal Result · ئەنجامی سیگنال", o, "⚡ Immediate alert (TP/SL hit) · ئاگادارکردنەوەی خێرا"));
+      const h = contentHash(o);
+      if (await wasRecentlySent(h, RESULT_DEDUPE_MS)) continue;
+      const ok = await sendTelegram("ctp_result", oneResultMessage(o));
       sent = ok || sent;
-      if (ok) targetsSent++;
+      if (ok) { targetsSent++; await recordSent(h, o.slice(0, 120), "result"); }
     }
 
-    // 2) NEW TARGETS → one message each, throttled to ~15–30 min unless very important.
+    // 2) SIGNALS → ONLY signal data, one message each, throttled to ~15–30 min
+    //    unless very important. Content-hash deduped (no duplicate signals in 15m).
     if (signalAlerts.length) {
       const throttle = await getState("target_throttle");
       let lastTargetAt = (throttle.lastAt as number) ?? 0;
@@ -1486,9 +1490,11 @@ Deno.serve(async (req) => {
         const gapOk = !lastTargetAt || Date.now() - lastTargetAt >= TARGET_MIN_GAP_MS;
         // Skip ordinary targets while inside the throttle window; always send important ones.
         if (!sig.important && !gapOk) continue;
+        const h = contentHash(sig.text);
+        if (await wasRecentlySent(h, SIGNAL_DEDUPE_MS)) continue;
         const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason));
         sent = ok || sent;
-        if (ok) { targetsSent++; lastTargetAt = Date.now(); }
+        if (ok) { targetsSent++; lastTargetAt = Date.now(); await recordSent(h, sig.text.slice(0, 120), "signal"); }
       }
       await setState("target_throttle", { lastAt: lastTargetAt });
     }
@@ -1500,13 +1506,14 @@ Deno.serve(async (req) => {
       sent = ok || sent;
     }
 
-    // 4) NEWS → each item as its own standalone message (market news only). Sent
-    //    separately so the rich bilingual blocks never hit Telegram's 4096 limit.
+    // 4) NEWS → ONLY news, each item as its own standalone message. Exact-headline
+    //    deduped against sent_news_log (2h window) so the same news never repeats.
     if (newsAlerts.length) {
       let anyNews = false;
-      for (const block of newsAlerts) {
-        const ok = await sendTelegram("ctp_news", oneNewsMessage(block));
-        anyNews = ok || anyNews;
+      for (const item of newsAlerts) {
+        if (await wasRecentlySent(item.hash, NEWS_DEDUPE_MS)) continue;
+        const ok = await sendTelegram("ctp_news", oneNewsMessage(item.block));
+        if (ok) { anyNews = true; await recordSent(item.hash, item.headline, "news"); }
       }
       sent = anyNews || sent;
       if (anyNews) await setState("news_throttle", { lastAt: Date.now() });
