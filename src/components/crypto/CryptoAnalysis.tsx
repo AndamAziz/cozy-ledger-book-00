@@ -795,10 +795,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           <div className="flex items-center gap-2 text-sm font-bold text-white">
             <Sparkles className="h-4 w-4 text-[#f0b90b]" />
             {biLabel('شیکاری بازاڕ', 'Market Analysis')}
-            {generatedAt && !aiLoading && (
-              <span className="flex items-center gap-1 text-[10px] font-normal text-[#848e9c]">
+            {generatedAt && (
+              <span className="flex items-center gap-1 text-[10px] font-normal text-[#0ecb81]">
                 <Clock className="h-3 w-3" />
-                {biLabel('نوێکرایەوە', 'Updated')} {updatedAgo(generatedAt)}
+                {biLabel('نوێکراوەتەوە خۆکار', 'Auto-updated')} {updatedAgo(generatedAt)}
               </span>
             )}
           </div>
