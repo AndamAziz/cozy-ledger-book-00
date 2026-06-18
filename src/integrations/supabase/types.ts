@@ -640,25 +640,34 @@ export type Database = {
       }
       sent_news_log: {
         Row: {
+          asset: string | null
           content_hash: string
+          event_keyword: string | null
           headline: string | null
           id: string
           kind: string
           sent_at: string
+          urgency: string | null
         }
         Insert: {
+          asset?: string | null
           content_hash: string
+          event_keyword?: string | null
           headline?: string | null
           id?: string
           kind?: string
           sent_at?: string
+          urgency?: string | null
         }
         Update: {
+          asset?: string | null
           content_hash?: string
+          event_keyword?: string | null
           headline?: string | null
           id?: string
           kind?: string
           sent_at?: string
+          urgency?: string | null
         }
         Relationships: []
       }
