@@ -836,7 +836,25 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 
   await setState("prices", priceState);
   await setState("open_signals", openState);
+  // Persist any newly scheduled higher-timeframe signals (cap to avoid unbounded growth).
+  await setState("tf_queue", { items: tfQueue.slice(-200) });
   return { signalAlerts, outcomeAlerts, quotes };
+}
+
+// Drain the higher-timeframe (15M/30M/1H) signal queue: return any items whose
+// scheduled send time has arrived, and rewrite the queue with the rest.
+async function drainDueTimeframeSignals(): Promise<TfQueueItem[]> {
+  const tfQueue = ((await getState("tf_queue")).items as TfQueueItem[]) ?? [];
+  if (!tfQueue.length) return [];
+  const now = Date.now();
+  const due: TfQueueItem[] = [];
+  const remaining: TfQueueItem[] = [];
+  for (const item of tfQueue) {
+    if (item.dueAt <= now) due.push(item);
+    else remaining.push(item);
+  }
+  if (due.length) await setState("tf_queue", { items: remaining });
+  return due;
 }
 
 
