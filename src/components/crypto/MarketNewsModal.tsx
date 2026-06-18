@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Newspaper, CalendarClock, Loader2, RefreshCw, ExternalLink, AlertCircle, TrendingUp, TrendingDown, Pin, Clock, Share2, Sun, Moon, X, Bell, Globe, Check } from 'lucide-react';
 import { useTimezone, formatInTimezone, formatDayInTimezone, TZ_OPTIONS } from '@/hooks/useTimezone';
-import { TelegramBanner } from '@/components/TelegramBanner';
+
 
 interface CalendarEvent {
   title: string;
@@ -998,7 +998,6 @@ export function MarketNewsModal({ open, onClose }: Props) {
         )}
 
         <div className="flex-1 overflow-y-auto" ref={scrollRef} style={tab === 'calendar' ? { backgroundColor: T.bg } : undefined}>
-          {tab === 'news' && <TelegramBanner />}
           {loading && events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-[#848e9c] gap-2">
               <Loader2 className="h-6 w-6 animate-spin" />
