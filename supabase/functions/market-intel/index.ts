@@ -1257,8 +1257,8 @@ Deno.serve(async (req) => {
       const outcomeSample = outcomeLine(sample.symbol, "BUY", "tp", sample.price, sampleTp, sTpPips);
 
       const liveNews = (await fetchNews()).slice(0, 3);
-      const kuTitles = await translateToKurdish(liveNews.map((n) => n.title));
-      const newsBlock = liveNews.map((n, i) => newsLine(n.title, kuTitles[i] ?? "", n.summary, n.category, n.source));
+      const newsEnriched = await enrichNews(liveNews);
+      const newsBlock = liveNews.map((n, i) => newsBlockItem(n, newsEnriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact }));
       const lines: string[] = [
         "📊 <b>CTP APP REPORTS</b>",
         "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
