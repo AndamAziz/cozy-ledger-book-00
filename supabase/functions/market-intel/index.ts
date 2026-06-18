@@ -2436,6 +2436,9 @@ Deno.serve(async (req) => {
     try { body = await req.json(); } catch { /* cron sends none */ }
     const loop = body.loop !== false; // default true; pass {loop:false} for a single pass
     const test = body.test === true;  // pass {test:true} to force a sample report to Telegram
+    // Force mode: immediately broadcast a first signal for the given assets (default GOLD/OIL/BITCOIN),
+    // bypassing the freshness / cooldown / strong-move guards. Seeds state so the cascade + continuous flow keep running.
+    const force = body.force === true || Array.isArray(body.force);
 
     // Config mode: read or set which market regions may open new targets.
     //   {"getConfig": true}                       → returns current enabled regions
