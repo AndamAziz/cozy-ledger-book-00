@@ -412,12 +412,42 @@ function nowStamp(): string {
 function oneSignalMessage(subtitle: string, body: string, reason?: string): string {
   return [
     "━━━━━━━━━━━━━━━",
-    "📊 <b>CTP APP REPORTS</b>",
+    "📊 <b>CTP SIGNALS</b>",
     "━━━━━━━━━━━━━━━",
     "",
     body,
     "",
     reason ? `<i>ℹ️ ${subtitle} · ${reason}</i>` : `<i>ℹ️ ${subtitle}</i>`,
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
+
+// Standalone CALENDAR-only message (economic events only — no signals, no news).
+function oneCalendarMessage(body: string): string {
+  return [
+    "━━━━━━━━━━━━━━━",
+    "🗓 <b>CTP CALENDAR</b>",
+    "━━━━━━━━━━━━━━━",
+    "",
+    body,
+    "",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
+
+// Standalone NEWS-only message (market news only — no signals, no calendar).
+function oneNewsMessage(body: string): string {
+  return [
+    "━━━━━━━━━━━━━━━",
+    "📰 <b>CTP NEWS</b>",
+    "━━━━━━━━━━━━━━━",
+    "",
+    body,
+    "",
     "━━━━━━━━━━━━━━━",
     `<i>🕒 ${nowStamp()}</i>`,
     `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
