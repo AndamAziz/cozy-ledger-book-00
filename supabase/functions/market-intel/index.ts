@@ -1171,15 +1171,12 @@ Deno.serve(async (req) => {
       sent = ok || sent;
     }
 
-    // 4) NEWS → its own standalone message (market news only), at most once / 60 min.
+    // 4) NEWS → its own standalone message (market news only). The 60-min window
+    //    was already checked above (newsWindowOpen) before fetching.
     if (newsAlerts.length) {
-      const throttle = await getState("news_throttle");
-      const lastNewsAt = (throttle.lastAt as number) ?? 0;
-      if (!lastNewsAt || Date.now() - lastNewsAt >= NEWS_MIN_GAP_MS) {
-        const ok = await sendTelegram("ctp_news", oneNewsMessage(newsAlerts.join("\n\n")));
-        sent = ok || sent;
-        if (ok) await setState("news_throttle", { lastAt: Date.now() });
-      }
+      const ok = await sendTelegram("ctp_news", oneNewsMessage(newsAlerts.join("\n\n")));
+      sent = ok || sent;
+      if (ok) await setState("news_throttle", { lastAt: Date.now() });
     }
 
     return new Response(
