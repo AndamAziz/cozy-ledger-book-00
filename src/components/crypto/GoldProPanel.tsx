@@ -13,7 +13,6 @@ import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { SignalHistory } from '@/components/crypto/SignalHistory';
 import { Crown, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
 import { TelegramSignalCta } from '@/components/TelegramSignalCta';
-import { TelegramShareButton } from '@/components/TelegramShareButton';
 
 interface Props {
   candles: OHLCCandle[];
@@ -206,19 +205,9 @@ export function GoldProPanel({ candles, price }: Props) {
         <p className="text-[10px] text-[#848e9c] mt-2 leading-relaxed">
           {bi('ئەمە یارمەتیدەرە نەک ڕاوێژی دارایی. هەمیشە Stop Loss بەکاربهێنە.', 'This is guidance, not financial advice. Always use a Stop Loss.')}
         </p>
-        <div className="mt-3 flex items-stretch gap-2">
+        <div className="mt-3">
           <TelegramSignalCta
-            className="flex-1"
             label={bi('📱 لە تێلێگرام وەربگرە', '📱 Get on Telegram free')}
-          />
-          <TelegramShareButton
-            bi={bi}
-            emoji="🥇"
-            label="GOLD"
-            action={signal.action}
-            entry={signal.action !== 'wait' ? signal.entry : null}
-            tp={signal.action !== 'wait' ? signal.tp : null}
-            decimals={2}
           />
         </div>
       </div>
