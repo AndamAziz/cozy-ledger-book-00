@@ -1862,6 +1862,12 @@ Deno.serve(async (req) => {
       sent = (await sendTelegram("ctp_daily", dailySummary)) || sent;
     }
 
+    // 0d) Weekly report on Monday 08:00 BST.
+    if (weeklySummary) {
+      sent = (await sendTelegram("ctp_weekly", weeklySummary)) || sent;
+    }
+
+
 
 
 
