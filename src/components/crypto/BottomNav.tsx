@@ -27,7 +27,7 @@ const haptic = () => {
 
 interface MainItem {
   key: string;
-  icon: ComponentType<{ className?: string; size?: number }>;
+  icon: ComponentType<{ className?: string; size?: string | number }>;
   label: string;
   active: boolean;
   onPress: () => void;
