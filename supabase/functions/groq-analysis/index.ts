@@ -308,27 +308,40 @@ Set validForMinutes based on the timeframe and confidence honestly (0-100). This
 ${narrativeLangRule}
 Write a concise, well-structured analysis of the asset covering: trend direction (Bullish/Bearish/Neutral), key support/resistance levels, a clear trade recommendation (Buy/Sell/Wait), the risk level (Low/Medium/High), and a brief explanation grounded in the RSI, MACD, EMA values and the macro/news context provided. Use short headers and bullet points. This is educational, not financial advice.`;
 
-    const resp = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
+    const streamBody = (model: string) =>
+      JSON.stringify({
+        model,
         temperature: 0.5,
         stream: true,
         messages: [
           { role: "system", content: sysPrompt },
           { role: "user", content: `${baseContext}\n\nWrite the analysis now.` },
         ],
-      }),
+      });
+
+    let resp = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+      body: streamBody(GROQ_MODEL),
     });
+
+    // Groq rate limited (30/min) -> fall back to Lovable AI Gateway streaming.
+    if (resp.status === 429 || resp.status === 402) {
+      await resp.body?.cancel().catch(() => {});
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (LOVABLE_API_KEY) {
+        resp = await fetch(GATEWAY_URL, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: streamBody(GATEWAY_MODEL),
+        });
+      }
+    }
 
     if (!resp.ok || !resp.body) {
       if (resp.status === 429 || resp.status === 402) return rateLimitResponse(resp.status);
       const t = await resp.text().catch(() => "");
-      console.error("Groq error (narrative):", resp.status, t);
+      console.error("LLM error (narrative):", resp.status, t);
       return new Response(JSON.stringify({ error: "هەڵەیەک ڕوویدا لە شیکاری AI." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
