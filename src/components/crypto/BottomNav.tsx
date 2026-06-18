@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import {
   Newspaper, CandlestickChart, Coins, Brain, Menu, Home,
-  Bitcoin, DollarSign, Scale, Bot, ArrowRightLeft, X,
+  Bitcoin, DollarSign, Scale, Bot, ArrowRightLeft, X, UserPlus,
 } from 'lucide-react';
+import { InviteFriendsModal } from '@/components/InviteFriendsModal';
+import { TELEGRAM_BLUE } from '@/lib/telegram';
 
 export type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
 
@@ -31,6 +33,7 @@ interface MainItem {
 
 export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, onConvert, bi }: BottomNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [tapped, setTapped] = useState<string | null>(null);
 
   const press = (key: string, fn: () => void) => {
@@ -54,10 +57,13 @@ export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, o
     { key: 'verify', icon: Scale, label: bi('پشکنین', 'Verify'), color: '#22c55e', onPress: onVerify },
     { key: 'news', icon: Newspaper, label: bi('هەواڵ', 'News'), color: '#f0b90b', onPress: onNews },
     { key: 'convert', icon: ArrowRightLeft, label: bi('گۆڕین', 'Convert'), color: '#f0b90b', onPress: onConvert },
+    { key: 'invite', icon: UserPlus, label: bi('بانگهێشت', 'Invite'), color: TELEGRAM_BLUE, onPress: () => setInviteOpen(true) },
   ];
 
   return (
     <>
+      <InviteFriendsModal open={inviteOpen} onClose={() => setInviteOpen(false)} bi={bi} />
+
       {/* More drawer */}
       {moreOpen && (
         <>
