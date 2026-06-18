@@ -790,7 +790,26 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
         if (highConf && strongMoveImp) reason = "🔥 Very important: high confidence + strong move · زۆر گرنگ: متمانە بەرز + جوڵە بەهێز";
         else if (highConf) reason = "🔥 Very important: high confidence · زۆر گرنگ: متمانە بەرز";
         else if (strongMoveImp) reason = "🔥 Very important: strong move · زۆر گرنگ: جوڵە بەهێز";
-        signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important, reason });
+
+        // Multi-timeframe cascade: post the 5M setup now, then schedule the
+        // 15M / 30M / 1H confirmations on a staggered timer (wider TP/SL each).
+        const now = Date.now();
+        for (const tfDef of TIMEFRAME_CASCADE) {
+          const tpPctTf = m.tpPct * tfDef.tpMult;
+          const slPctTf = m.slPct * tfDef.slMult;
+          const tpTf = +(q.price * (isBuy ? 1 + tpPctTf / 100 : 1 - tpPctTf / 100)).toFixed(2);
+          const slTf = +(q.price * (isBuy ? 1 - slPctTf / 100 : 1 + slPctTf / 100)).toFixed(2);
+          const tpPipsTf = toPips(tpTf - q.price, m.pip);
+          const slPipsTf = toPips(slTf - q.price, m.pip);
+          const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
+          const text = newSignalLine(q, sig as "BUY" | "SELL", tpTf, slTf, tpPipsTf, slPipsTf, confidence, session, tfDef.tf);
+          if (tfDef.delayMs === 0) {
+            // 5M fires immediately as a high-priority signal so it always reaches the channel.
+            signalAlerts.push({ text, important: true, reason: tfReason });
+          } else {
+            tfQueue.push({ dueAt: now + tfDef.delayMs, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
+          }
+        }
         openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
         lastSignalAt = Date.now();
         lastSignalDir = sig; // remember the direction we actually broadcast
