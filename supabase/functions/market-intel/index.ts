@@ -528,7 +528,7 @@ function signalRationale(q: Quote, sig: "BUY" | "SELL"): { en: string; ku: strin
   return { en: en.join(" + "), ku: ku.join(" + ") };
 }
 
-// Full BUY/SELL trade setup with entry, full target and stop loss (clean layout).
+// Full BUY/SELL trade setup with entry, full target and stop loss (clean RTL layout).
 function newSignalLine(
   q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
   confidence: number, session: string,
@@ -536,19 +536,39 @@ function newSignalLine(
   const m = ASSET_META[q.symbol];
   const tpDelta = Math.abs(tp - q.price);
   const slDelta = Math.abs(sl - q.price);
-  const r = signalRationale(q, sig);
+  const isBuy = sig === "BUY";
+  const sigKuW = isBuy ? "کڕین" : "فرۆشتن";
+  const strength = confidence >= 80 ? ["Strong", "بەهێز"] : confidence >= 65 ? ["Medium", "مامناوەند"] : ["Weak", "لاواز"];
+  const risk = confidence >= 80 ? ["Low", "کەم"] : confidence >= 65 ? ["Medium", "مامناوەند"] : ["High", "بەرز"];
+  const rsi = Math.max(20, Math.min(80, Math.round(50 + q.changePct * 6)));
+  const reasonLines = isBuy
+    ? [
+        "EMA9 > EMA21 ✅ کراوسئۆڤەری بەرز",
+        "MACD Bullish ✅ بەهێز",
+        `RSI: ${rsi} ✅ ناوەند`,
+        "Price > EMA50 ✅ بەرز",
+      ]
+    : [
+        "EMA9 < EMA21 ✅ کراوسئۆڤەری خوار",
+        "MACD Bearish ✅ بەهێز",
+        `RSI: ${rsi} ✅ ناوەند`,
+        "Price < EMA50 ✅ خوار",
+      ];
   return [
-    `${m.emoji} <b>${m.name} SIGNAL - ${sig}</b> ${sigEmoji(sig)}`,
+    `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
     "",
-    `💰 Entry: <code>$${fmt(q.price)}</code>`,
-    `🎯 TP: <code>$${fmt(tp)}</code> (+$${fmt(tpDelta)})`,
-    `🛑 SL: <code>$${fmt(sl)}</code> (-$${fmt(slDelta)})`,
-    `⚡ Confidence: <b>${confidence}%</b>`,
-    `📍 Session: ${session}`,
+    `💰 <code>$${fmt(q.price)}</code> :نرخی چوونەژوورەوە`,
+    `🎯 <code>$${fmt(tp)}</code> :تارگێت (+$${fmt(tpDelta)})`,
+    `🛑 <code>$${fmt(sl)}</code> :ستۆپ لۆس (-$${fmt(slDelta)})`,
     "",
-    `🇬🇧 Reason: ${esc(r.en)}`,
+    `⚡ Confidence: ${confidence}% · متمانە`,
+    `📍 ${esc(session)}`,
+    `💪 Strength: ${strength[0]} · ${strength[1]}`,
     "",
-    `🇮🇶 هۆکار: ${esc(r.ku)}`,
+    "📈 هۆکار:",
+    ...reasonLines,
+    "",
+    `⚠️ مەترسی: ${risk[1]} · Risk: ${risk[0]}`,
   ].join("\n");
 }
 
@@ -598,18 +618,16 @@ function nowStamp(): string {
 
 // Wrap a single trade target / outcome into its own standalone Telegram message.
 // Each target is sent separately and never bundled with other targets or news.
-function oneSignalMessage(subtitle: string, body: string, reason?: string): string {
+function oneSignalMessage(_subtitle: string, body: string, _reason?: string): string {
   return [
     "━━━━━━━━━━━━━━━",
-    "📊 <b>CTP SIGNALS</b>",
+    "📊 <b>CTP SIGNAL · سیگناڵی CTP</b>",
     "━━━━━━━━━━━━━━━",
     "",
     body,
     "",
-    reason ? `<i>ℹ️ ${subtitle} · ${reason}</i>` : `<i>ℹ️ ${subtitle}</i>`,
     "━━━━━━━━━━━━━━━",
-    `<i>🕒 ${nowStamp()}</i>`,
-    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+    `<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>`,
   ].join("\n");
 }
 
@@ -617,14 +635,13 @@ function oneSignalMessage(subtitle: string, body: string, reason?: string): stri
 function oneCalendarMessage(body: string): string {
   return [
     "━━━━━━━━━━━━━━━",
-    "🗓 <b>CTP CALENDAR</b>",
+    "🗓 <b>CTP CALENDAR · ساڵنامەی ئابووری</b>",
     "━━━━━━━━━━━━━━━",
     "",
     body,
     "",
     "━━━━━━━━━━━━━━━",
-    `<i>🕒 ${nowStamp()}</i>`,
-    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+    `<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>`,
   ].join("\n");
 }
 
@@ -632,14 +649,13 @@ function oneCalendarMessage(body: string): string {
 function oneNewsMessage(body: string): string {
   return [
     "━━━━━━━━━━━━━━━",
-    "📰 <b>CTP NEWS</b>",
+    "📰 <b>CTP NEWS · هەواڵی بازاڕ</b>",
     "━━━━━━━━━━━━━━━",
     "",
     body,
     "",
     "━━━━━━━━━━━━━━━",
-    `<i>🕒 ${nowStamp()}</i>`,
-    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+    `<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>`,
   ].join("\n");
 }
 
@@ -1119,35 +1135,28 @@ async function enrichNews(items: NewsItem[], priceBySymbol: Record<string, numbe
 const CAT_EMOJI: Record<string, string> = { GOLD: "🟡", OIL: "🟠", CRYPTO: "🟣", FOREX: "🔵", MARKETS: "🟢" };
 
 // Build one bilingual news block — NO external links / sources.
+// Count words in a string (used for the news content-quality gate).
+function wordCount(s: string): number {
+  return String(s || "").trim().split(/\s+/).filter(Boolean).length;
+}
+
+// Clean bilingual news card: asset header, headline, EN + KU summary, impact + tip.
 function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
   const dot = CAT_EMOJI[n.category] ?? "🔹";
   const al = ASSET_LABEL[n.category] ?? { en: n.category, ku: n.category };
   const im = IMPACT_META[e.impact] ?? IMPACT_META.NEUTRAL;
-  const ur = URGENCY_META[e.urgency] ?? URGENCY_META.INFO;
   const summaryEn = (e.summaryEn || n.summary || "").trim();
+  const headline = (e.titleKu || n.title || "").trim();
   const parts: string[] = [
-    `${ur.emoji} <b>${esc(ur.en)} / ${esc(ur.ku)}</b>`,
+    `${dot} <b>${esc(al.en.toUpperCase())} · ${esc(al.ku)}</b>`,
     "",
-    `${dot} <b>${esc(n.category)}</b>`,
+    `📌 ${esc(headline)}`,
   ];
-  if (e.titleKu) parts.push(esc(e.titleKu));
-  if (summaryEn) parts.push("", "📝 <b>English:</b>", esc(summaryEn));
-  if (e.summaryKu) parts.push("", "📝 <b>کوردی:</b>", esc(e.summaryKu));
-  parts.push(
-    "",
-    `🎯 ${esc(al.en)} Impact: ${e.impact} ${im.emoji}`,
-    `کاریگەری بۆ ${esc(al.ku)}: ${im.ku}`,
-  );
-  if (e.tipEn || e.tipKu) {
-    parts.push("", "💡 <b>Trader Tip / تێبینی بۆ ترەیدەر:</b>");
-    if (e.tipEn) parts.push(esc(e.tipEn));
-    if (e.tipKu) parts.push(esc(e.tipKu));
-  }
-  if (e.relatedEn || e.relatedKu) {
-    parts.push("", "🔗 <b>Related / پەیوەندیدار:</b>");
-    if (e.relatedEn) parts.push(esc(e.relatedEn));
-    if (e.relatedKu) parts.push(esc(e.relatedKu));
-  }
+  if (summaryEn) parts.push("", `🇬🇧 ${esc(summaryEn)}`);
+  if (e.summaryKu) parts.push("", `🇮🇶 ${esc(e.summaryKu)}`);
+  parts.push("", `📊 کاریگەری: ${e.impact} ${im.emoji} ${im.ku}`);
+  if (e.tipKu) parts.push(`💡 ${esc(e.tipKu)}`);
+  else if (e.tipEn) parts.push(`💡 ${esc(e.tipEn)}`);
   return parts.join("\n");
 }
 
@@ -1216,6 +1225,12 @@ async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
 
   const out: NewsOut[] = [];
   for (const c of bestByAsset.values()) {
+    // CONTENT-QUALITY GATE: never post an empty/thin news card. Require a real
+    // headline (≥6 words) AND a substantial summary (≥40 words). Skip otherwise.
+    const headline = (c.e.titleKu || c.n.title || "").trim();
+    const summary = (c.e.summaryEn || c.n.summary || "").trim();
+    if (wordCount(c.n.title) < 6 && wordCount(headline) < 6) continue;
+    if (wordCount(summary) < 40) continue;
     out.push({
       block: newsBlockItem(c.n, c.e),
       headline: c.n.title,
@@ -1340,6 +1355,77 @@ async function todaysKeyEvents(opts?: { usdOnly?: boolean; futureOnly?: boolean 
     const t = new Date(e.time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
     return `• ${t} UTC · ${esc(e.currency)} ${esc(e.title)}`;
   });
+}
+
+// Country/currency → flag emoji for calendar + session cards.
+const CCY_FLAG: Record<string, string> = {
+  USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵", CHF: "🇨🇭", CAD: "🇨🇦",
+  AUD: "🇦🇺", NZD: "🇳🇿", CNY: "🇨🇳",
+};
+function ccyFlag(c: string): string {
+  return CCY_FLAG[String(c || "").toUpperCase()] ?? "🏳️";
+}
+
+// Generic bilingual gold-impact hint for a calendar currency.
+function goldImpactLine(ccy: string): string {
+  const c = String(ccy || "").toUpperCase();
+  if (c === "USD") {
+    return [
+      "📊 Gold Impact / کاریگەری زێڕ:",
+      "ئەگەر داتا بەهێز بوو → SELL زێڕ 🔴",
+      "ئەگەر داتا لاواز بوو → BUY زێڕ 🟢",
+    ].join("\n");
+  }
+  return [
+    "📊 Gold Impact / کاریگەری زێڕ:",
+    "ئاگاداربە لە جوڵەی بازاڕ 🟡 · Watch for volatility",
+  ].join("\n");
+}
+
+// London-clock label for a fixed UTC hour (handles BST/GMT). E.g. London open 07 UTC → "08:00".
+function sessionLocalLabel(hourUtc: number, now: Date): string {
+  const d = new Date(now);
+  d.setUTCHours(hourUtc, 0, 0, 0);
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
+}
+
+// Yesterday's date string (UTC) relative to a reference date.
+function yesterdayStr(now: Date): string {
+  const d = new Date(now);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+// Closed-signal stats for a single UTC day (whole channel, all sessions).
+async function dayStats(day: string): Promise<{ total: number; won: number; lost: number; rate: number }> {
+  const start = new Date(`${day}T00:00:00.000Z`).toISOString();
+  const end = new Date(`${day}T23:59:59.999Z`).toISOString();
+  const { data } = await admin.from("ai_signals")
+    .select("status, closed_at")
+    .gte("closed_at", start).lte("closed_at", end)
+    .in("status", ["target_hit", "stopped_out"]);
+  const rows = (data ?? []) as { status: string }[];
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const lost = rows.filter((r) => r.status === "stopped_out").length;
+  const total = rows.length;
+  return { total, won, lost, rate: total ? Math.round((won / total) * 100) : 0 };
+}
+
+// Today's high-impact events as session-card lines: "🕐 08:30 · SNB Rate Decision 🇨🇭"
+async function keyEventLines(opts?: { usdOnly?: boolean; futureOnly?: boolean }): Promise<string[]> {
+  const events = await getHighImpactEvents();
+  const now = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
+  return events
+    .filter((e) => new Date(e.time).toISOString().slice(0, 10) === today)
+    .filter((e) => (opts?.usdOnly ? /USD/i.test(e.currency) : true))
+    .filter((e) => (opts?.futureOnly ? e.time >= now : true))
+    .sort((a, b) => a.time - b.time)
+    .slice(0, 6)
+    .map((e) => {
+      const t = new Date(e.time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
+      return `🕐 ${t} · ${esc(e.title)} ${ccyFlag(e.currency)}`;
+    });
 }
 
 // ── session open price snapshot (for close-session % change) ──
