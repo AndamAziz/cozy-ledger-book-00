@@ -1234,8 +1234,7 @@ async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
     // headline (≥6 words) AND a substantial summary (≥40 words). Skip otherwise.
     const headline = (c.e.titleKu || c.n.title || "").trim();
     const summary = (c.e.summaryEn || c.n.summary || "").trim();
-    if (wordCount(c.n.title) < 6 && wordCount(headline) < 6) continue;
-    if (wordCount(summary) < 40) continue;
+    if (!passesNewsQualityGate(c.n.title, headline, summary)) continue;
     out.push({
       block: newsBlockItem(c.n, c.e),
       headline: c.n.title,
