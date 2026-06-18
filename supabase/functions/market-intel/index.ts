@@ -1265,9 +1265,6 @@ Deno.serve(async (req) => {
     const sessionOpenAlerts = await evaluateSessionOpen();
     // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
     const dailySummary = await evaluateDailySummary(lastQuotes);
-    // Weekly recap (Mondays ~08:00 BST) + channel-growth milestone celebrations.
-    const weeklyStats = await evaluateWeeklyStats();
-    const milestoneAlerts = await evaluateMilestones();
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
@@ -1290,15 +1287,6 @@ Deno.serve(async (req) => {
       sent = (await sendTelegram("ctp_daily", dailySummary)) || sent;
     }
 
-    // 0d) Weekly performance recap (Mondays).
-    if (weeklyStats) {
-      sent = (await sendTelegram("ctp_weekly", weeklyStats)) || sent;
-    }
-
-    // 0e) Channel-growth milestone celebrations.
-    for (const m of milestoneAlerts) {
-      sent = (await sendTelegram("ctp_milestone", m)) || sent;
-    }
 
 
 
