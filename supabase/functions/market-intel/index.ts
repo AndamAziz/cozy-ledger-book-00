@@ -1475,46 +1475,68 @@ async function sessionSignalStats(region: Region, day: string): Promise<{ total:
   };
 }
 
+// Rich close stats for one region/day: totals, pips, P/L, win-rate, best signal.
+async function sessionCloseStats(region: Region, day: string): Promise<{
+  total: number; won: number; lost: number; pips: number; pl: number; rate: number; best?: DailyRow;
+}> {
+  const startUtc = new Date(`${day}T00:00:00.000Z`).toISOString();
+  const { data } = await admin.from("ai_signals")
+    .select("asset, signal, entry, close_price, status, result_pips, market_session, closed_at")
+    .gte("closed_at", startUtc)
+    .in("status", ["target_hit", "stopped_out"]);
+  const rows = ((data ?? []) as DailyRow[]).filter((r) => rowRegion(r.market_session) === region);
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const lost = rows.filter((r) => r.status === "stopped_out").length;
+  const pips = rows.reduce((s, r) => s + rowPips(r), 0);
+  const winners = rows.filter((r) => r.status === "target_hit").sort((a, b) => rowPips(b) - rowPips(a));
+  return {
+    total: rows.length, won, lost, pips, pl: pipsToDollars(pips),
+    rate: rows.length ? Math.round((won / rows.length) * 100) : 0,
+    best: winners[0],
+  };
+}
+
+// Friendly "what's next" line per region close.
+function nextSessionLine(region: Region): string {
+  if (region === "Asia") return "⏭ Next: London Session · لەندەن";
+  if (region === "London") return "⏭ Next: New York Session · نیویۆرک";
+  return "⏭ Next: Daily Report at 22:00 BST";
+}
+
 // ── OPEN message builder ──
 async function sessionOpenMessage(region: Region, quotes: Quote[], now: Date): Promise<string> {
   const { gold, oil, btc } = q3(quotes);
-  const utcLabel = `${String(SESSION_OPEN_HOURS[region]).padStart(2, "0")}:00`;
-  const lonLabel = londonHourLabel(now);
+  const bstLabel = sessionLocalLabel(SESSION_OPEN_HOURS[region], now);
+  const buys = quotes.filter((q) => ruleSignal(q.changePct) === "BUY").length;
+  const sells = quotes.filter((q) => ruleSignal(q.changePct) === "SELL").length;
+  const overall = buys > sells ? "BULLISH 🟢" : sells > buys ? "BEARISH 🔴" : "NEUTRAL 🟡";
+  const overallKu = buys > sells ? "بەرزبوونەوە" : sells > buys ? "دابەزین" : "مامناوەند";
+  const ev = region === "New York"
+    ? await keyEventLines({ usdOnly: true, futureOnly: true })
+    : await keyEventLines({ futureOnly: true });
+  const yest = await dayStats(yesterdayStr(now));
+
   const lines: string[] = [
     "━━━━━━━━━━━━━━━",
-    `${REGION_EMOJI[region]} <b>${REGION_KU[region]} کرایەوە</b>`,
     `${REGION_EMOJI[region]} <b>${region} Session Open</b>`,
+    `${REGION_KU[region]} کرایەوە · ${bstLabel} BST`,
     "━━━━━━━━━━━━━━━",
-    `🕐 ${utcLabel} UTC | ${lonLabel} London`,
+    "💰 <b>Live Prices / نرخی زیندوو:</b>",
+    priceWithChangeLine(gold, "🥇", "Gold"),
+    priceWithChangeLine(oil, "🛢", "Oil"),
+    priceWithChangeLine(btc, "₿", "BTC"),
+    "",
+    `📊 <b>Overall Bias: ${overall}</b>`,
+    `مەیلی گشتی: ${overallKu}`,
+    "",
+    "⚠️ <b>Key Events Today / ئیڤێنتی گرنگ:</b>",
+    ev.length ? ev.join("\n") : "🕐 No high-impact events · هیچ ئیڤێنتێک نییە",
+    "",
+    "🤖 Bot: ACTIVE · چالاک",
+    `📊 Yesterday: ${yest.total} signals · ${yest.won} won (${yest.rate}%)`,
+    "━━━━━━━━━━━━━━━",
+    "<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>",
   ];
-
-  if (region === "Asia") {
-    lines.push("📊 Markets now active: JPY, AUD, NZD", "");
-    lines.push(plainPriceLine(gold, "🥇", "Gold"), plainPriceLine(oil, "🛢", "Oil"), plainPriceLine(btc, "₿", "BTC"), "");
-    lines.push("📈 <b>Bias / ئاراستەی بازاڕ:</b>");
-    lines.push(`🥇 Gold: ${gold ? biasLabel(gold.changePct) : "—"}`);
-    lines.push(`🛢 Oil: ${oil ? biasLabel(oil.changePct) : "—"}`);
-    lines.push(`₿ BTC: ${btc ? biasLabel(btc.changePct) : "—"}`, "");
-    lines.push("⚡ First Signal Expected:", "Within 30 minutes of open");
-  } else if (region === "London") {
-    lines.push("📊 High volatility expected!", "جووڵانی بەهێز چاوەڕوانە!", "");
-    lines.push(priceWithChangeLine(gold, "🥇", "Gold"), priceWithChangeLine(oil, "🛢", "Oil"), priceWithChangeLine(btc, "₿", "BTC"), "");
-    const buys = quotes.filter((q) => ruleSignal(q.changePct) === "BUY").length;
-    const sells = quotes.filter((q) => ruleSignal(q.changePct) === "SELL").length;
-    const outlook = buys > sells ? "🟢 Bullish — مەیلی کڕین" : sells > buys ? "🔴 Bearish — مەیلی فرۆشتن" : "🟡 Neutral — مامناوەند";
-    lines.push("📈 <b>Session Outlook / دیدی سێشن:</b>", outlook, "");
-    const ev = await todaysKeyEvents();
-    lines.push("🗓 <b>Key Events Today:</b>", ev.length ? ev.join("\n") : "• No high-impact events", "");
-    lines.push("⚡ Bot Status: ACTIVE - watching for signals", "بۆت چالاکە - لە دوای سیگناڵدا دەگەڕێت");
-  } else {
-    lines.push("📊 USD pairs most active now!", "");
-    lines.push(plainPriceLine(gold, "🥇", "Gold"), plainPriceLine(oil, "🛢", "Oil"), plainPriceLine(btc, "₿", "BTC"), "");
-    const ev = await todaysKeyEvents({ usdOnly: true, futureOnly: true });
-    lines.push("🗓 <b>US Events Today:</b>", ev.length ? ev.join("\n") : "• No USD events remaining", "");
-    lines.push("⚡ Bot Status: ACTIVE");
-  }
-
-  lines.push("━━━━━━━━━━━━━━━", "<i>ئەمە ڕاوێژی دارایی نییە</i>");
   return lines.join("\n");
 }
 
@@ -1522,26 +1544,44 @@ async function sessionOpenMessage(region: Region, quotes: Quote[], now: Date): P
 async function sessionCloseMessage(region: Region, quotes: Quote[], day: string): Promise<string> {
   const { gold, oil, btc } = q3(quotes);
   const open = await getSessionOpenPrices(region, day);
-  const stats = await sessionSignalStats(region, day);
+  const s = await sessionCloseStats(region, day);
+  const closeLabel = sessionLocalLabel(SESSION_CLOSE_HOURS[region], new Date());
+  const plDot = s.pl >= 0 ? "🟢" : "🔴";
+
   const lines: string[] = [
     "━━━━━━━━━━━━━━━",
-    `${REGION_EMOJI[region]} <b>${REGION_KU[region]} داخرا</b>`,
     `${REGION_EMOJI[region]} <b>${region} Session Closed</b>`,
+    `${REGION_KU[region]} داخرا · ${closeLabel} BST`,
     "━━━━━━━━━━━━━━━",
-    `📊 <b>${region} Summary / پوختەی ${REGION_KU[region]}:</b>`,
+    "📊 <b>Session Results / ئەنجامی سێشن:</b>",
+    "",
     sessionChangeLine(gold, "🥇", "Gold", open?.["XAU/USD"]),
     sessionChangeLine(oil, "🛢", "Oil", open?.["WTI/USD"]),
     sessionChangeLine(btc, "₿", "BTC", open?.["BTC/USD"]),
     "",
-    `✅ Signals this session: ${stats.total}`,
-    `🏆 Won: ${stats.won} | ❌ Lost: ${stats.lost}`,
+    "🤖 <b>Bot Performance:</b>",
+    `📈 Signals: ${s.total}`,
+    `✅ Won: ${s.won} · ❌ Lost: ${s.lost}`,
+    `💰 P/L: ${plDot} ${plStr(s.pl)}`,
+    `📊 Win Rate: ${s.rate}%`,
   ];
-  if (region === "New York") {
-    lines.push("", "⏭ Next: Daily Report at 22:00 BST");
+
+  if (s.best) {
+    const meta = ASSET_META[s.best.asset] ?? { emoji: "🥇", name: s.best.asset };
+    const entry = Number(s.best.entry) || 0;
+    const close = Number(s.best.close_price) || 0;
+    const delta = s.best.signal === "SELL" ? entry - close : close - entry;
+    lines.push(
+      "",
+      `🏆 Best: ${meta.name} ${s.best.signal} $${fmt(entry)}→$${fmt(close)}`,
+      `${delta >= 0 ? "+" : "-"}$${fmt(Math.abs(delta))} · ${pipsStr(rowPips(s.best))} pips ✅`,
+    );
   }
-  lines.push("━━━━━━━━━━━━━━━", "<i>ئەمە ڕاوێژی دارایی نییە</i>");
+
+  lines.push("", nextSessionLine(region), "━━━━━━━━━━━━━━━", "<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>");
   return lines.join("\n");
 }
+
 
 // Dedup helpers against session_posts_log.
 async function wasSessionPosted(region: Region, kind: "open" | "close", day: string): Promise<boolean> {
