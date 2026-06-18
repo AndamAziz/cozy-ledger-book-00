@@ -1105,9 +1105,14 @@ Deno.serve(async (req) => {
       lastQuotes = r.quotes;
     }
 
-    // Calendar + news once per invocation (≈60s cadence).
+    // Calendar once per invocation (≈60s cadence).
     const { calendarAlerts, signalAlerts: calSignals, specialAlerts } = await evaluateCalendar();
-    const newsAlerts = await evaluateNews();
+    // News only when the 60-min window is open — otherwise skip fetch so items
+    // are not marked "alerted" and lost (they'll be picked up next window).
+    const newsThrottle = await getState("news_throttle");
+    const lastNewsAt = (newsThrottle.lastAt as number) ?? 0;
+    const newsWindowOpen = !lastNewsAt || Date.now() - lastNewsAt >= NEWS_MIN_GAP_MS;
+    const newsAlerts = newsWindowOpen ? await evaluateNews() : [];
     // Market-open reports for regions that just opened (analysis + get-ready heads-up).
     const sessionOpenAlerts = await evaluateSessionOpen();
     // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
