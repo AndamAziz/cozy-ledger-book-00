@@ -2021,7 +2021,16 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Session post preview/send (bypasses the time + dedupe gates):
+    // Pinned message + channel description refresh (bypasses the time + dedupe gates):
+    //   {"pinUpdate": true}  → recompute weekly stats, repin the stats message, and
+    //                          update the channel description right now.
+    if (body.pinUpdate === true) {
+      const r = await evaluatePinnedAndDescription({ force: true });
+      return new Response(JSON.stringify({ ok: true, ...r }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+
     //   {"sessionPreview": "open"|"close"}  → build & RETURN all 3 region messages
     //   {"sessionSend": "open"|"close"}     → also post them to Telegram now
     const sp = (body.sessionPreview ?? body.sessionSend) as string | undefined;
