@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { passesNewsQualityGate, wordCount } from "./news-quality.ts";
+import { passesNewsQualityGate } from "./news-quality.ts";
 
 // ───────────────────── config ─────────────────────
 const TELEGRAM_GATEWAY = "https://connector-gateway.lovable.dev/telegram";
