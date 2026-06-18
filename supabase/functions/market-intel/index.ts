@@ -226,15 +226,89 @@ async function wasRecentlySent(hash: string, withinMs: number): Promise<boolean>
   return !!data;
 }
 
+// True if ANY news for this asset was sent within the window (per-asset rate limit).
+async function wasAssetNewsSentWithin(asset: string, withinMs: number): Promise<boolean> {
+  const since = new Date(Date.now() - withinMs).toISOString();
+  const { data } = await admin
+    .from("sent_news_log")
+    .select("id")
+    .eq("kind", "news")
+    .eq("asset", asset)
+    .gte("sent_at", since)
+    .limit(1)
+    .maybeSingle();
+  return !!data;
+}
+
+// True if the SAME asset + event topic was already covered within the window —
+// catches differently-worded headlines about the same story (e.g. the Iran deal).
+async function wasAssetEventSentWithin(asset: string, event: string, withinMs: number): Promise<boolean> {
+  if (!event) return false;
+  const since = new Date(Date.now() - withinMs).toISOString();
+  const { data } = await admin
+    .from("sent_news_log")
+    .select("id")
+    .eq("kind", "news")
+    .eq("asset", asset)
+    .eq("event_keyword", event)
+    .gte("sent_at", since)
+    .limit(1)
+    .maybeSingle();
+  return !!data;
+}
+
 // Record that a piece of content was sent (for future dedupe checks).
-async function recordSent(hash: string, headline: string, kind: string) {
-  await admin.from("sent_news_log").insert({ content_hash: hash, headline: headline.slice(0, 300), kind });
+async function recordSent(
+  hash: string,
+  headline: string,
+  kind: string,
+  meta: { asset?: string; event?: string; urgency?: string } = {},
+) {
+  await admin.from("sent_news_log").insert({
+    content_hash: hash,
+    headline: headline.slice(0, 300),
+    kind,
+    asset: meta.asset ?? null,
+    event_keyword: meta.event ?? null,
+    urgency: meta.urgency ?? null,
+  });
 }
 
 // Dedupe windows for each message type.
 const NEWS_DEDUPE_MS = 2 * 60 * 60_000;   // 2 hours — never repeat the same headline
 const SIGNAL_DEDUPE_MS = 15 * 60_000;     // 15 min — never repeat the exact same signal
 const RESULT_DEDUPE_MS = 60 * 60_000;     // 1 hour — never repeat the exact same result
+
+// Smarter news dedupe windows (topic + per-asset + urgency based).
+const TOPIC_DEDUPE_MS = 3 * 60 * 60_000;  // 3h — same asset+event topic never repeats
+const ASSET_HOUR_MS = 60 * 60_000;        // 1h — at most one news per asset per hour
+const URGENCY_INFO_MS = 2 * 60 * 60_000;  // 🟢 info only sends if asset quiet for 2h
+
+// Extract a canonical "event" keyword from a headline+summary so two differently
+// worded stories about the same topic collapse to the same key.
+const EVENT_KEYWORDS: { re: RegExp; key: string }[] = [
+  { re: /\biran\b/i, key: "iran" },
+  { re: /\b(fomc|federal open market)\b/i, key: "fomc" },
+  { re: /\b(fed|federal reserve|powell)\b/i, key: "fed-rate" },
+  { re: /\b(nfp|non[- ]?farm|payroll|jobs report|unemployment|jobless)\b/i, key: "jobs" },
+  { re: /\b(cpi|inflation|ppi|core pce)\b/i, key: "inflation" },
+  { re: /\b(opec\+?|production cut|output cut)\b/i, key: "opec" },
+  { re: /\b(gdp|growth data)\b/i, key: "gdp" },
+  { re: /\b(tariff|trade war|trade deal)\b/i, key: "trade" },
+  { re: /\becb\b/i, key: "ecb" },
+  { re: /\b(boj|bank of japan)\b/i, key: "boj" },
+  { re: /\b(boe|bank of england)\b/i, key: "boe" },
+  { re: /\b(war|conflict|missile|strike|attack|ceasefire|geopolit|sanction)\b/i, key: "geopolitics" },
+  { re: /\b(supply|inventory|stockpile|reserves|glut|surplus|output|production)\b/i, key: "supply" },
+  { re: /\b(rate cut|rate hike|interest rate|monetary policy)\b/i, key: "rates" },
+];
+function extractEvent(text: string): string {
+  for (const { re, key } of EVENT_KEYWORDS) if (re.test(text)) return key;
+  return "";
+}
+
+// Urgency ranking for "pick the most important per asset".
+const URGENCY_RANK: Record<string, number> = { BREAKING: 3, IMPORTANT: 2, INFO: 1 };
 
 // ───────────────────── Telegram (retry + backoff) ─────────────────────
 async function sendToChat(chatId: string, kind: string, text: string): Promise<boolean> {
