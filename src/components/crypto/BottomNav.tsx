@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, ComponentType } from 'react';
 import {
   Newspaper, CandlestickChart, Coins, Brain, Menu, Home,
   Bitcoin, DollarSign, Scale, Bot, ArrowRightLeft, X, UserPlus,
