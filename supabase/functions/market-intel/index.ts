@@ -286,6 +286,70 @@ async function sendTelegram(kind: string, text: string): Promise<boolean> {
   return results.some(Boolean);
 }
 
+// Low-level call to any Telegram Bot API method through the connector gateway.
+// Returns the parsed `result` on success, or null on failure (logged, never throws).
+async function callTelegram(method: string, payload: Record<string, unknown>): Promise<any | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_API_KEY");
+  if (!LOVABLE_API_KEY || !TELEGRAM_API_KEY) return null;
+  try {
+    const res = await fetch(`${TELEGRAM_GATEWAY}/${method}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": TELEGRAM_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok && d.ok) return d.result;
+    console.error(`telegram ${method} failed`, res.status, JSON.stringify(d));
+    return null;
+  } catch (e) {
+    console.error(`telegram ${method} error`, String(e));
+    return null;
+  }
+}
+
+// Subscriber count for the public channel (returns null if unavailable).
+async function getChannelMemberCount(): Promise<number | null> {
+  const r = await callTelegram("getChatMemberCount", { chat_id: CHANNEL_CHAT_ID });
+  return typeof r === "number" ? r : null;
+}
+
+// Post a message to the channel and pin it (silently), unpinning the previous
+// pinned stats message first. The pinned message_id is remembered in state.
+async function pinChannelMessage(kind: string, text: string): Promise<boolean> {
+  const result = await callTelegram("sendMessage", {
+    chat_id: CHANNEL_CHAT_ID,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  });
+  const messageId = result?.message_id;
+  if (!messageId) return false;
+  // Unpin the previous stats message if we still have its id.
+  const prev = await getState("pinned_message");
+  const prevId = prev.messageId as number | undefined;
+  if (prevId) await callTelegram("unpinChatMessage", { chat_id: CHANNEL_CHAT_ID, message_id: prevId });
+  const pinned = await callTelegram("pinChatMessage", {
+    chat_id: CHANNEL_CHAT_ID,
+    message_id: messageId,
+    disable_notification: true,
+  });
+  await setState("pinned_message", { messageId, updatedAt: new Date().toISOString() });
+  return !!pinned;
+}
+
+// Update the channel's public description/bio.
+async function setChannelDescription(text: string): Promise<boolean> {
+  // Telegram caps channel descriptions at 255 chars.
+  const desc = text.length > 255 ? text.slice(0, 255) : text;
+  const r = await callTelegram("setChatDescription", { chat_id: CHANNEL_CHAT_ID, description: desc });
+  return r !== null;
+}
+
 // ───────────────────── message builders ─────────────────────
 // pip       = price distance that equals "1 pip" for this asset (for pip counting)
 // tpPct/slPct = full target / stop-loss distance as % of entry price (R:R ~1.5)
@@ -1666,6 +1730,61 @@ async function evaluateWeeklySummary(opts?: { force?: boolean }): Promise<string
   return lines.join("\n");
 }
 
+// ───────────────────── pinned message + channel description (Monday 08:00 BST) ─────────────────────
+// Computes the last 7 days' signal stats and refreshes BOTH the channel's pinned
+// stats message and its public description/bio. Deduped per week via
+// market_alert_state["pin_update"].lastWeek. Runs alongside the weekly report.
+async function evaluatePinnedAndDescription(opts?: { force?: boolean }): Promise<{ pinned: boolean; description: boolean } | null> {
+  const now = new Date();
+  const lon = new Date(now.toLocaleString("en-US", { timeZone: "Europe/London" }));
+  const weekKey = (() => {
+    const d = new Date(lon);
+    const diff = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - diff);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  if (!opts?.force) {
+    if (lon.getDay() !== 1 || lon.getHours() !== 8) return null; // Monday 08:00 BST/GMT
+    const state = await getState("pin_update");
+    if (state.lastWeek === weekKey) return null;
+    await setState("pin_update", { lastWeek: weekKey });
+  }
+
+  // Last 7 days of closed signals → total + win rate.
+  const sinceUtc = new Date(Date.now() - 7 * 24 * 60 * 60_000).toISOString();
+  const { data: closed } = await admin.from("ai_signals")
+    .select("status")
+    .gte("closed_at", sinceUtc)
+    .in("status", ["target_hit", "stopped_out"]);
+  const rows = (closed ?? []) as { status: string }[];
+  const total = rows.length;
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const winRate = total ? Math.round((won / total) * 100) : 0;
+  const subs = await getChannelMemberCount();
+  const subsLine = subs !== null ? `👥 ${subs.toLocaleString("en-US")} subscribers` : "";
+
+  // 1) Pinned stats message.
+  const pinText = [
+    "📌 <b>CTP Gold Signals</b>",
+    `This week: ${total} signals | ${winRate}% win rate`,
+    "Join: t.me/goldmarketai",
+  ].join("\n");
+  const pinned = await pinChannelMessage("ctp_pin", pinText);
+
+  // 2) Channel description / bio (Telegram caps at 255 chars).
+  const descText = [
+    "🥇 CTP Gold Signals",
+    `Last week: ${winRate}% win rate`,
+    "Signals: Gold|Oil|BTC",
+    "Free | Real-time | Kurdish+English",
+    subsLine,
+  ].filter(Boolean).join("\n");
+  const description = await setChannelDescription(descText);
+
+  return { pinned, description };
+}
+
 // ───────────────────── monthly report (1st of month 09:00 BST) ─────────────────────
 // Summarizes the previous calendar month: gold range, bot performance, best week,
 // signal of the month, and the next month's key events. Deduped per month via
@@ -1902,7 +2021,16 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Session post preview/send (bypasses the time + dedupe gates):
+    // Pinned message + channel description refresh (bypasses the time + dedupe gates):
+    //   {"pinUpdate": true}  → recompute weekly stats, repin the stats message, and
+    //                          update the channel description right now.
+    if (body.pinUpdate === true) {
+      const r = await evaluatePinnedAndDescription({ force: true });
+      return new Response(JSON.stringify({ ok: true, ...r }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+
     //   {"sessionPreview": "open"|"close"}  → build & RETURN all 3 region messages
     //   {"sessionSend": "open"|"close"}     → also post them to Telegram now
     const sp = (body.sessionPreview ?? body.sessionSend) as string | undefined;
@@ -2021,6 +2149,8 @@ Deno.serve(async (req) => {
     const weeklySummary = await evaluateWeeklySummary();
     // Monthly report (only fires 1st of month 09:00 BST, deduped per month).
     const monthlySummary = await evaluateMonthlySummary();
+    // Pinned stats message + channel description refresh (Monday 08:00 BST, deduped per week).
+    const pinUpdate = await evaluatePinnedAndDescription();
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
@@ -2054,6 +2184,11 @@ Deno.serve(async (req) => {
     // 0e) Monthly report on the 1st of the month 09:00 BST.
     if (monthlySummary) {
       sent = (await sendTelegram("ctp_monthly", monthlySummary)) || sent;
+    }
+
+    // 0f) Pinned stats + channel description refreshed on Monday 08:00 BST.
+    if (pinUpdate) {
+      sent = pinUpdate.pinned || pinUpdate.description || sent;
     }
 
 
@@ -2113,7 +2248,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent, targetsSent, sessionPosts: sessionPosts.length, specialAlerts: specialAlerts.length, dailySummary: dailySummary ? 1 : 0, weeklySummary: weeklySummary ? 1 : 0, monthlySummary: monthlySummary ? 1 : 0, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
+      JSON.stringify({ ok: true, sent, targetsSent, sessionPosts: sessionPosts.length, specialAlerts: specialAlerts.length, dailySummary: dailySummary ? 1 : 0, weeklySummary: weeklySummary ? 1 : 0, monthlySummary: monthlySummary ? 1 : 0, pinUpdate: pinUpdate ? 1 : 0, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
