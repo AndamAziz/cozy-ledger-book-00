@@ -1554,7 +1554,7 @@ async function evaluateWeeklySummary(opts?: { force?: boolean }): Promise<string
   const prevFriday = new Date(prevMonday);
   prevFriday.setUTCDate(prevFriday.getUTCDate() + 4);
 
-  const fmtDay = (d: Date) => d.toLocaleDateString("en-GB", { month: "short", day: "numeric", timeZone: "UTC" });
+  const fmtDay = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   const yearLabel = prevFriday.getUTCFullYear();
   const weekLabel = `${fmtDay(prevMonday)}-${prevFriday.toLocaleDateString("en-GB", { day: "numeric", timeZone: "UTC" })}, ${yearLabel}`;
 
