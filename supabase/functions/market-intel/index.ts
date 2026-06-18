@@ -1561,6 +1561,29 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Session post preview/send (bypasses the time + dedupe gates):
+    //   {"sessionPreview": "open"|"close"}  → build & RETURN all 3 region messages
+    //   {"sessionSend": "open"|"close"}     → also post them to Telegram now
+    const sp = (body.sessionPreview ?? body.sessionSend) as string | undefined;
+    if (sp === "open" || sp === "close") {
+      const now = new Date();
+      const day = now.toISOString().slice(0, 10);
+      const quotes = await getPrices();
+      const posts: { region: Region; text: string }[] = [];
+      for (const region of ALL_REGIONS) {
+        const text = sp === "open"
+          ? await sessionOpenMessage(region, quotes, now)
+          : await sessionCloseMessage(region, quotes, day);
+        posts.push({ region, text });
+      }
+      let sent = 0;
+      if (body.sessionSend) {
+        for (const p of posts) if (await sendTelegram(`ctp_session_${sp}`, p.text)) sent++;
+      }
+      return new Response(JSON.stringify({ ok: true, kind: sp, sent, posts }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
 
 
 
