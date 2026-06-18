@@ -286,6 +286,70 @@ async function sendTelegram(kind: string, text: string): Promise<boolean> {
   return results.some(Boolean);
 }
 
+// Low-level call to any Telegram Bot API method through the connector gateway.
+// Returns the parsed `result` on success, or null on failure (logged, never throws).
+async function callTelegram(method: string, payload: Record<string, unknown>): Promise<any | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_API_KEY");
+  if (!LOVABLE_API_KEY || !TELEGRAM_API_KEY) return null;
+  try {
+    const res = await fetch(`${TELEGRAM_GATEWAY}/${method}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": TELEGRAM_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok && d.ok) return d.result;
+    console.error(`telegram ${method} failed`, res.status, JSON.stringify(d));
+    return null;
+  } catch (e) {
+    console.error(`telegram ${method} error`, String(e));
+    return null;
+  }
+}
+
+// Subscriber count for the public channel (returns null if unavailable).
+async function getChannelMemberCount(): Promise<number | null> {
+  const r = await callTelegram("getChatMemberCount", { chat_id: CHANNEL_CHAT_ID });
+  return typeof r === "number" ? r : null;
+}
+
+// Post a message to the channel and pin it (silently), unpinning the previous
+// pinned stats message first. The pinned message_id is remembered in state.
+async function pinChannelMessage(kind: string, text: string): Promise<boolean> {
+  const result = await callTelegram("sendMessage", {
+    chat_id: CHANNEL_CHAT_ID,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  });
+  const messageId = result?.message_id;
+  if (!messageId) return false;
+  // Unpin the previous stats message if we still have its id.
+  const prev = await getState("pinned_message");
+  const prevId = prev.messageId as number | undefined;
+  if (prevId) await callTelegram("unpinChatMessage", { chat_id: CHANNEL_CHAT_ID, message_id: prevId });
+  const pinned = await callTelegram("pinChatMessage", {
+    chat_id: CHANNEL_CHAT_ID,
+    message_id: messageId,
+    disable_notification: true,
+  });
+  await setState("pinned_message", { messageId, updatedAt: new Date().toISOString() });
+  return !!pinned;
+}
+
+// Update the channel's public description/bio.
+async function setChannelDescription(text: string): Promise<boolean> {
+  // Telegram caps channel descriptions at 255 chars.
+  const desc = text.length > 255 ? text.slice(0, 255) : text;
+  const r = await callTelegram("setChatDescription", { chat_id: CHANNEL_CHAT_ID, description: desc });
+  return r !== null;
+}
+
 // ───────────────────── message builders ─────────────────────
 // pip       = price distance that equals "1 pip" for this asset (for pip counting)
 // tpPct/slPct = full target / stop-loss distance as % of entry price (R:R ~1.5)
