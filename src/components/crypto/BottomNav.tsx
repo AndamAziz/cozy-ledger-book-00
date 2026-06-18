@@ -3,8 +3,10 @@ import {
   Newspaper, CandlestickChart, Coins, Brain, Menu, Home,
   Bitcoin, DollarSign, Scale, Bot, ArrowRightLeft, X, UserPlus,
 } from 'lucide-react';
+import { TelegramIcon } from '@/components/TelegramIcon';
 import { InviteFriendsModal } from '@/components/InviteFriendsModal';
-import { TELEGRAM_BLUE } from '@/lib/telegram';
+import { TELEGRAM_BLUE, openTelegramChannel } from '@/lib/telegram';
+import { useTelegramSubscribers, formatSubs } from '@/hooks/useTelegramSubscribers';
 
 export type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
 
