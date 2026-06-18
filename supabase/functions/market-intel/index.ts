@@ -1785,7 +1785,7 @@ async function evaluatePinnedAndDescription(opts?: { force?: boolean }): Promise
   return { pinned, description };
 }
 
-
+// ───────────────────── monthly report (1st of month 09:00 BST) ─────────────────────
 // Summarizes the previous calendar month: gold range, bot performance, best week,
 // signal of the month, and the next month's key events. Deduped per month via
 // market_alert_state["monthly_summary"].monthKey.
