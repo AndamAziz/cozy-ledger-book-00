@@ -10,6 +10,10 @@ const corsHeaders = {
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.1-8b-instant";
 
+// Lovable AI Gateway fallback (used when Groq is rate limited 429/402). Also OpenAI-compatible.
+const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GATEWAY_MODEL = "google/gemini-2.5-flash";
+
 // ---- Simple in-memory 5 minute cache (warm-instance backstop for rate limits) ----
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const summaryCache = new Map<string, { at: number; payload: unknown }>();
@@ -219,15 +223,16 @@ The stop-loss MUST be derived from a specific level (EMA9/EMA21/EMA50, Bollinger
 For gold, factor in macro drivers (US Dollar/DXY, Fed/rates, CPI/PPI/NFP, geopolitics). If a "LIVE ECONOMIC CALENDAR" block is provided, base the USD judgement on those real events.
 Set validForMinutes based on the timeframe and confidence honestly (0-100). This is educational, not financial advice.`;
 
-      const callGroq = () =>
-        fetch(GROQ_URL, {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      const callLLM = (url: string, key: string, model: string) =>
+        fetch(url, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${GROQ_API_KEY}`,
+            Authorization: `Bearer ${key}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: GROQ_MODEL,
+            model,
             temperature: 0.4,
             max_tokens: 1200, // cap output to avoid repetition loops
             messages: [
@@ -239,6 +244,8 @@ Set validForMinutes based on the timeframe and confidence honestly (0-100). This
           }),
         });
 
+      const callGroq = () => callLLM(GROQ_URL, GROQ_API_KEY, GROQ_MODEL);
+
       // 8B model occasionally emits a malformed tool call -> retry once.
       let resp = await callGroq();
       if (resp.status === 400) {
@@ -246,10 +253,23 @@ Set validForMinutes based on the timeframe and confidence honestly (0-100). This
         resp = await callGroq();
       }
 
+      // Groq rate limited (30/min) -> serve stale cache, else fall back to Lovable AI Gateway.
+      if ((resp.status === 429 || resp.status === 402)) {
+        await resp.text().catch(() => "");
+        if (cached) {
+          return new Response(JSON.stringify(cached.payload), {
+            headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "STALE" },
+          });
+        }
+        if (LOVABLE_API_KEY) {
+          resp = await callLLM(GATEWAY_URL, LOVABLE_API_KEY, GATEWAY_MODEL);
+        }
+      }
+
       if (!resp.ok) {
         if (resp.status === 429 || resp.status === 402) return rateLimitResponse(resp.status);
         const t = await resp.text();
-        console.error("Groq error (summary):", resp.status, t);
+        console.error("LLM error (summary):", resp.status, t);
         return new Response(JSON.stringify({ error: "هەڵە لە دروستکردنی پوختە." }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -288,27 +308,40 @@ Set validForMinutes based on the timeframe and confidence honestly (0-100). This
 ${narrativeLangRule}
 Write a concise, well-structured analysis of the asset covering: trend direction (Bullish/Bearish/Neutral), key support/resistance levels, a clear trade recommendation (Buy/Sell/Wait), the risk level (Low/Medium/High), and a brief explanation grounded in the RSI, MACD, EMA values and the macro/news context provided. Use short headers and bullet points. This is educational, not financial advice.`;
 
-    const resp = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
+    const streamBody = (model: string) =>
+      JSON.stringify({
+        model,
         temperature: 0.5,
         stream: true,
         messages: [
           { role: "system", content: sysPrompt },
           { role: "user", content: `${baseContext}\n\nWrite the analysis now.` },
         ],
-      }),
+      });
+
+    let resp = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+      body: streamBody(GROQ_MODEL),
     });
+
+    // Groq rate limited (30/min) -> fall back to Lovable AI Gateway streaming.
+    if (resp.status === 429 || resp.status === 402) {
+      await resp.body?.cancel().catch(() => {});
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (LOVABLE_API_KEY) {
+        resp = await fetch(GATEWAY_URL, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: streamBody(GATEWAY_MODEL),
+        });
+      }
+    }
 
     if (!resp.ok || !resp.body) {
       if (resp.status === 429 || resp.status === 402) return rateLimitResponse(resp.status);
       const t = await resp.text().catch(() => "");
-      console.error("Groq error (narrative):", resp.status, t);
+      console.error("LLM error (narrative):", resp.status, t);
       return new Response(JSON.stringify({ error: "هەڵەیەک ڕوویدا لە شیکاری AI." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
