@@ -9,6 +9,7 @@ import {
   TradeSetup,
 } from '@/lib/aiAnalysis';
 import { RefreshCw, TrendingUp, TrendingDown, Minus, Target, Clock, Layers, Gauge, Bug } from 'lucide-react';
+import { TELEGRAM_BLUE, openTelegramChannel } from '@/lib/telegram';
 
 interface Props {
   btcPrice: number;
@@ -123,6 +124,14 @@ function ConfluenceBar({ a, bi }: { a: AssetAnalysis; bi: (ku: string, en: strin
         <span className="text-white font-bold">{fmtAgo(a.signalChangedAt)}</span>{' '}
         {bi('لەمەوبەر', 'ago')}
       </div>
+      {/* Telegram real-time alerts link */}
+      <button
+        onClick={openTelegramChannel}
+        className="mt-2 flex items-center gap-1 text-[11px] font-bold active:scale-95 transition-transform"
+        style={{ color: TELEGRAM_BLUE }}
+      >
+        🔔 {bi('بەشداربە بۆ ئاگادارکردنەوەی ڕاستەوخۆ', 'Subscribe for real-time alerts')} <span aria-hidden>→</span>
+      </button>
     </div>
   );
 }
