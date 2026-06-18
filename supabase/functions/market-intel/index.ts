@@ -1115,6 +1115,216 @@ async function evaluateSessionOpen(): Promise<string[]> {
   return alerts;
 }
 
+// ───────────────────── scheduled session OPEN / CLOSE posts ─────────────────────
+// Auto-posts a rich bilingual card to @goldmarketai exactly when each major FX
+// session opens and closes (UTC triggers). Deduped per day via session_posts_log.
+const SESSION_OPEN_HOURS: Record<Region, number> = { Asia: 0, London: 7, "New York": 13 };
+const SESSION_CLOSE_HOURS: Record<Region, number> = { Asia: 8, London: 16, "New York": 21 };
+
+// London-clock label for the current time (handles BST/GMT automatically).
+function londonHourLabel(d: Date): string {
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
+}
+
+// Lookup quotes by base asset.
+function q3(quotes: Quote[]): { gold?: Quote; oil?: Quote; btc?: Quote } {
+  return {
+    gold: quotes.find((q) => q.symbol === "XAU/USD"),
+    oil: quotes.find((q) => q.symbol === "WTI/USD"),
+    btc: quotes.find((q) => q.symbol === "BTC/USD"),
+  };
+}
+
+// BULLISH / BEARISH / NEUTRAL bias from the day's % change.
+function biasLabel(changePct: number): string {
+  if (changePct >= 0.15) return "BULLISH 🟢";
+  if (changePct <= -0.15) return "BEARISH 🔴";
+  return "NEUTRAL 🟡";
+}
+
+// Plain price line: "🥇 Gold: $4,275.30"
+function plainPriceLine(q: Quote | undefined, emoji: string, name: string): string {
+  if (!q) return `${emoji} ${name}: —`;
+  return `${emoji} ${name}: <code>$${fmt(q.price)}</code>`;
+}
+
+// Price line with arrow + %: "🥇 Gold: $4,275.30 🟢▲ +0.42%"
+function priceWithChangeLine(q: Quote | undefined, emoji: string, name: string): string {
+  if (!q) return `${emoji} ${name}: —`;
+  const up = q.changePct >= 0;
+  const arrow = up ? "🟢▲" : "🔴▼";
+  return `${emoji} ${name}: <code>$${fmt(q.price)}</code> ${arrow} ${up ? "+" : ""}${q.changePct.toFixed(2)}%`;
+}
+
+// Today's high-impact economic events, optionally only USD and/or only upcoming.
+async function todaysKeyEvents(opts?: { usdOnly?: boolean; futureOnly?: boolean }): Promise<string[]> {
+  const events = await getHighImpactEvents();
+  const now = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = events
+    .filter((e) => new Date(e.time).toISOString().slice(0, 10) === today)
+    .filter((e) => (opts?.usdOnly ? /USD/i.test(e.currency) : true))
+    .filter((e) => (opts?.futureOnly ? e.time >= now : true))
+    .sort((a, b) => a.time - b.time)
+    .slice(0, 6);
+  return rows.map((e) => {
+    const t = new Date(e.time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
+    return `• ${t} UTC · ${esc(e.currency)} ${esc(e.title)}`;
+  });
+}
+
+// ── session open price snapshot (for close-session % change) ──
+async function recordSessionOpenPrices(region: Region, day: string, quotes: Quote[]) {
+  const state = await getState("session_open_prices");
+  const map = (state.map as Record<string, Record<string, number>>) ?? {};
+  const snap: Record<string, number> = {};
+  for (const q of quotes) snap[q.symbol] = q.price;
+  map[`${region}|${day}`] = snap;
+  await setState("session_open_prices", { map });
+}
+async function getSessionOpenPrices(region: Region, day: string): Promise<Record<string, number> | null> {
+  const state = await getState("session_open_prices");
+  const map = (state.map as Record<string, Record<string, number>>) ?? {};
+  return map[`${region}|${day}`] ?? null;
+}
+
+// Session change line (open → close): "🥇 Gold: 🟢 +$5.20 (+0.12%)"
+function sessionChangeLine(q: Quote | undefined, emoji: string, name: string, openPrice?: number): string {
+  if (!q) return `${emoji} ${name}: —`;
+  let delta: number;
+  let pct: number;
+  if (openPrice && openPrice > 0) {
+    delta = q.price - openPrice;
+    pct = (delta / openPrice) * 100;
+  } else {
+    pct = q.changePct;
+    delta = q.price * (pct / 100);
+  }
+  const sign = delta >= 0 ? "+" : "-";
+  const dot = delta >= 0 ? "🟢" : "🔴";
+  return `${emoji} ${name}: ${dot} ${sign}$${fmt(Math.abs(delta))} (${sign}${Math.abs(pct).toFixed(2)}%)`;
+}
+
+// Count this region's signals today (total / won / lost) from ai_signals.
+async function sessionSignalStats(region: Region, day: string): Promise<{ total: number; won: number; lost: number }> {
+  const startUtc = new Date(`${day}T00:00:00.000Z`).toISOString();
+  const { data } = await admin.from("ai_signals")
+    .select("status, market_session, created_at")
+    .gte("created_at", startUtc);
+  const rows = (data ?? []) as { status: string; market_session: string }[];
+  const mine = rows.filter((r) => rowRegion(r.market_session) === region);
+  return {
+    total: mine.length,
+    won: mine.filter((r) => r.status === "target_hit").length,
+    lost: mine.filter((r) => r.status === "stopped_out").length,
+  };
+}
+
+// ── OPEN message builder ──
+async function sessionOpenMessage(region: Region, quotes: Quote[], now: Date): Promise<string> {
+  const { gold, oil, btc } = q3(quotes);
+  const utcLabel = `${String(SESSION_OPEN_HOURS[region]).padStart(2, "0")}:00`;
+  const lonLabel = londonHourLabel(now);
+  const lines: string[] = [
+    "━━━━━━━━━━━━━━━",
+    `${REGION_EMOJI[region]} <b>${REGION_KU[region]} کرایەوە</b>`,
+    `${REGION_EMOJI[region]} <b>${region} Session Open</b>`,
+    "━━━━━━━━━━━━━━━",
+    `🕐 ${utcLabel} UTC | ${lonLabel} London`,
+  ];
+
+  if (region === "Asia") {
+    lines.push("📊 Markets now active: JPY, AUD, NZD", "");
+    lines.push(plainPriceLine(gold, "🥇", "Gold"), plainPriceLine(oil, "🛢", "Oil"), plainPriceLine(btc, "₿", "BTC"), "");
+    lines.push("📈 <b>Bias / ئاراستەی بازاڕ:</b>");
+    lines.push(`🥇 Gold: ${gold ? biasLabel(gold.changePct) : "—"}`);
+    lines.push(`🛢 Oil: ${oil ? biasLabel(oil.changePct) : "—"}`);
+    lines.push(`₿ BTC: ${btc ? biasLabel(btc.changePct) : "—"}`, "");
+    lines.push("⚡ First Signal Expected:", "Within 30 minutes of open");
+  } else if (region === "London") {
+    lines.push("📊 High volatility expected!", "جووڵانی بەهێز چاوەڕوانە!", "");
+    lines.push(priceWithChangeLine(gold, "🥇", "Gold"), priceWithChangeLine(oil, "🛢", "Oil"), priceWithChangeLine(btc, "₿", "BTC"), "");
+    const buys = quotes.filter((q) => ruleSignal(q.changePct) === "BUY").length;
+    const sells = quotes.filter((q) => ruleSignal(q.changePct) === "SELL").length;
+    const outlook = buys > sells ? "🟢 Bullish — مەیلی کڕین" : sells > buys ? "🔴 Bearish — مەیلی فرۆشتن" : "🟡 Neutral — مامناوەند";
+    lines.push("📈 <b>Session Outlook / دیدی سێشن:</b>", outlook, "");
+    const ev = await todaysKeyEvents();
+    lines.push("🗓 <b>Key Events Today:</b>", ev.length ? ev.join("\n") : "• No high-impact events", "");
+    lines.push("⚡ Bot Status: ACTIVE - watching for signals", "بۆت چالاکە - لە دوای سیگناڵدا دەگەڕێت");
+  } else {
+    lines.push("📊 USD pairs most active now!", "");
+    lines.push(plainPriceLine(gold, "🥇", "Gold"), plainPriceLine(oil, "🛢", "Oil"), plainPriceLine(btc, "₿", "BTC"), "");
+    const ev = await todaysKeyEvents({ usdOnly: true, futureOnly: true });
+    lines.push("🗓 <b>US Events Today:</b>", ev.length ? ev.join("\n") : "• No USD events remaining", "");
+    lines.push("⚡ Bot Status: ACTIVE");
+  }
+
+  lines.push("━━━━━━━━━━━━━━━", "<i>ئەمە ڕاوێژی دارایی نییە</i>");
+  return lines.join("\n");
+}
+
+// ── CLOSE message builder ──
+async function sessionCloseMessage(region: Region, quotes: Quote[], day: string): Promise<string> {
+  const { gold, oil, btc } = q3(quotes);
+  const open = await getSessionOpenPrices(region, day);
+  const stats = await sessionSignalStats(region, day);
+  const lines: string[] = [
+    "━━━━━━━━━━━━━━━",
+    `${REGION_EMOJI[region]} <b>${REGION_KU[region]} داخرا</b>`,
+    `${REGION_EMOJI[region]} <b>${region} Session Closed</b>`,
+    "━━━━━━━━━━━━━━━",
+    `📊 <b>${region} Summary / پوختەی ${REGION_KU[region]}:</b>`,
+    sessionChangeLine(gold, "🥇", "Gold", open?.["XAU/USD"]),
+    sessionChangeLine(oil, "🛢", "Oil", open?.["WTI/USD"]),
+    sessionChangeLine(btc, "₿", "BTC", open?.["BTC/USD"]),
+    "",
+    `✅ Signals this session: ${stats.total}`,
+    `🏆 Won: ${stats.won} | ❌ Lost: ${stats.lost}`,
+  ];
+  if (region === "New York") {
+    lines.push("", "⏭ Next: Daily Report at 22:00 BST");
+  }
+  lines.push("━━━━━━━━━━━━━━━", "<i>ئەمە ڕاوێژی دارایی نییە</i>");
+  return lines.join("\n");
+}
+
+// Dedup helpers against session_posts_log.
+async function wasSessionPosted(region: Region, kind: "open" | "close", day: string): Promise<boolean> {
+  const { data } = await admin.from("session_posts_log")
+    .select("id").eq("region", region).eq("kind", kind).eq("session_date", day).limit(1).maybeSingle();
+  return !!data;
+}
+async function recordSessionPost(region: Region, kind: "open" | "close", day: string) {
+  await admin.from("session_posts_log").insert({ region, kind, session_date: day });
+}
+
+interface SessionPost { region: Region; kind: "open" | "close"; text: string; }
+
+// Fire any session open/close posts due in the current UTC hour (deduped per day).
+async function evaluateSessionPosts(): Promise<SessionPost[]> {
+  const now = new Date();
+  const hour = now.getUTCHours();
+  const day = now.toISOString().slice(0, 10);
+  const out: SessionPost[] = [];
+  let quotes: Quote[] | null = null;
+  const getQ = async (): Promise<Quote[]> => (quotes ??= await getPrices());
+
+  for (const region of ALL_REGIONS) {
+    if (SESSION_OPEN_HOURS[region] === hour && !(await wasSessionPosted(region, "open", day))) {
+      const q = await getQ();
+      await recordSessionOpenPrices(region, day, q);
+      out.push({ region, kind: "open", text: await sessionOpenMessage(region, q, now) });
+    }
+  }
+  for (const region of ALL_REGIONS) {
+    if (SESSION_CLOSE_HOURS[region] === hour && !(await wasSessionPosted(region, "close", day))) {
+      const q = await getQ();
+      out.push({ region, kind: "close", text: await sessionCloseMessage(region, q, day) });
+    }
+  }
+  return out;
+}
+
 // ───────────────────── daily summary (22:00 BST = 21:00 UTC) ─────────────────────
 const DAILY_SUMMARY_UTC_HOUR = 21; // 22:00 London time (BST)
 
