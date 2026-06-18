@@ -1073,10 +1073,12 @@ Deno.serve(async (req) => {
     }
 
     // Calendar + news once per invocation (≈60s cadence).
-    const { calendarAlerts, signalAlerts: calSignals } = await evaluateCalendar();
+    const { calendarAlerts, signalAlerts: calSignals, specialAlerts } = await evaluateCalendar();
     const newsAlerts = await evaluateNews();
     // Market-open reports for regions that just opened (analysis + get-ready heads-up).
     const sessionOpenAlerts = await evaluateSessionOpen();
+    // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
+    const dailySummary = await evaluateDailySummary(lastQuotes);
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
@@ -1088,6 +1090,18 @@ Deno.serve(async (req) => {
     for (const r of sessionOpenAlerts) {
       sent = (await sendTelegram("ctp_session_open", r)) || sent;
     }
+
+    // 0b) FOMC/NFP special 🚨 alerts → each as its own high-priority message.
+    for (const s of specialAlerts) {
+      sent = (await sendTelegram("ctp_special", s)) || sent;
+    }
+
+    // 0c) Daily summary at 22:00 BST.
+    if (dailySummary) {
+      sent = (await sendTelegram("ctp_daily", dailySummary)) || sent;
+    }
+
+
 
 
     // 1) OUTCOMES (TP/SL hit) → always sent, each as its own message (must close now).
