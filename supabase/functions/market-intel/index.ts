@@ -773,9 +773,12 @@ function categorize(text: string): string {
 }
 function firstSentence(s: string): string {
   if (!s) return "";
-  const m = s.match(/^.*?[.!?](\s|$)/);
-  let out = (m ? m[0] : s).trim();
-  if (out.length > 160) out = out.slice(0, 157) + "...";
+  // Strip any leftover URLs and keep up to ~4 sentences (≤ 480 chars) so the
+  // Telegram post can show the full news summary, not just a teaser.
+  const clean = s.replace(/https?:\/\/\S+/gi, "").replace(/\s+/g, " ").trim();
+  const sentences = clean.match(/[^.!?]+[.!?]+/g);
+  let out = sentences ? sentences.slice(0, 4).join(" ").trim() : clean;
+  if (out.length > 480) out = out.slice(0, 477).trim() + "...";
   return out;
 }
 function parseRss(xml: string, source: string, fallbackCategory: string): NewsItem[] {
