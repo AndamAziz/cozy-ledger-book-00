@@ -13,6 +13,7 @@ import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { SignalHistory } from '@/components/crypto/SignalHistory';
 import { Crown, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
 import { TelegramSignalCta } from '@/components/TelegramSignalCta';
+import { TelegramShareButton } from '@/components/TelegramShareButton';
 
 interface Props {
   candles: OHLCCandle[];
