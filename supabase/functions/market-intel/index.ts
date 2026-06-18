@@ -529,16 +529,29 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 }
 
 
-async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAlerts: SignalMsg[] }> {
+// Detect the market-moving "tier-1" events that deserve a dedicated 🚨 alert.
+function isFomcNfp(title: string): boolean {
+  return /\bfomc\b|federal funds|fed funds|interest rate|rate decision|monetary policy|non[- ]?farm|\bnfp\b|payroll/i.test(title);
+}
+function specialEventHead(title: string): string {
+  if (/non[- ]?farm|\bnfp\b|payroll/i.test(title)) return "🚨 <b>NFP RESULT</b>";
+  if (/\bfomc\b|federal funds|fed funds|interest rate|rate decision|monetary policy/i.test(title)) return "🚨 <b>FOMC RESULT</b>";
+  return "🚨 <b>HIGH-IMPACT RESULT</b>";
+}
+
+async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAlerts: SignalMsg[]; specialAlerts: string[] }> {
   const events = await getHighImpactEvents();
-  const state = await getState("events"); // { alertedKeys, remindKeys, resultKeys }
+  const state = await getState("events"); // { alertedKeys, remindKeys, resultKeys, preGold }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
   const reminded = new Set((state.remindKeys as string[]) ?? []);
   const resulted = new Set((state.resultKeys as string[]) ?? []);
+  const preGold: Record<string, number> = (state.preGold as Record<string, number>) ?? {};
   const now = Date.now();
   const calendarAlerts: string[] = [];     // pure news / heads-up / result info (NO trade targets)
   const signalAlerts: SignalMsg[] = [];    // news-driven trade targets (sent as separate messages)
+  const specialAlerts: string[] = [];      // dedicated 🚨 FOMC/NFP result alerts
   let goldPrice: number | null = null; // fetched lazily for USD-event gold bias
+
 
   for (const ev of events) {
     // Persist upcoming events for the dashboard.
