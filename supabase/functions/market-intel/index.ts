@@ -411,12 +411,13 @@ function nowStamp(): string {
 // Each target is sent separately and never bundled with other targets or news.
 function oneSignalMessage(subtitle: string, body: string, reason?: string): string {
   return [
+    "━━━━━━━━━━━━━━━",
     "📊 <b>CTP APP REPORTS</b>",
-    reason ? `<i>${subtitle}</i> · <b>${reason}</b>` : `<i>${subtitle}</i>`,
     "━━━━━━━━━━━━━━━",
     "",
     body,
     "",
+    reason ? `<i>ℹ️ ${subtitle} · ${reason}</i>` : `<i>ℹ️ ${subtitle}</i>`,
     "━━━━━━━━━━━━━━━",
     `<i>🕒 ${nowStamp()}</i>`,
     `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
