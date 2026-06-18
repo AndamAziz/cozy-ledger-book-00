@@ -2051,6 +2051,12 @@ Deno.serve(async (req) => {
       sent = (await sendTelegram("ctp_weekly", weeklySummary)) || sent;
     }
 
+    // 0e) Monthly report on the 1st of the month 09:00 BST.
+    if (monthlySummary) {
+      sent = (await sendTelegram("ctp_monthly", monthlySummary)) || sent;
+    }
+
+
 
 
 
