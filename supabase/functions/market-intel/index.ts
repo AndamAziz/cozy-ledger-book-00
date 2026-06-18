@@ -1442,12 +1442,16 @@ Deno.serve(async (req) => {
       sent = ok || sent;
     }
 
-    // 4) NEWS → its own standalone message (market news only). The 60-min window
-    //    was already checked above (newsWindowOpen) before fetching.
+    // 4) NEWS → each item as its own standalone message (market news only). Sent
+    //    separately so the rich bilingual blocks never hit Telegram's 4096 limit.
     if (newsAlerts.length) {
-      const ok = await sendTelegram("ctp_news", oneNewsMessage(newsAlerts.join("\n\n━━━━━━━━━━━━━━━\n\n")));
-      sent = ok || sent;
-      if (ok) await setState("news_throttle", { lastAt: Date.now() });
+      let anyNews = false;
+      for (const block of newsAlerts) {
+        const ok = await sendTelegram("ctp_news", oneNewsMessage(block));
+        anyNews = ok || anyNews;
+      }
+      sent = anyNews || sent;
+      if (anyNews) await setState("news_throttle", { lastAt: Date.now() });
     }
 
     return new Response(
