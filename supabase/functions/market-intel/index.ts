@@ -783,7 +783,6 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
         }).select("id").maybeSingle();
 
-        const important = confidence >= TARGET_IMPORTANT_CONFIDENCE || Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
         const highConf = confidence >= TARGET_IMPORTANT_CONFIDENCE;
         const strongMoveImp = Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
         let reason = "⏱ Cooldown passed / throttle finished · کاتژمێری کۆتایی هات";
