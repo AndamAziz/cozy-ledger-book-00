@@ -415,33 +415,13 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     });
   }
 
-  const buildBody = () => ({
-    symbol,
-    price: currentPrice,
-    change24h: change24h.toFixed(2),
-    timeframe: tfLabel,
-    dayHigh: dayHigh != null ? Number(dayHigh.toFixed(2)) : null,
-    dayLow: dayLow != null ? Number(dayLow.toFixed(2)) : null,
-    lang: langMode,
-    summary,
-    indicators: {
-      rsi: indicators.rsi,
-      macd: indicators.macd,
-      bollinger: indicators.bollinger,
-      ema9: indicators.ema9,
-      ema21: indicators.ema21,
-      ema50: indicators.ema50,
-    },
-  });
-
-  // Image analysis still uses the vision model (crypto-analysis).
+  // Image (chart screenshot) analysis still uses the vision model.
   const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crypto-analysis`;
-  // Text analysis now runs on the free Groq API (groq-analysis).
-  const aiFnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/groq-analysis`;
   const authHeaders = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
   };
+
 
   // ---- Rule-based analysis (ZERO API calls, zero credits, instant) ----
   // 5-minute cache so repeated taps reuse the latest computed result.
