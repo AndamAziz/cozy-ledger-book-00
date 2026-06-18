@@ -442,115 +442,100 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
   };
 
-  // ---- 5 minute response cache (Groq free tier = 30 req/min) ----
-  const aiCacheKey = `groq-ai:${symbol}:${tfLabel}:${langMode}`;
-  const readAiCache = (): { summary: TradeSummary; generatedAt: string; text: string } | null => {
-    try {
-      const raw = localStorage.getItem(aiCacheKey);
-      if (!raw) return null;
-      const c = JSON.parse(raw);
-      if (!c?.generatedAt) return null;
-      if (Date.now() - new Date(c.generatedAt).getTime() > 5 * 60 * 1000) return null;
-      return c;
-    } catch {
-      return null;
-    }
+  // ---- Rule-based analysis (ZERO API calls, zero credits, instant) ----
+  // 5-minute cache so repeated taps reuse the latest computed result.
+  const ruleCacheKey = `rule-ai:${symbol}:${tfLabel}`;
+
+  // Format a price for the asset (Gold/Oil with cents, BTC whole numbers).
+  const fmtMoney = (n: number): string => {
+    if (!Number.isFinite(n)) return '—';
+    const decimals = n >= 1000 ? 2 : n >= 100 ? 2 : 2;
+    return '$' + n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   };
 
-  const fetchSummary = async () => {
-    const resp = await fetch(aiFnUrl, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify({ ...buildBody(), mode: 'summary' }),
-    });
-    if (!resp.ok) {
-      let msg = biLabel('هەڵەیەک ڕوویدا لە دروستکردنی پوختە.', 'Failed to generate the summary.');
-      try {
-        const j = await resp.json();
-        if (j?.error) msg = j.error;
-      } catch { /* ignore */ }
-      throw new Error(msg);
-    }
-    const j = await resp.json();
-    setTradeSummary(j.summary as TradeSummary);
-    setGeneratedAt(j.generatedAt as string);
-    return { summary: j.summary as TradeSummary, generatedAt: j.generatedAt as string };
-  };
-
-  const streamNarrative = async () => {
-    const resp = await fetch(aiFnUrl, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify(buildBody()),
-    });
-
-    if (!resp.ok || !resp.body) {
-      let msg = biLabel('هەڵەیەک ڕوویدا لە شیکاری AI.', 'AI analysis failed.');
-      try {
-        const j = await resp.json();
-        if (j?.error) msg = j.error;
-      } catch { /* ignore */ }
-      throw new Error(msg);
-    }
-
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let acc = '';
-    let done = false;
-    while (!done) {
-      const { done: d, value } = await reader.read();
-      if (d) break;
-      buffer += decoder.decode(value, { stream: true });
-      let idx: number;
-      while ((idx = buffer.indexOf('\n')) !== -1) {
-        let line = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 1);
-        if (line.endsWith('\r')) line = line.slice(0, -1);
-        if (line.startsWith(':') || line.trim() === '') continue;
-        if (!line.startsWith('data: ')) continue;
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === '[DONE]') { done = true; break; }
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) { acc += content; setAiText(acc); }
-        } catch {
-          buffer = line + '\n' + buffer;
-          break;
-        }
-      }
-    }
-    return acc;
+  // Map the pure rule result into the existing TradeSummary shape so the whole
+  // UI (trade buttons, Telegram signal, etc.) keeps working without any AI call.
+  const ruleToSummary = (r: RuleResult): TradeSummary => {
+    const tpDelta = r.tp - currentPrice;
+    const slDelta = currentPrice - r.sl;
+    const headlineEn =
+      r.signal === 'buy'
+        ? `Bullish confluence (${r.score}/4) — momentum favors buyers.`
+        : r.signal === 'sell'
+        ? `Bearish confluence (${r.score}/4) — momentum favors sellers.`
+        : `Mixed signals (${r.score}/4) — wait for a clearer setup.`;
+    const headline =
+      r.signal === 'buy'
+        ? `هاوکێشەی بەرزبوونەوە (${r.score}/4) — مەیلی کڕین.`
+        : r.signal === 'sell'
+        ? `هاوکێشەی داشکان (${r.score}/4) — مەیلی فرۆشتن.`
+        : `سیگناڵی تێکەڵ (${r.score}/4) — چاوەڕێی هەلێکی ڕوونتر بکە.`;
+    return {
+      recommendation: r.signal,
+      confidence: r.confidence,
+      headline,
+      headlineEn,
+      entry: fmtMoney(currentPrice),
+      targets: [`${fmtMoney(r.tp)} (+${fmtMoney(Math.abs(tpDelta)).replace('$', '$')})`],
+      stopLoss: `${fmtMoney(r.sl)} (-${fmtMoney(Math.abs(slDelta)).replace('$', '$')})`,
+      stopLossIndicator: 'EMA',
+      stopLossBasis: `پاڵپشت/بەربەست: ${fmtMoney(r.support)} / ${fmtMoney(r.resistance)}`,
+      stopLossBasisEn: `Support / Resistance: ${fmtMoney(r.support)} / ${fmtMoney(r.resistance)}`,
+      horizonDays: 1,
+      riskLevel: r.risk,
+      riskNote: `مەترسی: ${r.riskLabelKu}`,
+      riskNoteEn: `Risk: ${r.riskLabel}`,
+      reasoning: `هێز: ${r.score}/4 · RSI: ${r.rsi != null ? r.rsi.toFixed(1) : '—'} → ${r.rsiStatusKu}`,
+      reasoningEn: `Strength: ${r.score}/4 · RSI: ${r.rsi != null ? r.rsi.toFixed(1) : '—'} → ${r.rsiStatus}`,
+      keyDrivers: r.reasons.map((reason) => ({
+        indicator: reason.en.replace(/\s*[✅🔴🟢⚠️].*$/u, '').trim() || 'Signal',
+        effect: (r.signal === 'hold' ? 'neutral' : r.signal) as SignalType,
+        influence: 'high' as Influence,
+        note: reason.ku,
+        noteEn: reason.en,
+      })),
+    };
   };
 
   const runAiAnalysis = async () => {
-    setAiLoading(true);
     setAiError(null);
     setAiText('');
-    setTradeSummary(null);
-    setGeneratedAt(null);
-    try {
-      // Serve a cached result if it is fresh (< 5 min) to respect Groq's free rate limit.
-      const cached = readAiCache();
-      if (cached) {
-        setTradeSummary(cached.summary);
-        setGeneratedAt(cached.generatedAt);
-        if (cached.text) setAiText(cached.text);
-        return;
-      }
-      // First the fast structured summary, then the detailed narrative
-      const { summary, generatedAt } = await fetchSummary();
-      const text = await streamNarrative();
-      try {
-        localStorage.setItem(aiCacheKey, JSON.stringify({ summary, generatedAt, text }));
-      } catch { /* ignore quota errors */ }
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : biLabel('هەڵەیەک ڕوویدا.', 'Something went wrong.'));
-    } finally {
-      setAiLoading(false);
+    // Instant — no spinner, no network. Compute from the indicators we already have.
+    if (!hasData) {
+      setAiError(biLabel('داتای پێویست نییە بۆ شیکاری.', 'Not enough data to analyze.'));
+      return;
     }
+
+    // Serve a fresh (< 5 min) cached result if present.
+    try {
+      const raw = localStorage.getItem(ruleCacheKey);
+      if (raw) {
+        const c = JSON.parse(raw) as { summary: TradeSummary; generatedAt: string };
+        if (c?.generatedAt && Date.now() - new Date(c.generatedAt).getTime() <= 5 * 60 * 1000) {
+          setTradeSummary(c.summary);
+          setGeneratedAt(c.generatedAt);
+          return;
+        }
+      }
+    } catch { /* ignore */ }
+
+    const result = analyzeMarket({
+      price: currentPrice,
+      ema9: indicators.ema9,
+      ema21: indicators.ema21,
+      ema50: indicators.ema50,
+      rsi: indicators.rsi,
+      macdLine: indicators.macd?.macd ?? null,
+      macdSignal: indicators.macd?.signal ?? null,
+    });
+    const summaryOut = ruleToSummary(result);
+    setTradeSummary(summaryOut);
+    setGeneratedAt(result.generatedAt);
+    try {
+      localStorage.setItem(ruleCacheKey, JSON.stringify({ summary: summaryOut, generatedAt: result.generatedAt }));
+    } catch { /* ignore quota errors */ }
   };
+
 
   // ---- Chart image analysis ----
   const consumeStream = async (resp: Response, onChunk: (s: string) => void) => {
