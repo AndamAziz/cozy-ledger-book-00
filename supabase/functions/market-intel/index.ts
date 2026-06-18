@@ -1707,7 +1707,18 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Session post preview/send (bypasses the time + dedupe gates):
+    // Weekly report preview/send (bypasses the time + dedupe gates):
+    //   {"weeklyPreview": true}  → build & RETURN the report (does NOT post)
+    //   {"weeklySend": true}     → build the report and post it to the channel now
+    if (body.weeklyPreview === true || body.weeklySend === true) {
+      const report = await evaluateWeeklySummary({ force: true });
+      let sent = false;
+      if (body.weeklySend === true && report) {
+        sent = await sendTelegram("ctp_weekly", report);
+      }
+      return new Response(JSON.stringify({ ok: true, sent, report }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     //   {"sessionPreview": "open"|"close"}  → build & RETURN all 3 region messages
     //   {"sessionSend": "open"|"close"}     → also post them to Telegram now
     const sp = (body.sessionPreview ?? body.sessionSend) as string | undefined;
