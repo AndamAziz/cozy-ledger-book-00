@@ -1378,7 +1378,7 @@ Deno.serve(async (req) => {
     const newsThrottle = await getState("news_throttle");
     const lastNewsAt = (newsThrottle.lastAt as number) ?? 0;
     const newsWindowOpen = !lastNewsAt || Date.now() - lastNewsAt >= NEWS_MIN_GAP_MS;
-    const newsAlerts = newsWindowOpen ? await evaluateNews() : [];
+    const newsAlerts = newsWindowOpen ? await evaluateNews(lastQuotes) : [];
     // Market-open reports for regions that just opened (analysis + get-ready heads-up).
     const sessionOpenAlerts = await evaluateSessionOpen();
     // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
