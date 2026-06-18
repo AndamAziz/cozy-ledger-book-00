@@ -199,6 +199,22 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [imageSummaryLoading, setImageSummaryLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Ticking clock so the "Updated Xm ago" label refreshes itself.
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const updatedAgo = (iso: string | null): string => {
+    if (!iso) return '';
+    const s = Math.max(0, Math.round((nowTick - new Date(iso).getTime()) / 1000));
+    if (s < 60) return biLabel(`${s} چرکە لەمەوبەر`, `${s}s ago`);
+    const m = Math.floor(s / 60);
+    if (m < 60) return biLabel(`${m} خولەک لەمەوبەر`, `${m}m ago`);
+    const h = Math.floor(m / 60);
+    return biLabel(`${h} کاتژمێر لەمەوبەر`, `${h}h ago`);
+  };
+
 
   // Admin-only Telegram signal sending
   const [isAdmin, setIsAdmin] = useState(false);
@@ -417,14 +433,32 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     },
   });
 
+  // Image analysis still uses the vision model (crypto-analysis).
   const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crypto-analysis`;
+  // Text analysis now runs on the free Groq API (groq-analysis).
+  const aiFnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/groq-analysis`;
   const authHeaders = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
   };
 
+  // ---- 5 minute response cache (Groq free tier = 30 req/min) ----
+  const aiCacheKey = `groq-ai:${symbol}:${tfLabel}:${langMode}`;
+  const readAiCache = (): { summary: TradeSummary; generatedAt: string; text: string } | null => {
+    try {
+      const raw = localStorage.getItem(aiCacheKey);
+      if (!raw) return null;
+      const c = JSON.parse(raw);
+      if (!c?.generatedAt) return null;
+      if (Date.now() - new Date(c.generatedAt).getTime() > 5 * 60 * 1000) return null;
+      return c;
+    } catch {
+      return null;
+    }
+  };
+
   const fetchSummary = async () => {
-    const resp = await fetch(fnUrl, {
+    const resp = await fetch(aiFnUrl, {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify({ ...buildBody(), mode: 'summary' }),
@@ -440,10 +474,11 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     const j = await resp.json();
     setTradeSummary(j.summary as TradeSummary);
     setGeneratedAt(j.generatedAt as string);
+    return { summary: j.summary as TradeSummary, generatedAt: j.generatedAt as string };
   };
 
   const streamNarrative = async () => {
-    const resp = await fetch(fnUrl, {
+    const resp = await fetch(aiFnUrl, {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify(buildBody()),
@@ -486,6 +521,7 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         }
       }
     }
+    return acc;
   };
 
   const runAiAnalysis = async () => {
@@ -495,9 +531,20 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     setTradeSummary(null);
     setGeneratedAt(null);
     try {
+      // Serve a cached result if it is fresh (< 5 min) to respect Groq's free rate limit.
+      const cached = readAiCache();
+      if (cached) {
+        setTradeSummary(cached.summary);
+        setGeneratedAt(cached.generatedAt);
+        if (cached.text) setAiText(cached.text);
+        return;
+      }
       // First the fast structured summary, then the detailed narrative
-      await fetchSummary();
-      await streamNarrative();
+      const { summary, generatedAt } = await fetchSummary();
+      const text = await streamNarrative();
+      try {
+        localStorage.setItem(aiCacheKey, JSON.stringify({ summary, generatedAt, text }));
+      } catch { /* ignore quota errors */ }
     } catch (e) {
       setAiError(e instanceof Error ? e.message : biLabel('هەڵەیەک ڕوویدا.', 'Something went wrong.'));
     } finally {
@@ -782,6 +829,12 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           <div className="flex items-center gap-2 text-sm font-bold text-white">
             <Sparkles className="h-4 w-4 text-[#f0b90b]" />
             {biLabel('شیکاری زیرەک (AI)', 'AI analysis')}
+            {generatedAt && !aiLoading && (
+              <span className="flex items-center gap-1 text-[10px] font-normal text-[#848e9c]">
+                <Clock className="h-3 w-3" />
+                {biLabel('نوێکرایەوە', 'Updated')} {updatedAgo(generatedAt)}
+              </span>
+            )}
           </div>
           <button
             onClick={runAiAnalysis}
