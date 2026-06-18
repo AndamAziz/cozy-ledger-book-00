@@ -804,13 +804,14 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
           </div>
           <button
             onClick={runAiAnalysis}
-            disabled={aiLoading || !hasData}
+            disabled={!hasData}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#f0b90b] text-black disabled:opacity-50 active:scale-95 transition"
           >
-            {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {aiLoading ? biLabel('شیکاری...', 'Analyzing...') : (aiText || tradeSummary) ? biLabel('دووبارە شیکاری', 'Re-analyze') : biLabel('شیکاری بکە', 'Analyze')}
+            <Sparkles className="h-3.5 w-3.5" />
+            {tradeSummary ? biLabel('دووبارە شیکاری', 'Re-analyze') : biLabel('شیکاری بکە', 'Analyze')}
           </button>
         </div>
+
 
         {/* Language selector for the whole analysis (set before running) */}
         <div className="flex items-center justify-between gap-2 mb-3 rounded-lg bg-[#0d1117] border border-[#1a1e2e] px-3 py-2">
