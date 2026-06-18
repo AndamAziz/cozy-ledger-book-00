@@ -1442,6 +1442,9 @@ Deno.serve(async (req) => {
     const sessionOpenAlerts = await evaluateSessionOpen();
     // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
     const dailySummary = await evaluateDailySummary(lastQuotes);
+    // Weekly recap (Mondays ~08:00 BST) + channel-growth milestone celebrations.
+    const weeklyStats = await evaluateWeeklyStats();
+    const milestoneAlerts = await evaluateMilestones();
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
