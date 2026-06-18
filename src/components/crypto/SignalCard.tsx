@@ -141,6 +141,20 @@ export function SignalCard({ signal, loading, emoji }: Props) {
           <p className="text-[11px] text-white leading-relaxed">{bi(signal.reasonKu, signal.reasonEn)}</p>
         </div>
 
+        {/* Share to grow the channel */}
+        <TelegramShareButton
+          bi={bi}
+          emoji={emoji}
+          label={signal.label}
+          action={action}
+          entry={directional ? signal.entry : null}
+          tp={directional ? signal.takeProfit1 : null}
+          decimals={signal.decimals}
+          className="w-full"
+        />
+
+
+
         {/* Footer: session + updated */}
         <div className="flex items-center justify-between text-[10px] text-[#848e9c]">
           <span className="flex items-center gap-1">
