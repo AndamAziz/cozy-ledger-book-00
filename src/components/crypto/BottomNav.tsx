@@ -27,10 +27,11 @@ const haptic = () => {
 
 interface MainItem {
   key: string;
-  icon: typeof Newspaper;
+  icon: ComponentType<{ className?: string; size?: number }>;
   label: string;
   active: boolean;
   onPress: () => void;
+  isExternal?: boolean;
 }
 
 export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, onConvert, bi }: BottomNavProps) {
