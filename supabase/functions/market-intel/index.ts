@@ -1889,6 +1889,19 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Monthly report preview/send (bypasses the time + dedupe gates):
+    //   {"monthlyPreview": true}  → build & RETURN the report (does NOT post)
+    //   {"monthlySend": true}     → build the report and post it to the channel now
+    if (body.monthlyPreview === true || body.monthlySend === true) {
+      const report = await evaluateMonthlySummary({ force: true });
+      let sent = false;
+      if (body.monthlySend === true && report) {
+        sent = await sendTelegram("ctp_monthly", report);
+      }
+      return new Response(JSON.stringify({ ok: true, sent, report }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Session post preview/send (bypasses the time + dedupe gates):
     //   {"sessionPreview": "open"|"close"}  → build & RETURN all 3 region messages
     //   {"sessionSend": "open"|"close"}     → also post them to Telegram now
