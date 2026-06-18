@@ -840,11 +840,11 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
     if (ev.actual && minsSince >= 0 && minsSince <= 360 && !resulted.has(ev.key)) {
       resulted.add(ev.key);
 
-      // News block: result figures + market bias (no concrete Entry/TP/SL here).
+      // Result block: figures + market bias (no concrete Entry/TP/SL here).
       const lines: string[] = [
-        `🏁 <b>RESULT / ئەنجامی هەواڵ</b>`,
-        `📅 <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
-        `Actual: <code>${esc(ev.actual)}</code> · Forecast: <code>${esc(ev.forecast || "—")}</code> · Prev: <code>${esc(ev.previous || "—")}</code>`,
+        `🏁 <b>RESULT · ئەنجامی ئیڤێنت</b>`,
+        `${ccyFlag(ev.currency)} <b>${esc(ev.title)}</b> · ${esc(ev.currency)}`,
+        `📊 Actual: <code>${esc(ev.actual)}</code> · Fcst: <code>${esc(ev.forecast || "—")}</code> · Prev: <code>${esc(ev.previous || "—")}</code>`,
       ];
 
       const a = parseFigure(ev.actual);
