@@ -722,7 +722,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 
     // 2) No open position → consider opening a NEW signal when timing is right.
     const prev = priceState[q.symbol] as
-      { price?: number; signal?: Signal; lastSignalAt?: number; lastSignalDir?: Signal } | undefined;
+      { price?: number; signal?: Signal; lastSignalAt?: number; lastSignalDir?: Signal; lastAuditKey?: string } | undefined;
     const actionable = sig === "BUY" || sig === "SELL";
     // requireSession assets only open while an ENABLED region is live (user-configurable).
     const timingOk = !m.requireSession || enabledSessionOpen(enabledRegions);
