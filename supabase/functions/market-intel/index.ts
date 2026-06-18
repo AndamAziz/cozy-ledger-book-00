@@ -825,23 +825,53 @@ const IMPACT_META: Record<string, { emoji: string; ku: string }> = {
   BEARISH: { emoji: "🔴", ku: "داکشان" },
   NEUTRAL: { emoji: "🟡", ku: "جێگیر" },
 };
+const URGENCY_META: Record<string, { emoji: string; en: string; ku: string }> = {
+  BREAKING: { emoji: "🔴", en: "Breaking — act now", ku: "هەواڵی گرنگ — ئێستا کار بکە" },
+  IMPORTANT: { emoji: "🟡", en: "Important — watch closely", ku: "گرنگ — بەوردی چاودێری بکە" },
+  INFO: { emoji: "🟢", en: "Informational — no action needed", ku: "زانیاری — پێویست بە کار ناکات" },
+};
 
 type Impact = "BULLISH" | "BEARISH" | "NEUTRAL";
-interface NewsEnrich { titleKu: string; summaryEn: string; summaryKu: string; impact: Impact; }
+type Urgency = "BREAKING" | "IMPORTANT" | "INFO";
+interface NewsEnrich {
+  titleKu: string;
+  summaryEn: string;
+  summaryKu: string;
+  impact: Impact;
+  urgency: Urgency;
+  tipEn: string;
+  tipKu: string;
+  relatedEn: string;
+  relatedKu: string;
+}
 
-// Enrich a batch of news items in one AI call: Kurdish title, a full 3-4 sentence
-// English summary, its Kurdish (Sorani) translation, and the expected impact on
-// the relevant asset. NO URLs / source names are ever produced.
-async function enrichNews(items: NewsItem[]): Promise<NewsEnrich[]> {
-  const fallback: NewsEnrich[] = items.map((n) => ({ titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" }));
+// Map a news category to the live symbol whose price anchors the trader tip.
+const CAT_SYMBOL: Record<string, string> = {
+  GOLD: "XAU/USD", OIL: "WTI/USD", CRYPTO: "BTC/USD", FOREX: "XAU/USD", MARKETS: "XAU/USD",
+};
+
+// Enrich a batch of news items in one AI call: natural-Kurdish title + summary,
+// expected impact, urgency level, a trader tip with concrete levels, and a
+// related-asset note. NO URLs / source names are ever produced.
+async function enrichNews(items: NewsItem[], priceBySymbol: Record<string, number> = {}): Promise<NewsEnrich[]> {
+  const fallback: NewsEnrich[] = items.map((n) => ({
+    titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL",
+    urgency: "INFO", tipEn: "", tipKu: "", relatedEn: "", relatedKu: "",
+  }));
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY || items.length === 0) return fallback;
   try {
-    const payload = items.map((n) => ({
-      title: n.title,
-      summary: n.summary,
-      asset: (ASSET_LABEL[n.category] ?? { en: "Market" }).en,
-    }));
+    const payload = items.map((n) => {
+      const al = ASSET_LABEL[n.category] ?? { en: "Market" };
+      const sym = CAT_SYMBOL[n.category];
+      const price = sym ? priceBySymbol[sym] : undefined;
+      return {
+        title: n.title,
+        summary: n.summary,
+        asset: al.en,
+        current_price: price ?? null,
+      };
+    });
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -851,18 +881,24 @@ async function enrichNews(items: NewsItem[]): Promise<NewsEnrich[]> {
           {
             role: "system",
             content:
-              "You are a bilingual financial news editor (English + Kurdish Sorani / کوردیی ناوەندی). " +
+              "You are an experienced bilingual financial journalist who writes for a Kurdish audience (English + Kurdish Sorani / کوردیی ناوەندی). " +
+              "Write Kurdish the way a professional Kurdish news journalist would write it — natural, fluent and idiomatic. Do NOT translate word-for-word; rephrase so it reads like original Kurdish journalism, while keeping the meaning faithful. Keep financial terms understandable. " +
               "For each item return an object with EXACTLY these keys: " +
-              "title_ku (natural Kurdish translation of the title), " +
+              "title_ku (a natural Kurdish news-style title), " +
               "summary_en (a clear 3-4 sentence English summary built from the title and provided text; NEVER include URLs, links, or source/website names), " +
-              "summary_ku (natural Kurdish Sorani translation of summary_en), " +
-              "impact (one of BULLISH, BEARISH, NEUTRAL — the expected effect of this news on the given asset). " +
+              "summary_ku (a natural, journalist-style Kurdish version of summary_en — fluent, not literal), " +
+              "impact (one of BULLISH, BEARISH, NEUTRAL — expected effect on the given asset), " +
+              "urgency (one of BREAKING, IMPORTANT, INFO — how time-sensitive this news is for a trader), " +
+              "tip_en (one short actionable trader tip with concrete price levels using current_price when provided, e.g. 'If gold is bullish, consider BUY above 4320 with SL 4305'), " +
+              "tip_ku (the same trader tip written naturally in Kurdish Sorani), " +
+              "related_en (one short sentence naming another asset also affected and why, e.g. 'Oil also affected because the Iran deal impacts both'; empty string if none), " +
+              "related_ku (the same related-asset note in natural Kurdish; empty string if none). " +
               "Reply ONLY with a JSON array of objects, same order and same length as the input. No markdown, no extra text.",
           },
           { role: "user", content: JSON.stringify(payload) },
         ],
       }),
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(25000),
     });
     if (!res.ok) { await res.text(); return fallback; }
     const d = await res.json();
@@ -873,11 +909,18 @@ async function enrichNews(items: NewsItem[]): Promise<NewsEnrich[]> {
       return arr.map((x, i) => {
         const impRaw = String(x?.impact ?? "").toUpperCase();
         const impact: Impact = impRaw === "BULLISH" || impRaw === "BEARISH" ? impRaw : "NEUTRAL";
+        const urgRaw = String(x?.urgency ?? "").toUpperCase();
+        const urgency: Urgency = urgRaw === "BREAKING" || urgRaw === "IMPORTANT" ? urgRaw : "INFO";
         return {
           titleKu: String(x?.title_ku ?? ""),
           summaryEn: String(x?.summary_en ?? items[i].summary ?? ""),
           summaryKu: String(x?.summary_ku ?? ""),
           impact,
+          urgency,
+          tipEn: String(x?.tip_en ?? ""),
+          tipKu: String(x?.tip_ku ?? ""),
+          relatedEn: String(x?.related_en ?? ""),
+          relatedKu: String(x?.related_ku ?? ""),
         };
       });
     }
@@ -894,8 +937,13 @@ function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
   const dot = CAT_EMOJI[n.category] ?? "🔹";
   const al = ASSET_LABEL[n.category] ?? { en: n.category, ku: n.category };
   const im = IMPACT_META[e.impact] ?? IMPACT_META.NEUTRAL;
+  const ur = URGENCY_META[e.urgency] ?? URGENCY_META.INFO;
   const summaryEn = (e.summaryEn || n.summary || "").trim();
-  const parts: string[] = [`${dot} <b>${esc(n.category)}</b>`];
+  const parts: string[] = [
+    `${ur.emoji} <b>${esc(ur.en)} / ${esc(ur.ku)}</b>`,
+    "",
+    `${dot} <b>${esc(n.category)}</b>`,
+  ];
   if (e.titleKu) parts.push(esc(e.titleKu));
   if (summaryEn) parts.push("", "📝 <b>English:</b>", esc(summaryEn));
   if (e.summaryKu) parts.push("", "📝 <b>کوردی:</b>", esc(e.summaryKu));
@@ -904,10 +952,22 @@ function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
     `🎯 ${esc(al.en)} Impact: ${e.impact} ${im.emoji}`,
     `کاریگەری بۆ ${esc(al.ku)}: ${im.ku}`,
   );
+  if (e.tipEn || e.tipKu) {
+    parts.push("", "💡 <b>Trader Tip / تێبینی بۆ ترەیدەر:</b>");
+    if (e.tipEn) parts.push(esc(e.tipEn));
+    if (e.tipKu) parts.push(esc(e.tipKu));
+  }
+  if (e.relatedEn || e.relatedKu) {
+    parts.push("", "🔗 <b>Related / پەیوەندیدار:</b>");
+    if (e.relatedEn) parts.push(esc(e.relatedEn));
+    if (e.relatedKu) parts.push(esc(e.relatedKu));
+  }
   return parts.join("\n");
 }
 
-async function evaluateNews(): Promise<string[]> {
+async function evaluateNews(quotes: Quote[] = []): Promise<string[]> {
+  const priceBySymbol: Record<string, number> = {};
+  for (const q of quotes) priceBySymbol[q.symbol] = q.price;
   const news = await fetchNews();
   const state = await getState("news"); // { alertedKeys: string[] }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
@@ -927,13 +987,13 @@ async function evaluateNews(): Promise<string[]> {
   await setState("news", { alertedKeys: [...alerted].slice(-300) });
   if (fresh.length === 0) return [];
 
-  const enriched = await enrichNews(fresh);
+  const enriched = await enrichNews(fresh, priceBySymbol);
 
   // Persist for the dashboard (best-effort).
   const out: string[] = [];
   for (let i = 0; i < fresh.length; i++) {
     const n = fresh[i];
-    const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact };
+    const e = enriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" };
     const hash = (n.link || n.title).toLowerCase();
     await admin.from("market_news").upsert({
       hash, title: n.title, title_ku: e.titleKu || null, summary: e.summaryEn || n.summary || null,
@@ -1257,8 +1317,10 @@ Deno.serve(async (req) => {
       const outcomeSample = outcomeLine(sample.symbol, "BUY", "tp", sample.price, sampleTp, sTpPips);
 
       const liveNews = (await fetchNews()).slice(0, 3);
-      const newsEnriched = await enrichNews(liveNews);
-      const newsBlock = liveNews.map((n, i) => newsBlockItem(n, newsEnriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact }));
+      const testPriceBySymbol: Record<string, number> = {};
+      for (const q of quotes) testPriceBySymbol[q.symbol] = q.price;
+      const newsEnriched = await enrichNews(liveNews, testPriceBySymbol);
+      const newsBlock = liveNews.map((n, i) => newsBlockItem(n, newsEnriched[i] ?? { titleKu: "", summaryEn: n.summary, summaryKu: "", impact: "NEUTRAL" as Impact, urgency: "INFO" as Urgency, tipEn: "", tipKu: "", relatedEn: "", relatedKu: "" }));
       const lines: string[] = [
         "📊 <b>CTP APP REPORTS</b>",
         "<i>Market News & Analysis · هەواڵ و شیکاری بازاڕ</i>",
@@ -1278,14 +1340,17 @@ Deno.serve(async (req) => {
         priceBlock.length ? priceBlock.join("\n\n") : "—",
         "",
       ];
-      if (newsBlock.length) {
-        lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "", newsBlock.join("\n\n━━━━━━━━━━━━━━━\n\n"), "");
-      }
       lines.push("━━━━━━━━━━━━━━━");
       lines.push(`<i>🕒 ${nowStamp()}</i>`);
       lines.push(`<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`);
       const ok = await sendTelegram("ctp_report_test", lines.join("\n"));
-      return new Response(JSON.stringify({ ok: true, sent: ok, mode: "test", quotes: quotes.length, news: newsBlock.length }),
+      // News goes out as separate messages (each rich block can exceed Telegram's
+      // 4096-char limit if bundled), matching the production news flow.
+      let newsSent = 0;
+      for (const block of newsBlock) {
+        if (await sendTelegram("ctp_news", oneNewsMessage(block))) newsSent++;
+      }
+      return new Response(JSON.stringify({ ok: true, sent: ok, mode: "test", quotes: quotes.length, news: newsBlock.length, newsSent }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -1318,7 +1383,7 @@ Deno.serve(async (req) => {
     const newsThrottle = await getState("news_throttle");
     const lastNewsAt = (newsThrottle.lastAt as number) ?? 0;
     const newsWindowOpen = !lastNewsAt || Date.now() - lastNewsAt >= NEWS_MIN_GAP_MS;
-    const newsAlerts = newsWindowOpen ? await evaluateNews() : [];
+    const newsAlerts = newsWindowOpen ? await evaluateNews(lastQuotes) : [];
     // Market-open reports for regions that just opened (analysis + get-ready heads-up).
     const sessionOpenAlerts = await evaluateSessionOpen();
     // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
@@ -1380,12 +1445,16 @@ Deno.serve(async (req) => {
       sent = ok || sent;
     }
 
-    // 4) NEWS → its own standalone message (market news only). The 60-min window
-    //    was already checked above (newsWindowOpen) before fetching.
+    // 4) NEWS → each item as its own standalone message (market news only). Sent
+    //    separately so the rich bilingual blocks never hit Telegram's 4096 limit.
     if (newsAlerts.length) {
-      const ok = await sendTelegram("ctp_news", oneNewsMessage(newsAlerts.join("\n\n━━━━━━━━━━━━━━━\n\n")));
-      sent = ok || sent;
-      if (ok) await setState("news_throttle", { lastAt: Date.now() });
+      let anyNews = false;
+      for (const block of newsAlerts) {
+        const ok = await sendTelegram("ctp_news", oneNewsMessage(block));
+        anyNews = ok || anyNews;
+      }
+      sent = anyNews || sent;
+      if (anyNews) await setState("news_throttle", { lastAt: Date.now() });
     }
 
     return new Response(
