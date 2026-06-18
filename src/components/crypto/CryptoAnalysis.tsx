@@ -199,6 +199,22 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
   const [imageSummaryLoading, setImageSummaryLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Ticking clock so the "Updated Xm ago" label refreshes itself.
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const updatedAgo = (iso: string | null): string => {
+    if (!iso) return '';
+    const s = Math.max(0, Math.round((nowTick - new Date(iso).getTime()) / 1000));
+    if (s < 60) return biLabel(`${s} چرکە لەمەوبەر`, `${s}s ago`);
+    const m = Math.floor(s / 60);
+    if (m < 60) return biLabel(`${m} خولەک لەمەوبەر`, `${m}m ago`);
+    const h = Math.floor(m / 60);
+    return biLabel(`${h} کاتژمێر لەمەوبەر`, `${h}h ago`);
+  };
+
 
   // Admin-only Telegram signal sending
   const [isAdmin, setIsAdmin] = useState(false);
