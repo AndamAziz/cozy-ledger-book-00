@@ -2186,6 +2186,11 @@ Deno.serve(async (req) => {
       sent = (await sendTelegram("ctp_monthly", monthlySummary)) || sent;
     }
 
+    // 0f) Pinned stats + channel description refreshed on Monday 08:00 BST.
+    if (pinUpdate) {
+      sent = pinUpdate.pinned || pinUpdate.description || sent;
+    }
+
 
 
 
