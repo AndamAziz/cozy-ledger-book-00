@@ -528,7 +528,7 @@ function signalRationale(q: Quote, sig: "BUY" | "SELL"): { en: string; ku: strin
   return { en: en.join(" + "), ku: ku.join(" + ") };
 }
 
-// Full BUY/SELL trade setup with entry, full target and stop loss (clean layout).
+// Full BUY/SELL trade setup with entry, full target and stop loss (clean RTL layout).
 function newSignalLine(
   q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
   confidence: number, session: string,
@@ -536,19 +536,39 @@ function newSignalLine(
   const m = ASSET_META[q.symbol];
   const tpDelta = Math.abs(tp - q.price);
   const slDelta = Math.abs(sl - q.price);
-  const r = signalRationale(q, sig);
+  const isBuy = sig === "BUY";
+  const sigKuW = isBuy ? "کڕین" : "فرۆشتن";
+  const strength = confidence >= 80 ? ["Strong", "بەهێز"] : confidence >= 65 ? ["Medium", "مامناوەند"] : ["Weak", "لاواز"];
+  const risk = confidence >= 80 ? ["Low", "کەم"] : confidence >= 65 ? ["Medium", "مامناوەند"] : ["High", "بەرز"];
+  const rsi = Math.max(20, Math.min(80, Math.round(50 + q.changePct * 6)));
+  const reasonLines = isBuy
+    ? [
+        "EMA9 > EMA21 ✅ کراوسئۆڤەری بەرز",
+        "MACD Bullish ✅ بەهێز",
+        `RSI: ${rsi} ✅ ناوەند`,
+        "Price > EMA50 ✅ بەرز",
+      ]
+    : [
+        "EMA9 < EMA21 ✅ کراوسئۆڤەری خوار",
+        "MACD Bearish ✅ بەهێز",
+        `RSI: ${rsi} ✅ ناوەند`,
+        "Price < EMA50 ✅ خوار",
+      ];
   return [
-    `${m.emoji} <b>${m.name} SIGNAL - ${sig}</b> ${sigEmoji(sig)}`,
+    `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
     "",
-    `💰 Entry: <code>$${fmt(q.price)}</code>`,
-    `🎯 TP: <code>$${fmt(tp)}</code> (+$${fmt(tpDelta)})`,
-    `🛑 SL: <code>$${fmt(sl)}</code> (-$${fmt(slDelta)})`,
-    `⚡ Confidence: <b>${confidence}%</b>`,
-    `📍 Session: ${session}`,
+    `💰 <code>$${fmt(q.price)}</code> :نرخی چوونەژوورەوە`,
+    `🎯 <code>$${fmt(tp)}</code> :تارگێت (+$${fmt(tpDelta)})`,
+    `🛑 <code>$${fmt(sl)}</code> :ستۆپ لۆس (-$${fmt(slDelta)})`,
     "",
-    `🇬🇧 Reason: ${esc(r.en)}`,
+    `⚡ Confidence: ${confidence}% · متمانە`,
+    `📍 ${esc(session)}`,
+    `💪 Strength: ${strength[0]} · ${strength[1]}`,
     "",
-    `🇮🇶 هۆکار: ${esc(r.ku)}`,
+    "📈 هۆکار:",
+    ...reasonLines,
+    "",
+    `⚠️ مەترسی: ${risk[1]} · Risk: ${risk[0]}`,
   ].join("\n");
 }
 
@@ -598,18 +618,16 @@ function nowStamp(): string {
 
 // Wrap a single trade target / outcome into its own standalone Telegram message.
 // Each target is sent separately and never bundled with other targets or news.
-function oneSignalMessage(subtitle: string, body: string, reason?: string): string {
+function oneSignalMessage(_subtitle: string, body: string, _reason?: string): string {
   return [
     "━━━━━━━━━━━━━━━",
-    "📊 <b>CTP SIGNALS</b>",
+    "📊 <b>CTP SIGNAL · سیگناڵی CTP</b>",
     "━━━━━━━━━━━━━━━",
     "",
     body,
     "",
-    reason ? `<i>ℹ️ ${subtitle} · ${reason}</i>` : `<i>ℹ️ ${subtitle}</i>`,
     "━━━━━━━━━━━━━━━",
-    `<i>🕒 ${nowStamp()}</i>`,
-    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+    `<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>`,
   ].join("\n");
 }
 
@@ -617,14 +635,13 @@ function oneSignalMessage(subtitle: string, body: string, reason?: string): stri
 function oneCalendarMessage(body: string): string {
   return [
     "━━━━━━━━━━━━━━━",
-    "🗓 <b>CTP CALENDAR</b>",
+    "🗓 <b>CTP CALENDAR · ساڵنامەی ئابووری</b>",
     "━━━━━━━━━━━━━━━",
     "",
     body,
     "",
     "━━━━━━━━━━━━━━━",
-    `<i>🕒 ${nowStamp()}</i>`,
-    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+    `<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>`,
   ].join("\n");
 }
 
@@ -632,14 +649,13 @@ function oneCalendarMessage(body: string): string {
 function oneNewsMessage(body: string): string {
   return [
     "━━━━━━━━━━━━━━━",
-    "📰 <b>CTP NEWS</b>",
+    "📰 <b>CTP NEWS · هەواڵی بازاڕ</b>",
     "━━━━━━━━━━━━━━━",
     "",
     body,
     "",
     "━━━━━━━━━━━━━━━",
-    `<i>🕒 ${nowStamp()}</i>`,
-    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+    `<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>`,
   ].join("\n");
 }
 
@@ -760,69 +776,75 @@ function specialEventHead(title: string): string {
 
 async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAlerts: SignalMsg[]; specialAlerts: string[] }> {
   const events = await getHighImpactEvents();
-  const state = await getState("events"); // { alertedKeys, remindKeys, resultKeys, preGold }
+  const state = await getState("events"); // { alertedKeys, resultKeys, preGold }
   const alerted = new Set((state.alertedKeys as string[]) ?? []);
-  const reminded = new Set((state.remindKeys as string[]) ?? []);
   const resulted = new Set((state.resultKeys as string[]) ?? []);
   const preGold: Record<string, number> = (state.preGold as Record<string, number>) ?? {};
   const now = Date.now();
-  const calendarAlerts: string[] = [];     // pure news / heads-up / result info (NO trade targets)
-  const signalAlerts: SignalMsg[] = [];    // news-driven trade targets (sent as separate messages)
+  const calendarAlerts: string[] = [];     // heads-up + result info (NO trade targets)
+  const signalAlerts: SignalMsg[] = [];    // news-driven trade targets (sent separately)
   const specialAlerts: string[] = [];      // dedicated 🚨 FOMC/NFP result alerts
-  let goldPrice: number | null = null; // fetched lazily for USD-event gold bias
+  let goldPrice: number | null = null;     // fetched lazily for USD-event gold bias
 
-
+  // Persist all upcoming high-impact events for the dashboard.
   for (const ev of events) {
-    // Persist upcoming events for the dashboard.
     await admin.from("economic_events").upsert({
       ext_key: ev.key, title: ev.title, currency: ev.currency, impact: ev.impact,
       event_time: new Date(ev.time).toISOString(), forecast: ev.forecast, previous: ev.previous,
     }, { onConflict: "ext_key" });
+  }
 
-    const minutes = (ev.time - now) / 60_000;
-
-    // 1) EARLY heads-up → fired once between the 5-min reminder window and EVENT_ALERT_MIN.
-    if (minutes > EVENT_REMINDER_MIN && minutes <= EVENT_ALERT_MIN && !alerted.has(ev.key)) {
-      alerted.add(ev.key);
-      calendarAlerts.push([
-        `🟠⚠️ <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
-        `🕒 In ${Math.round(minutes)} min · لە ${Math.round(minutes)} خولەکدا`,
-        ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
-        `ئامادە بە — تارگێت دوای دەرچوونی هەواڵەکە دەنێردرێت`,
-      ].filter(Boolean).join("\n"));
-    }
-
-    // 2) FINAL 5-minute reminder → fired once inside the last EVENT_REMINDER_MIN minutes.
-    if (minutes >= 0 && minutes <= EVENT_REMINDER_MIN && !reminded.has(ev.key)) {
-      reminded.add(ev.key);
-      // Snapshot gold just before a tier-1 USD release so we can measure the reaction.
-      if (isFomcNfp(ev.title) && ev.currency.toUpperCase() === "USD" && preGold[ev.key] == null) {
-        if (goldPrice === null) { const g = await fetchGold(); goldPrice = g?.price ?? null; }
-        if (goldPrice) preGold[ev.key] = goldPrice;
+  // ── ALERT 1 of 2: ONE combined heads-up ≤30 min before release. Events firing
+  // at the SAME time are merged into a single message (grouped by currency, shown
+  // as a "PACKAGE" when one currency has 2+ events at that time). No 5-min spam.
+  {
+    const upcoming = events
+      .filter((ev) => { const m = (ev.time - now) / 60_000; return m > 0 && m <= EVENT_ALERT_MIN && !alerted.has(ev.key); })
+      .sort((a, b) => a.time - b.time);
+    if (upcoming.length) {
+      for (const ev of upcoming) {
+        alerted.add(ev.key);
+        // Snapshot gold before a tier-1 USD release so we can measure the reaction later.
+        if (isFomcNfp(ev.title) && ev.currency.toUpperCase() === "USD" && preGold[ev.key] == null) {
+          if (goldPrice === null) { const g = await fetchGold(); goldPrice = g?.price ?? null; }
+          if (goldPrice) preGold[ev.key] = goldPrice;
+        }
       }
-      const left = Math.max(0, Math.round(minutes));
-      calendarAlerts.push([
-        `🔔⏰ <b>بیرهێنانەوە / REMINDER</b>`,
-        `🟠 <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
-        `🕒 ${left} min left · ${left} خولەک ماوە بۆ دەرچوونی هەواڵەکە`,
-        ev.forecast ? `Forecast: <code>${esc(ev.forecast)}</code> · Prev: <code>${esc(ev.previous)}</code>` : "",
-        `🟢🔴 ئامادە بە بۆ کڕین یان فرۆشتن / Get ready to BUY or SELL`,
-      ].filter(Boolean).join("\n"));
+      const minsTo = Math.max(1, Math.round((upcoming[0].time - now) / 60_000));
+      const head = [
+        `⚠️ ${upcoming.length} High-Impact Event${upcoming.length > 1 ? "s" : ""} in ${minsTo} min`,
+        `${upcoming.length} ئیڤێنتی گرنگ لە ${minsTo} خولەکدا`,
+      ];
+      const byTime = new Map<number, CalEvent[]>();
+      for (const ev of upcoming) { const a = byTime.get(ev.time) ?? []; a.push(ev); byTime.set(ev.time, a); }
+      const blocks: string[] = [];
+      for (const [time, evs] of [...byTime.entries()].sort((a, b) => a[0] - b[0])) {
+        const tLabel = new Date(time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
+        const byCcy = new Map<string, CalEvent[]>();
+        for (const ev of evs) { const a = byCcy.get(ev.currency) ?? []; a.push(ev); byCcy.set(ev.currency, a); }
+        for (const [ccy, list] of byCcy.entries()) {
+          const isPkg = list.length > 1;
+          const title = `${ccyFlag(ccy)} <b>${esc(ccy)}${isPkg ? " PACKAGE" : ""}</b> · ${tLabel} UTC`;
+          const items = list.map((ev) => `• ${esc(ev.title)}${ev.forecast ? `: Fcst ${esc(ev.forecast)}` : ""}`);
+          blocks.push([title, ...items, "", goldImpactLine(ccy)].join("\n"));
+        }
+      }
+      calendarAlerts.push([...head, "", blocks.join("\n\n")].join("\n"));
     }
+  }
 
-
-
-    // 2) AFTER the event releases → post the RESULT + market reaction/bias.
+  for (const ev of events) {
+    // ── ALERT 2 of 2: AFTER the event releases → post the RESULT + market reaction.
     // Only when an actual figure exists, event is in the past but recent (<=6h), and not yet posted.
     const minsSince = (now - ev.time) / 60_000;
     if (ev.actual && minsSince >= 0 && minsSince <= 360 && !resulted.has(ev.key)) {
       resulted.add(ev.key);
 
-      // News block: result figures + market bias (no concrete Entry/TP/SL here).
+      // Result block: figures + market bias (no concrete Entry/TP/SL here).
       const lines: string[] = [
-        `🏁 <b>RESULT / ئەنجامی هەواڵ</b>`,
-        `📅 <b>${esc(ev.title)}</b> (${esc(ev.currency)})`,
-        `Actual: <code>${esc(ev.actual)}</code> · Forecast: <code>${esc(ev.forecast || "—")}</code> · Prev: <code>${esc(ev.previous || "—")}</code>`,
+        `🏁 <b>RESULT · ئەنجامی ئیڤێنت</b>`,
+        `${ccyFlag(ev.currency)} <b>${esc(ev.title)}</b> · ${esc(ev.currency)}`,
+        `📊 Actual: <code>${esc(ev.actual)}</code> · Fcst: <code>${esc(ev.forecast || "—")}</code> · Prev: <code>${esc(ev.previous || "—")}</code>`,
       ];
 
       const a = parseFigure(ev.actual);
@@ -911,7 +933,6 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
   // Keep last 100 keys of each kind (+ pending pre-event gold snapshots).
   await setState("events", {
     alertedKeys: [...alerted].slice(-100),
-    remindKeys: [...reminded].slice(-100),
     resultKeys: [...resulted].slice(-100),
     preGold,
   });
@@ -1119,35 +1140,28 @@ async function enrichNews(items: NewsItem[], priceBySymbol: Record<string, numbe
 const CAT_EMOJI: Record<string, string> = { GOLD: "🟡", OIL: "🟠", CRYPTO: "🟣", FOREX: "🔵", MARKETS: "🟢" };
 
 // Build one bilingual news block — NO external links / sources.
+// Count words in a string (used for the news content-quality gate).
+function wordCount(s: string): number {
+  return String(s || "").trim().split(/\s+/).filter(Boolean).length;
+}
+
+// Clean bilingual news card: asset header, headline, EN + KU summary, impact + tip.
 function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
   const dot = CAT_EMOJI[n.category] ?? "🔹";
   const al = ASSET_LABEL[n.category] ?? { en: n.category, ku: n.category };
   const im = IMPACT_META[e.impact] ?? IMPACT_META.NEUTRAL;
-  const ur = URGENCY_META[e.urgency] ?? URGENCY_META.INFO;
   const summaryEn = (e.summaryEn || n.summary || "").trim();
+  const headline = (e.titleKu || n.title || "").trim();
   const parts: string[] = [
-    `${ur.emoji} <b>${esc(ur.en)} / ${esc(ur.ku)}</b>`,
+    `${dot} <b>${esc(al.en.toUpperCase())} · ${esc(al.ku)}</b>`,
     "",
-    `${dot} <b>${esc(n.category)}</b>`,
+    `📌 ${esc(headline)}`,
   ];
-  if (e.titleKu) parts.push(esc(e.titleKu));
-  if (summaryEn) parts.push("", "📝 <b>English:</b>", esc(summaryEn));
-  if (e.summaryKu) parts.push("", "📝 <b>کوردی:</b>", esc(e.summaryKu));
-  parts.push(
-    "",
-    `🎯 ${esc(al.en)} Impact: ${e.impact} ${im.emoji}`,
-    `کاریگەری بۆ ${esc(al.ku)}: ${im.ku}`,
-  );
-  if (e.tipEn || e.tipKu) {
-    parts.push("", "💡 <b>Trader Tip / تێبینی بۆ ترەیدەر:</b>");
-    if (e.tipEn) parts.push(esc(e.tipEn));
-    if (e.tipKu) parts.push(esc(e.tipKu));
-  }
-  if (e.relatedEn || e.relatedKu) {
-    parts.push("", "🔗 <b>Related / پەیوەندیدار:</b>");
-    if (e.relatedEn) parts.push(esc(e.relatedEn));
-    if (e.relatedKu) parts.push(esc(e.relatedKu));
-  }
+  if (summaryEn) parts.push("", `🇬🇧 ${esc(summaryEn)}`);
+  if (e.summaryKu) parts.push("", `🇮🇶 ${esc(e.summaryKu)}`);
+  parts.push("", `📊 کاریگەری: ${e.impact} ${im.emoji} ${im.ku}`);
+  if (e.tipKu) parts.push(`💡 ${esc(e.tipKu)}`);
+  else if (e.tipEn) parts.push(`💡 ${esc(e.tipEn)}`);
   return parts.join("\n");
 }
 
@@ -1216,6 +1230,12 @@ async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
 
   const out: NewsOut[] = [];
   for (const c of bestByAsset.values()) {
+    // CONTENT-QUALITY GATE: never post an empty/thin news card. Require a real
+    // headline (≥6 words) AND a substantial summary (≥40 words). Skip otherwise.
+    const headline = (c.e.titleKu || c.n.title || "").trim();
+    const summary = (c.e.summaryEn || c.n.summary || "").trim();
+    if (wordCount(c.n.title) < 6 && wordCount(headline) < 6) continue;
+    if (wordCount(summary) < 40) continue;
     out.push({
       block: newsBlockItem(c.n, c.e),
       headline: c.n.title,
@@ -1342,6 +1362,77 @@ async function todaysKeyEvents(opts?: { usdOnly?: boolean; futureOnly?: boolean 
   });
 }
 
+// Country/currency → flag emoji for calendar + session cards.
+const CCY_FLAG: Record<string, string> = {
+  USD: "🇺🇸", EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵", CHF: "🇨🇭", CAD: "🇨🇦",
+  AUD: "🇦🇺", NZD: "🇳🇿", CNY: "🇨🇳",
+};
+function ccyFlag(c: string): string {
+  return CCY_FLAG[String(c || "").toUpperCase()] ?? "🏳️";
+}
+
+// Generic bilingual gold-impact hint for a calendar currency.
+function goldImpactLine(ccy: string): string {
+  const c = String(ccy || "").toUpperCase();
+  if (c === "USD") {
+    return [
+      "📊 Gold Impact / کاریگەری زێڕ:",
+      "ئەگەر داتا بەهێز بوو → SELL زێڕ 🔴",
+      "ئەگەر داتا لاواز بوو → BUY زێڕ 🟢",
+    ].join("\n");
+  }
+  return [
+    "📊 Gold Impact / کاریگەری زێڕ:",
+    "ئاگاداربە لە جوڵەی بازاڕ 🟡 · Watch for volatility",
+  ].join("\n");
+}
+
+// London-clock label for a fixed UTC hour (handles BST/GMT). E.g. London open 07 UTC → "08:00".
+function sessionLocalLabel(hourUtc: number, now: Date): string {
+  const d = new Date(now);
+  d.setUTCHours(hourUtc, 0, 0, 0);
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
+}
+
+// Yesterday's date string (UTC) relative to a reference date.
+function yesterdayStr(now: Date): string {
+  const d = new Date(now);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+// Closed-signal stats for a single UTC day (whole channel, all sessions).
+async function dayStats(day: string): Promise<{ total: number; won: number; lost: number; rate: number }> {
+  const start = new Date(`${day}T00:00:00.000Z`).toISOString();
+  const end = new Date(`${day}T23:59:59.999Z`).toISOString();
+  const { data } = await admin.from("ai_signals")
+    .select("status, closed_at")
+    .gte("closed_at", start).lte("closed_at", end)
+    .in("status", ["target_hit", "stopped_out"]);
+  const rows = (data ?? []) as { status: string }[];
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const lost = rows.filter((r) => r.status === "stopped_out").length;
+  const total = rows.length;
+  return { total, won, lost, rate: total ? Math.round((won / total) * 100) : 0 };
+}
+
+// Today's high-impact events as session-card lines: "🕐 08:30 · SNB Rate Decision 🇨🇭"
+async function keyEventLines(opts?: { usdOnly?: boolean; futureOnly?: boolean }): Promise<string[]> {
+  const events = await getHighImpactEvents();
+  const now = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
+  return events
+    .filter((e) => new Date(e.time).toISOString().slice(0, 10) === today)
+    .filter((e) => (opts?.usdOnly ? /USD/i.test(e.currency) : true))
+    .filter((e) => (opts?.futureOnly ? e.time >= now : true))
+    .sort((a, b) => a.time - b.time)
+    .slice(0, 6)
+    .map((e) => {
+      const t = new Date(e.time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
+      return `🕐 ${t} · ${esc(e.title)} ${ccyFlag(e.currency)}`;
+    });
+}
+
 // ── session open price snapshot (for close-session % change) ──
 async function recordSessionOpenPrices(region: Region, day: string, quotes: Quote[]) {
   const state = await getState("session_open_prices");
@@ -1389,46 +1480,68 @@ async function sessionSignalStats(region: Region, day: string): Promise<{ total:
   };
 }
 
+// Rich close stats for one region/day: totals, pips, P/L, win-rate, best signal.
+async function sessionCloseStats(region: Region, day: string): Promise<{
+  total: number; won: number; lost: number; pips: number; pl: number; rate: number; best?: DailyRow;
+}> {
+  const startUtc = new Date(`${day}T00:00:00.000Z`).toISOString();
+  const { data } = await admin.from("ai_signals")
+    .select("asset, signal, entry, close_price, status, result_pips, market_session, closed_at")
+    .gte("closed_at", startUtc)
+    .in("status", ["target_hit", "stopped_out"]);
+  const rows = ((data ?? []) as DailyRow[]).filter((r) => rowRegion(r.market_session) === region);
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const lost = rows.filter((r) => r.status === "stopped_out").length;
+  const pips = rows.reduce((s, r) => s + rowPips(r), 0);
+  const winners = rows.filter((r) => r.status === "target_hit").sort((a, b) => rowPips(b) - rowPips(a));
+  return {
+    total: rows.length, won, lost, pips, pl: pipsToDollars(pips),
+    rate: rows.length ? Math.round((won / rows.length) * 100) : 0,
+    best: winners[0],
+  };
+}
+
+// Friendly "what's next" line per region close.
+function nextSessionLine(region: Region): string {
+  if (region === "Asia") return "⏭ Next: London Session · لەندەن";
+  if (region === "London") return "⏭ Next: New York Session · نیویۆرک";
+  return "⏭ Next: Daily Report at 22:00 BST";
+}
+
 // ── OPEN message builder ──
 async function sessionOpenMessage(region: Region, quotes: Quote[], now: Date): Promise<string> {
   const { gold, oil, btc } = q3(quotes);
-  const utcLabel = `${String(SESSION_OPEN_HOURS[region]).padStart(2, "0")}:00`;
-  const lonLabel = londonHourLabel(now);
+  const bstLabel = sessionLocalLabel(SESSION_OPEN_HOURS[region], now);
+  const buys = quotes.filter((q) => ruleSignal(q.changePct) === "BUY").length;
+  const sells = quotes.filter((q) => ruleSignal(q.changePct) === "SELL").length;
+  const overall = buys > sells ? "BULLISH 🟢" : sells > buys ? "BEARISH 🔴" : "NEUTRAL 🟡";
+  const overallKu = buys > sells ? "بەرزبوونەوە" : sells > buys ? "دابەزین" : "مامناوەند";
+  const ev = region === "New York"
+    ? await keyEventLines({ usdOnly: true, futureOnly: true })
+    : await keyEventLines({ futureOnly: true });
+  const yest = await dayStats(yesterdayStr(now));
+
   const lines: string[] = [
     "━━━━━━━━━━━━━━━",
-    `${REGION_EMOJI[region]} <b>${REGION_KU[region]} کرایەوە</b>`,
     `${REGION_EMOJI[region]} <b>${region} Session Open</b>`,
+    `${REGION_KU[region]} کرایەوە · ${bstLabel} BST`,
     "━━━━━━━━━━━━━━━",
-    `🕐 ${utcLabel} UTC | ${lonLabel} London`,
+    "💰 <b>Live Prices / نرخی زیندوو:</b>",
+    priceWithChangeLine(gold, "🥇", "Gold"),
+    priceWithChangeLine(oil, "🛢", "Oil"),
+    priceWithChangeLine(btc, "₿", "BTC"),
+    "",
+    `📊 <b>Overall Bias: ${overall}</b>`,
+    `مەیلی گشتی: ${overallKu}`,
+    "",
+    "⚠️ <b>Key Events Today / ئیڤێنتی گرنگ:</b>",
+    ev.length ? ev.join("\n") : "🕐 No high-impact events · هیچ ئیڤێنتێک نییە",
+    "",
+    "🤖 Bot: ACTIVE · چالاک",
+    `📊 Yesterday: ${yest.total} signals · ${yest.won} won (${yest.rate}%)`,
+    "━━━━━━━━━━━━━━━",
+    "<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>",
   ];
-
-  if (region === "Asia") {
-    lines.push("📊 Markets now active: JPY, AUD, NZD", "");
-    lines.push(plainPriceLine(gold, "🥇", "Gold"), plainPriceLine(oil, "🛢", "Oil"), plainPriceLine(btc, "₿", "BTC"), "");
-    lines.push("📈 <b>Bias / ئاراستەی بازاڕ:</b>");
-    lines.push(`🥇 Gold: ${gold ? biasLabel(gold.changePct) : "—"}`);
-    lines.push(`🛢 Oil: ${oil ? biasLabel(oil.changePct) : "—"}`);
-    lines.push(`₿ BTC: ${btc ? biasLabel(btc.changePct) : "—"}`, "");
-    lines.push("⚡ First Signal Expected:", "Within 30 minutes of open");
-  } else if (region === "London") {
-    lines.push("📊 High volatility expected!", "جووڵانی بەهێز چاوەڕوانە!", "");
-    lines.push(priceWithChangeLine(gold, "🥇", "Gold"), priceWithChangeLine(oil, "🛢", "Oil"), priceWithChangeLine(btc, "₿", "BTC"), "");
-    const buys = quotes.filter((q) => ruleSignal(q.changePct) === "BUY").length;
-    const sells = quotes.filter((q) => ruleSignal(q.changePct) === "SELL").length;
-    const outlook = buys > sells ? "🟢 Bullish — مەیلی کڕین" : sells > buys ? "🔴 Bearish — مەیلی فرۆشتن" : "🟡 Neutral — مامناوەند";
-    lines.push("📈 <b>Session Outlook / دیدی سێشن:</b>", outlook, "");
-    const ev = await todaysKeyEvents();
-    lines.push("🗓 <b>Key Events Today:</b>", ev.length ? ev.join("\n") : "• No high-impact events", "");
-    lines.push("⚡ Bot Status: ACTIVE - watching for signals", "بۆت چالاکە - لە دوای سیگناڵدا دەگەڕێت");
-  } else {
-    lines.push("📊 USD pairs most active now!", "");
-    lines.push(plainPriceLine(gold, "🥇", "Gold"), plainPriceLine(oil, "🛢", "Oil"), plainPriceLine(btc, "₿", "BTC"), "");
-    const ev = await todaysKeyEvents({ usdOnly: true, futureOnly: true });
-    lines.push("🗓 <b>US Events Today:</b>", ev.length ? ev.join("\n") : "• No USD events remaining", "");
-    lines.push("⚡ Bot Status: ACTIVE");
-  }
-
-  lines.push("━━━━━━━━━━━━━━━", "<i>ئەمە ڕاوێژی دارایی نییە</i>");
   return lines.join("\n");
 }
 
@@ -1436,26 +1549,44 @@ async function sessionOpenMessage(region: Region, quotes: Quote[], now: Date): P
 async function sessionCloseMessage(region: Region, quotes: Quote[], day: string): Promise<string> {
   const { gold, oil, btc } = q3(quotes);
   const open = await getSessionOpenPrices(region, day);
-  const stats = await sessionSignalStats(region, day);
+  const s = await sessionCloseStats(region, day);
+  const closeLabel = sessionLocalLabel(SESSION_CLOSE_HOURS[region], new Date());
+  const plDot = s.pl >= 0 ? "🟢" : "🔴";
+
   const lines: string[] = [
     "━━━━━━━━━━━━━━━",
-    `${REGION_EMOJI[region]} <b>${REGION_KU[region]} داخرا</b>`,
     `${REGION_EMOJI[region]} <b>${region} Session Closed</b>`,
+    `${REGION_KU[region]} داخرا · ${closeLabel} BST`,
     "━━━━━━━━━━━━━━━",
-    `📊 <b>${region} Summary / پوختەی ${REGION_KU[region]}:</b>`,
+    "📊 <b>Session Results / ئەنجامی سێشن:</b>",
+    "",
     sessionChangeLine(gold, "🥇", "Gold", open?.["XAU/USD"]),
     sessionChangeLine(oil, "🛢", "Oil", open?.["WTI/USD"]),
     sessionChangeLine(btc, "₿", "BTC", open?.["BTC/USD"]),
     "",
-    `✅ Signals this session: ${stats.total}`,
-    `🏆 Won: ${stats.won} | ❌ Lost: ${stats.lost}`,
+    "🤖 <b>Bot Performance:</b>",
+    `📈 Signals: ${s.total}`,
+    `✅ Won: ${s.won} · ❌ Lost: ${s.lost}`,
+    `💰 P/L: ${plDot} ${plStr(s.pl)}`,
+    `📊 Win Rate: ${s.rate}%`,
   ];
-  if (region === "New York") {
-    lines.push("", "⏭ Next: Daily Report at 22:00 BST");
+
+  if (s.best) {
+    const meta = ASSET_META[s.best.asset] ?? { emoji: "🥇", name: s.best.asset };
+    const entry = Number(s.best.entry) || 0;
+    const close = Number(s.best.close_price) || 0;
+    const delta = s.best.signal === "SELL" ? entry - close : close - entry;
+    lines.push(
+      "",
+      `🏆 Best: ${meta.name} ${s.best.signal} $${fmt(entry)}→$${fmt(close)}`,
+      `${delta >= 0 ? "+" : "-"}$${fmt(Math.abs(delta))} · ${pipsStr(rowPips(s.best))} pips ✅`,
+    );
   }
-  lines.push("━━━━━━━━━━━━━━━", "<i>ئەمە ڕاوێژی دارایی نییە</i>");
+
+  lines.push("", nextSessionLine(region), "━━━━━━━━━━━━━━━", "<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>");
   return lines.join("\n");
 }
+
 
 // Dedup helpers against session_posts_log.
 async function wasSessionPosted(region: Region, kind: "open" | "close", day: string): Promise<boolean> {
@@ -1558,7 +1689,33 @@ function sessionRegionBlock(region: Region, rows: DailyRow[]): string {
 // Fires once per day during the 21:00 UTC (22:00 BST) hour; deduped by calendar date.
 // Pass { force: true } to build the report regardless of the time/dedupe gates
 // (used by the preview/test handler — does not touch the dedupe state).
-async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }): Promise<string | null> {
+// Daily performance line: "🥇 Gold: $4,290 🔴▼ -$63 (-1.5%)"
+function dailyPerfLine(q: Quote | undefined, emoji: string, name: string): string {
+  if (!q) return `${emoji} ${name}: —`;
+  const up = q.changePct >= 0;
+  const arrow = up ? "🟢▲" : "🔴▼";
+  const delta = q.price * (q.changePct / 100);
+  const sign = delta >= 0 ? "+" : "-";
+  return `${emoji} ${name}: <code>$${fmt(q.price)}</code> ${arrow} ${sign}$${fmt(Math.abs(delta))} (${up ? "+" : ""}${q.changePct.toFixed(2)}%)`;
+}
+
+// Tomorrow's high-impact events as "🕐 12:30 BST · Philly Fed 🇺🇸" lines.
+async function tomorrowKeyEventLines(): Promise<string[]> {
+  const events = await getHighImpactEvents();
+  const t = new Date();
+  t.setUTCDate(t.getUTCDate() + 1);
+  const day = t.toISOString().slice(0, 10);
+  return events
+    .filter((e) => new Date(e.time).toISOString().slice(0, 10) === day)
+    .sort((a, b) => a.time - b.time)
+    .slice(0, 6)
+    .map((e) => {
+      const tl = new Date(e.time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" });
+      return `🕐 ${tl} BST · ${esc(e.title)} ${ccyFlag(e.currency)}`;
+    });
+}
+
+async function evaluateDailySummary(quotes: Quote[], opts?: { force?: boolean }): Promise<string | null> {
   const now = new Date();
   const day = now.toISOString().slice(0, 10);
   if (!opts?.force) {
@@ -1568,10 +1725,16 @@ async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }
     await setState("daily_summary", { lastDay: day });
   }
 
-
   const dateLabel = now.toLocaleDateString("en-GB", {
     weekday: "long", month: "short", day: "numeric", year: "numeric", timeZone: "Europe/London",
   });
+
+  // Live market performance (use passed quotes; fall back to a fresh fetch).
+  const q = (quotes && quotes.length) ? quotes : await getPrices();
+  const { gold, oil, btc } = q3(q);
+
+  // Tomorrow's key events.
+  const tomorrow = await tomorrowKeyEventLines();
 
   const header = [
     "━━━━━━━━━━━━━━━━━━━━━",
@@ -1580,13 +1743,21 @@ async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }
     "━━━━━━━━━━━━━━━━━━━━━",
     `📅 ${esc(dateLabel)}`,
     "",
+    "💰 <b>Market Performance:</b>",
+    dailyPerfLine(gold, "🥇", "Gold"),
+    dailyPerfLine(oil, "🛢", "Oil"),
+    dailyPerfLine(btc, "₿", "BTC"),
+    "",
+  ];
+  const tomorrowBlock = [
+    "📊 <b>Tomorrow's Key Events / ئیڤێنتی سبەی:</b>",
+    tomorrow.length ? tomorrow.join("\n") : "🕐 No high-impact events · هیچ ئیڤێنتێک نییە",
+    "",
   ];
   const footer = [
     "━━━━━━━━━━━━━━━━━━━━━",
-    "📱 <b>بچۆ بۆ چەنالەکە</b>",
-    "https://t.me/goldmarketai",
+    "📱 t.me/goldmarketai",
     "━━━━━━━━━━━━━━━━━━━━━",
-    `<i>🕒 ${nowStamp()}</i>`,
     "<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>",
   ];
 
@@ -1598,22 +1769,25 @@ async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }
     .in("status", ["target_hit", "stopped_out"]);
   const rows = (closed ?? []) as DailyRow[];
 
-  // No signals today → still send a summary.
+  const sigText = (r: DailyRow) => {
+    const meta = ASSET_META[r.asset] ?? { emoji: "🥇", name: r.asset };
+    const entry = Number(r.entry) || 0;
+    const close = Number(r.close_price) || 0;
+    const delta = r.signal === "SELL" ? entry - close : close - entry;
+    return { meta, entry, close, delta };
+  };
+
+  // No closed signals today → still send a full report (prices + tomorrow events).
   if (rows.length === 0) {
     return [
       ...header,
-      "😴 <b>No signals generated today</b>",
-      "<i>هیچ سیگناڵێک ئەمڕۆ نەنێردرا</i>",
+      "🤖 <b>Bot Results:</b>",
+      "Total Signals: 0",
+      "<i>هیچ سیگناڵێک ئەمڕۆ نەداخرا</i>",
       "",
+      ...tomorrowBlock,
       ...footer,
     ].join("\n");
-  }
-
-  // Group by region.
-  const byRegion: Record<Region, DailyRow[]> = { Asia: [], London: [], "New York": [] };
-  for (const r of rows) {
-    const reg = rowRegion(r.market_session);
-    if (reg) byRegion[reg].push(r);
   }
 
   // Totals.
@@ -1630,60 +1804,31 @@ async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }
   const losers = rows.filter((r) => r.status === "stopped_out").sort((a, b) => rowPips(a) - rowPips(b));
   const best = winners[0];
   const worst = losers[0];
-
-  const sigText = (r: DailyRow) => {
-    const meta = ASSET_META[r.asset] ?? { emoji: "🥇", name: r.asset };
-    const entry = Number(r.entry) || 0;
-    const close = Number(r.close_price) || 0;
-    const delta = r.signal === "SELL" ? entry - close : close - entry;
-    return { meta, entry, close, delta };
-  };
+  const bestPl = best ? pipsToDollars(rowPips(best)) : 0;
+  const worstPl = worst ? pipsToDollars(rowPips(worst)) : 0;
 
   const lines: string[] = [
     ...header,
-    "🌍 <b>SESSION BREAKDOWN:</b>",
-    "<i>سەرکەوتنی هەر سێشنێک</i>",
+    "🤖 <b>Bot Results:</b>",
+    `Total Signals: ${trades}`,
+    `✅ Won: ${won} (${winRate}% win rate)`,
+    `❌ Lost: ${lost}`,
+    `💰 Total P/L: ${netDot} ${plStr(netPl)}`,
+    `📈 Best: ${plStr(bestPl)} · 📉 Worst: ${plStr(worstPl)}`,
     "",
-    sessionRegionBlock("Asia", byRegion.Asia),
-    "",
-    sessionRegionBlock("London", byRegion.London),
-    "",
-    sessionRegionBlock("New York", byRegion["New York"]),
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━",
-    "📊 <b>TOTAL TODAY</b>",
-    "━━━━━━━━━━━━━━━━━━━━━",
-    `🥇 Signals: <b>${trades}</b> total`,
-    `✅ Won: <b>${won}</b> (${winRate}% win rate)`,
-    `❌ Lost: <b>${lost}</b>`,
-    `📈 Total Pips: <b>${pipsStr(totalPips)}</b>`,
-    `💰 Net P/L: ${netDot} <b>${plStr(netPl)}</b>`,
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━",
   ];
 
   if (best) {
     const b = sigText(best);
     lines.push(
-      "🏆 <b>BEST SIGNAL TODAY</b>",
-      `${b.meta.emoji} ${b.meta.name} ${best.signal} @ <code>$${fmt(b.entry)}</code>`,
-      `✅ Hit TP: <code>$${fmt(b.close)}</code> (${b.delta >= 0 ? "+" : "-"}$${fmt(Math.abs(b.delta))})`,
-      `📈 ${pipsStr(rowPips(best))} pips`,
-      "",
-    );
-  }
-  if (worst) {
-    const w = sigText(worst);
-    lines.push(
-      "❌ <b>MISSED SIGNAL</b>",
-      `${w.meta.emoji} ${w.meta.name} ${worst.signal} @ <code>$${fmt(w.entry)}</code>`,
-      `🛑 Hit SL: <code>$${fmt(w.close)}</code> (${w.delta >= 0 ? "+" : "-"}$${fmt(Math.abs(w.delta))})`,
-      `📉 ${pipsStr(rowPips(worst))} pips`,
+      "🏆 <b>Signal of the Day / سیگناڵی ڕۆژ:</b>",
+      `${b.meta.name} ${best.signal} $${fmt(b.entry)} → $${fmt(b.close)}`,
+      `${plStr(bestPl)} · ${pipsStr(rowPips(best))} pips ✅`,
       "",
     );
   }
 
-  lines.push(...footer);
+  lines.push(...tomorrowBlock, ...footer);
   return lines.join("\n");
 }
 
