@@ -1279,7 +1279,7 @@ Deno.serve(async (req) => {
         "",
       ];
       if (newsBlock.length) {
-        lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "", newsBlock.join("\n\n"), "");
+        lines.push("📰 <b>Market News / هەواڵی بازاڕ</b>", "", newsBlock.join("\n\n━━━━━━━━━━━━━━━\n\n"), "");
       }
       lines.push("━━━━━━━━━━━━━━━");
       lines.push(`<i>🕒 ${nowStamp()}</i>`);
