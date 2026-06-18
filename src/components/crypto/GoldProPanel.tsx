@@ -12,7 +12,7 @@ import { GoldSignalPanel } from '@/components/crypto/GoldSignalPanel';
 import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { SignalHistory } from '@/components/crypto/SignalHistory';
 import { Crown, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
-import { TelegramSignalCta } from '@/components/TelegramSignalCta';
+
 
 interface Props {
   candles: OHLCCandle[];
@@ -205,11 +205,6 @@ export function GoldProPanel({ candles, price }: Props) {
         <p className="text-[10px] text-[#848e9c] mt-2 leading-relaxed">
           {bi('ئەمە یارمەتیدەرە نەک ڕاوێژی دارایی. هەمیشە Stop Loss بەکاربهێنە.', 'This is guidance, not financial advice. Always use a Stop Loss.')}
         </p>
-        <div className="mt-3">
-          <TelegramSignalCta
-            label={bi('📱 لە تێلێگرام وەربگرە', '📱 Get on Telegram free')}
-          />
-        </div>
       </div>
 
 
