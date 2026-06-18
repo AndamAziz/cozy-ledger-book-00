@@ -40,6 +40,18 @@ const TARGET_IMPORTANT_MOVE_PCT = 0.6;   // |change| ≥ this % ⇒ send target 
 const PRICE_INTERVAL_MS = 5_000;
 const LOOP_WINDOW_MS = 50_000;
 
+// Multi-timeframe signal cascade. When a NEW signal opens we post the 5M setup
+// immediately, then auto-post the higher timeframes on a staggered schedule so
+// users see the same trade confirmed across 5M → 15M → 30M → 1H. Each higher
+// timeframe uses a wider target / stop (it's a longer hold). Delays are measured
+// from the moment the first (5M) signal is sent.
+const TIMEFRAME_CASCADE: { tf: string; delayMs: number; tpMult: number; slMult: number }[] = [
+  { tf: "5M",  delayMs: 0,            tpMult: 1.0, slMult: 1.0 },
+  { tf: "15M", delayMs: 5 * 60_000,  tpMult: 1.8, slMult: 1.4 },
+  { tf: "30M", delayMs: 15 * 60_000, tpMult: 2.6, slMult: 1.9 },
+  { tf: "1H",  delayMs: 30 * 60_000, tpMult: 4.0, slMult: 2.8 },
+];
+
 // News is broadcast at most once per 60 minutes (its own standalone message).
 const NEWS_MIN_GAP_MS = 60 * 60_000;
 
@@ -532,7 +544,7 @@ function signalRationale(q: Quote, sig: "BUY" | "SELL"): { en: string; ku: strin
 // Full BUY/SELL trade setup with entry, full target and stop loss (clean RTL layout).
 function newSignalLine(
   q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
-  confidence: number, session: string,
+  confidence: number, session: string, tf?: string,
 ): string {
   const m = ASSET_META[q.symbol];
   const tpDelta = Math.abs(tp - q.price);
@@ -557,6 +569,7 @@ function newSignalLine(
       ];
   return [
     `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
+    tf ? `⏱ <b>Timeframe: ${tf}</b> · چوارچێوەی کات` : "",
     "",
     `💰 <code>$${fmt(q.price)}</code> :نرخی چوونەژوورەوە`,
     `🎯 <code>$${fmt(tp)}</code> :تارگێت (+$${fmt(tpDelta)})`,
@@ -665,12 +678,17 @@ interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: numb
 // A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
 // `reason` tells the user why this specific target was sent (very important, cooldown, news, etc.).
 interface SignalMsg { text: string; important: boolean; reason: string; }
+// A queued higher-timeframe signal waiting for its scheduled send time.
+interface TfQueueItem { dueAt: number; text: string; reason: string; symbol: string; tf: string; }
+
 
 async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAlerts: string[]; quotes: Quote[] }> {
   const quotes = await getPrices();
   const priceState = await getState("prices");      // { "XAU/USD": { price, signal } }
   const openState = await getState("open_signals"); // { "XAU/USD": OpenSig }
   const enabledRegions = await getEnabledRegions(); // which markets may open new targets
+  // Pending higher-timeframe (15M/30M/1H) signals waiting for their staggered send time.
+  const tfQueue = ((await getState("tf_queue")).items as TfQueueItem[]) ?? [];
   const signalAlerts: SignalMsg[] = [];
   const outcomeAlerts: string[] = [];
 
@@ -765,14 +783,32 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
         }).select("id").maybeSingle();
 
-        const important = confidence >= TARGET_IMPORTANT_CONFIDENCE || Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
         const highConf = confidence >= TARGET_IMPORTANT_CONFIDENCE;
         const strongMoveImp = Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
         let reason = "⏱ Cooldown passed / throttle finished · کاتژمێری کۆتایی هات";
         if (highConf && strongMoveImp) reason = "🔥 Very important: high confidence + strong move · زۆر گرنگ: متمانە بەرز + جوڵە بەهێز";
         else if (highConf) reason = "🔥 Very important: high confidence · زۆر گرنگ: متمانە بەرز";
         else if (strongMoveImp) reason = "🔥 Very important: strong move · زۆر گرنگ: جوڵە بەهێز";
-        signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important, reason });
+
+        // Multi-timeframe cascade: post the 5M setup now, then schedule the
+        // 15M / 30M / 1H confirmations on a staggered timer (wider TP/SL each).
+        const now = Date.now();
+        for (const tfDef of TIMEFRAME_CASCADE) {
+          const tpPctTf = m.tpPct * tfDef.tpMult;
+          const slPctTf = m.slPct * tfDef.slMult;
+          const tpTf = +(q.price * (isBuy ? 1 + tpPctTf / 100 : 1 - tpPctTf / 100)).toFixed(2);
+          const slTf = +(q.price * (isBuy ? 1 - slPctTf / 100 : 1 + slPctTf / 100)).toFixed(2);
+          const tpPipsTf = toPips(tpTf - q.price, m.pip);
+          const slPipsTf = toPips(slTf - q.price, m.pip);
+          const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
+          const text = newSignalLine(q, sig as "BUY" | "SELL", tpTf, slTf, tpPipsTf, slPipsTf, confidence, session, tfDef.tf);
+          if (tfDef.delayMs === 0) {
+            // 5M fires immediately as a high-priority signal so it always reaches the channel.
+            signalAlerts.push({ text, important: true, reason: tfReason });
+          } else {
+            tfQueue.push({ dueAt: now + tfDef.delayMs, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
+          }
+        }
         openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
         lastSignalAt = Date.now();
         lastSignalDir = sig; // remember the direction we actually broadcast
@@ -799,7 +835,25 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 
   await setState("prices", priceState);
   await setState("open_signals", openState);
+  // Persist any newly scheduled higher-timeframe signals (cap to avoid unbounded growth).
+  await setState("tf_queue", { items: tfQueue.slice(-200) });
   return { signalAlerts, outcomeAlerts, quotes };
+}
+
+// Drain the higher-timeframe (15M/30M/1H) signal queue: return any items whose
+// scheduled send time has arrived, and rewrite the queue with the rest.
+async function drainDueTimeframeSignals(): Promise<TfQueueItem[]> {
+  const tfQueue = ((await getState("tf_queue")).items as TfQueueItem[]) ?? [];
+  if (!tfQueue.length) return [];
+  const now = Date.now();
+  const due: TfQueueItem[] = [];
+  const remaining: TfQueueItem[] = [];
+  for (const item of tfQueue) {
+    if (item.dueAt <= now) due.push(item);
+    else remaining.push(item);
+  }
+  if (due.length) await setState("tf_queue", { items: remaining });
+  return due;
 }
 
 
@@ -2600,6 +2654,13 @@ Deno.serve(async (req) => {
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
+
+    // Higher-timeframe cascade: any 15M/30M/1H signals whose staggered send time
+    // has arrived are added now (important ⇒ bypass throttle so they always post).
+    const dueTfSignals = await drainDueTimeframeSignals();
+    for (const item of dueTfSignals) {
+      signalAlerts.push({ text: item.text, important: true, reason: item.reason });
+    }
 
     let sent = false;
     let targetsSent = 0;
