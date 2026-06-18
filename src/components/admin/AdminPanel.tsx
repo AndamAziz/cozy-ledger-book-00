@@ -43,6 +43,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TelegramHealthCard } from './TelegramHealthCard';
 
 interface UserApproval {
   id: string;
