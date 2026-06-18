@@ -1008,9 +1008,9 @@ function sessionRegionBlock(region: Region, rows: DailyRow[]): string {
 // (used by the preview/test handler — does not touch the dedupe state).
 async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }): Promise<string | null> {
   const now = new Date();
+  const day = now.toISOString().slice(0, 10);
   if (!opts?.force) {
     if (now.getUTCHours() !== DAILY_SUMMARY_UTC_HOUR) return null;
-    const day = now.toISOString().slice(0, 10);
     const state = await getState("daily_summary");
     if (state.lastDay === day) return null;
     await setState("daily_summary", { lastDay: day });
