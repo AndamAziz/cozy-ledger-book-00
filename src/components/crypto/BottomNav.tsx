@@ -57,6 +57,7 @@ export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, o
     { key: 'verify', icon: Scale, label: bi('پشکنین', 'Verify'), color: '#22c55e', onPress: onVerify },
     { key: 'news', icon: Newspaper, label: bi('هەواڵ', 'News'), color: '#f0b90b', onPress: onNews },
     { key: 'convert', icon: ArrowRightLeft, label: bi('گۆڕین', 'Convert'), color: '#f0b90b', onPress: onConvert },
+    { key: 'invite', icon: UserPlus, label: bi('بانگهێشت', 'Invite'), color: TELEGRAM_BLUE, onPress: () => setInviteOpen(true) },
   ];
 
   return (
