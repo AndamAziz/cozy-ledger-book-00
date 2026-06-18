@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { passesNewsQualityGate } from "./news-quality.ts";
 
 // ───────────────────── config ─────────────────────
 const TELEGRAM_GATEWAY = "https://connector-gateway.lovable.dev/telegram";
@@ -1141,9 +1142,8 @@ const CAT_EMOJI: Record<string, string> = { GOLD: "🟡", OIL: "🟠", CRYPTO: "
 
 // Build one bilingual news block — NO external links / sources.
 // Count words in a string (used for the news content-quality gate).
-function wordCount(s: string): number {
-  return String(s || "").trim().split(/\s+/).filter(Boolean).length;
-}
+// wordCount, passesNewsQualityGate and the length thresholds live in a shared
+// module so the automated tests validate the exact same rules used here.
 
 // Clean bilingual news card: asset header, headline, EN + KU summary, impact + tip.
 function newsBlockItem(n: NewsItem, e: NewsEnrich): string {
@@ -1234,8 +1234,7 @@ async function evaluateNews(quotes: Quote[] = []): Promise<NewsOut[]> {
     // headline (≥6 words) AND a substantial summary (≥40 words). Skip otherwise.
     const headline = (c.e.titleKu || c.n.title || "").trim();
     const summary = (c.e.summaryEn || c.n.summary || "").trim();
-    if (wordCount(c.n.title) < 6 && wordCount(headline) < 6) continue;
-    if (wordCount(summary) < 40) continue;
+    if (!passesNewsQualityGate(c.n.title, headline, summary)) continue;
     out.push({
       block: newsBlockItem(c.n, c.e),
       headline: c.n.title,
