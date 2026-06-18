@@ -33,6 +33,7 @@ interface MainItem {
 
 export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, onConvert, bi }: BottomNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [tapped, setTapped] = useState<string | null>(null);
 
   const press = (key: string, fn: () => void) => {
