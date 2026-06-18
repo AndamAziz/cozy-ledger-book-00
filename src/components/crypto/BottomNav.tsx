@@ -27,7 +27,7 @@ const haptic = () => {
 
 interface MainItem {
   key: string;
-  icon: ComponentType<{ className?: string; size?: string | number }>;
+  icon: ComponentType<{ className?: string; size?: string | number; style?: React.CSSProperties }>;
   label: string;
   active: boolean;
   onPress: () => void;
@@ -38,6 +38,7 @@ export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, o
   const [moreOpen, setMoreOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [tapped, setTapped] = useState<string | null>(null);
+  const subs = useTelegramSubscribers();
 
   const press = (key: string, fn: () => void) => {
     haptic();

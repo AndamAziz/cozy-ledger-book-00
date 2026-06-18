@@ -1,16 +1,18 @@
 interface Props {
   className?: string;
   size?: number;
+  style?: React.CSSProperties;
 }
 
 /** Official-style Telegram paper-plane glyph (single-color, uses currentColor). */
-export function TelegramIcon({ className, size = 24 }: Props) {
+export function TelegramIcon({ className, size = 24, style }: Props) {
   return (
     <svg
       viewBox="0 0 24 24"
       width={size}
       height={size}
       className={className}
+      style={style}
       fill="currentColor"
       aria-hidden="true"
     >
