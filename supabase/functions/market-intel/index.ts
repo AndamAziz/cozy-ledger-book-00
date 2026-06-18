@@ -712,17 +712,17 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
         delete openState[q.symbol];
       }
       // Only one active signal per symbol — never stack a second one.
-      const prevOpen = priceState[q.symbol] as { lastSignalAt?: number; lastSignalDir?: Signal } | undefined;
+      const prevOpen = priceState[q.symbol] as { lastSignalAt?: number; lastSignalDir?: Signal; lastAuditKey?: string } | undefined;
       priceState[q.symbol] = {
         price: q.price, signal: sig,
-        lastSignalAt: prevOpen?.lastSignalAt, lastSignalDir: prevOpen?.lastSignalDir,
+        lastSignalAt: prevOpen?.lastSignalAt, lastSignalDir: prevOpen?.lastSignalDir, lastAuditKey: prevOpen?.lastAuditKey,
       };
       continue;
     }
 
     // 2) No open position → consider opening a NEW signal when timing is right.
     const prev = priceState[q.symbol] as
-      { price?: number; signal?: Signal; lastSignalAt?: number; lastSignalDir?: Signal } | undefined;
+      { price?: number; signal?: Signal; lastSignalAt?: number; lastSignalDir?: Signal; lastAuditKey?: string } | undefined;
     const actionable = sig === "BUY" || sig === "SELL";
     // requireSession assets only open while an ENABLED region is live (user-configurable).
     const timingOk = !m.requireSession || enabledSessionOpen(enabledRegions);
@@ -738,33 +738,62 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 
     let lastSignalAt = prev?.lastSignalAt;
     let lastSignalDir = prev?.lastSignalDir;
-    if (actionable && timingOk && fresh && strongMove && cooldownOk) {
-      const isBuy = sig === "BUY";
-      const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
-      const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
-      const tpPips = toPips(tp - q.price, m.pip);
-      const slPips = toPips(sl - q.price, m.pip);
-      const confidence = Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
-      const session = sessionLabel(new Date(), enabledRegions);
 
-      const { data: ins } = await admin.from("ai_signals").insert({
-        asset: m.name, signal: sig, entry: q.price, tp, sl,
-        confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
-      }).select("id").maybeSingle();
+    // Audit: record every actionable (BUY/SELL) decision — sent or skipped — with the
+    // reason it was (or wasn't) broadcast: fresh / cooldown / market closed / weak move.
+    if (actionable) {
+      let auditOutcome: "sent" | "skipped";
+      let auditReason: string;
+      if (!timingOk) auditReason = "market_closed";
+      else if (!fresh) auditReason = "not_fresh";
+      else if (!strongMove) auditReason = "weak_move";
+      else if (!cooldownOk) auditReason = "cooldown";
+      else auditReason = "fresh";
+      auditOutcome = auditReason === "fresh" ? "sent" : "skipped";
 
-      const important = confidence >= TARGET_IMPORTANT_CONFIDENCE || Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
-      const highConf = confidence >= TARGET_IMPORTANT_CONFIDENCE;
-      const strongMove = Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
-      let reason = "⏱ Cooldown passed / throttle finished · کاتژمێری کۆتایی هات";
-      if (highConf && strongMove) reason = "🔥 Very important: high confidence + strong move · زۆر گرنگ: متمانە بەرز + جوڵە بەهێز";
-      else if (highConf) reason = "🔥 Very important: high confidence · زۆر گرنگ: متمانە بەرز";
-      else if (strongMove) reason = "🔥 Very important: strong move · زۆر گرنگ: جوڵە بەهێز";
-      signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important, reason });
-      openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
-      lastSignalAt = Date.now();
-      lastSignalDir = sig; // remember the direction we actually broadcast
+      if (actionable && timingOk && fresh && strongMove && cooldownOk) {
+        const isBuy = sig === "BUY";
+        const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+        const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
+        const tpPips = toPips(tp - q.price, m.pip);
+        const slPips = toPips(sl - q.price, m.pip);
+        const confidence = Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
+        const session = sessionLabel(new Date(), enabledRegions);
+
+        const { data: ins } = await admin.from("ai_signals").insert({
+          asset: m.name, signal: sig, entry: q.price, tp, sl,
+          confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
+        }).select("id").maybeSingle();
+
+        const important = confidence >= TARGET_IMPORTANT_CONFIDENCE || Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
+        const highConf = confidence >= TARGET_IMPORTANT_CONFIDENCE;
+        const strongMoveImp = Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
+        let reason = "⏱ Cooldown passed / throttle finished · کاتژمێری کۆتایی هات";
+        if (highConf && strongMoveImp) reason = "🔥 Very important: high confidence + strong move · زۆر گرنگ: متمانە بەرز + جوڵە بەهێز";
+        else if (highConf) reason = "🔥 Very important: high confidence · زۆر گرنگ: متمانە بەرز";
+        else if (strongMoveImp) reason = "🔥 Very important: strong move · زۆر گرنگ: جوڵە بەهێز";
+        signalAlerts.push({ text: newSignalLine(q, sig as "BUY" | "SELL", tp, sl, tpPips, slPips, confidence, session), important, reason });
+        openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
+        lastSignalAt = Date.now();
+        lastSignalDir = sig; // remember the direction we actually broadcast
+      }
+
+      // Persist the audit record (best-effort — never block signal flow on logging).
+      // The scan loop ticks ~every 5s, so to avoid flooding we log every SENT signal,
+      // but only log a SKIPPED attempt when its reason CHANGES from the last logged one
+      // for this symbol (so each distinct fresh/cooldown/market-closed/weak-move state
+      // transition is recorded exactly once).
+      const auditKey = `${auditOutcome}:${auditReason}`;
+      if (auditOutcome === "sent" || prev?.lastAuditKey !== auditKey) {
+        await admin.from("signal_audit_log").insert({
+          symbol: m.name, signal: sig, price: q.price, change_pct: q.changePct,
+          outcome: auditOutcome, reason: auditReason,
+        });
+      }
+      priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt, lastSignalDir, lastAuditKey: auditKey };
+    } else {
+      priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt, lastSignalDir, lastAuditKey: prev?.lastAuditKey };
     }
-    priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt, lastSignalDir };
   }
 
 

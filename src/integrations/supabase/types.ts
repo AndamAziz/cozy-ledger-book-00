@@ -695,6 +695,39 @@ export type Database = {
         }
         Relationships: []
       }
+      signal_audit_log: {
+        Row: {
+          change_pct: number | null
+          created_at: string
+          id: string
+          outcome: string
+          price: number | null
+          reason: string
+          signal: string
+          symbol: string
+        }
+        Insert: {
+          change_pct?: number | null
+          created_at?: string
+          id?: string
+          outcome: string
+          price?: number | null
+          reason: string
+          signal: string
+          symbol: string
+        }
+        Update: {
+          change_pct?: number | null
+          created_at?: string
+          id?: string
+          outcome?: string
+          price?: number | null
+          reason?: string
+          signal?: string
+          symbol?: string
+        }
+        Relationships: []
+      }
       telegram_logs: {
         Row: {
           attempts: number
