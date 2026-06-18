@@ -1004,13 +1004,18 @@ function sessionRegionBlock(region: Region, rows: DailyRow[]): string {
 
 // End-of-day report with per-session breakdown, win-rates, and best/worst signal.
 // Fires once per day during the 21:00 UTC (22:00 BST) hour; deduped by calendar date.
-async function evaluateDailySummary(_quotes: Quote[]): Promise<string | null> {
+// Pass { force: true } to build the report regardless of the time/dedupe gates
+// (used by the preview/test handler — does not touch the dedupe state).
+async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }): Promise<string | null> {
   const now = new Date();
-  if (now.getUTCHours() !== DAILY_SUMMARY_UTC_HOUR) return null;
-  const day = now.toISOString().slice(0, 10);
-  const state = await getState("daily_summary");
-  if (state.lastDay === day) return null;
-  await setState("daily_summary", { lastDay: day });
+  if (!opts?.force) {
+    if (now.getUTCHours() !== DAILY_SUMMARY_UTC_HOUR) return null;
+    const day = now.toISOString().slice(0, 10);
+    const state = await getState("daily_summary");
+    if (state.lastDay === day) return null;
+    await setState("daily_summary", { lastDay: day });
+  }
+
 
   const dateLabel = now.toLocaleDateString("en-GB", {
     weekday: "long", month: "short", day: "numeric", year: "numeric", timeZone: "Europe/London",
