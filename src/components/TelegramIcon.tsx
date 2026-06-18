@@ -1,8 +1,11 @@
 import type { CSSProperties } from 'react';
+
+interface Props {
   className?: string;
   size?: number;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
+
 
 /** Official-style Telegram paper-plane glyph (single-color, uses currentColor). */
 export function TelegramIcon({ className, size = 24, style }: Props) {
