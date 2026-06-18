@@ -909,7 +909,75 @@ async function evaluateSessionOpen(): Promise<string[]> {
   return alerts;
 }
 
-// ───────────────────── HTTP ─────────────────────
+// ───────────────────── daily summary (22:00 BST = 21:00 UTC) ─────────────────────
+const DAILY_SUMMARY_UTC_HOUR = 21; // 22:00 London time (BST)
+
+// Per-asset arrow + colored % for the daily prices block.
+function dailyPriceLine(q: Quote): string {
+  const m = ASSET_META[q.symbol];
+  const up = q.changePct >= 0;
+  const arrow = up ? "▲" : "▼";
+  const dot = up ? "🟢" : "🔴";
+  const pct = `${up ? "+" : ""}${q.changePct.toFixed(1)}%`;
+  return `${m.emoji} <b>${m.name}</b>: <code>$${fmt(q.price)}</code> ${dot}${arrow} ${pct}`;
+}
+
+// End-of-day report: market closes + today's bot performance. Fires once per day
+// during the 21:00 UTC hour; deduped by calendar date in market_alert_state.
+async function evaluateDailySummary(quotes: Quote[]): Promise<string | null> {
+  const now = new Date();
+  if (now.getUTCHours() !== DAILY_SUMMARY_UTC_HOUR) return null;
+  const day = now.toISOString().slice(0, 10);
+  const state = await getState("daily_summary");
+  if (state.lastDay === day) return null;
+  await setState("daily_summary", { lastDay: day });
+
+  const priceQuotes = quotes.length ? quotes : await getPrices();
+  const dateLabel = now.toLocaleDateString("en-GB", {
+    weekday: "long", month: "short", day: "numeric", timeZone: "Europe/London",
+  });
+
+  // Today's closed signals → trade count, wins/losses, dollar P/L.
+  const startUtc = new Date(`${day}T00:00:00.000Z`).toISOString();
+  const { data: closed } = await admin.from("ai_signals")
+    .select("signal, entry, close_price, status, closed_at")
+    .gte("closed_at", startUtc)
+    .in("status", ["target_hit", "stopped_out"]);
+  const rows = (closed ?? []) as { signal: string; entry: number; close_price: number; status: string }[];
+  const trades = rows.length;
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const lost = rows.filter((r) => r.status === "stopped_out").length;
+  let pl = 0;
+  for (const r of rows) {
+    const entry = Number(r.entry) || 0;
+    const close = Number(r.close_price) || 0;
+    if (!entry || !close) continue;
+    pl += r.signal === "SELL" ? entry - close : close - entry;
+  }
+  const plStr = `${pl >= 0 ? "+" : "-"}$${fmt(Math.abs(pl))}`;
+  const plDot = pl >= 0 ? "🟢" : "🔴";
+
+  const priceBlock = priceQuotes.length ? priceQuotes.map(dailyPriceLine).join("\n") : "—";
+
+  return [
+    "━━━━━━━━━━━━━━━",
+    `📈 <b>Daily Report - ${esc(dateLabel)}</b>`,
+    "━━━━━━━━━━━━━━━",
+    "",
+    priceBlock,
+    "",
+    "📊 <b>Bot Performance Today / ئەنجامی ئەمڕۆ:</b>",
+    `• Trades / مامەڵە: <b>${trades}</b>`,
+    `• Won / بردنەوە: <b>${won}</b> | Lost / دۆڕان: <b>${lost}</b>`,
+    `• P/L / قازانج: ${plDot} <b>${plStr}</b>`,
+    "",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    `<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>`,
+  ].join("\n");
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
