@@ -1520,6 +1520,152 @@ async function evaluateDailySummary(_quotes: Quote[], opts?: { force?: boolean }
 
 
 
+// ───────────────────── weekly report (Monday 08:00 BST) ─────────────────────
+// Summarizes the previous trading week (Mon–Fri that just ended): gold range,
+// bot performance, and best/worst signal. Deduped per week via market_alert_state.
+async function evaluateWeeklySummary(opts?: { force?: boolean }): Promise<string | null> {
+  const now = new Date();
+  // London-clock weekday + hour (handles BST/GMT automatically).
+  const lon = new Date(now.toLocaleString("en-US", { timeZone: "Europe/London" }));
+  const weekKey = (() => {
+    // ISO-ish key of THIS Monday (London) so we only post once per week.
+    const d = new Date(lon);
+    const diff = (d.getDay() + 6) % 7; // days since Monday
+    d.setDate(d.getDate() - diff);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  if (!opts?.force) {
+    if (lon.getDay() !== 1 || lon.getHours() !== 8) return null; // Monday 08:00 BST/GMT
+    const state = await getState("weekly_summary");
+    if (state.lastWeek === weekKey) return null;
+    await setState("weekly_summary", { lastWeek: weekKey });
+  }
+
+  // Previous week window: last Monday 00:00 → this Monday 00:00 (UTC dates).
+  const todayUtc = new Date(`${now.toISOString().slice(0, 10)}T00:00:00.000Z`);
+  const dow = (todayUtc.getUTCDay() + 6) % 7; // days since Monday (UTC)
+  const thisMonday = new Date(todayUtc);
+  thisMonday.setUTCDate(thisMonday.getUTCDate() - dow);
+  const prevMonday = new Date(thisMonday);
+  prevMonday.setUTCDate(prevMonday.getUTCDate() - 7);
+  const startUtc = prevMonday.toISOString();
+  const endUtc = thisMonday.toISOString();
+  const prevFriday = new Date(prevMonday);
+  prevFriday.setUTCDate(prevFriday.getUTCDate() + 4);
+
+  const fmtDay = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const yearLabel = prevFriday.getUTCFullYear();
+  const weekLabel = `${fmtDay(prevMonday)}-${prevFriday.toLocaleDateString("en-GB", { day: "numeric", timeZone: "UTC" })}, ${yearLabel}`;
+
+  const header = [
+    "━━━━━━━━━━━━━━━",
+    "📊 <b>CTP WEEKLY REPORT</b>",
+    "<i>هەفتەنامەی CTP</i>",
+    "━━━━━━━━━━━━━━━",
+    `📅 Week: ${weekLabel}`,
+    "",
+  ];
+  const footer = [
+    "📱 t.me/goldmarketai",
+    "━━━━━━━━━━━━━━━",
+    `<i>🕒 ${nowStamp()}</i>`,
+    "<i>Not financial advice · ئەمە ڕاوێژی دارایی نییە</i>",
+  ];
+
+  const { data: closed } = await admin.from("ai_signals")
+    .select("asset, signal, entry, close_price, status, result_pips, market_session, closed_at")
+    .gte("closed_at", startUtc)
+    .lt("closed_at", endUtc)
+    .in("status", ["target_hit", "stopped_out"]);
+  const rows = (closed ?? []) as DailyRow[];
+
+  if (rows.length === 0) {
+    return [
+      ...header,
+      "😴 <b>No signals closed last week</b>",
+      "<i>هیچ سیگناڵێک هەفتەی ڕابردوو نەهاتە تەواوبوون</i>",
+      "",
+      ...footer,
+    ].join("\n");
+  }
+
+  // Gold performance from this week's gold signal price points.
+  const goldRows = rows.filter((r) => r.asset === "XAU/USD");
+  const goldPrices = goldRows.flatMap((r) => [Number(r.entry), Number(r.close_price)]).filter((n) => Number.isFinite(n) && n > 0);
+  let goldBlock: string[] = [];
+  if (goldPrices.length) {
+    const high = Math.max(...goldPrices);
+    const low = Math.min(...goldPrices);
+    const first = Number(goldRows[0]?.entry) || goldPrices[0];
+    const last = Number(goldRows[goldRows.length - 1]?.close_price) || goldPrices[goldPrices.length - 1];
+    const chg = last - first;
+    const chgPct = first ? (chg / first) * 100 : 0;
+    const sign = chg >= 0 ? "+" : "-";
+    goldBlock = [
+      "🥇 <b>GOLD PERFORMANCE:</b>",
+      `High: <code>$${fmt(high)}</code> | Low: <code>$${fmt(low)}</code>`,
+      `Weekly Change: ${sign}$${fmt(Math.abs(chg))} (${sign}${Math.abs(chgPct).toFixed(2)}%)`,
+      "",
+    ];
+  }
+
+  // Bot performance totals.
+  const trades = rows.length;
+  const won = rows.filter((r) => r.status === "target_hit").length;
+  const lost = rows.filter((r) => r.status === "stopped_out").length;
+  const winRate = trades ? Math.round((won / trades) * 100) : 0;
+  const totalPips = rows.reduce((s, r) => s + rowPips(r), 0);
+  const netPl = pipsToDollars(totalPips);
+  const netDot = netPl >= 0 ? "🟢" : "🔴";
+
+  const winners = rows.filter((r) => r.status === "target_hit").sort((a, b) => rowPips(b) - rowPips(a));
+  const losers = rows.filter((r) => r.status === "stopped_out").sort((a, b) => rowPips(a) - rowPips(b));
+  const best = winners[0];
+  const worst = losers[0];
+  const sigText = (r: DailyRow) => {
+    const meta = ASSET_META[r.asset] ?? { emoji: "🥇", name: r.asset };
+    const entry = Number(r.entry) || 0;
+    const close = Number(r.close_price) || 0;
+    const delta = r.signal === "SELL" ? entry - close : close - entry;
+    return { meta, entry, close, delta };
+  };
+
+  const lines: string[] = [
+    ...header,
+    ...goldBlock,
+    "📊 <b>BOT PERFORMANCE:</b>",
+    `Total Signals: ${trades}`,
+    `✅ Won: ${won} (${winRate}% win rate)`,
+    `❌ Lost: ${lost}`,
+    `💰 Total Pips: ${pipsStr(totalPips)}`,
+    `💵 Net P/L: ${netDot} ${plStr(netPl)}`,
+    "",
+  ];
+
+  if (best) {
+    const b = sigText(best);
+    lines.push(
+      "🏆 <b>Best Signal of Week:</b>",
+      `${b.meta.emoji} ${b.meta.name} ${best.signal} @ <code>$${fmt(b.entry)}</code> → <code>$${fmt(b.close)}</code>`,
+      `${b.delta >= 0 ? "+" : "-"}$${fmt(Math.abs(b.delta))} | ${pipsStr(rowPips(best))} pips ✅`,
+      "",
+    );
+  }
+  if (worst) {
+    const w = sigText(worst);
+    lines.push(
+      "❌ <b>Worst Signal:</b>",
+      `${w.meta.emoji} ${w.meta.name} ${worst.signal} @ <code>$${fmt(w.entry)}</code> → SL <code>$${fmt(w.close)}</code>`,
+      `${w.delta >= 0 ? "+" : "-"}$${fmt(Math.abs(w.delta))} | ${pipsStr(rowPips(worst))} pips`,
+      "",
+    );
+  }
+
+  lines.push(...footer);
+  return lines.join("\n");
+}
+
 // (channel-growth milestones + weekly stats removed)
 
 
@@ -1556,6 +1702,19 @@ Deno.serve(async (req) => {
       let sent = false;
       if (body.dailySend === true && report) {
         sent = await sendTelegram("ctp_daily", report);
+      }
+      return new Response(JSON.stringify({ ok: true, sent, report }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Weekly report preview/send (bypasses the time + dedupe gates):
+    //   {"weeklyPreview": true}  → build & RETURN the report (does NOT post)
+    //   {"weeklySend": true}     → build the report and post it to the channel now
+    if (body.weeklyPreview === true || body.weeklySend === true) {
+      const report = await evaluateWeeklySummary({ force: true });
+      let sent = false;
+      if (body.weeklySend === true && report) {
+        sent = await sendTelegram("ctp_weekly", report);
       }
       return new Response(JSON.stringify({ ok: true, sent, report }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1676,6 +1835,8 @@ Deno.serve(async (req) => {
     const sessionPosts = await evaluateSessionPosts();
     // End-of-day report (only fires during the 21:00 UTC / 22:00 BST hour).
     const dailySummary = await evaluateDailySummary(lastQuotes);
+    // Weekly report (only fires Monday 08:00 BST, deduped per week).
+    const weeklySummary = await evaluateWeeklySummary();
 
     // News-driven targets join the price targets — all sent as separate messages.
     signalAlerts.push(...calSignals);
@@ -1700,6 +1861,12 @@ Deno.serve(async (req) => {
     if (dailySummary) {
       sent = (await sendTelegram("ctp_daily", dailySummary)) || sent;
     }
+
+    // 0d) Weekly report on Monday 08:00 BST.
+    if (weeklySummary) {
+      sent = (await sendTelegram("ctp_weekly", weeklySummary)) || sent;
+    }
+
 
 
 
@@ -1756,7 +1923,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, sent, targetsSent, sessionPosts: sessionPosts.length, specialAlerts: specialAlerts.length, dailySummary: dailySummary ? 1 : 0, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
+      JSON.stringify({ ok: true, sent, targetsSent, sessionPosts: sessionPosts.length, specialAlerts: specialAlerts.length, dailySummary: dailySummary ? 1 : 0, weeklySummary: weeklySummary ? 1 : 0, signalAlerts: signalAlerts.length, outcomeAlerts: outcomeAlerts.length, calendarAlerts: calendarAlerts.length, newsAlerts: newsAlerts.length, quotes: lastQuotes.length }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
