@@ -958,8 +958,9 @@ const NEWS_SOURCES: { url: string; source: string; category: string }[] = [
   { url: "https://feeds.content.dowjones.io/public/rss/mw_topstories", source: "MarketWatch", category: "markets" },
   // MarketWatch real-time market pulse (faster breaking headlines).
   { url: "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain", source: "MarketWatch", category: "markets" },
-  // ForexFactory — macro / FX news & analysis.
-  { url: "https://www.forexfactory.com/rss.php", source: "ForexFactory", category: "forex" },
+  // ForexFactory macro/FX data now comes from the clean JSON calendar feed
+  // (https://nfs.faireconomy.media/ff_calendar_thisweek.json) via CALENDAR_URL /
+  // getHighImpactEvents() — the blocked HTML RSS feed has been removed.
   // Reuters business/markets (may be intermittent — failures are ignored gracefully).
   { url: "https://feeds.reuters.com/reuters/businessNews", source: "Reuters", category: "markets" },
   { url: "https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best", source: "Reuters", category: "markets" },
