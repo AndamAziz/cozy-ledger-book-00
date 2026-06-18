@@ -687,6 +687,8 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
   const priceState = await getState("prices");      // { "XAU/USD": { price, signal } }
   const openState = await getState("open_signals"); // { "XAU/USD": OpenSig }
   const enabledRegions = await getEnabledRegions(); // which markets may open new targets
+  // Pending higher-timeframe (15M/30M/1H) signals waiting for their staggered send time.
+  const tfQueue = ((await getState("tf_queue")).items as TfQueueItem[]) ?? [];
   const signalAlerts: SignalMsg[] = [];
   const outcomeAlerts: string[] = [];
 
