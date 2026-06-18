@@ -1178,35 +1178,6 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Weekly performance preview/send.
-    //   {"weeklyPreview": true} → build & RETURN the recap (no post)
-    //   {"weeklySend": true}    → build the recap and post it to the channel now
-    if (body.weeklyPreview === true || body.weeklySend === true) {
-      const report = await evaluateWeeklyStats({ force: true });
-      let sent = false;
-      if (body.weeklySend === true && report) {
-        sent = await sendTelegram("ctp_weekly", report);
-      }
-      return new Response(JSON.stringify({ ok: true, sent, report }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Milestone check/test.
-    //   {"milestoneCheck": true} → check live member count & post any newly-crossed milestone
-    //   {"milestoneTest": true}  → post a sample 10-member celebration (does not touch state)
-    if (body.milestoneCheck === true || body.milestoneTest === true) {
-      if (body.milestoneTest === true) {
-        const sample = milestoneMessage(10);
-        const sent = await sendTelegram("ctp_milestone", sample);
-        return new Response(JSON.stringify({ ok: true, sent, sample }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      const alerts = await evaluateMilestones();
-      let sent = false;
-      for (const a of alerts) sent = (await sendTelegram("ctp_milestone", a)) || sent;
-      return new Response(JSON.stringify({ ok: true, sent, count: await getMemberCount(), milestones: alerts.length }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
 
 
 
