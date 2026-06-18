@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft, Copy, Check, Eye, EyeOff, Clock, Globe } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
+import { analyzeMarket, RuleResult } from '@/lib/ruleAnalysis';
 
 interface CryptoAnalysisProps {
   symbol: string;
@@ -414,143 +415,108 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     });
   }
 
-  const buildBody = () => ({
-    symbol,
-    price: currentPrice,
-    change24h: change24h.toFixed(2),
-    timeframe: tfLabel,
-    dayHigh: dayHigh != null ? Number(dayHigh.toFixed(2)) : null,
-    dayLow: dayLow != null ? Number(dayLow.toFixed(2)) : null,
-    lang: langMode,
-    summary,
-    indicators: {
-      rsi: indicators.rsi,
-      macd: indicators.macd,
-      bollinger: indicators.bollinger,
-      ema9: indicators.ema9,
-      ema21: indicators.ema21,
-      ema50: indicators.ema50,
-    },
-  });
-
-  // Image analysis still uses the vision model (crypto-analysis).
+  // Image (chart screenshot) analysis still uses the vision model.
   const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crypto-analysis`;
-  // Text analysis now runs on the free Groq API (groq-analysis).
-  const aiFnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/groq-analysis`;
   const authHeaders = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
   };
 
-  // ---- 5 minute response cache (Groq free tier = 30 req/min) ----
-  const aiCacheKey = `groq-ai:${symbol}:${tfLabel}:${langMode}`;
-  const readAiCache = (): { summary: TradeSummary; generatedAt: string; text: string } | null => {
-    try {
-      const raw = localStorage.getItem(aiCacheKey);
-      if (!raw) return null;
-      const c = JSON.parse(raw);
-      if (!c?.generatedAt) return null;
-      if (Date.now() - new Date(c.generatedAt).getTime() > 5 * 60 * 1000) return null;
-      return c;
-    } catch {
-      return null;
-    }
+
+  // ---- Rule-based analysis (ZERO API calls, zero credits, instant) ----
+  // 5-minute cache so repeated taps reuse the latest computed result.
+  const ruleCacheKey = `rule-ai:${symbol}:${tfLabel}`;
+
+  // Format a price for the asset (Gold/Oil with cents, BTC whole numbers).
+  const fmtMoney = (n: number): string => {
+    if (!Number.isFinite(n)) return '—';
+    const decimals = n >= 1000 ? 2 : n >= 100 ? 2 : 2;
+    return '$' + n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   };
 
-  const fetchSummary = async () => {
-    const resp = await fetch(aiFnUrl, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify({ ...buildBody(), mode: 'summary' }),
-    });
-    if (!resp.ok) {
-      let msg = biLabel('هەڵەیەک ڕوویدا لە دروستکردنی پوختە.', 'Failed to generate the summary.');
-      try {
-        const j = await resp.json();
-        if (j?.error) msg = j.error;
-      } catch { /* ignore */ }
-      throw new Error(msg);
-    }
-    const j = await resp.json();
-    setTradeSummary(j.summary as TradeSummary);
-    setGeneratedAt(j.generatedAt as string);
-    return { summary: j.summary as TradeSummary, generatedAt: j.generatedAt as string };
-  };
-
-  const streamNarrative = async () => {
-    const resp = await fetch(aiFnUrl, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify(buildBody()),
-    });
-
-    if (!resp.ok || !resp.body) {
-      let msg = biLabel('هەڵەیەک ڕوویدا لە شیکاری AI.', 'AI analysis failed.');
-      try {
-        const j = await resp.json();
-        if (j?.error) msg = j.error;
-      } catch { /* ignore */ }
-      throw new Error(msg);
-    }
-
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let acc = '';
-    let done = false;
-    while (!done) {
-      const { done: d, value } = await reader.read();
-      if (d) break;
-      buffer += decoder.decode(value, { stream: true });
-      let idx: number;
-      while ((idx = buffer.indexOf('\n')) !== -1) {
-        let line = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 1);
-        if (line.endsWith('\r')) line = line.slice(0, -1);
-        if (line.startsWith(':') || line.trim() === '') continue;
-        if (!line.startsWith('data: ')) continue;
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === '[DONE]') { done = true; break; }
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) { acc += content; setAiText(acc); }
-        } catch {
-          buffer = line + '\n' + buffer;
-          break;
-        }
-      }
-    }
-    return acc;
+  // Map the pure rule result into the existing TradeSummary shape so the whole
+  // UI (trade buttons, Telegram signal, etc.) keeps working without any AI call.
+  const ruleToSummary = (r: RuleResult): TradeSummary => {
+    const tpDelta = r.tp - currentPrice;
+    const slDelta = currentPrice - r.sl;
+    const headlineEn =
+      r.signal === 'buy'
+        ? `Bullish confluence (${r.score}/4) — momentum favors buyers.`
+        : r.signal === 'sell'
+        ? `Bearish confluence (${r.score}/4) — momentum favors sellers.`
+        : `Mixed signals (${r.score}/4) — wait for a clearer setup.`;
+    const headline =
+      r.signal === 'buy'
+        ? `هاوکێشەی بەرزبوونەوە (${r.score}/4) — مەیلی کڕین.`
+        : r.signal === 'sell'
+        ? `هاوکێشەی داشکان (${r.score}/4) — مەیلی فرۆشتن.`
+        : `سیگناڵی تێکەڵ (${r.score}/4) — چاوەڕێی هەلێکی ڕوونتر بکە.`;
+    return {
+      recommendation: r.signal,
+      confidence: r.confidence,
+      headline,
+      headlineEn,
+      entry: fmtMoney(currentPrice),
+      targets: [`${fmtMoney(r.tp)} (+${fmtMoney(Math.abs(tpDelta))})`],
+      stopLoss: `${fmtMoney(r.sl)} (-${fmtMoney(Math.abs(slDelta))})`,
+      stopLossIndicator: 'EMA',
+      stopLossBasis: `پاڵپشت/بەربەست: ${fmtMoney(r.support)} / ${fmtMoney(r.resistance)}`,
+      stopLossBasisEn: `Support / Resistance: ${fmtMoney(r.support)} / ${fmtMoney(r.resistance)}`,
+      horizonDays: 1,
+      riskLevel: r.risk,
+      riskNote: `مەترسی: ${r.riskLabelKu}`,
+      riskNoteEn: `Risk: ${r.riskLabel}`,
+      reasoning: `هێز: ${r.score}/4 · RSI: ${r.rsi != null ? r.rsi.toFixed(1) : '—'} → ${r.rsiStatusKu}`,
+      reasoningEn: `Strength: ${r.score}/4 · RSI: ${r.rsi != null ? r.rsi.toFixed(1) : '—'} → ${r.rsiStatus}`,
+      keyDrivers: r.reasons.map((reason) => ({
+        indicator: reason.en.replace(/\s*[✅🔴🟢⚠️].*$/u, '').trim() || 'Signal',
+        effect: (r.signal === 'hold' ? 'neutral' : r.signal) as SignalType,
+        influence: 'high' as Influence,
+        note: reason.ku,
+        noteEn: reason.en,
+      })),
+    };
   };
 
   const runAiAnalysis = async () => {
-    setAiLoading(true);
     setAiError(null);
     setAiText('');
-    setTradeSummary(null);
-    setGeneratedAt(null);
-    try {
-      // Serve a cached result if it is fresh (< 5 min) to respect Groq's free rate limit.
-      const cached = readAiCache();
-      if (cached) {
-        setTradeSummary(cached.summary);
-        setGeneratedAt(cached.generatedAt);
-        if (cached.text) setAiText(cached.text);
-        return;
-      }
-      // First the fast structured summary, then the detailed narrative
-      const { summary, generatedAt } = await fetchSummary();
-      const text = await streamNarrative();
-      try {
-        localStorage.setItem(aiCacheKey, JSON.stringify({ summary, generatedAt, text }));
-      } catch { /* ignore quota errors */ }
-    } catch (e) {
-      setAiError(e instanceof Error ? e.message : biLabel('هەڵەیەک ڕوویدا.', 'Something went wrong.'));
-    } finally {
-      setAiLoading(false);
+    // Instant — no spinner, no network. Compute from the indicators we already have.
+    if (!hasData) {
+      setAiError(biLabel('داتای پێویست نییە بۆ شیکاری.', 'Not enough data to analyze.'));
+      return;
     }
+
+    // Serve a fresh (< 5 min) cached result if present.
+    try {
+      const raw = localStorage.getItem(ruleCacheKey);
+      if (raw) {
+        const c = JSON.parse(raw) as { summary: TradeSummary; generatedAt: string };
+        if (c?.generatedAt && Date.now() - new Date(c.generatedAt).getTime() <= 5 * 60 * 1000) {
+          setTradeSummary(c.summary);
+          setGeneratedAt(c.generatedAt);
+          return;
+        }
+      }
+    } catch { /* ignore */ }
+
+    const result = analyzeMarket({
+      price: currentPrice,
+      ema9: indicators.ema9,
+      ema21: indicators.ema21,
+      ema50: indicators.ema50,
+      rsi: indicators.rsi,
+      macdLine: indicators.macd?.macd ?? null,
+      macdSignal: indicators.macd?.signal ?? null,
+    });
+    const summaryOut = ruleToSummary(result);
+    setTradeSummary(summaryOut);
+    setGeneratedAt(result.generatedAt);
+    try {
+      localStorage.setItem(ruleCacheKey, JSON.stringify({ summary: summaryOut, generatedAt: result.generatedAt }));
+    } catch { /* ignore quota errors */ }
   };
+
 
   // ---- Chart image analysis ----
   const consumeStream = async (resp: Response, onChunk: (s: string) => void) => {
@@ -684,6 +650,26 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
 
   const hasData = candles.length > 0;
+
+  // Auto-run the rule-based analysis instantly whenever data is ready or the
+  // price/indicators change — no taps, no spinner, no API. (Throttled to ~recompute
+  // only when inputs actually move.)
+  useEffect(() => {
+    if (!hasData || currentPrice <= 0) return;
+    const result = analyzeMarket({
+      price: currentPrice,
+      ema9: indicators.ema9,
+      ema21: indicators.ema21,
+      ema50: indicators.ema50,
+      rsi: indicators.rsi,
+      macdLine: indicators.macd?.macd ?? null,
+      macdSignal: indicators.macd?.signal ?? null,
+    });
+    setTradeSummary(ruleToSummary(result));
+    setGeneratedAt(result.generatedAt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasData, currentPrice, indicators]);
+
   const gaugePct = (summary.score + 100) / 2; // 0..100
 
   const targetDate = generatedAt && tradeSummary
@@ -828,23 +814,24 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-sm font-bold text-white">
             <Sparkles className="h-4 w-4 text-[#f0b90b]" />
-            {biLabel('شیکاری زیرەک (AI)', 'AI analysis')}
-            {generatedAt && !aiLoading && (
-              <span className="flex items-center gap-1 text-[10px] font-normal text-[#848e9c]">
+            {biLabel('شیکاری بازاڕ', 'Market Analysis')}
+            {generatedAt && (
+              <span className="flex items-center gap-1 text-[10px] font-normal text-[#0ecb81]">
                 <Clock className="h-3 w-3" />
-                {biLabel('نوێکرایەوە', 'Updated')} {updatedAgo(generatedAt)}
+                {biLabel('نوێکراوەتەوە خۆکار', 'Auto-updated')} {updatedAgo(generatedAt)}
               </span>
             )}
           </div>
           <button
             onClick={runAiAnalysis}
-            disabled={aiLoading || !hasData}
+            disabled={!hasData}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#f0b90b] text-black disabled:opacity-50 active:scale-95 transition"
           >
-            {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {aiLoading ? biLabel('شیکاری...', 'Analyzing...') : (aiText || tradeSummary) ? biLabel('دووبارە شیکاری', 'Re-analyze') : biLabel('شیکاری بکە', 'Analyze')}
+            <Sparkles className="h-3.5 w-3.5" />
+            {tradeSummary ? biLabel('دووبارە شیکاری', 'Re-analyze') : biLabel('شیکاری بکە', 'Analyze')}
           </button>
         </div>
+
 
         {/* Language selector for the whole analysis (set before running) */}
         <div className="flex items-center justify-between gap-2 mb-3 rounded-lg bg-[#0d1117] border border-[#1a1e2e] px-3 py-2">
