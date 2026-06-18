@@ -62,6 +62,8 @@ export function BottomNav({ activeTab, onTab, onHome, onNews, onVerify, onBot, o
 
   return (
     <>
+      <InviteFriendsModal open={inviteOpen} onClose={() => setInviteOpen(false)} bi={bi} />
+
       {/* More drawer */}
       {moreOpen && (
         <>
