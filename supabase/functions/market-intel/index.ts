@@ -712,24 +712,32 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
         delete openState[q.symbol];
       }
       // Only one active signal per symbol — never stack a second one.
-      const prevOpen = priceState[q.symbol] as { lastSignalAt?: number } | undefined;
-      priceState[q.symbol] = { price: q.price, signal: sig, lastSignalAt: prevOpen?.lastSignalAt };
+      const prevOpen = priceState[q.symbol] as { lastSignalAt?: number; lastSignalDir?: Signal } | undefined;
+      priceState[q.symbol] = {
+        price: q.price, signal: sig,
+        lastSignalAt: prevOpen?.lastSignalAt, lastSignalDir: prevOpen?.lastSignalDir,
+      };
       continue;
     }
 
     // 2) No open position → consider opening a NEW signal when timing is right.
-    const prev = priceState[q.symbol] as { price?: number; signal?: Signal; lastSignalAt?: number } | undefined;
+    const prev = priceState[q.symbol] as
+      { price?: number; signal?: Signal; lastSignalAt?: number; lastSignalDir?: Signal } | undefined;
     const actionable = sig === "BUY" || sig === "SELL";
     // requireSession assets only open while an ENABLED region is live (user-configurable).
     const timingOk = !m.requireSession || enabledSessionOpen(enabledRegions);
-    // Avoid re-opening the same direction immediately; only fire when signal flips.
-    const fresh = prev?.signal !== sig;
+    // Avoid re-opening the SAME direction we last SENT a signal for. We compare against
+    // lastSignalDir (only updated when a signal is actually broadcast) — NOT the per-tick
+    // observed signal — otherwise a direction that was merely observed while the market was
+    // closed / in cooldown would permanently block that direction from ever firing.
+    const fresh = prev?.lastSignalDir !== sig;
     // Quiet-market guard: skip weak moves and respect a per-symbol cooldown so we
     // don't spam repeated signals when the market is barely moving.
     const strongMove = Math.abs(q.changePct) >= SIGNAL_MIN_MOVE_PCT;
     const cooldownOk = !prev?.lastSignalAt || Date.now() - prev.lastSignalAt >= SIGNAL_COOLDOWN_MS;
 
     let lastSignalAt = prev?.lastSignalAt;
+    let lastSignalDir = prev?.lastSignalDir;
     if (actionable && timingOk && fresh && strongMove && cooldownOk) {
       const isBuy = sig === "BUY";
       const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
