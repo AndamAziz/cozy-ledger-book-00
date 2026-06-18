@@ -1467,6 +1467,18 @@ Deno.serve(async (req) => {
       sent = (await sendTelegram("ctp_daily", dailySummary)) || sent;
     }
 
+    // 0d) Weekly performance recap (Mondays).
+    if (weeklyStats) {
+      sent = (await sendTelegram("ctp_weekly", weeklyStats)) || sent;
+    }
+
+    // 0e) Channel-growth milestone celebrations.
+    for (const m of milestoneAlerts) {
+      sent = (await sendTelegram("ctp_milestone", m)) || sent;
+    }
+
+
+
 
 
 
