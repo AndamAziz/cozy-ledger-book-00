@@ -13,7 +13,7 @@ import GestureQA from "./pages/GestureQA";
 import Bots from "./pages/Bots";
 import BotDetail from "./pages/BotDetail";
 import NotFound from "./pages/NotFound";
-import { TelegramFloatingButton } from "@/components/TelegramFloatingButton";
+
 
 const queryClient = new QueryClient();
 
@@ -36,7 +36,7 @@ const App = () => (
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-              <TelegramFloatingButton />
+              
             </BotNotificationsProvider>
           </BrowserRouter>
         </TooltipProvider>
