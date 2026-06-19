@@ -370,7 +370,7 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="relative z-10 flex-1 flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
+        className="relative z-10 flex min-h-[360px] flex-shrink-0 overflow-x-auto snap-x snap-mandatory no-scrollbar"
         style={{ scrollSnapType: 'x mandatory' }}
       >
         {FEATURES.map((feature, i) => {
