@@ -140,6 +140,31 @@ function quoteLevels(q: Quote, sig: "BUY" | "SELL"): { entry: number; tp: number
   return { entry, tp, sl, tp2 };
 }
 
+// ATR-based levels for a GIVEN direction. Used by news-event gold targets that
+// derive their direction from the data surprise (not the technical engine) but
+// must still use the SAME 1.5×ATR / 1.5R risk model as the rest of the platform.
+// Entry is the live reaction price; SL/TP distances come from the engine's ATR.
+// Falls back to the percentage model only when no ATR is available.
+function levelsForDir(
+  symbol: string, price: number, dir: "BUY" | "SELL", atr: number | null,
+): { entry: number; tp: number; sl: number } {
+  const m = ASSET_META[symbol];
+  const decimals = symbol === "BTC/USD" ? 0 : 2;
+  const isBuy = dir === "BUY";
+  const dirSign = isBuy ? 1 : -1;
+  if (atr && atr > 0) {
+    const slDist = atr * 1.5;
+    return {
+      entry: +price.toFixed(decimals),
+      sl: +(price - dirSign * slDist).toFixed(decimals),
+      tp: +(price + dirSign * slDist * 1.5).toFixed(decimals),
+    };
+  }
+  const tp = +(price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+  const sl = +(price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
+  return { entry: +price.toFixed(2), tp, sl };
+}
+
 // ───────────────────── price sources ─────────────────────
 async function fetchGold(): Promise<Quote | null> {
   try {
