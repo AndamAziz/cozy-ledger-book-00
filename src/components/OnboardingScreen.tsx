@@ -333,7 +333,7 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
   const NextIcon = dir === 'rtl' ? ChevronLeft : ChevronRight;
 
   return (
-    <div className="relative min-h-screen min-h-[100dvh] flex flex-col overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 safe-area-inset">
+    <div className="relative min-h-screen min-h-[100dvh] flex flex-col overflow-x-hidden overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5 safe-area-inset">
       {/* Decorative orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-20 -start-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
