@@ -121,6 +121,16 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
     }
     setIsLoading(true);
     try {
+      // Block reset attempts until the sender domain DNS is verified/active.
+      const available = await isResetEmailAvailable();
+      if (!available) {
+        toast({
+          title: t('resetUnavailableTitle'),
+          description: t('resetUnavailableDesc'),
+          variant: 'destructive',
+        });
+        return;
+      }
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
         { redirectTo: `${window.location.origin}/reset-password` }
