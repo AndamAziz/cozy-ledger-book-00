@@ -44,6 +44,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TelegramHealthCard } from './TelegramHealthCard';
+import { ReviewModeration } from './ReviewModeration';
 
 interface UserApproval {
   id: string;
