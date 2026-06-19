@@ -51,6 +51,7 @@ export type Database = {
         Row: {
           asset: string
           close_price: number | null
+          close_reason: string | null
           closed_at: string | null
           confidence: number | null
           created_at: string
@@ -69,6 +70,7 @@ export type Database = {
         Insert: {
           asset: string
           close_price?: number | null
+          close_reason?: string | null
           closed_at?: string | null
           confidence?: number | null
           created_at?: string
@@ -87,6 +89,7 @@ export type Database = {
         Update: {
           asset?: string
           close_price?: number | null
+          close_reason?: string | null
           closed_at?: string | null
           confidence?: number | null
           created_at?: string
