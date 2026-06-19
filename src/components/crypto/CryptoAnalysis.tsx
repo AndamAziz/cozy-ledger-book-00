@@ -161,8 +161,37 @@ function ColorizedAnalysis({ text, color, className = '' }: { text: string; colo
 }
 
 
+// Map a chart symbol to the canonical multi-source asset key (or null if this
+// symbol has no dedicated multi-TF + macro feed — then we use buildLocalSignal).
+function symbolToAssetKey(symbol: string): AssetKey | null {
+  const s = (symbol || '').toUpperCase();
+  if (/(XAU|GOLD|ZÊR|زێر)/.test(s)) return 'gold';
+  if (/(BTC|XBT|BITCOIN)/.test(s)) return 'btc';
+  if (/EUR.?USD|^EUR$/.test(s)) return 'eurusd';
+  if (/GBP.?USD|^GBP$/.test(s)) return 'gbpusd';
+  if (/USD.?JPY|^JPY$/.test(s)) return 'usdjpy';
+  return null;
+}
 
-export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, interval, timeframeLabel, tradeSymbol, tradeLabel }: CryptoAnalysisProps) {
+// Map a chart interval (minutes) / label to the nearest engine timeframe.
+function intervalToSignalTF(interval?: number, label?: string): SignalTF {
+  const l = (label || '').toUpperCase();
+  if (l.includes('1D') || l.includes('DAY')) return 'D1';
+  if (l.includes('4H')) return 'H4';
+  if (l.includes('1H') || l === 'H1') return 'H1';
+  if (l.includes('30')) return 'M30';
+  if (l.includes('15')) return 'M15';
+  if (l.includes('5')) return 'M5';
+  const m = interval ?? 60;
+  if (m >= 1440) return 'D1';
+  if (m >= 240) return 'H4';
+  if (m >= 60) return 'H1';
+  if (m >= 30) return 'M30';
+  if (m >= 15) return 'M15';
+  return 'M5';
+}
+
+
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
