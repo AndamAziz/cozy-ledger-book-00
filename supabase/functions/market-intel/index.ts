@@ -588,8 +588,8 @@ function newSignalLine(
   const entryStr = priceFmt(q.symbol, q.price);
   const tpStr = priceFmt(q.symbol, tp);
   const slStr = priceFmt(q.symbol, sl);
-  const profitStr = `+${priceFmt(q.symbol, tpDelta)}`;
-  const lossStr = `-${priceFmt(q.symbol, slDelta)}`;
+  const profitStr = `+${tpPipsExact} pips | +$${fmt(tpUsd)}`;
+  const lossStr = `-${slPipsExact} pips | -$${fmt(slUsd)}`;
 
   const levels =
     `Entry:       ${entryStr}\n` +
