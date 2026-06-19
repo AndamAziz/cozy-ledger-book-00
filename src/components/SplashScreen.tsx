@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Button } from '@/components/ui/button';
+import { RefreshCw, WifiOff } from 'lucide-react';
 
-export const SplashScreen = () => {
+interface SplashScreenProps {
+  /** When true, shows an error message with a retry button instead of the spinner. */
+  timedOut?: boolean;
+  /** Called when the user taps the retry button. Defaults to a full page reload. */
+  onRetry?: () => void;
+}
+
+export const SplashScreen = ({ timedOut = false, onRetry }: SplashScreenProps) => {
   const [isVisible, setIsVisible] = useState(true);
   const [showText, setShowText] = useState(false);
   const [showSubtext, setShowSubtext] = useState(false);
@@ -17,6 +26,14 @@ export const SplashScreen = () => {
       clearTimeout(subtextTimer);
     };
   }, []);
+
+  const handleRetry = () => {
+    if (onRetry) {
+      onRetry();
+    } else {
+      window.location.reload();
+    }
+  };
 
   if (!isVisible) return null;
 
