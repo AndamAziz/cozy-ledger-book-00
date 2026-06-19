@@ -861,18 +861,20 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           <Check className="h-3 w-3 ml-1" />
                           {t('approve')}
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setShowDeleteDialog(true);
-                          }}
-                          className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
-                        >
-                          <Trash2 className="h-3 w-3 ml-1" />
-                          {t('delete')}
-                        </Button>
+                        {isCEO && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowDeleteDialog(true);
+                            }}
+                            className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
+                          >
+                            <Trash2 className="h-3 w-3 ml-1" />
+                            {t('delete')}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -962,6 +964,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         </div>
                       </div>
                       
+                      {isCEO ? (
                       <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
@@ -1077,6 +1080,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           </Button>
                         )}
                       </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">
+                          {t('adminBannerNote')}
+                        </p>
+                      )}
                     </div>
                   </div>
                 );

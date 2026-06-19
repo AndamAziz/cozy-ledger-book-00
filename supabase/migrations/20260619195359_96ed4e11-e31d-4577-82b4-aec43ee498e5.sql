@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.enforce_admin_approval_scope() FROM PUBLIC, anon, authenticated;

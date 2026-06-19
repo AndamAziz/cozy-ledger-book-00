@@ -68,6 +68,15 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
+    // Only the CEO may change a user's password.
+    const CEO_EMAIL = "andam@outlook.com";
+    if ((user.email || "").toLowerCase() !== CEO_EMAIL) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Only the CEO can change passwords" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Parse request body
     const { userId, newPassword, targetEmail }: ChangePasswordRequest = await req.json();
 
