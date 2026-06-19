@@ -6,6 +6,7 @@ import { SIGNAL_TIMEFRAMES, SignalTF, AssetKey } from '@/lib/signalEngine';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
 import { SignalCard } from '@/components/crypto/SignalCard';
 import { SignalParityCheck } from '@/components/crypto/SignalParityCheck';
+import { LegOutcomeTimeline } from '@/components/crypto/LegOutcomeTimeline';
 
 const C_BULL = '#0ecb81';
 const C_BEAR = '#f6465d';
