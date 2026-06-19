@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Mail, Lock, LogIn, UserPlus, Building2, Eye, EyeOff } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { isResetEmailAvailable } from '@/lib/emailDns';
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -121,6 +122,16 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
     }
     setIsLoading(true);
     try {
+      // Block reset attempts until the sender domain DNS is verified/active.
+      const available = await isResetEmailAvailable();
+      if (!available) {
+        toast({
+          title: t('resetUnavailableTitle'),
+          description: t('resetUnavailableDesc'),
+          variant: 'destructive',
+        });
+        return;
+      }
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
         { redirectTo: `${window.location.origin}/reset-password` }
