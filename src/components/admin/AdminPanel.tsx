@@ -1034,7 +1034,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           <X className="h-3 w-3 ml-1" />
                           {t('revoke')}
                         </Button>
-                        {isCEO && !user.isAdmin && (
+                        {!user.isAdmin && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -1062,18 +1062,20 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                             {t('removeAdmin')}
                           </Button>
                         )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setShowDeleteDialog(true);
-                          }}
-                          className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
-                        >
-                          <Trash2 className="h-3 w-3 ml-1" />
-                          {t('delete')}
-                        </Button>
+                        {(!user.isAdmin || isCEO) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowDeleteDialog(true);
+                            }}
+                            className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
+                          >
+                            <Trash2 className="h-3 w-3 ml-1" />
+                            {t('delete')}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -71,6 +71,22 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    // Only the CEO may delete a user who is an admin.
+    const CEO_EMAIL = 'andam@outlook.com';
+    const { data: targetRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
+
+    if (targetRole && adminEmail.toLowerCase() !== CEO_EMAIL) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: Only the CEO can delete an admin account' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Log the activity BEFORE deletion (so we have target info)
     await supabaseAdmin.from("admin_activity_logs").insert({
       admin_id: adminUserId,

@@ -53,11 +53,16 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Only the CEO/super-admin can promote other admins
-    const CEO_EMAIL = "andam@outlook.com";
-    if ((user.email || "").toLowerCase() !== CEO_EMAIL) {
+    // Any admin can promote a regular user to admin
+    const { data: roleData } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (roleData?.role !== "admin") {
       return new Response(
-        JSON.stringify({ error: "Forbidden: Only the CEO can add admins" }),
+        JSON.stringify({ error: "Forbidden: Admin access required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
