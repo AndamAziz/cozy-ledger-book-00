@@ -77,12 +77,12 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if target user already has admin role
+    // Check if target user already has a role row
     const { data: existingRole } = await supabaseAdmin
       .from("user_roles")
-      .select("role")
+      .select("id, role")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
 
     if (existingRole?.role === "admin") {
       return new Response(
@@ -91,11 +91,20 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Update user role to admin
-    const { error: updateError } = await supabaseAdmin
-      .from("user_roles")
-      .update({ role: "admin" })
-      .eq("user_id", userId);
+    // Update existing role row to admin, or insert one if the user has none
+    let updateError;
+    if (existingRole) {
+      const { error } = await supabaseAdmin
+        .from("user_roles")
+        .update({ role: "admin" })
+        .eq("user_id", userId);
+      updateError = error;
+    } else {
+      const { error } = await supabaseAdmin
+        .from("user_roles")
+        .insert({ user_id: userId, role: "admin" });
+      updateError = error;
+    }
 
     if (updateError) {
       console.error("Error updating role:", updateError);
