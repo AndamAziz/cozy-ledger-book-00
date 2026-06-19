@@ -471,15 +471,14 @@ export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
   }
 
 
-  // ATR-based risk model: SL = 1.5x ATR, TP1 = 1.5R, TP2 = 3R.
+  // Unified ATR-based risk model (shared with Confluence, Signals, bot, Telegram).
   const atr = calculateATR(p.candles);
-  const slDist = atr > 0 ? atr * 1.5 : price * 0.005;
-  const dirSign = action === 'buy' ? 1 : action === 'sell' ? -1 : 0;
-  const entry = +price.toFixed(p.decimals);
-  const stopLoss = dirSign !== 0 ? +(price - dirSign * slDist).toFixed(p.decimals) : 0;
-  const takeProfit1 = dirSign !== 0 ? +(price + dirSign * slDist * 1.5).toFixed(p.decimals) : 0;
-  const takeProfit2 = dirSign !== 0 ? +(price + dirSign * slDist * 3).toFixed(p.decimals) : 0;
-  const riskReward = dirSign !== 0 ? 1.5 : 0;
+  const { entry, stopLoss, takeProfit1, takeProfit2, riskReward } = atrLevels(
+    action === 'buy' || action === 'sell' ? action : 'none',
+    price,
+    atr,
+    p.decimals,
+  );
 
   // Reasoning.
   const techNotesEn: string[] = [];
