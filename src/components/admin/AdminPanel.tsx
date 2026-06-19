@@ -727,6 +727,12 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         {/* Telegram Bot Health */}
         <TelegramHealthCard />
 
+        {/* Customer Reviews Moderation */}
+        <div className="mb-4">
+          <ReviewModeration />
+        </div>
+
+
         {/* Active Filter Indicator */}
         {activeFilter !== 'all' && (
           <div className="mb-4 flex items-center gap-2">
