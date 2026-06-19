@@ -34,6 +34,7 @@ const App = () => (
                 <Route path="/gesture-qa" element={<GestureQA />} />
                 <Route path="/bots" element={<Bots />} />
                 <Route path="/bots/:id" element={<BotDetail />} />
+                <Route path="/reviews" element={<Reviews />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
