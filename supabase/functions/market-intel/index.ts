@@ -598,7 +598,8 @@ function newSignalLine(
   const meta =
     `Confidence:  ${confidence}%\n` +
     `Session:     ${esc(sessionEn(session))}\n` +
-    `Strength:    ${strength}`;
+    `Strength:    ${strength}\n` +
+    `Order Size:  0.01 lot ($0.10 / pip)`;
 
   return [
     "╔══════════════════╗",
