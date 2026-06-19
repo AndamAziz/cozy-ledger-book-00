@@ -65,6 +65,18 @@ const TIMEFRAME_CASCADE: { tf: string; delayMs: number }[] = [
   { tf: "1H",  delayMs: 30 * 60_000 },
 ];
 
+// How long each timeframe's candle/period runs. Once a leg has been live for its
+// full period (and it never hit TP/SL) the bot reports a "period closed" result
+// (pips won/lost vs entry) and closes that leg — so EVERY signal that goes out is
+// always followed by its own outcome message, before any new signal is sent.
+const TF_PERIOD_MS: Record<string, number> = {
+  "5M": 5 * 60_000,
+  "15M": 15 * 60_000,
+  "30M": 30 * 60_000,
+  "1H": 60 * 60_000,
+};
+
+
 
 // News is broadcast at most once per 60 minutes (its own standalone message).
 const NEWS_MIN_GAP_MS = 60 * 60_000;
