@@ -93,3 +93,86 @@ export function calculateRisk(input: RiskInput): RiskResult {
     valid,
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unified ATR-based risk model.
+//
+// This is the SINGLE source of truth for Entry / Stop Loss / Take Profit across
+// the whole platform — the Signals panel, the Confluence tab, the Analyze card,
+// and the Telegram bot all derive their levels from `atrLevels()` so the numbers
+// are identical everywhere for the same direction, price and ATR.
+//
+// Model: SL = 1.5 × ATR from entry, TP1 = 1.5R, TP2 = 3R → fixed 1.5 : 1 R/R.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** ATR multiplier used to place the stop loss. */
+export const ATR_SL_MULT = 1.5;
+/** Reward multiple for the first take-profit (1.5R). */
+export const ATR_TP1_R = 1.5;
+/** Reward multiple for the second take-profit (3R). */
+export const ATR_TP2_R = 3;
+
+export interface AtrLevels {
+  entry: number;
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2: number;
+  /** Stop distance in price (1.5 × ATR, or a 0.5% fallback when ATR is 0). */
+  slDist: number;
+  riskReward: number;
+}
+
+/** Average True Range (Wilder) over the candle series. */
+export function calculateATR(candles: OHLCCandle[], period = 14): number {
+  if (!candles || candles.length < period + 1) {
+    // fall back to a small range estimate from whatever we have
+    if (candles && candles.length >= 2) {
+      const trs = [];
+      for (let i = 1; i < candles.length; i++) trs.push(candles[i].high - candles[i].low);
+      const avg = trs.reduce((a, b) => a + b, 0) / trs.length;
+      return Number.isFinite(avg) ? avg : 0;
+    }
+    return 0;
+  }
+  const trs: number[] = [];
+  for (let i = 1; i < candles.length; i++) {
+    const h = candles[i].high;
+    const l = candles[i].low;
+    const pc = candles[i - 1].close;
+    trs.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
+  }
+  let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < trs.length; i++) atr = (atr * (period - 1) + trs[i]) / period;
+  return Number.isFinite(atr) ? atr : 0;
+}
+
+/**
+ * Compute the unified ATR-based entry/SL/TP for a direction.
+ *
+ * @param side    'buy' | 'sell' | 'none' (none → all levels zeroed)
+ * @param price   the entry price (last close / live spot)
+ * @param atr     ATR for the relevant series (0 → 0.5% fallback distance)
+ * @param decimals price decimals for rounding
+ */
+export function atrLevels(
+  side: 'buy' | 'sell' | 'none',
+  price: number,
+  atr: number,
+  decimals: number,
+): AtrLevels {
+  const dirSign = side === 'buy' ? 1 : side === 'sell' ? -1 : 0;
+  const px = price > 0 ? price : 0;
+  const slDist = atr > 0 ? atr * ATR_SL_MULT : px * 0.005;
+  const entry = +px.toFixed(decimals);
+  if (dirSign === 0 || px <= 0) {
+    return { entry, stopLoss: 0, takeProfit1: 0, takeProfit2: 0, slDist, riskReward: 0 };
+  }
+  return {
+    entry,
+    stopLoss: +(px - dirSign * slDist).toFixed(decimals),
+    takeProfit1: +(px + dirSign * slDist * ATR_TP1_R).toFixed(decimals),
+    takeProfit2: +(px + dirSign * slDist * ATR_TP2_R).toFixed(decimals),
+    slDist,
+    riskReward: +(ATR_TP1_R / 1).toFixed(2),
+  };
+}
