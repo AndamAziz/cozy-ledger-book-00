@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Mail, Lock, LogIn, UserPlus, Building2, Eye, EyeOff } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { isResetEmailAvailable } from '@/lib/emailDns';
 
 interface LoginFormProps {
   onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
