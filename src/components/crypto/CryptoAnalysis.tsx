@@ -752,24 +752,16 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
   const hasData = candles.length > 0;
 
-  // Auto-run the rule-based analysis instantly whenever data is ready or the
-  // price/indicators change — no taps, no spinner, no API. (Throttled to ~recompute
-  // only when inputs actually move.)
+  // Auto-run the unified analysis instantly whenever data is ready or the
+  // price/indicators/canonical signal change — no taps, no spinner, no API.
   useEffect(() => {
     if (!hasData || currentPrice <= 0) return;
-    const result = analyzeMarket({
-      price: currentPrice,
-      ema9: indicators.ema9,
-      ema21: indicators.ema21,
-      ema50: indicators.ema50,
-      rsi: indicators.rsi,
-      macdLine: indicators.macd?.macd ?? null,
-      macdSignal: indicators.macd?.signal ?? null,
-    });
-    setTradeSummary(ruleToSummary(result));
-    setGeneratedAt(result.generatedAt);
+    const out = computeUnifiedSummary();
+    if (!out) return;
+    setTradeSummary(out.summary);
+    setGeneratedAt(out.generatedAt);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasData, currentPrice, indicators]);
+  }, [hasData, currentPrice, indicators, canonicalSignal, assetKey]);
 
   const gaugePct = (summary.score + 100) / 2; // 0..100
 
