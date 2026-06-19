@@ -52,17 +52,19 @@ const TARGET_IMPORTANT_MOVE_PCT = 0.6;   // |change| ≥ this % ⇒ send target 
 const PRICE_INTERVAL_MS = 5_000;
 const LOOP_WINDOW_MS = 50_000;
 
-// Multi-timeframe signal cascade. When a NEW signal opens we post the 5M setup
-// immediately, then auto-post the higher timeframes on a staggered schedule so
-// users see the same trade confirmed across 5M → 15M → 30M → 1H. Each higher
-// timeframe uses a wider target / stop (it's a longer hold). Delays are measured
-// from the moment the first (5M) signal is sent.
-const TIMEFRAME_CASCADE: { tf: string; delayMs: number; tpMult: number; slMult: number }[] = [
-  { tf: "5M",  delayMs: 0,            tpMult: 1.0, slMult: 1.0 },
-  { tf: "15M", delayMs: 5 * 60_000,  tpMult: 1.8, slMult: 1.4 },
-  { tf: "30M", delayMs: 15 * 60_000, tpMult: 2.6, slMult: 1.9 },
-  { tf: "1H",  delayMs: 30 * 60_000, tpMult: 4.0, slMult: 2.8 },
+// Multi-timeframe signal cascade. When a NEW signal opens we post the setup
+// immediately, then auto-re-post the SAME trade on a staggered schedule so users
+// who join late still see it. Every message uses the IDENTICAL ATR-based
+// entry/SL/TP from the shared engine (byte-for-byte equal to the app) — the only
+// thing that changes per row is the send time and the confirmation label.
+// Delays are measured from the moment the first signal is sent.
+const TIMEFRAME_CASCADE: { tf: string; delayMs: number }[] = [
+  { tf: "5M",  delayMs: 0 },
+  { tf: "15M", delayMs: 5 * 60_000 },
+  { tf: "30M", delayMs: 15 * 60_000 },
+  { tf: "1H",  delayMs: 30 * 60_000 },
 ];
+
 
 // News is broadcast at most once per 60 minutes (its own standalone message).
 const NEWS_MIN_GAP_MS = 60 * 60_000;
@@ -118,6 +120,49 @@ function quoteSignal(q: Quote): Signal {
 function quoteConfidence(q: Quote): number {
   if (q.eng) return q.eng.confidence;
   return Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
+}
+
+// ATR-based entry / stop-loss / take-profit straight from the shared engine —
+// byte-for-byte identical to the app (entry = last-candle close, SL = 1.5×ATR,
+// TP1 = 1.5R, TP2 = 3R). The percentage fallback runs ONLY when the engine
+// produced no candle data, which for an actionable BUY/SELL is rare.
+function quoteLevels(q: Quote, sig: "BUY" | "SELL"): { entry: number; tp: number; sl: number; tp2: number } {
+  const e = q.eng;
+  if (e && e.entry > 0 && e.stopLoss > 0 && e.takeProfit1 > 0) {
+    return { entry: e.entry, tp: e.takeProfit1, sl: e.stopLoss, tp2: e.takeProfit2 };
+  }
+  const m = ASSET_META[q.symbol];
+  const isBuy = sig === "BUY";
+  const entry = q.price;
+  const tp = +(entry * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+  const sl = +(entry * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
+  const tp2 = +(entry * (isBuy ? 1 + (m.tpPct * 2) / 100 : 1 - (m.tpPct * 2) / 100)).toFixed(2);
+  return { entry, tp, sl, tp2 };
+}
+
+// ATR-based levels for a GIVEN direction. Used by news-event gold targets that
+// derive their direction from the data surprise (not the technical engine) but
+// must still use the SAME 1.5×ATR / 1.5R risk model as the rest of the platform.
+// Entry is the live reaction price; SL/TP distances come from the engine's ATR.
+// Falls back to the percentage model only when no ATR is available.
+function levelsForDir(
+  symbol: string, price: number, dir: "BUY" | "SELL", atr: number | null,
+): { entry: number; tp: number; sl: number } {
+  const m = ASSET_META[symbol];
+  const decimals = symbol === "BTC/USD" ? 0 : 2;
+  const isBuy = dir === "BUY";
+  const dirSign = isBuy ? 1 : -1;
+  if (atr && atr > 0) {
+    const slDist = atr * 1.5;
+    return {
+      entry: +price.toFixed(decimals),
+      sl: +(price - dirSign * slDist).toFixed(decimals),
+      tp: +(price + dirSign * slDist * 1.5).toFixed(decimals),
+    };
+  }
+  const tp = +(price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+  const sl = +(price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
+  return { entry: +price.toFixed(2), tp, sl };
 }
 
 // ───────────────────── price sources ─────────────────────
@@ -652,12 +697,12 @@ function signalRationale(q: Quote, sig: "BUY" | "SELL"): { en: string; ku: strin
 // Full BUY/SELL trade setup with entry, full target and stop loss (clean RTL layout).
 // All indicator lines reflect the REAL engine values (no fabricated RSI/EMA/MACD).
 function newSignalLine(
-  q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
+  q: Quote, sig: "BUY" | "SELL", entry: number, tp: number, sl: number, _tpPips: number, _slPips: number,
   confidence: number, session: string, tf?: string,
 ): string {
   const m = ASSET_META[q.symbol];
-  const tpDelta = Math.abs(tp - q.price);
-  const slDelta = Math.abs(sl - q.price);
+  const tpDelta = Math.abs(tp - entry);
+  const slDelta = Math.abs(sl - entry);
   const isBuy = sig === "BUY";
   const sigKuW = isBuy ? "کڕین" : "فرۆشتن";
   const strength = confidence >= 80 ? ["Strong", "بەهێز"] : confidence >= 65 ? ["Medium", "مامناوەند"] : ["Weak", "لاواز"];
@@ -696,7 +741,7 @@ function newSignalLine(
     `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
     tf ? `⏱ <b>Timeframe: ${tf}</b> · چوارچێوەی کات` : "",
     "",
-    `💰 <code>$${fmt(q.price)}</code> :نرخی چوونەژوورەوە`,
+    `💰 <code>$${fmt(entry)}</code> :نرخی چوونەژوورەوە`,
     `🎯 <code>$${fmt(tp)}</code> :تارگێت (+$${fmt(tpDelta)})`,
     `🛑 <code>$${fmt(sl)}</code> :ستۆپ لۆس (-$${fmt(slDelta)})`,
     "",
@@ -895,16 +940,15 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
       auditOutcome = auditReason === "fresh" ? "sent" : "skipped";
 
       if (actionable && timingOk && fresh && strongMove && cooldownOk) {
-        const isBuy = sig === "BUY";
-        const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
-        const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
-        const tpPips = toPips(tp - q.price, m.pip);
-        const slPips = toPips(sl - q.price, m.pip);
+        // ATR-based levels from the SAME engine as the app — identical entry/SL/TP.
+        const { entry, tp, sl } = quoteLevels(q, sig as "BUY" | "SELL");
+        const tpPips = toPips(tp - entry, m.pip);
+        const slPips = toPips(sl - entry, m.pip);
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
 
         const { data: ins } = await admin.from("ai_signals").insert({
-          asset: m.name, signal: sig, entry: q.price, tp, sl,
+          asset: m.name, signal: sig, entry, tp, sl,
           confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
         }).select("id").maybeSingle();
 
@@ -915,26 +959,20 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
         else if (highConf) reason = "🔥 Very important: high confidence · زۆر گرنگ: متمانە بەرز";
         else if (strongMoveImp) reason = "🔥 Very important: strong move · زۆر گرنگ: جوڵە بەهێز";
 
-        // Multi-timeframe cascade: post the 5M setup now, then schedule the
-        // 15M / 30M / 1H confirmations on a staggered timer (wider TP/SL each).
+        // Staggered re-posts of the SAME trade so late joiners still see it. Every
+        // message carries the identical engine entry/SL/TP — no per-TF widening.
         const now = Date.now();
         for (const tfDef of TIMEFRAME_CASCADE) {
-          const tpPctTf = m.tpPct * tfDef.tpMult;
-          const slPctTf = m.slPct * tfDef.slMult;
-          const tpTf = +(q.price * (isBuy ? 1 + tpPctTf / 100 : 1 - tpPctTf / 100)).toFixed(2);
-          const slTf = +(q.price * (isBuy ? 1 - slPctTf / 100 : 1 + slPctTf / 100)).toFixed(2);
-          const tpPipsTf = toPips(tpTf - q.price, m.pip);
-          const slPipsTf = toPips(slTf - q.price, m.pip);
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
-          const text = newSignalLine(q, sig as "BUY" | "SELL", tpTf, slTf, tpPipsTf, slPipsTf, confidence, session, tfDef.tf);
+          const text = newSignalLine(q, sig as "BUY" | "SELL", entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
           if (tfDef.delayMs === 0) {
-            // 5M fires immediately as a high-priority signal so it always reaches the channel.
+            // First message fires immediately as a high-priority signal so it always reaches the channel.
             signalAlerts.push({ text, important: true, reason: tfReason });
           } else {
             tfQueue.push({ dueAt: now + tfDef.delayMs, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
           }
         }
-        openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry: q.price, tp, sl };
+        openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry, tp, sl };
         lastSignalAt = Date.now();
         lastSignalDir = sig; // remember the direction we actually broadcast
       }
@@ -1082,20 +1120,21 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
           lines.push(`🎯 تارگێتەکە بە پەیامێکی جیا دەنێردرێت / Trade target sent separately`);
 
           // Concrete trade target → SEPARATE signal message (news-driven ⇒ important).
+          // Direction comes from the data surprise; risk model = same ATR engine.
           const m = ASSET_META["XAU/USD"];
           if (goldPrice) {
+            const goldEng = await getEngine("XAU/USD", goldPrice);
+            const { entry, tp, sl } = levelsForDir("XAU/USD", goldPrice, dir as "BUY" | "SELL", goldEng?.atr ?? null);
             const isBuy = dir === "BUY";
-            const tp = +(goldPrice * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
-            const sl = +(goldPrice * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
-            const tpPips = toPips(tp - goldPrice, m.pip);
-            const slPips = toPips(sl - goldPrice, m.pip);
+            const tpPips = toPips(tp - entry, m.pip);
+            const slPips = toPips(sl - entry, m.pip);
             signalAlerts.push({
               important: true,
               reason: "📰 High-impact news / هەواڵی کاریگەری بەرز",
               text: [
                 `📰 News-driven / بەهۆی هەواڵ: <b>${esc(ev.title)}</b>`,
                 `${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`,
-                `📍 Entry / دەستپێک: <code>$${fmt(goldPrice)}</code>`,
+                `📍 Entry / دەستپێک: <code>$${fmt(entry)}</code>`,
                 `🎯🟢 TP / تارگێت: <code>$${fmt(tp)}</code> (${isBuy ? "+" : "-"}${tpPips} pips)`,
                 `🛑🔴 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (${isBuy ? "-" : "+"}${slPips} pips)`,
               ].join("\n"),
@@ -1132,9 +1171,8 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
           if (sd !== "HOLD") goldDir = sd;
         }
         if (goldDir && goldPrice) {
-          const m = ASSET_META["XAU/USD"];
-          const isBuy = goldDir === "BUY";
-          const tp = +(goldPrice * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+          const goldEng = await getEngine("XAU/USD", goldPrice);
+          const { tp } = levelsForDir("XAU/USD", goldPrice, goldDir, goldEng?.atr ?? null);
           sLines.push(`📈 Signal: ${sigEmoji(goldDir)} <b>${goldDir}</b> → Target <code>$${fmt(tp)}</code>`);
           sLines.push(`📈 سیگنال: ${sigKu(goldDir)} → تارگێت <code>$${fmt(tp)}</code>`);
         } else {
@@ -2723,15 +2761,18 @@ Deno.serve(async (req) => {
       const quotes = await getPrices();
       const priceBlock = quotes.map((q) => priceLine(q, quoteSignal(q)));
 
-      // Build a sample full trade signal + a sample TP outcome from live gold price.
+      // Build a sample full trade signal + a sample TP outcome. Uses the engine's
+      // ATR levels when available (same as live), else a percentage sample.
       const sample = quotes[0] ?? { symbol: "XAU/USD", price: 4275, changePct: 0.3 } as Quote;
       const sm = ASSET_META[sample.symbol] ?? ASSET_META["XAU/USD"];
-      const sampleTp = +(sample.price * (1 + sm.tpPct / 100)).toFixed(2);
-      const sampleSl = +(sample.price * (1 - sm.slPct / 100)).toFixed(2);
-      const sTpPips = toPips(sampleTp - sample.price, sm.pip);
-      const sSlPips = toPips(sampleSl - sample.price, sm.pip);
-      const signalSample = newSignalLine(sample, "BUY", sampleTp, sampleSl, sTpPips, sSlPips, 78, sessionLabel());
-      const outcomeSample = outcomeLine(sample.symbol, "BUY", "tp", sample.price, sampleTp, sTpPips);
+      const sLv = quoteLevels(sample, "BUY");
+      const sampleEntry = sLv.entry;
+      const sampleTp = sLv.tp;
+      const sampleSl = sLv.sl;
+      const sTpPips = toPips(sampleTp - sampleEntry, sm.pip);
+      const sSlPips = toPips(sampleSl - sampleEntry, sm.pip);
+      const signalSample = newSignalLine(sample, "BUY", sampleEntry, sampleTp, sampleSl, sTpPips, sSlPips, 78, sessionLabel());
+      const outcomeSample = outcomeLine(sample.symbol, "BUY", "tp", sampleEntry, sampleTp, sTpPips);
 
       const liveNews = (await fetchNews()).slice(0, 3);
       const testPriceBySymbol: Record<string, number> = {};
@@ -2808,35 +2849,28 @@ Deno.serve(async (req) => {
           : q.eng && q.eng.score < 0 ? "SELL"
           : q.eng && q.eng.score > 0 ? "BUY"
           : q.changePct < 0 ? "SELL" : "BUY";
-        const isBuy = sig === "BUY";
-        const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
-        const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
-        const tpPips = toPips(tp - q.price, m.pip);
-        const slPips = toPips(sl - q.price, m.pip);
+        // ATR-based levels from the SAME engine as the app — identical entry/SL/TP.
+        const { entry, tp, sl } = quoteLevels(q, sig);
+        const tpPips = toPips(tp - entry, m.pip);
+        const slPips = toPips(sl - entry, m.pip);
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
 
         const { data: ins } = await admin.from("ai_signals").insert({
-          asset: m.name, signal: sig, entry: q.price, tp, sl,
+          asset: m.name, signal: sig, entry, tp, sl,
           confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
         }).select("id").maybeSingle();
 
         const reason = "🚀 First signal (manual start) · یەکەم سیگنال (دەستپێکی دەستی)";
         const now = Date.now();
         for (const tfDef of TIMEFRAME_CASCADE) {
-          const tpPctTf = m.tpPct * tfDef.tpMult;
-          const slPctTf = m.slPct * tfDef.slMult;
-          const tpTf = +(q.price * (isBuy ? 1 + tpPctTf / 100 : 1 - tpPctTf / 100)).toFixed(2);
-          const slTf = +(q.price * (isBuy ? 1 - slPctTf / 100 : 1 + slPctTf / 100)).toFixed(2);
-          const tpPipsTf = toPips(tpTf - q.price, m.pip);
-          const slPipsTf = toPips(slTf - q.price, m.pip);
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
-          const text = newSignalLine(q, sig, tpTf, slTf, tpPipsTf, slPipsTf, confidence, session, tfDef.tf);
+          const text = newSignalLine(q, sig, entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
           if (tfDef.delayMs === 0) forcedAlerts.push({ text, important: true, reason: tfReason });
           else tfQueue.push({ dueAt: now + tfDef.delayMs, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
         }
 
-        openState[symbol] = { id: ins?.id as string | undefined, signal: sig, entry: q.price, tp, sl };
+        openState[symbol] = { id: ins?.id as string | undefined, signal: sig, entry, tp, sl };
         priceState[symbol] = { price: q.price, signal: sig, lastSignalAt: now, lastSignalDir: sig, lastAuditKey: "sent:fresh" };
         await admin.from("signal_audit_log").insert({
           symbol: m.name, signal: sig, price: q.price, change_pct: q.changePct, outcome: "sent", reason: "forced",
