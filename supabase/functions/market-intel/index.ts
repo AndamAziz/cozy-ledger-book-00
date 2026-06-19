@@ -959,6 +959,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           if (leg.id) {
             await admin.from("ai_signals").update({
               status: hit === "tp" ? "target_hit" : "stopped_out",
+              close_reason: hit === "tp" ? "tp" : "sl",
               result_pips: hit === "tp" ? pips : -pips,
               close_price: q.price,
               closed_at: new Date().toISOString(),
@@ -975,6 +976,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           if (leg.id) {
             await admin.from("ai_signals").update({
               status: win ? "target_hit" : "stopped_out",
+              close_reason: "period_close",
               result_pips: win ? pips : -pips,
               close_price: q.price,
               closed_at: new Date().toISOString(),
