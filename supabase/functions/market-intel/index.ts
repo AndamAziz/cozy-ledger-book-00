@@ -122,6 +122,24 @@ function quoteConfidence(q: Quote): number {
   return Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
 }
 
+// ATR-based entry / stop-loss / take-profit straight from the shared engine —
+// byte-for-byte identical to the app (entry = last-candle close, SL = 1.5×ATR,
+// TP1 = 1.5R, TP2 = 3R). The percentage fallback runs ONLY when the engine
+// produced no candle data, which for an actionable BUY/SELL is rare.
+function quoteLevels(q: Quote, sig: "BUY" | "SELL"): { entry: number; tp: number; sl: number; tp2: number } {
+  const e = q.eng;
+  if (e && e.entry > 0 && e.stopLoss > 0 && e.takeProfit1 > 0) {
+    return { entry: e.entry, tp: e.takeProfit1, sl: e.stopLoss, tp2: e.takeProfit2 };
+  }
+  const m = ASSET_META[q.symbol];
+  const isBuy = sig === "BUY";
+  const entry = q.price;
+  const tp = +(entry * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+  const sl = +(entry * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
+  const tp2 = +(entry * (isBuy ? 1 + (m.tpPct * 2) / 100 : 1 - (m.tpPct * 2) / 100)).toFixed(2);
+  return { entry, tp, sl, tp2 };
+}
+
 // ───────────────────── price sources ─────────────────────
 async function fetchGold(): Promise<Quote | null> {
   try {
