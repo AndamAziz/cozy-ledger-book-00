@@ -75,9 +75,26 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
       return;
     }
 
-    const result = isSignupMode 
-      ? await onSignup(email, password, companyName.trim())
-      : await onLogin(email, password);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // When signing up, detect emails already registered via Google Sign-In
+    // and show a clear, actionable message instead of a generic error.
+    if (isSignupMode) {
+      const info = await getAccountProviderInfo(normalizedEmail);
+      if (info.exists && info.hasGoogle && !info.hasPassword) {
+        toast({
+          title: t('googleAccountSignupTitle'),
+          description: t('googleAccountSignupDesc'),
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    const result = isSignupMode
+      ? await onSignup(normalizedEmail, password, companyName.trim())
+      : await onLogin(normalizedEmail, password);
 
     if (result.success) {
       toast({
@@ -85,9 +102,12 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
         description: t('success'),
       });
     } else {
+      const description = result.errorKey
+        ? t(result.errorKey as Parameters<typeof t>[0])
+        : result.error || t('error');
       toast({
         title: t('error'),
-        description: result.error || t('error'),
+        description,
         variant: 'destructive',
       });
     }
