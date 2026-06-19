@@ -411,8 +411,8 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
         })}
       </div>
 
-      {/* Dots */}
-      <div className="relative z-10 flex items-center justify-center gap-2 py-4">
+      {/* Dots (forced LTR to match the carousel order) */}
+      <div dir="ltr" className="relative z-10 flex items-center justify-center gap-2 py-4">
         {FEATURES.map((_, i) => (
           <button
             key={i}
