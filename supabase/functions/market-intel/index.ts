@@ -1041,11 +1041,6 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
 
-        const { data: ins } = await admin.from("ai_signals").insert({
-          asset: m.name, signal: sig, entry, tp, sl,
-          confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
-        }).select("id").maybeSingle();
-
         const highConf = confidence >= TARGET_IMPORTANT_CONFIDENCE;
         const strongMoveImp = Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
         let reason = "⏱ Cooldown passed / throttle finished · کاتژمێری کۆتایی هات";
@@ -1055,21 +1050,39 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 
         // Staggered re-posts of the SAME trade so late joiners still see it. Every
         // message carries the identical engine entry/SL/TP — no per-TF widening.
+        // Each timeframe becomes its OWN tracked leg (its own ai_signals row) so it
+        // reports its own result the moment its candle/period closes.
         const now = Date.now();
+        const newLegs: OpenLeg[] = [];
         for (const tfDef of TIMEFRAME_CASCADE) {
+          const activeFrom = now + tfDef.delayMs;
+          const expiresAt = activeFrom + (TF_PERIOD_MS[tfDef.tf] ?? TF_PERIOD_MS["15M"]);
+
+          const { data: ins } = await admin.from("ai_signals").insert({
+            asset: m.name, signal: sig, entry, tp, sl, confidence,
+            status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
+            timeframe: tfDef.tf,
+          }).select("id").maybeSingle();
+
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
           const text = newSignalLine(q, sig as "BUY" | "SELL", entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
           if (tfDef.delayMs === 0) {
             // First message fires immediately as a high-priority signal so it always reaches the channel.
             signalAlerts.push({ text, important: true, reason: tfReason });
           } else {
-            tfQueue.push({ dueAt: now + tfDef.delayMs, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
+            tfQueue.push({ dueAt: activeFrom, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
           }
+          newLegs.push({
+            id: ins?.id as string | undefined,
+            signal: sig as "BUY" | "SELL",
+            entry, tp, sl, tf: tfDef.tf, activeFrom, expiresAt,
+          });
         }
-        openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry, tp, sl };
+        openState[q.symbol] = newLegs;
         lastSignalAt = Date.now();
         lastSignalDir = sig; // remember the direction we actually broadcast
       }
+
 
       // Persist the audit record (best-effort — never block signal flow on logging).
       // The scan loop ticks ~every 5s, so to avoid flooding we log every SENT signal,
