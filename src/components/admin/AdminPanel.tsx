@@ -98,9 +98,17 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
+  const CEO_EMAIL = 'andam@outlook.com';
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const isCEO = (currentUserEmail || '').toLowerCase() === CEO_EMAIL;
+
   useEffect(() => {
     fetchUsers();
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserEmail(data.user?.email ?? null);
+    });
   }, []);
+
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -989,7 +997,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           <X className="h-3 w-3 ml-1" />
                           {t('revoke')}
                         </Button>
-                        {!user.isAdmin && (
+                        {isCEO && !user.isAdmin && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -1003,7 +1011,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                             {t('makeAdmin')}
                           </Button>
                         )}
-                        {user.isAdmin && (
+                        {isCEO && user.isAdmin && (
                           <Button
                             variant="outline"
                             size="sm"

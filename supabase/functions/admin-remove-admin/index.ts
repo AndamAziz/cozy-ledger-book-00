@@ -35,17 +35,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if requesting user is admin
-    const { data: requesterRole } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single()
-
-    if (!requesterRole) {
+    // Only the CEO/super-admin can remove admins
+    const CEO_EMAIL = 'andam@outlook.com'
+    if ((user.email || '').toLowerCase() !== CEO_EMAIL) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - admin access required' }),
+        JSON.stringify({ error: 'Forbidden: Only the CEO can remove admins' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
