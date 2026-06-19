@@ -14,13 +14,18 @@ interface LoginFormProps {
 export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSignupMode, setIsSignupMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
   const { t } = useLanguage();
+
+  const passwordsMismatch =
+    isSignupMode && confirmPassword.length > 0 && password !== confirmPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +61,16 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
       return;
     }
 
+    if (isSignupMode && password !== confirmPassword) {
+      toast({
+        title: t('error'),
+        description: t('passwordsDoNotMatch'),
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const result = isSignupMode 
       ? await onSignup(email, password, companyName.trim())
       : await onLogin(email, password);
@@ -80,8 +95,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
     setIsSignupMode(signup);
     setEmail('');
     setPassword('');
+    setConfirmPassword('');
     setCompanyName('');
     setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -243,12 +260,53 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+
+              {/* Confirm Password - Only in signup mode */}
+              {isSignupMode && (
+                <div>
+                  <div className="relative group">
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                      <Lock className="w-5 h-5" />
+                    </span>
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder=" "
+                      disabled={isLoading}
+                      className={`peer w-full py-4 pr-12 pl-12 bg-slate-800/60 border-2 rounded-xl text-white text-base outline-none transition-all focus:bg-slate-800/80 placeholder-transparent ${
+                        passwordsMismatch
+                          ? 'border-destructive focus:border-destructive'
+                          : 'border-slate-700/50 focus:border-primary'
+                      }`}
+                    />
+                    <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
+                      peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                      peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
+                      {t('confirmPassword')}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-primary transition-colors p-1"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {passwordsMismatch && (
+                    <p className="mt-2 text-sm text-destructive text-right">
+                      {t('passwordsDoNotMatch')}
+                    </p>
+                  )}
+                </div>
+              )}
+              
               
               {/* Submit Button */}
               <Button 
                 type="submit" 
                 className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 text-base font-bold rounded-xl transition-all duration-300 mt-2"
-                disabled={isLoading}
+                disabled={isLoading || passwordsMismatch}
               >
               {isLoading ? (
                   <div className="flex items-center gap-2">
