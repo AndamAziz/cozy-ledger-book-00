@@ -606,20 +606,15 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       }
     } catch { /* ignore */ }
 
-    const result = analyzeMarket({
-      price: currentPrice,
-      ema9: indicators.ema9,
-      ema21: indicators.ema21,
-      ema50: indicators.ema50,
-      rsi: indicators.rsi,
-      macdLine: indicators.macd?.macd ?? null,
-      macdSignal: indicators.macd?.signal ?? null,
-    });
-    const summaryOut = ruleToSummary(result);
-    setTradeSummary(summaryOut);
-    setGeneratedAt(result.generatedAt);
+    const out = computeUnifiedSummary();
+    if (!out) {
+      setAiError(biLabel('داتای پێویست نییە بۆ شیکاری.', 'Not enough data to analyze.'));
+      return;
+    }
+    setTradeSummary(out.summary);
+    setGeneratedAt(out.generatedAt);
     try {
-      localStorage.setItem(ruleCacheKey, JSON.stringify({ summary: summaryOut, generatedAt: result.generatedAt }));
+      localStorage.setItem(ruleCacheKey, JSON.stringify({ summary: out.summary, generatedAt: out.generatedAt }));
     } catch { /* ignore quota errors */ }
   };
 
