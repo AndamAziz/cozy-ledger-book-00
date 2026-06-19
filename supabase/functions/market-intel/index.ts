@@ -2736,14 +2736,17 @@ Deno.serve(async (req) => {
       const quotes = await getPrices();
       const priceBlock = quotes.map((q) => priceLine(q, quoteSignal(q)));
 
-      // Build a sample full trade signal + a sample TP outcome from live gold price.
+      // Build a sample full trade signal + a sample TP outcome. Uses the engine's
+      // ATR levels when available (same as live), else a percentage sample.
       const sample = quotes[0] ?? { symbol: "XAU/USD", price: 4275, changePct: 0.3 } as Quote;
       const sm = ASSET_META[sample.symbol] ?? ASSET_META["XAU/USD"];
-      const sampleTp = +(sample.price * (1 + sm.tpPct / 100)).toFixed(2);
-      const sampleSl = +(sample.price * (1 - sm.slPct / 100)).toFixed(2);
-      const sTpPips = toPips(sampleTp - sample.price, sm.pip);
-      const sSlPips = toPips(sampleSl - sample.price, sm.pip);
-      const signalSample = newSignalLine(sample, "BUY", sampleTp, sampleSl, sTpPips, sSlPips, 78, sessionLabel());
+      const sLv = quoteLevels(sample, "BUY");
+      const sampleEntry = sLv.entry;
+      const sampleTp = sLv.tp;
+      const sampleSl = sLv.sl;
+      const sTpPips = toPips(sampleTp - sampleEntry, sm.pip);
+      const sSlPips = toPips(sampleSl - sampleEntry, sm.pip);
+      const signalSample = newSignalLine(sample, "BUY", sampleEntry, sampleTp, sampleSl, sTpPips, sSlPips, 78, sessionLabel());
       const outcomeSample = outcomeLine(sample.symbol, "BUY", "tp", sample.price, sampleTp, sTpPips);
 
       const liveNews = (await fetchNews()).slice(0, 3);
