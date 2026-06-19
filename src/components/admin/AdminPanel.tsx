@@ -428,6 +428,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
       if (error) throw error;
 
+      await logActivity('expiry_changed', selectedUser.user_id, selectedUser.email, { action: `Expiry set to ${newExpiry.toISOString().split('T')[0]}` });
+
       toast({
         title: t('success'),
         description: t('expiryChanged'),
