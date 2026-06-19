@@ -1,5 +1,6 @@
 import { OHLCCandle, fetchOHLC } from './krakenApi';
 import { calculateRSI, calculateMACD, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from './indicators';
+import { calculateATR, atrLevels } from './risk';
 
 export type TrendDir = 'up' | 'down' | 'neutral';
 
