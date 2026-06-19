@@ -653,6 +653,25 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           </div>
         </header>
 
+        {/* Role context banner */}
+        {currentUserEmail && (
+          isCEO ? (
+            <div className="mb-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 to-primary/5 p-4 flex items-start gap-3">
+              <Crown className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-primary">{t('ceoRoleBadge')}</p>
+                <p className="text-xs text-muted-foreground">{t('ceoBannerDesc')}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-6 rounded-2xl border border-warning/30 bg-gradient-to-br from-warning/15 to-warning/5 p-4 flex items-start gap-3">
+              <Shield className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">{t('adminBannerNote')}</p>
+            </div>
+          )
+        )}
+
+
         {/* Statistics Cards - Compact & Clickable */}
         <div className="grid grid-cols-4 md:grid-cols-7 gap-2 md:gap-3 mb-6">
           <div 
