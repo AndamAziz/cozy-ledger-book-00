@@ -299,7 +299,21 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 </button>
               </div>
 
-              {/* Confirm Password - Only in signup mode */}
+              {/* Forgot password link - login mode only */}
+              {!isSignupMode && (
+                <div className="text-left -mt-2">
+                  <button
+                    type="button"
+                    onClick={openForgotMode}
+                    className="text-sm text-primary hover:text-success font-medium transition-colors"
+                    disabled={isLoading}
+                  >
+                    {t('forgotPassword')}
+                  </button>
+                </div>
+              )}
+
+
               {isSignupMode && (
                 <div>
                   <div className="relative group">
