@@ -372,10 +372,11 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
         <p className="text-xs sm:text-sm text-muted-foreground mt-1">{ui.subtitle}</p>
       </div>
 
-      {/* Swipeable feature cards */}
+      {/* Swipeable feature cards (container forced LTR for reliable scroll math) */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
+        dir="ltr"
         className="relative z-10 flex min-h-[360px] flex-shrink-0 overflow-x-auto snap-x snap-mandatory no-scrollbar"
         style={{ scrollSnapType: 'x mandatory' }}
       >
@@ -384,6 +385,7 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
           return (
             <div
               key={i}
+              dir={dir}
               className="snap-center shrink-0 w-full h-full flex items-center justify-center px-5 sm:px-8 py-4"
             >
               <div className="glass-card w-full max-w-md p-6 sm:p-8 animate-fade-in">
