@@ -201,6 +201,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       'account_deleted': t('actionDeleted'),
       'make_admin': t('actionMadeAdmin'),
       'remove_admin': t('actionRemovedAdmin'),
+      'reset_email_sent': t('actionResetEmailSent'),
     };
     return labels[actionType] || actionType;
   };
@@ -319,6 +320,27 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       });
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleSendResetEmail = async (user: UserApproval) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      await logActivity('reset_email_sent', user.user_id, user.email, { action: 'Password reset email sent by admin' });
+      toast({
+        title: t('success'),
+        description: t('resetEmailSent'),
+      });
+    } catch (error) {
+      console.error('Error sending reset email:', error);
+      toast({
+        title: t('error'),
+        description: t('errorOccurred'),
+        variant: 'destructive',
+      });
     }
   };
 
@@ -1082,9 +1104,22 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         )}
                       </div>
                       ) : (
-                        <p className="text-xs text-muted-foreground italic">
-                          {t('adminBannerNote')}
-                        </p>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <p className="text-xs text-muted-foreground italic flex-1">
+                            {t('adminBannerNote')}
+                          </p>
+                          {!user.isAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSendResetEmail(user)}
+                              className="rounded-lg text-xs border-info/30 text-info hover:text-info hover:bg-info/10"
+                            >
+                              <Mail className="h-3 w-3 ml-1" />
+                              {t('sendResetEmail')}
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
