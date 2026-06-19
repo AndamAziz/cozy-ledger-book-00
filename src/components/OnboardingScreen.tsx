@@ -304,22 +304,30 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    const idx = Math.round(el.scrollLeft / el.clientWidth);
-    setActiveIndex(Math.abs(idx));
+    // Works for both LTR (positive scrollLeft) and modern RTL (negative scrollLeft)
+    const idx = Math.round(Math.abs(el.scrollLeft) / el.clientWidth);
+    setActiveIndex(Math.min(FEATURES.length - 1, Math.max(0, idx)));
   };
 
   const goTo = (index: number) => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ left: index * el.clientWidth, behavior: 'smooth' });
+    const clamped = Math.min(FEATURES.length - 1, Math.max(0, index));
+    // Modern browsers use negative scrollLeft for RTL containers
+    const target = dir === 'rtl' ? -(clamped * el.clientWidth) : clamped * el.clientWidth;
+    el.scrollTo({ left: target, behavior: 'smooth' });
   };
 
   const handleNext = () => {
     if (isLast) {
       onComplete();
-    } else {
-      goTo(activeIndex + 1);
+      return;
     }
+    const next = activeIndex + 1;
+    setActiveIndex(next);
+    goTo(next);
+    // Bring the carousel back into view in case the page was scrolled down
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Keep active index in sync on resize
