@@ -303,6 +303,15 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
       if (error) throw error;
 
+      if (data?.error) {
+        toast({
+          title: t('error'),
+          description: data.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       toast({
         title: t('success'),
         description: t('passwordChanged'),
