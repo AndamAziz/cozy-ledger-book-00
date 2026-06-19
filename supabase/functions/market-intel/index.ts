@@ -716,7 +716,7 @@ function newSignalLine(
     `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
     tf ? `⏱ <b>Timeframe: ${tf}</b> · چوارچێوەی کات` : "",
     "",
-    `💰 <code>$${fmt(q.price)}</code> :نرخی چوونەژوورەوە`,
+    `💰 <code>$${fmt(entry)}</code> :نرخی چوونەژوورەوە`,
     `🎯 <code>$${fmt(tp)}</code> :تارگێت (+$${fmt(tpDelta)})`,
     `🛑 <code>$${fmt(sl)}</code> :ستۆپ لۆس (-$${fmt(slDelta)})`,
     "",
