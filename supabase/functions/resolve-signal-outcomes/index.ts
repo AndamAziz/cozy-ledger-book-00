@@ -89,16 +89,20 @@ async function fetchKrakenM5(): Promise<Candle[]> {
 }
 
 async function fetchGoldM5(): Promise<Candle[]> {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/commodities-prices?mode=history&code=XAU&range=5min`, {
-      headers: { Authorization: `Bearer ${ANON}`, apikey: ANON }, signal: AbortSignal.timeout(10000),
-    });
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !Array.isArray(data?.candles)) return [];
-    return data.candles.map((c: { time: number; high: number; low: number; close: number }) => ({
-      time: c.time, high: c.high, low: c.low, close: c.close,
-    }));
-  } catch { return []; }
+  // Both "5min" and "1d" return ~5-minute candles from commodities-prices.
+  for (const range of ["5min", "1d", "5d"]) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/commodities-prices?mode=history&code=XAU&range=${range}`, {
+        headers: { Authorization: `Bearer ${ANON}`, apikey: ANON }, signal: AbortSignal.timeout(20000),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !Array.isArray(data?.candles) || !data.candles.length) continue;
+      return data.candles.map((c: { time: number; high: number; low: number; close: number }) => ({
+        time: c.time, high: c.high, low: c.low, close: c.close,
+      }));
+    } catch { /* try next range */ }
+  }
+  return [];
 }
 
 async function fetchOilM5(): Promise<Candle[]> {
