@@ -426,6 +426,8 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 </button>
               </p>
             </div>
+            </>
+            )}
           </div>
         </div>
         
