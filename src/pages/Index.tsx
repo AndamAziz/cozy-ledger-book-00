@@ -18,6 +18,7 @@ import { InventoryTab } from '@/components/InventoryTab';
 import { SalesTab } from '@/components/SalesTab';
 import { ReportsTab } from '@/components/ReportsTab';
 import { SplashScreen } from '@/components/SplashScreen';
+import { OnboardingScreen } from '@/components/OnboardingScreen';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Users, Sparkles, Tv, Film } from 'lucide-react';
@@ -156,16 +157,30 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
   );
 };
 
+const ONBOARDING_SEEN_KEY = 'city-taxperts-onboarding-seen';
+
 const Index = () => {
   const { user, isAuthenticated, isLoading, login, signup, logout } = useAuth();
   const { isAdmin, approvalStatus, isLoading: roleLoading } = useUserRole(user);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem(ONBOARDING_SEEN_KEY);
+  });
+
+  const completeOnboarding = () => {
+    localStorage.setItem(ONBOARDING_SEEN_KEY, '1');
+    setShowOnboarding(false);
+  };
 
   if (isLoading || (isAuthenticated && roleLoading)) {
     return <SplashScreen />;
   }
 
   if (!isAuthenticated) {
+    if (showOnboarding) {
+      return <OnboardingScreen onComplete={completeOnboarding} />;
+    }
     return <LoginForm onLogin={login} onSignup={signup} />;
   }
 
