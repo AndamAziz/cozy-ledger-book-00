@@ -155,6 +155,18 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           {activeTab === 'reports' && (
             <ReportsTab incomeData={financeData.incomeData} expenseData={financeData.expenseData} cigaretteData={financeData.cigaretteData} salesData={financeData.salesData} summary={summary} currentMonthLabel={financeData.getCurrentMonthLabel()} currentMonthKey={financeData.currentMonthKey} />
           )}
+
+          {/* Customer reviews */}
+          <div className="mt-4 sm:mt-6 grid gap-3 no-print">
+            <ReviewForm user={user} reviewerName={companyName} />
+            <Button
+              variant="outline"
+              onClick={() => navigate('/reviews')}
+              className="w-full rounded-xl border-gold/40 text-foreground hover:bg-gold/10"
+            >
+              {reviewI18n.seeAll}
+            </Button>
+          </div>
         </div>
       </div>
     </>
