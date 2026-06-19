@@ -306,7 +306,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               <Button 
                 type="submit" 
                 className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 text-base font-bold rounded-xl transition-all duration-300 mt-2"
-                disabled={isLoading}
+                disabled={isLoading || passwordsMismatch}
               >
               {isLoading ? (
                   <div className="flex items-center gap-2">
