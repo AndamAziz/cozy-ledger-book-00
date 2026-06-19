@@ -1,10 +1,10 @@
 import { useState } from "react";
 import {
-  History, Trash2, Check, X as XIcon, Clock,
+  History, Check, X as XIcon, Clock, Hourglass,
   TrendingUp, TrendingDown, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useSignalJournal, SignalAction, SignalEntry } from "@/hooks/useSignalJournal";
+import { useSignalJournalDb, SignalAction, SignalEntry } from "@/hooks/useSignalJournalDb";
 
 interface Props {
   storeKey: string;
@@ -22,10 +22,11 @@ function fmtDate(ms: number): string {
   return `${pad(d.getDate())} ${MONTHS[d.getMonth()]} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function SignalHistory({ storeKey, action, confidence, price, decimals }: Props) {
+export function SignalHistory({ storeKey, decimals }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === "en" || language === "tr" ? en : ku);
-  const { entries, recent, accuracy, decidedCount, clear } = useSignalJournal(storeKey, action, confidence, price);
+  const { entries, recent, accuracy, decidedCount, totalPips, loading, isTracked } =
+    useSignalJournalDb(storeKey);
   const [expanded, setExpanded] = useState(false);
 
   const fmt = (n: number) =>
@@ -37,20 +38,28 @@ export function SignalHistory({ storeKey, action, confidence, price, decimals }:
     if (e.result === "pending") {
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-[#f0b90b]">
-          <Clock className="h-3 w-3" /> {bi("چاوەڕێ", "Pending")}
+          <Clock className="h-3 w-3" /> {bi("چاوەڕێ", "Open")}
+        </span>
+      );
+    }
+    if (e.result === "expired") {
+      return (
+        <span className="flex items-center gap-1 text-[10px] font-bold text-[#848e9c]">
+          <Hourglass className="h-3 w-3" /> {bi("بەسەرچوو", "Expired")}
         </span>
       );
     }
     if (e.result === "correct") {
+      const label = e.outcome === "tp2" ? "TP2" : "TP1";
       return (
         <span className="flex items-center gap-1 text-[10px] font-bold text-[#0ecb81]">
-          <Check className="h-3 w-3" /> {bi("ڕاست", "Correct")}
+          <Check className="h-3 w-3" /> {label}
         </span>
       );
     }
     return (
       <span className="flex items-center gap-1 text-[10px] font-bold text-[#f6465d]">
-        <XIcon className="h-3 w-3" /> {bi("هەڵە", "Wrong")}
+        <XIcon className="h-3 w-3" /> SL
       </span>
     );
   };
@@ -65,18 +74,25 @@ export function SignalHistory({ storeKey, action, confidence, price, decimals }:
             {bi("وردی", "Accuracy")} {accuracy}%
           </span>
         )}
-        {entries.length > 0 && (
-          <button
-            onClick={clear}
-            aria-label={bi("سڕینەوە", "Clear")}
-            className="ml-auto rounded-md p-1.5 text-[#848e9c] hover:bg-white/10 hover:text-[#f6465d] transition-colors"
+        {decidedCount > 0 && (
+          <span
+            className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-semibold tabular-nums"
+            style={{ color: totalPips >= 0 ? "#0ecb81" : "#f6465d" }}
           >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+            {totalPips >= 0 ? "+" : ""}{Math.round(totalPips)} {bi("پۆینت", "pips")}
+          </span>
         )}
       </div>
 
-      {entries.length === 0 ? (
+      {loading ? (
+        <p className="mt-2.5 text-center text-[11px] text-[#848e9c]">
+          {bi("بارکردن…", "Loading…")}
+        </p>
+      ) : !isTracked ? (
+        <p className="mt-2.5 text-center text-[11px] text-[#848e9c]">
+          {bi("مێژووی سیگناڵ بۆ ئەم ئامرازە بەردەست نییە", "Signal history not tracked for this asset")}
+        </p>
+      ) : entries.length === 0 ? (
         <p className="mt-2.5 text-center text-[11px] text-[#848e9c]">
           {bi("هێشتا سیگناڵ تۆمار نەکراوە", "No signals recorded yet")}
         </p>
@@ -101,7 +117,14 @@ export function SignalHistory({ storeKey, action, confidence, price, decimals }:
                     {resultChip(e)}
                   </div>
                   <div className="mt-1 flex items-center justify-between text-[10px] text-[#848e9c] tabular-nums">
-                    <span>@ {fmt(e.entryPrice)}{e.resultPrice != null ? ` → ${fmt(e.resultPrice)}` : ""}</span>
+                    <span>
+                      @ {fmt(e.entryPrice)}{e.resultPrice != null ? ` → ${fmt(e.resultPrice)}` : ""}
+                      {e.pips != null && (e.result === "correct" || e.result === "wrong") ? (
+                        <span style={{ color: e.pips >= 0 ? "#0ecb81" : "#f6465d" }}>
+                          {" "}({e.pips >= 0 ? "+" : ""}{Math.round(e.pips)})
+                        </span>
+                      ) : null}
+                    </span>
                     <span>{fmtDate(e.time)}</span>
                   </div>
                 </li>
