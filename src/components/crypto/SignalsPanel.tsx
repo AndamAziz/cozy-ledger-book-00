@@ -191,6 +191,11 @@ export function SignalsPanel() {
       {/* Cross-engine parity check (Confluence vs Signals vs Telegram) */}
       <SignalParityCheck asset={asset} />
 
+      {/* Per-timeframe outcome timeline (Telegram cascade legs) */}
+      <LegOutcomeTimeline />
+
+
+
 
 
       <p className="text-[10px] text-[#848e9c] leading-relaxed pb-2">
