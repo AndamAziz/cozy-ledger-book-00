@@ -153,8 +153,16 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
         });
         return;
       }
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // Detect accounts created via Google Sign-In (no password set). We still
+      // send the recovery link so they can OPTIONALLY set a password and enable
+      // email login as well (account linking), but we tell them clearly that
+      // Google Sign-In is how this account was created.
+      const info = await getAccountProviderInfo(normalizedEmail);
+
       const { error } = await supabase.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
+        normalizedEmail,
         { redirectTo: `${window.location.origin}/reset-password` }
       );
       if (error) {
@@ -162,7 +170,11 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
       } else {
         // Always show success to avoid leaking which emails exist
         setResetSent(true);
-        toast({ title: t('resetLinkSent'), description: t('resetLinkSentDesc') });
+        if (info.isGoogleOnly) {
+          toast({ title: t('googleAccountResetTitle'), description: t('googleAccountResetDesc') });
+        } else {
+          toast({ title: t('resetLinkSent'), description: t('resetLinkSentDesc') });
+        }
       }
     } catch (err) {
       toast({ title: t('error'), description: t('error'), variant: 'destructive' });
