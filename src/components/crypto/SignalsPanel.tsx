@@ -128,6 +128,19 @@ export function SignalsPanel() {
       {/* Signal card */}
       <SignalCard signal={signal} loading={loading && !signal} emoji={meta.emoji} />
 
+      {/* Higher-TF confluence conflict warning */}
+      {signal?.confluenceAlignment === 'conflicting' && (
+        <div className="flex items-start gap-2 rounded-lg border border-[#f0b90b55] bg-[#f0b90b14] px-3 py-2">
+          <span className="text-sm leading-none mt-0.5">⚠️</span>
+          <div className="text-[11px] leading-snug text-[#f0b90b]">
+            {bi(
+              `بەرامبەر ئاراستەی کاتە بەرزەکانە (${signal.confluenceDebug.confScore}٪ ${signal.confluenceDebug.confDir === 'down' ? 'دابەزین' : 'بەرزبوونەوە'})`,
+              `Conflicts with higher-TF trend (${signal.confluenceDebug.confScore}% ${signal.confluenceDebug.confDir === 'down' ? 'bearish' : 'bullish'})`,
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Multi-timeframe strip */}
       {signal && (
         <div className="rounded-xl bg-[#0d1117] border border-[#1a1e2e] p-3">
@@ -164,6 +177,10 @@ export function SignalsPanel() {
             <div className="flex justify-between"><span className="text-[#848e9c]">EMA50</span><span className="text-white font-bold">{signal.ema50?.toFixed(signal.decimals) ?? '—'}</span></div>
             <div className="flex justify-between"><span className="text-[#848e9c]">ATR</span><span className="text-white font-bold">{signal.atr.toFixed(signal.decimals)}</span></div>
             <div className="flex justify-between"><span className="text-[#848e9c]">Confidence</span><span className="text-white font-bold">{signal.confidence}%</span></div>
+            <div className="flex justify-between"><span className="text-[#848e9c]">ConfScore</span><span className="text-white font-bold">{signal.confluenceDebug.confScore}% {signal.confluenceDebug.confDir}</span></div>
+            <div className="flex justify-between"><span className="text-[#848e9c]">Damp</span><span className="text-white font-bold">×{signal.confluenceDebug.damp.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-[#848e9c]">Combined</span><span className="text-white font-bold">{signal.confluenceDebug.combinedBefore}→{signal.confluenceDebug.combinedAfter}</span></div>
+            <div className="flex justify-between"><span className="text-[#848e9c]">Align</span><span className="text-white font-bold">{signal.confluenceAlignment}</span></div>
           </div>
         </div>
       )}
