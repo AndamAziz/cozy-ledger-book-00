@@ -23,7 +23,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         return stored;
       }
     }
-    return 'ku'; // Default to Kurdish
+    return 'en'; // Default to English
   });
 
   useEffect(() => {
