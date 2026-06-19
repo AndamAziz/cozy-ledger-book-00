@@ -2628,6 +2628,7 @@ Deno.serve(async (req) => {
               stopLoss: q.eng.stopLoss,
               takeProfit1: q.eng.takeProfit1,
               takeProfit2: q.eng.takeProfit2,
+              riskReward: q.eng.riskReward,
               confScore: q.eng.confScore,
               confDir: q.eng.confDir,
               confluenceAlignment: q.eng.confluenceAlignment,
