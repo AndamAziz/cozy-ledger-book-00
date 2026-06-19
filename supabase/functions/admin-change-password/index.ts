@@ -111,8 +111,9 @@ serve(async (req: Request): Promise<Response> => {
           error: isWeak
             ? "This password is too weak or has appeared in a data breach. Please choose a stronger, unique password."
             : msg,
+          fallback: true,
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
