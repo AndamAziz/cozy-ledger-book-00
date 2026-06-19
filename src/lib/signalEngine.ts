@@ -65,6 +65,16 @@ export interface AssetSignal {
   atr: number;
   decimals: number;
   conflict: boolean;
+  /** How the selected-TF call relates to the independent 6-TF confluence. */
+  confluenceAlignment: 'aligned' | 'conflicting' | 'neutral';
+  /** Confluence/penalty diagnostics (debug). */
+  confluenceDebug: {
+    confScore: number;
+    confDir: TrendDir;
+    damp: number;
+    combinedBefore: number;
+    combinedAfter: number;
+  };
   reasonKu: string;
   reasonEn: string;
   newsWarningKu: string | null;
