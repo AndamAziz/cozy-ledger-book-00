@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.enforce_review_rate_limit() FROM PUBLIC, anon, authenticated;
