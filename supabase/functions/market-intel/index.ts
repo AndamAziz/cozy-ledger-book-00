@@ -2565,6 +2565,44 @@ Deno.serve(async (req) => {
     // bypassing the freshness / cooldown / strong-move guards. Seeds state so the cascade + continuous flow keep running.
     const force = body.force === true || Array.isArray(body.force);
 
+    // Diagnostic mode: {"analyze": true} → returns the raw engine analysis (same
+    // core as the app) for GOLD/OIL/BITCOIN as JSON. Posts NOTHING to Telegram.
+    // Used to verify the bot signal == app signal (direction, confidence, RSI/MACD/EMA).
+    if (body.analyze === true) {
+      const quotes = await getPrices();
+      const out = quotes.map((q) => ({
+        symbol: q.symbol,
+        livePrice: q.price,
+        dayChangePct: q.changePct,
+        botSignal: quoteSignal(q),
+        confidence: quoteConfidence(q),
+        engine: q.eng
+          ? {
+              action: q.eng.action,
+              score: q.eng.score,
+              price: q.eng.price,
+              rsi: q.eng.rsi,
+              macd: q.eng.macd,
+              ema20: q.eng.ema20,
+              ema50: q.eng.ema50,
+              atr: q.eng.atr,
+              entry: q.eng.entry,
+              stopLoss: q.eng.stopLoss,
+              takeProfit1: q.eng.takeProfit1,
+              takeProfit2: q.eng.takeProfit2,
+              confScore: q.eng.confScore,
+              confDir: q.eng.confDir,
+              confluenceAlignment: q.eng.confluenceAlignment,
+              conflict: q.eng.conflict,
+              perTF: q.eng.perTF.map((t) => ({ label: t.label, dir: t.dir, rsi: t.rsi ? +t.rsi.toFixed(1) : null })),
+            }
+          : null,
+      }));
+      return new Response(JSON.stringify({ ok: true, ts: new Date().toISOString(), assets: out }, null, 2),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+
     // Config mode: read or set which market regions may open new targets.
     //   {"getConfig": true}                       → returns current enabled regions
     //   {"setRegions": ["Asia","London"]}         → updates enabled regions (empty ⇒ all)
