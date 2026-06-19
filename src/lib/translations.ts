@@ -199,6 +199,10 @@ export const translations = {
     signingUp: 'چاوەڕوان بە...',
     invalidCredentials: 'ئیمەیڵ یان وشەی نهێنی هەڵەیە',
     emailAlreadyRegistered: 'ئەم ئیمەیڵە پێشتر تۆمار کراوە',
+    googleAccountSignupTitle: 'ئەم ئیمەیڵە پێشتر بە گووگڵ تۆمارکراوە',
+    googleAccountSignupDesc: 'ئەم ئیمەیڵە پێشتر بە "چوونەژوورەوە بە گووگڵ" تۆمارکراوە. تکایە دوگمەی "چوونەژوورەوە بە گووگڵ" بەکاربهێنە، یان "وشەی نهێنیت لەبیرچووە؟" بکە بۆ دانانی وشەی نهێنی بۆ چوونەژوورەوەی دەستی.',
+    googleAccountResetTitle: 'ئەم هەژمارە بە گووگڵ دروستکراوە',
+    googleAccountResetDesc: 'ئەم هەژمارە بە "چوونەژوورەوە بە گووگڵ" دروستکراوە. تکایە دوگمەی گووگڵ بەکاربهێنە بۆ چوونەژوورەوە، یان لینکێکی ڕێکخستنەوەمان بۆت نارد بۆ دانانی وشەی نهێنی تاکو بتوانیت بە هەردوو شێوە بچیتە ژوورەوە.',
     errorOccurred: 'هەڵەیەک ڕویدا',
     
     // Splash Screen
@@ -635,6 +639,10 @@ export const translations = {
     signingUp: 'Signing up...',
     invalidCredentials: 'Invalid email or password',
     emailAlreadyRegistered: 'This email is already registered',
+    googleAccountSignupTitle: 'This email is already registered via Google',
+    googleAccountSignupDesc: 'This email is already registered via Google Sign-In. Please use the "Sign in with Google" button instead, or click "Forgot Password" to set a password for manual login.',
+    googleAccountResetTitle: 'This account was created with Google',
+    googleAccountResetDesc: 'This account was created using Google Sign-In. Please use the "Sign in with Google" button to log in. We also sent you a reset link so you can set a password and enable email login as well.',
     errorOccurred: 'An error occurred',
     
     // Splash Screen
@@ -1071,6 +1079,10 @@ export const translations = {
     signingUp: 'جاري التسجيل...',
     invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
     emailAlreadyRegistered: 'هذا البريد الإلكتروني مسجل مسبقاً',
+    googleAccountSignupTitle: 'هذا البريد مسجل مسبقاً عبر Google',
+    googleAccountSignupDesc: 'هذا البريد الإلكتروني مسجل مسبقاً عبر تسجيل الدخول بـ Google. الرجاء استخدام زر "تسجيل الدخول بـ Google"، أو الضغط على "نسيت كلمة المرور؟" لتعيين كلمة مرور لتسجيل الدخول اليدوي.',
+    googleAccountResetTitle: 'تم إنشاء هذا الحساب عبر Google',
+    googleAccountResetDesc: 'تم إنشاء هذا الحساب باستخدام تسجيل الدخول بـ Google. الرجاء استخدام زر "تسجيل الدخول بـ Google". كما أرسلنا لك رابط إعادة تعيين لتتمكن من تعيين كلمة مرور وتفعيل تسجيل الدخول بالبريد أيضاً.',
     errorOccurred: 'حدث خطأ',
     
     // Splash Screen
@@ -1507,6 +1519,10 @@ export const translations = {
     signingUp: 'در حال ثبت‌نام...',
     invalidCredentials: 'ایمیل یا رمز عبور اشتباه است',
     emailAlreadyRegistered: 'این ایمیل قبلاً ثبت شده است',
+    googleAccountSignupTitle: 'این ایمیل قبلاً با Google ثبت شده است',
+    googleAccountSignupDesc: 'این ایمیل قبلاً از طریق ورود با Google ثبت شده است. لطفاً از دکمه «ورود با Google» استفاده کنید، یا روی «رمز عبور را فراموش کرده‌اید؟» بزنید تا برای ورود دستی رمز عبور تعیین کنید.',
+    googleAccountResetTitle: 'این حساب با Google ساخته شده است',
+    googleAccountResetDesc: 'این حساب با استفاده از ورود با Google ساخته شده است. لطفاً از دکمه «ورود با Google» استفاده کنید. همچنین یک لینک بازنشانی برایتان فرستادیم تا بتوانید رمز عبور تعیین کرده و ورود با ایمیل را نیز فعال کنید.',
     errorOccurred: 'خطایی رخ داد',
     
     // Splash Screen
@@ -1943,6 +1959,10 @@ export const translations = {
     signingUp: 'Kayıt olunuyor...',
     invalidCredentials: 'Geçersiz e-posta veya şifre',
     emailAlreadyRegistered: 'Bu e-posta zaten kayıtlı',
+    googleAccountSignupTitle: 'Bu e-posta Google ile zaten kayıtlı',
+    googleAccountSignupDesc: 'Bu e-posta Google ile Giriş üzerinden zaten kayıtlı. Lütfen "Google ile Giriş" düğmesini kullanın veya manuel giriş için şifre belirlemek üzere "Şifremi Unuttum" seçeneğine tıklayın.',
+    googleAccountResetTitle: 'Bu hesap Google ile oluşturuldu',
+    googleAccountResetDesc: 'Bu hesap Google ile Giriş kullanılarak oluşturuldu. Lütfen "Google ile Giriş" düğmesini kullanın. Ayrıca şifre belirleyip e-posta ile girişi de etkinleştirebilmeniz için bir sıfırlama bağlantısı gönderdik.',
     errorOccurred: 'Bir hata oluştu',
 
     // Splash Screen

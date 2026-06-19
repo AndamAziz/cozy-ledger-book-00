@@ -6,10 +6,11 @@ import { Mail, Lock, LogIn, UserPlus, Building2, Eye, EyeOff } from 'lucide-reac
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { isResetEmailAvailable } from '@/lib/emailDns';
+import { getAccountProviderInfo } from '@/lib/accountProvider';
 
 interface LoginFormProps {
-  onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  onSignup: (email: string, password: string, companyName: string) => Promise<{ success: boolean; error?: string }>;
+  onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string; errorKey?: string }>;
+  onSignup: (email: string, password: string, companyName: string) => Promise<{ success: boolean; error?: string; errorKey?: string }>;
 }
 
 export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
@@ -74,9 +75,26 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
       return;
     }
 
-    const result = isSignupMode 
-      ? await onSignup(email, password, companyName.trim())
-      : await onLogin(email, password);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // When signing up, detect emails already registered via Google Sign-In
+    // and show a clear, actionable message instead of a generic error.
+    if (isSignupMode) {
+      const info = await getAccountProviderInfo(normalizedEmail);
+      if (info.exists && info.hasGoogle && !info.hasPassword) {
+        toast({
+          title: t('googleAccountSignupTitle'),
+          description: t('googleAccountSignupDesc'),
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    const result = isSignupMode
+      ? await onSignup(normalizedEmail, password, companyName.trim())
+      : await onLogin(normalizedEmail, password);
 
     if (result.success) {
       toast({
@@ -84,9 +102,12 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
         description: t('success'),
       });
     } else {
+      const description = result.errorKey
+        ? t(result.errorKey as Parameters<typeof t>[0])
+        : result.error || t('error');
       toast({
         title: t('error'),
-        description: result.error || t('error'),
+        description,
         variant: 'destructive',
       });
     }
@@ -132,8 +153,16 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
         });
         return;
       }
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // Detect accounts created via Google Sign-In (no password set). We still
+      // send the recovery link so they can OPTIONALLY set a password and enable
+      // email login as well (account linking), but we tell them clearly that
+      // Google Sign-In is how this account was created.
+      const info = await getAccountProviderInfo(normalizedEmail);
+
       const { error } = await supabase.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
+        normalizedEmail,
         { redirectTo: `${window.location.origin}/reset-password` }
       );
       if (error) {
@@ -141,7 +170,11 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
       } else {
         // Always show success to avoid leaking which emails exist
         setResetSent(true);
-        toast({ title: t('resetLinkSent'), description: t('resetLinkSentDesc') });
+        if (info.isGoogleOnly) {
+          toast({ title: t('googleAccountResetTitle'), description: t('googleAccountResetDesc') });
+        } else {
+          toast({ title: t('resetLinkSent'), description: t('resetLinkSentDesc') });
+        }
       }
     } catch (err) {
       toast({ title: t('error'), description: t('error'), variant: 'destructive' });
