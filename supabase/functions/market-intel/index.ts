@@ -924,40 +924,83 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
       trend: q.changePct >= 0 ? "up" : "down", signal: sig, updated_at: new Date().toISOString(),
     });
 
-    const open = openState[q.symbol] as OpenSig | undefined;
-
-    // 1) Manage an OPEN position → did price hit TP or SL?
-    if (open) {
-      const isBuy = open.signal === "BUY";
-      let hit: "tp" | "sl" | null = null;
-      if (isBuy) {
-        if (q.price >= open.tp) hit = "tp";
-        else if (q.price <= open.sl) hit = "sl";
-      } else {
-        if (q.price <= open.tp) hit = "tp";
-        else if (q.price >= open.sl) hit = "sl";
-      }
-      if (hit) {
-        const pips = toPips(q.price - open.entry, m.pip);
-        outcomeAlerts.push(outcomeLine(q.symbol, open.signal, hit, open.entry, q.price, pips));
-        if (open.id) {
-          await admin.from("ai_signals").update({
-            status: hit === "tp" ? "target_hit" : "stopped_out",
-            result_pips: hit === "tp" ? pips : -pips,
-            close_price: q.price,
-            closed_at: new Date().toISOString(),
-          }).eq("id", open.id);
-        }
-        delete openState[q.symbol];
-      }
-      // Only one active signal per symbol — never stack a second one.
-      const prevOpen = priceState[q.symbol] as { lastSignalAt?: number; lastSignalDir?: Signal; lastAuditKey?: string } | undefined;
-      priceState[q.symbol] = {
-        price: q.price, signal: sig,
-        lastSignalAt: prevOpen?.lastSignalAt, lastSignalDir: prevOpen?.lastSignalDir, lastAuditKey: prevOpen?.lastAuditKey,
-      };
-      continue;
+    // Migrate any legacy single-object open position to the new per-leg array.
+    const rawOpen = openState[q.symbol];
+    let legs: OpenLeg[] = [];
+    if (Array.isArray(rawOpen)) {
+      legs = rawOpen as OpenLeg[];
+    } else if (rawOpen && typeof rawOpen === "object") {
+      const o = rawOpen as { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number };
+      legs = [{ ...o, tf: "15M", activeFrom: 0, expiresAt: Date.now() + TF_PERIOD_MS["15M"] }];
     }
+
+    // 1) Manage every OPEN leg → did price hit TP/SL, or did its candle/period close?
+    if (legs.length) {
+      const nowTs = Date.now();
+      const stillOpen: OpenLeg[] = [];
+      for (const leg of legs) {
+        // Leg not live yet (queued higher-TF re-post) → keep waiting.
+        if (nowTs < leg.activeFrom) { stillOpen.push(leg); continue; }
+
+        const isBuy = leg.signal === "BUY";
+        let hit: "tp" | "sl" | null = null;
+        if (isBuy) {
+          if (q.price >= leg.tp) hit = "tp";
+          else if (q.price <= leg.sl) hit = "sl";
+        } else {
+          if (q.price <= leg.tp) hit = "tp";
+          else if (q.price >= leg.sl) hit = "sl";
+        }
+
+        // a) Hit TP or SL → close this leg with a tagged outcome.
+        if (hit) {
+          const pips = toPips(q.price - leg.entry, m.pip);
+          outcomeAlerts.push(outcomeLine(q.symbol, leg.signal, hit, leg.entry, q.price, pips, leg.tf));
+          if (leg.id) {
+            await admin.from("ai_signals").update({
+              status: hit === "tp" ? "target_hit" : "stopped_out",
+              result_pips: hit === "tp" ? pips : -pips,
+              close_price: q.price,
+              closed_at: new Date().toISOString(),
+            }).eq("id", leg.id);
+          }
+          continue; // leg closed → drop it
+        }
+
+        // b) The timeframe's candle/period closed without hitting TP/SL → report P/L now.
+        if (nowTs >= leg.expiresAt) {
+          const win = isBuy ? q.price >= leg.entry : q.price <= leg.entry;
+          const pips = toPips(q.price - leg.entry, m.pip);
+          outcomeAlerts.push(periodCloseLine(q.symbol, leg.signal, leg.tf, leg.entry, q.price, pips, win));
+          if (leg.id) {
+            await admin.from("ai_signals").update({
+              status: win ? "target_hit" : "stopped_out",
+              result_pips: win ? pips : -pips,
+              close_price: q.price,
+              closed_at: new Date().toISOString(),
+            }).eq("id", leg.id);
+          }
+          continue; // leg closed → drop it
+        }
+
+        stillOpen.push(leg); // still running
+      }
+
+      if (stillOpen.length) openState[q.symbol] = stillOpen;
+      else delete openState[q.symbol];
+
+      // While ANY leg is still open we never stack a new trade for this symbol — the
+      // current trade's outcomes are always reported before a fresh signal goes out.
+      if (stillOpen.length) {
+        const prevOpen = priceState[q.symbol] as { lastSignalAt?: number; lastSignalDir?: Signal; lastAuditKey?: string } | undefined;
+        priceState[q.symbol] = {
+          price: q.price, signal: sig,
+          lastSignalAt: prevOpen?.lastSignalAt, lastSignalDir: prevOpen?.lastSignalDir, lastAuditKey: prevOpen?.lastAuditKey,
+        };
+        continue;
+      }
+    }
+
 
     // 2) No open position → consider opening a NEW signal when timing is right.
     const prev = priceState[q.symbol] as
