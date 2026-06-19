@@ -2762,14 +2762,20 @@ Deno.serve(async (req) => {
         const q = quotes.find((x) => x.symbol === symbol);
         if (!q) continue;
 
-        // Direction from latest move; default to BUY when flat.
-        const sig: "BUY" | "SELL" = q.changePct < 0 ? "SELL" : "BUY";
+        // Direction from the SAME engine as the app (action → score lean → flat fallback).
+        const ea = q.eng?.action;
+        const sig: "BUY" | "SELL" =
+          ea === "sell" ? "SELL"
+          : ea === "buy" ? "BUY"
+          : q.eng && q.eng.score < 0 ? "SELL"
+          : q.eng && q.eng.score > 0 ? "BUY"
+          : q.changePct < 0 ? "SELL" : "BUY";
         const isBuy = sig === "BUY";
         const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
         const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
         const tpPips = toPips(tp - q.price, m.pip);
         const slPips = toPips(sl - q.price, m.pip);
-        const confidence = Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
+        const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
 
         const { data: ins } = await admin.from("ai_signals").insert({
