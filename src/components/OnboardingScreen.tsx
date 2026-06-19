@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { ReviewsShowcase } from '@/components/reviews/ReviewsShowcase';
 import {
   Wallet,
   Film,
