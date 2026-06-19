@@ -227,6 +227,9 @@ export const translations = {
     dayAlreadyExists: 'ئەم ڕۆژە پێشتر داخڵ کراوە',
     noDataToShow: 'هیچ داتایەک نییە بۆ پیشاندان',
     loading: 'چاوەڕوان بە...',
+    loadingTakingLong: 'بارکردن زۆری خایاند',
+    loadingTakingLongMsg: 'کێشەیەک هەیە لە پەیوەندی بە سێرڤەرەوە. تکایە دڵنیابە لە ئینتەرنێتەکەت و دووبارە هەوڵ بدەرەوە.',
+    retry: 'دووبارە هەوڵ بدەرەوە',
     
     // Month names
     january: 'کانوونی دووەم',
@@ -667,6 +670,9 @@ export const translations = {
     dayAlreadyExists: 'This day already has income recorded',
     noDataToShow: 'No data to display',
     loading: 'Loading...',
+    loadingTakingLong: 'Loading is taking longer than expected',
+    loadingTakingLongMsg: 'There seems to be a connection problem. Please check your internet and try again.',
+    retry: 'Retry',
     
     // Month names
     january: 'January',
@@ -1107,6 +1113,9 @@ export const translations = {
     dayAlreadyExists: 'هذا اليوم مسجل مسبقاً',
     noDataToShow: 'لا توجد بيانات للعرض',
     loading: 'جاري التحميل...',
+    loadingTakingLong: 'يستغرق التحميل وقتاً أطول من المعتاد',
+    loadingTakingLongMsg: 'يبدو أن هناك مشكلة في الاتصال. يرجى التحقق من الإنترنت والمحاولة مرة أخرى.',
+    retry: 'إعادة المحاولة',
     
     // Month names
     january: 'يناير',
@@ -1547,6 +1556,9 @@ export const translations = {
     dayAlreadyExists: 'این روز قبلاً ثبت شده است',
     noDataToShow: 'داده‌ای برای نمایش نیست',
     loading: 'در حال بارگذاری...',
+    loadingTakingLong: 'بارگذاری بیش از حد طول کشید',
+    loadingTakingLongMsg: 'به نظر می‌رسد مشکلی در اتصال وجود دارد. لطفاً اینترنت خود را بررسی کرده و دوباره تلاش کنید.',
+    retry: 'تلاش مجدد',
     
     // Month names
     january: 'ژانویه',
@@ -1987,6 +1999,9 @@ export const translations = {
     dayAlreadyExists: 'Bu gün için gelir zaten kayıtlı',
     noDataToShow: 'Gösterilecek veri yok',
     loading: 'Yükleniyor...',
+    loadingTakingLong: 'Yükleme beklenenden uzun sürüyor',
+    loadingTakingLongMsg: 'Bağlantı sorunu var gibi görünüyor. Lütfen internetinizi kontrol edip tekrar deneyin.',
+    retry: 'Tekrar Dene',
 
     // Month names
     january: 'Ocak',
