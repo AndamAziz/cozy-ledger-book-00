@@ -1,5 +1,6 @@
 import { OHLCCandle, fetchOHLC } from './krakenApi';
 import { calculateRSI, calculateMACD, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from './indicators';
+import { calculateATR, atrLevels } from './risk';
 
 export type TrendDir = 'up' | 'down' | 'neutral';
 
@@ -254,38 +255,33 @@ export function recordDirection(asset: 'btc' | 'gold', dir: TrendDir): number {
   }
 }
 
-/** Generate one trade setup of the day from the bias + key levels. */
-export function buildTradeSetup(dir: TrendDir, price: number, levels: KeyLevels): TradeSetup {
+/**
+ * Generate the trade setup of the day from the bias + the live price.
+ *
+ * Uses the SAME unified ATR-based risk model (`atrLevels`) as the Signals panel,
+ * the Analyze card and the Telegram bot — so Entry / SL / TP / R:R are identical
+ * across the whole platform. `atrSeries` is the candle series used to measure
+ * ATR (the M5 / live series, matching the default Signals view).
+ */
+export function buildTradeSetup(
+  dir: TrendDir,
+  price: number,
+  atrSeries: OHLCCandle[],
+  decimals = 2,
+): TradeSetup {
   if (price <= 0 || dir === 'neutral') {
-    return { side: 'none', entry: price, stopLoss: 0, takeProfit1: 0, takeProfit2: 0, riskReward: 0 };
+    return { side: 'none', entry: +Math.max(price, 0).toFixed(decimals), stopLoss: 0, takeProfit1: 0, takeProfit2: 0, riskReward: 0 };
   }
-  if (dir === 'up') {
-    const stopLoss = levels.nearestSupport ?? price * 0.99;
-    const tp1 = levels.nearestResistance ?? price * 1.01;
-    const tp2 = levels.resistances[1] ?? price * 1.02;
-    const risk = Math.max(price - stopLoss, price * 0.001);
-    const reward = tp1 - price;
-    return {
-      side: 'buy',
-      entry: +price.toFixed(2),
-      stopLoss: +stopLoss.toFixed(2),
-      takeProfit1: +tp1.toFixed(2),
-      takeProfit2: +tp2.toFixed(2),
-      riskReward: +(reward / risk).toFixed(2),
-    };
-  }
-  const stopLoss = levels.nearestResistance ?? price * 1.01;
-  const tp1 = levels.nearestSupport ?? price * 0.99;
-  const tp2 = levels.supports[1] ?? price * 0.98;
-  const risk = Math.max(stopLoss - price, price * 0.001);
-  const reward = price - tp1;
+  const side: 'buy' | 'sell' = dir === 'up' ? 'buy' : 'sell';
+  const atr = calculateATR(atrSeries);
+  const lv = atrLevels(side, price, atr, decimals);
   return {
-    side: 'sell',
-    entry: +price.toFixed(2),
-    stopLoss: +stopLoss.toFixed(2),
-    takeProfit1: +tp1.toFixed(2),
-    takeProfit2: +tp2.toFixed(2),
-    riskReward: +(reward / risk).toFixed(2),
+    side,
+    entry: lv.entry,
+    stopLoss: lv.stopLoss,
+    takeProfit1: lv.takeProfit1,
+    takeProfit2: lv.takeProfit2,
+    riskReward: lv.riskReward,
   };
 }
 
@@ -339,7 +335,10 @@ export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promis
   const levelSeries = series[1]?.length ? series[1] : series[0]?.length ? series[0] : series[2] || [];
   const effectivePrice = price > 0 ? price : levelSeries.length ? levelSeries[levelSeries.length - 1].close : 0;
   const levels = buildKeyLevels(levelSeries, effectivePrice);
-  const setup = buildTradeSetup(confluence.dir, effectivePrice, levels);
+  // ATR for the trade setup uses the M5 (live) series to match the default
+  // Signals/bot view, falling back to M15, then the key-level series.
+  const atrSeries = series[5]?.length ? series[5] : series[4]?.length ? series[4] : levelSeries;
+  const setup = buildTradeSetup(confluence.dir, effectivePrice, atrSeries, 2);
   const signalChangedAt = recordDirection(asset, confluence.dir);
 
   return { trends, confluence, levels, setup, price: effectivePrice, signalChangedAt };

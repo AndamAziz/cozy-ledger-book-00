@@ -1,6 +1,9 @@
 import { OHLCCandle } from './krakenApi';
 import { calculateRSI, calculateMACD, STANDARD_INDICATOR_SETTINGS, bestIndicatorSettings } from './indicators';
 import { trendFromCandles, TrendDir, getSessionStatuses, aggregateCandles } from './aiAnalysis';
+import { calculateATR, atrLevels } from './risk';
+
+export { calculateATR };
 
 export type SignalAction = 'buy' | 'sell' | 'wait' | 'neutral';
 export type AssetKey = 'gold' | 'btc' | 'eurusd' | 'gbpusd' | 'usdjpy';
@@ -104,29 +107,6 @@ export function emaLast(values: number[], period: number): number | null {
   return prev;
 }
 
-/** Average True Range (Wilder) over the candle series. */
-export function calculateATR(candles: OHLCCandle[], period = 14): number {
-  if (!candles || candles.length < period + 1) {
-    // fall back to a small range estimate from whatever we have
-    if (candles && candles.length >= 2) {
-      const trs = [];
-      for (let i = 1; i < candles.length; i++) trs.push(candles[i].high - candles[i].low);
-      const avg = trs.reduce((a, b) => a + b, 0) / trs.length;
-      return Number.isFinite(avg) ? avg : 0;
-    }
-    return 0;
-  }
-  const trs: number[] = [];
-  for (let i = 1; i < candles.length; i++) {
-    const h = candles[i].high;
-    const l = candles[i].low;
-    const pc = candles[i - 1].close;
-    trs.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
-  }
-  let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
-  for (let i = period; i < trs.length; i++) atr = (atr * (period - 1) + trs[i]) / period;
-  return Number.isFinite(atr) ? atr : 0;
-}
 
 export interface TechnicalRead {
   rsi: number | null;
@@ -417,13 +397,9 @@ export function buildLocalSignal(candles: OHLCCandle[], price: number, decimals:
   const d = decideFromScores(tech.score, 0, 0, perTF, false);
 
   const atr = calculateATR(candles);
-  const slDist = atr > 0 ? atr * 1.5 : px * 0.005;
-  const dirSign = d.action === 'buy' ? 1 : d.action === 'sell' ? -1 : 0;
-  const entry = +px.toFixed(decimals);
-  const stopLoss = dirSign !== 0 ? +(px - dirSign * slDist).toFixed(decimals) : 0;
-  const takeProfit1 = dirSign !== 0 ? +(px + dirSign * slDist * 1.5).toFixed(decimals) : 0;
-  const takeProfit2 = dirSign !== 0 ? +(px + dirSign * slDist * 3).toFixed(decimals) : 0;
-  const riskReward = dirSign !== 0 ? 1.5 : 0;
+  // Unified ATR-based risk model (shared with Confluence, Signals, bot, Telegram).
+  const lv = atrLevels(d.action === 'buy' || d.action === 'sell' ? d.action : 'none', px, atr, decimals);
+  const { entry, stopLoss, takeProfit1, takeProfit2, slDist, riskReward } = lv;
 
   const emas = [tech.ema20, tech.ema50].filter((v): v is number => v != null && Number.isFinite(v));
   const support = emas.length ? Math.min(...emas, px - slDist) : px - slDist;
@@ -495,15 +471,14 @@ export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
   }
 
 
-  // ATR-based risk model: SL = 1.5x ATR, TP1 = 1.5R, TP2 = 3R.
+  // Unified ATR-based risk model (shared with Confluence, Signals, bot, Telegram).
   const atr = calculateATR(p.candles);
-  const slDist = atr > 0 ? atr * 1.5 : price * 0.005;
-  const dirSign = action === 'buy' ? 1 : action === 'sell' ? -1 : 0;
-  const entry = +price.toFixed(p.decimals);
-  const stopLoss = dirSign !== 0 ? +(price - dirSign * slDist).toFixed(p.decimals) : 0;
-  const takeProfit1 = dirSign !== 0 ? +(price + dirSign * slDist * 1.5).toFixed(p.decimals) : 0;
-  const takeProfit2 = dirSign !== 0 ? +(price + dirSign * slDist * 3).toFixed(p.decimals) : 0;
-  const riskReward = dirSign !== 0 ? 1.5 : 0;
+  const { entry, stopLoss, takeProfit1, takeProfit2, riskReward } = atrLevels(
+    action === 'buy' || action === 'sell' ? action : 'none',
+    price,
+    atr,
+    p.decimals,
+  );
 
   // Reasoning.
   const techNotesEn: string[] = [];
