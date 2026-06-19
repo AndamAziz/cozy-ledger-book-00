@@ -61,6 +61,16 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
       return;
     }
 
+    if (isSignupMode && password !== confirmPassword) {
+      toast({
+        title: t('error'),
+        description: t('passwordsDoNotMatch'),
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const result = isSignupMode 
       ? await onSignup(email, password, companyName.trim())
       : await onLogin(email, password);
@@ -85,8 +95,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
     setIsSignupMode(signup);
     setEmail('');
     setPassword('');
+    setConfirmPassword('');
     setCompanyName('');
     setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleGoogleLogin = async () => {
