@@ -14,6 +14,7 @@ import Bots from "./pages/Bots";
 import BotDetail from "./pages/BotDetail";
 import Reviews from "./pages/Reviews";
 import ResetPassword from "./pages/ResetPassword";
+import EmailStatus from "./pages/EmailStatus";
 import NotFound from "./pages/NotFound";
 
 
@@ -37,6 +38,7 @@ const App = () => (
                 <Route path="/bots/:id" element={<BotDetail />} />
                 <Route path="/reviews" element={<Reviews />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/email-status" element={<EmailStatus />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
