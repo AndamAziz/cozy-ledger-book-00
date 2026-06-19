@@ -1050,6 +1050,14 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_email_auth_providers: {
+        Args: { _email: string }
+        Returns: {
+          account_exists: boolean
+          has_password: boolean
+          providers: string[]
+        }[]
+      }
       get_user_approval_status: {
         Args: { _user_id: string }
         Returns: {
