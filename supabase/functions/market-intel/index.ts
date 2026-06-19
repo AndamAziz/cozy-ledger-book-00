@@ -768,16 +768,17 @@ function newSignalLine(
   ].join("\n");
 }
 
-// Outcome message when a signal closes on TP or SL.
+// Outcome message when a signal closes on TP or SL (tagged with its timeframe).
 function outcomeLine(
   symbol: string, sig: "BUY" | "SELL", hit: "tp" | "sl",
-  entry: number, close: number, pips: number,
+  entry: number, close: number, pips: number, tf?: string,
 ): string {
   const m = ASSET_META[symbol];
+  const tfTag = tf ? ` · ⏱ ${tf}` : "";
   if (hit === "tp") {
     return [
       `🟢✅ <b>TARGET HIT / تارگێت تەواوبوو</b> 🎉`,
-      `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
+      `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}${tfTag}`,
       `📈🟢 Result / ئەنجام: <b>+${pips} pips</b>`,
       `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
       `سیگنالەکە سەرکەوتوو بوو 🟢✅`,
@@ -785,11 +786,38 @@ function outcomeLine(
   }
   return [
     `🔴❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
-    `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
+    `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}${tfTag}`,
     `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
     `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
     `🟠⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
     `🚪 تکایە پۆزیشنەکە دابخە / Please close your position`,
+  ].join("\n");
+}
+
+// Result message when a timeframe's candle/period closes WITHOUT hitting TP or SL.
+// Reports the running P/L (pips won/lost vs entry) at the moment the period ended,
+// so every signal sent for a timeframe always gets its own outcome.
+function periodCloseLine(
+  symbol: string, sig: "BUY" | "SELL", tf: string,
+  entry: number, close: number, pips: number, win: boolean,
+): string {
+  const m = ASSET_META[symbol];
+  if (win) {
+    return [
+      `🟢 <b>${tf} CANDLE CLOSED · IN PROFIT</b> 🎯`,
+      `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig} · ⏱ ${tf}`,
+      `📈🟢 Result / ئەنجام: <b>+${pips} pips</b>`,
+      `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+      `کاتی ${tf} تەواوبوو لە قازاندا 🟢 · ${tf} period closed in profit`,
+    ].join("\n");
+  }
+  return [
+    `🔴 <b>${tf} CANDLE CLOSED · IN LOSS</b>`,
+    `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig} · ⏱ ${tf}`,
+    `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
+    `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+    `کاتی ${tf} تەواوبوو لە زیاندا 🔴 · ${tf} period closed in loss`,
+
   ].join("\n");
 }
 
