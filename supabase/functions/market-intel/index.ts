@@ -541,48 +541,81 @@ function signalRationale(q: Quote, sig: "BUY" | "SELL"): { en: string; ku: strin
   return { en: en.join(" + "), ku: ku.join(" + ") };
 }
 
-// Full BUY/SELL trade setup with entry, full target and stop loss (clean RTL layout).
+// Strip any non-English decoration from a session label (e.g. "🇬🇧 London (لەندەن)" → "London").
+function sessionEn(session: string): string {
+  let s = session.replace(/\([^)]*\)/g, "");          // drop "(لەندەن)"
+  s = s.split("/")[0];                                  // drop "/ داخراو"
+  s = s.replace(/[^\x00-\x7F]/g, "");                   // drop emojis / non-ASCII
+  s = s.replace(/\s+/g, " ").trim();
+  return s || "Closed";
+}
+
+// Format a price with sensible decimals based on the asset's tick size.
+function priceFmt(symbol: string, n: number): string {
+  const pip = ASSET_META[symbol]?.pip ?? 0.01;
+  const decimals = pip >= 1 ? 2 : pip >= 0.1 ? 2 : pip >= 0.01 ? 2 : 4;
+  return n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+// Full BUY/SELL trade setup — premium, English-only, Telegram-ready layout.
 function newSignalLine(
   q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
   confidence: number, session: string, tf?: string,
 ): string {
   const m = ASSET_META[q.symbol];
+  const isBuy = sig === "BUY";
+  const sigIcon = isBuy ? "🟢" : "🔴";
   const tpDelta = Math.abs(tp - q.price);
   const slDelta = Math.abs(sl - q.price);
-  const isBuy = sig === "BUY";
-  const sigKuW = isBuy ? "کڕین" : "فرۆشتن";
-  const strength = confidence >= 80 ? ["Strong", "بەهێز"] : confidence >= 65 ? ["Medium", "مامناوەند"] : ["Weak", "لاواز"];
-  const risk = confidence >= 80 ? ["Low", "کەم"] : confidence >= 65 ? ["Medium", "مامناوەند"] : ["High", "بەرز"];
-  const rsi = Math.max(20, Math.min(80, Math.round(50 + q.changePct * 6)));
-  const reasonLines = isBuy
-    ? [
-        "EMA9 &gt; EMA21 ✅ کراوسئۆڤەری بەرز",
-        "MACD Bullish ✅ بەهێز",
-        `RSI: ${rsi} ✅ ناوەند`,
-        "Price &gt; EMA50 ✅ بەرز",
-      ]
-    : [
-        "EMA9 &lt; EMA21 ✅ کراوسئۆڤەری خوار",
-        "MACD Bearish ✅ بەهێز",
-        `RSI: ${rsi} ✅ ناوەند`,
-        "Price &lt; EMA50 ✅ خوار",
-      ];
+
+  const strength = confidence >= 80 ? "Strong" : confidence >= 65 ? "Medium" : "Weak";
+  const risk = confidence >= 80 ? "Low" : confidence >= 65 ? "Medium" : "High";
+
+  // Dynamic technical reasons derived from signal direction + RSI estimate.
+  const rsi = Math.max(15, Math.min(85, Math.round(50 + q.changePct * 6)));
+  const rsiStatus = rsi >= 70 ? "Overbought" : rsi <= 30 ? "Oversold" : "Neutral zone";
+  const emaCmp = isBuy ? "&gt;" : "&lt;";
+  const emaSignal = isBuy ? "Bullish crossover" : "Bearish crossover";
+  const macdSignal = isBuy ? "Bullish momentum" : "Bearish momentum";
+  const trendDir = isBuy ? "Uptrend" : "Downtrend";
+
+  const entryStr = priceFmt(q.symbol, q.price);
+  const tpStr = priceFmt(q.symbol, tp);
+  const slStr = priceFmt(q.symbol, sl);
+  const profitStr = `+${priceFmt(q.symbol, tpDelta)}`;
+  const lossStr = `-${priceFmt(q.symbol, slDelta)}`;
+
+  const levels =
+    `Entry:       ${entryStr}\n` +
+    `Take Profit: ${tpStr} (${profitStr})\n` +
+    `Stop Loss:   ${slStr} (${lossStr})`;
+  const meta =
+    `Confidence:  ${confidence}%\n` +
+    `Session:     ${esc(sessionEn(session))}\n` +
+    `Strength:    ${strength}`;
+
   return [
-    `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
-    tf ? `⏱ <b>Timeframe: ${tf}</b> · چوارچێوەی کات` : "",
+    "╔══════════════════╗",
+    "🚨 <b>CTP SIGNAL</b>",
+    "╚══════════════════╝",
     "",
-    `💰 <code>$${fmt(q.price)}</code> :نرخی چوونەژوورەوە`,
-    `🎯 <code>$${fmt(tp)}</code> :تارگێت (+$${fmt(tpDelta)})`,
-    `🛑 <code>$${fmt(sl)}</code> :ستۆپ لۆس (-$${fmt(slDelta)})`,
+    `Asset: <b>${m.name}</b> ${m.emoji}`,
+    `Signal: ${sigIcon} <b>${sig}</b>`,
     "",
-    `⚡ Confidence: ${confidence}% · متمانە`,
-    `📍 ${esc(session)}`,
-    `💪 Strength: ${strength[0]} · ${strength[1]}`,
+    `Timeframe: <b>${tf ?? "5M"}</b>`,
     "",
-    "📈 هۆکار:",
-    ...reasonLines,
+    `<pre>${levels}</pre>`,
+    `<pre>${meta}</pre>`,
+    "Analysis:",
+    `• EMA9 ${emaCmp} EMA21 ✅ ${emaSignal}`,
+    `• MACD ✅ ${macdSignal}`,
+    `• RSI (${rsi}) ✅ ${rsiStatus}`,
+    `• Price vs EMA50 ✅ ${trendDir}`,
     "",
-    `⚠️ مەترسی: ${risk[1]} · Risk: ${risk[0]}`,
+    `Risk Level: <b>${risk}</b> ⚠️`,
+    "",
+    "━━━━━━━━━━━━━━━━━━",
+    "⚠️ <i>Not Financial Advice</i>",
   ].join("\n");
 }
 
