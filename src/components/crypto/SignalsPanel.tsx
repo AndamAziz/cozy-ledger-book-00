@@ -186,6 +186,11 @@ export function SignalsPanel() {
         </div>
       )}
 
+      {/* Cross-engine parity check (Confluence vs Signals vs Telegram) */}
+      <SignalParityCheck asset={asset} />
+
+
+
       <p className="text-[10px] text-[#848e9c] leading-relaxed pb-2">
         {bi('ئەمە یارمەتیدەرە نەک ڕاوێژی دارایی. هەمیشە Stop Loss بەکاربهێنە.', 'Guidance only, not financial advice. Always use a Stop Loss.')}
       </p>
