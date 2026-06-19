@@ -997,7 +997,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           <X className="h-3 w-3 ml-1" />
                           {t('revoke')}
                         </Button>
-                        {!user.isAdmin && (
+                        {isCEO && !user.isAdmin && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -1011,7 +1011,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                             {t('makeAdmin')}
                           </Button>
                         )}
-                        {user.isAdmin && (
+                        {isCEO && user.isAdmin && (
                           <Button
                             variant="outline"
                             size="sm"
