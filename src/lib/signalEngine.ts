@@ -1,6 +1,6 @@
 import { OHLCCandle } from './krakenApi';
 import { calculateRSI, calculateMACD, STANDARD_INDICATOR_SETTINGS, bestIndicatorSettings } from './indicators';
-import { trendFromCandles, TrendDir, getSessionStatuses } from './aiAnalysis';
+import { trendFromCandles, TrendDir, getSessionStatuses, aggregateCandles } from './aiAnalysis';
 
 export type SignalAction = 'buy' | 'sell' | 'wait' | 'neutral';
 export type AssetKey = 'gold' | 'btc' | 'eurusd' | 'gbpusd' | 'usdjpy';
@@ -273,36 +273,53 @@ export interface BuildSignalParams {
   now?: number;
 }
 
-/** Build a complete, live multi-source trade signal for one asset + timeframe. */
-export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
-  const now = p.now ?? Date.now();
-  const tech = analyzeTechnical(p.candles, p.price);
-  const macro = macroScore(p.asset, p.macro);
-  const news = assessNews(p.events, p.currencies, now);
-  const sessions = getSessionStatuses(new Date(now)).filter((s) => s.active).map((s) => s.name);
+/** Outcome of the shared decision core. */
+export interface ConfluenceDecision {
+  /** Final score after the confluence penalty. */
+  combined: number;
+  /** Score before the penalty (debug). */
+  combinedBefore: number;
+  confidence: number;
+  action: SignalAction;
+  confluenceAlignment: 'aligned' | 'conflicting' | 'neutral';
+  /** 0..100 — how strongly the multi-TF set agrees on a direction. */
+  confScore: number;
+  confDir: TrendDir;
+  /** Penalty multiplier applied to the score (×1.0 .. ×0.5). */
+  damp: number;
+  conflict: boolean;
+}
 
-  const price = p.price > 0 ? p.price : p.candles.length ? p.candles[p.candles.length - 1].close : 0;
-
-  // Per-timeframe trend (for conflict detection).
-  const perTF: TFView[] = SIGNAL_TIMEFRAMES.map((tf) => {
-    const c = p.candlesByTF[tf] ?? (tf === p.timeframe ? p.candles : []);
-    const t = trendFromCandles(c);
-    return { label: tf, dir: t.dir, rsi: t.rsi, macd: t.macd };
-  });
+/**
+ * The ONE decision core shared by every signal in the app.
+ *
+ * Takes a technical score (-100..100), a macro score, the macro weight, and the
+ * per-timeframe trend set, then applies:
+ *   1. technical + macro blend,
+ *   2. the higher-TF confluence filter (damp marginal calls that fight the
+ *      broader trend — `PEN_MAX` haircut, engaged once a `CONF_MAJORITY` of TFs
+ *      oppose the lean),
+ *   3. the confidence gate (<60% ⇒ neutral),
+ *   4. WAIT rules for blocking news / hard timeframe conflict.
+ *
+ * Both `buildAssetSignal` (multi-source) and `buildLocalSignal` (single-series)
+ * call this, so there is exactly one place where BUY/SELL/WAIT is decided.
+ */
+export function decideFromScores(
+  techScore: number,
+  macroScoreVal: number,
+  macroWeight: number,
+  perTF: TFView[],
+  newsBlocking: boolean,
+): ConfluenceDecision {
   const upCount = perTF.filter((t) => t.dir === 'up').length;
   const downCount = perTF.filter((t) => t.dir === 'down').length;
   const conflict = upCount >= 2 && downCount >= 2;
 
-  // Combined score: technical is the spine, macro tilts it.
-  const macroWeight = p.asset === 'gold' || p.asset === 'btc' ? 0.4 : 0.25;
-  let combined = Math.round(tech.score * (1 - macroWeight) + macro.score * macroWeight);
+  let combined = Math.round(techScore * (1 - macroWeight) + macroScoreVal * macroWeight);
 
   // ── Higher-TF confluence filter ──
-  // Independent 6-TF bias derived from the same per-TF trends (mirrors
-  // computeConfluence). If a majority of timeframes oppose the selected-TF lean,
-  // damp the score proportional to the disagreement so marginal calls flip but
-  // high-conviction calls survive (reduced). computeConfluence() itself is untouched.
-  const PEN_MAX = 0.5; // max haircut when all 6 TFs oppose
+  const PEN_MAX = 0.5; // max haircut when every TF opposes
   const CONF_MAJORITY = 50; // % threshold before any penalty engages
   const confTotal = perTF.length || 1;
   const confDominant = Math.max(upCount, downCount);
@@ -321,26 +338,153 @@ export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
   }
 
   // Confidence: scaled magnitude, boosted slightly when timeframes align.
-  const alignment = Math.abs(upCount - downCount) / SIGNAL_TIMEFRAMES.length; // 0..1
+  const alignment = Math.abs(upCount - downCount) / (perTF.length || 1); // 0..1
   let confidence = clamp(Math.round(40 + Math.abs(combined) * 0.5 + alignment * 12), 0, 96);
 
   // Decide the action with the quality rules.
   let action: SignalAction = combined > 0 ? 'buy' : combined < 0 ? 'sell' : 'neutral';
-  if (news.blocking) action = 'wait';
+  if (newsBlocking) action = 'wait';
   else if (conflict) action = 'wait';
   else if (confidence < 60) action = 'neutral';
 
   if (action === 'wait' || action === 'neutral') confidence = Math.min(confidence, 59);
 
-  // Alignment vs the independent 6-TF confluence, based on the FINAL action so
-  // the badge appears whenever a directional call survives but still fights the
-  // broader trend.
   const confluenceAlignment: 'aligned' | 'conflicting' | 'neutral' =
     (action === 'buy' || action === 'sell') && confDir !== 'neutral' && confScore >= CONF_MAJORITY
       ? confDir === (action === 'buy' ? 'up' : 'down')
         ? 'aligned'
         : 'conflicting'
       : 'neutral';
+
+  return { combined, combinedBefore, confidence, action, confluenceAlignment, confScore, confDir, damp, conflict };
+}
+
+/** Single-series signal: same engine as buildAssetSignal, no external macro/news. */
+export interface LocalSignal {
+  action: SignalAction;
+  confidence: number;
+  score: number;
+  price: number;
+  entry: number;
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2: number;
+  riskReward: number;
+  atr: number;
+  decimals: number;
+  rsi: number | null;
+  macd: { macd: number; signal: number; histogram: number } | null;
+  ema20: number | null;
+  ema50: number | null;
+  support: number;
+  resistance: number;
+  confluenceAlignment: 'aligned' | 'conflicting' | 'neutral';
+  confScore: number;
+  confDir: TrendDir;
+  conflict: boolean;
+  perTF: TFView[];
+}
+
+/**
+ * Build a signal from ONE candle series (any symbol). Used by the Analyze card /
+ * Send-to-Telegram flow for assets that don't have a dedicated multi-source feed.
+ *
+ * It reuses `analyzeTechnical` and the shared `decideFromScores` core, and
+ * derives the higher-TF confluence by aggregating the base series into coarser
+ * timeframes — so a chart that looks bullish on M15 but bearish across the
+ * higher aggregates is damped exactly like the Signals panel does. There is NO
+ * separate 0–4 scoring engine anymore.
+ */
+export function buildLocalSignal(candles: OHLCCandle[], price: number, decimals: number): LocalSignal {
+  const tech = analyzeTechnical(candles, price);
+  const px = price > 0 ? price : candles.length ? candles[candles.length - 1].close : 0;
+
+  // Pseudo multi-TF confluence by aggregating the base series into coarser TFs.
+  const FACTORS = [1, 2, 4, 8, 12];
+  const perTF: TFView[] = [];
+  for (const f of FACTORS) {
+    const agg = aggregateCandles(candles, f);
+    if (agg.length < 28) continue;
+    const t = trendFromCandles(agg);
+    perTF.push({ label: `x${f}`, dir: t.dir, rsi: t.rsi, macd: t.macd });
+  }
+  if (perTF.length === 0) {
+    const t = trendFromCandles(candles);
+    perTF.push({ label: 'base', dir: t.dir, rsi: t.rsi, macd: t.macd });
+  }
+
+  // macroWeight = 0 → technical-only, but the SAME decision core.
+  const d = decideFromScores(tech.score, 0, 0, perTF, false);
+
+  const atr = calculateATR(candles);
+  const slDist = atr > 0 ? atr * 1.5 : px * 0.005;
+  const dirSign = d.action === 'buy' ? 1 : d.action === 'sell' ? -1 : 0;
+  const entry = +px.toFixed(decimals);
+  const stopLoss = dirSign !== 0 ? +(px - dirSign * slDist).toFixed(decimals) : 0;
+  const takeProfit1 = dirSign !== 0 ? +(px + dirSign * slDist * 1.5).toFixed(decimals) : 0;
+  const takeProfit2 = dirSign !== 0 ? +(px + dirSign * slDist * 3).toFixed(decimals) : 0;
+  const riskReward = dirSign !== 0 ? 1.5 : 0;
+
+  const emas = [tech.ema20, tech.ema50].filter((v): v is number => v != null && Number.isFinite(v));
+  const support = emas.length ? Math.min(...emas, px - slDist) : px - slDist;
+  const resistance = emas.length ? Math.max(...emas, px + slDist) : px + slDist;
+
+  return {
+    action: d.action,
+    confidence: d.confidence,
+    score: d.combined,
+    price: px,
+    entry,
+    stopLoss,
+    takeProfit1,
+    takeProfit2,
+    riskReward,
+    atr,
+    decimals,
+    rsi: tech.rsi,
+    macd: tech.macd,
+    ema20: tech.ema20,
+    ema50: tech.ema50,
+    support,
+    resistance,
+    confluenceAlignment: d.confluenceAlignment,
+    confScore: d.confScore,
+    confDir: d.confDir,
+    conflict: d.conflict,
+    perTF,
+  };
+}
+
+
+/** Build a complete, live multi-source trade signal for one asset + timeframe. */
+export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
+  const now = p.now ?? Date.now();
+  const tech = analyzeTechnical(p.candles, p.price);
+  const macro = macroScore(p.asset, p.macro);
+  const news = assessNews(p.events, p.currencies, now);
+  const sessions = getSessionStatuses(new Date(now)).filter((s) => s.active).map((s) => s.name);
+
+  const price = p.price > 0 ? p.price : p.candles.length ? p.candles[p.candles.length - 1].close : 0;
+
+  // Per-timeframe trend (for conflict detection).
+  const perTF: TFView[] = SIGNAL_TIMEFRAMES.map((tf) => {
+    const c = p.candlesByTF[tf] ?? (tf === p.timeframe ? p.candles : []);
+    const t = trendFromCandles(c);
+    return { label: tf, dir: t.dir, rsi: t.rsi, macd: t.macd };
+  });
+  // Combined score: technical is the spine, macro tilts it.
+  const macroWeight = p.asset === 'gold' || p.asset === 'btc' ? 0.4 : 0.25;
+
+  // Single shared decision core (technical + macro tilt + higher-TF confluence
+  // filter + confidence gate). The exact same function powers buildLocalSignal,
+  // so every signal across the app is decided by ONE codepath.
+  const d = decideFromScores(tech.score, macro.score, macroWeight, perTF, news.blocking);
+  const { conflict, confScore, confDir, damp, combinedBefore } = d;
+  const combined = d.combined;
+  const confidence = d.confidence;
+  const action = d.action;
+  const confluenceAlignment = d.confluenceAlignment;
+  const signalDir: TrendDir = combinedBefore > 0 ? 'up' : combinedBefore < 0 ? 'down' : 'neutral';
 
   if (typeof console !== 'undefined') {
     // Debug: verify the confluence filter on real data before fine-tuning.

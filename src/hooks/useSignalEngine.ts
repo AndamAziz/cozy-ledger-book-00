@@ -39,7 +39,8 @@ function notifyFlip(meta: AssetMeta, prev: SignalAction, next: SignalAction) {
   }
 }
 
-export function useSignalEngine(assetKey: AssetKey, tf: SignalTF) {
+export function useSignalEngine(assetKey: AssetKey, tf: SignalTF, opts?: { enabled?: boolean }) {
+  const enabled = opts?.enabled ?? true;
   const meta = useMemo(() => getAssetMeta(assetKey), [assetKey]);
 
   const [macro, setMacro] = useState<MacroContext>({ dxyChangePct: null, fearGreed: null, spxChangePct: null });
@@ -60,12 +61,16 @@ export function useSignalEngine(assetKey: AssetKey, tf: SignalTF) {
     setLoading(false);
   }, [meta]);
 
-  // Refetch when the asset changes + every 5 minutes.
+  // Refetch when the asset changes + every 5 minutes (only while enabled).
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     loadAll();
     const id = window.setInterval(loadAll, REFRESH_MS);
     return () => window.clearInterval(id);
-  }, [loadAll]);
+  }, [loadAll, enabled]);
 
   // Ask for notification permission once.
   useEffect(() => {

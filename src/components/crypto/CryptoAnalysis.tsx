@@ -7,7 +7,8 @@ import { toast } from '@/hooks/use-toast';
 import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft, Copy, Check, Eye, EyeOff, Clock, Globe } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
-import { analyzeMarket, RuleResult } from '@/lib/ruleAnalysis';
+import { buildLocalSignal, LocalSignal, AssetKey, SignalTF, SignalAction } from '@/lib/signalEngine';
+import { useSignalEngine } from '@/hooks/useSignalEngine';
 
 interface CryptoAnalysisProps {
   symbol: string;
@@ -160,8 +161,38 @@ function ColorizedAnalysis({ text, color, className = '' }: { text: string; colo
 }
 
 
+// Map a chart symbol to the canonical multi-source asset key (or null if this
+// symbol has no dedicated multi-TF + macro feed — then we use buildLocalSignal).
+function symbolToAssetKey(symbol: string): AssetKey | null {
+  const s = (symbol || '').toUpperCase();
+  if (/(XAU|GOLD|ZÊR|زێر)/.test(s)) return 'gold';
+  if (/(BTC|XBT|BITCOIN)/.test(s)) return 'btc';
+  if (/EUR.?USD|^EUR$/.test(s)) return 'eurusd';
+  if (/GBP.?USD|^GBP$/.test(s)) return 'gbpusd';
+  if (/USD.?JPY|^JPY$/.test(s)) return 'usdjpy';
+  return null;
+}
+
+// Map a chart interval (minutes) / label to the nearest engine timeframe.
+function intervalToSignalTF(interval?: number, label?: string): SignalTF {
+  const l = (label || '').toUpperCase();
+  if (l.includes('1D') || l.includes('DAY')) return 'D1';
+  if (l.includes('4H')) return 'H4';
+  if (l.includes('1H') || l === 'H1') return 'H1';
+  if (l.includes('30')) return 'M30';
+  if (l.includes('15')) return 'M15';
+  if (l.includes('5')) return 'M5';
+  const m = interval ?? 60;
+  if (m >= 1440) return 'D1';
+  if (m >= 240) return 'H4';
+  if (m >= 60) return 'H1';
+  if (m >= 30) return 'M30';
+  if (m >= 15) return 'M15';
+  return 'M5';
+}
 
 export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, interval, timeframeLabel, tradeSymbol, tradeLabel }: CryptoAnalysisProps) {
+
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -434,48 +465,123 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     return '$' + n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   };
 
-  // Map the pure rule result into the existing TradeSummary shape so the whole
-  // UI (trade buttons, Telegram signal, etc.) keeps working without any AI call.
-  const ruleToSummary = (r: RuleResult): TradeSummary => {
-    const tpDelta = r.tp - currentPrice;
-    const slDelta = currentPrice - r.sl;
+  // ── Unified signal engine ──
+  // The Analyze card, the demo-trade buttons and the Send-to-Telegram message all
+  // read `tradeSummary`, which is now produced by the SAME engine as the Signals
+  // panel: buildAssetSignal for assets with a dedicated multi-source feed
+  // (Gold / BTC / EUR-GBP-JPY vs USD), and buildLocalSignal (same decision core)
+  // for every other symbol. There is no separate 0–4 engine anymore.
+  const assetKey = useMemo<AssetKey | null>(() => symbolToAssetKey(symbol), [symbol]);
+  const sigTf = useMemo<SignalTF>(() => intervalToSignalTF(interval, timeframeLabel), [interval, timeframeLabel]);
+  const { signal: canonicalSignal } = useSignalEngine(assetKey ?? 'btc', sigTf, { enabled: !!assetKey });
+
+  // Convert either engine's output into the existing TradeSummary shape.
+  const signalToSummary = (sig: {
+    action: SignalAction;
+    confidence: number;
+    score: number;
+    price: number;
+    entry: number;
+    stopLoss: number;
+    takeProfit1: number;
+    takeProfit2: number;
+    rsi: number | null;
+    ema20: number | null;
+    ema50: number | null;
+    support?: number;
+    resistance?: number;
+    confluenceAlignment: 'aligned' | 'conflicting' | 'neutral';
+    reasonEn?: string;
+    reasonKu?: string;
+  }): TradeSummary => {
+    const rec: Recommendation = sig.action === 'buy' ? 'buy' : sig.action === 'sell' ? 'sell' : 'hold';
+    const px = sig.price > 0 ? sig.price : currentPrice;
+    const conflicting = sig.confluenceAlignment === 'conflicting';
+
+    // Risk: overbought/oversold or a higher-TF conflict ⇒ high; high confidence ⇒ low.
+    let riskLevel: RiskLevel = 'medium';
+    if ((sig.rsi != null && (sig.rsi > 70 || sig.rsi < 30)) || conflicting) riskLevel = 'high';
+    else if (sig.confidence >= 75) riskLevel = 'low';
+
+    const dirEn = rec === 'buy' ? 'Bullish' : rec === 'sell' ? 'Bearish' : 'Mixed';
+    const dirKu = rec === 'buy' ? 'بەرزبوونەوە' : rec === 'sell' ? 'داشکان' : 'تێکەڵ';
+    const conflictEn = conflicting ? ' ⚠️ Conflicts with the higher-timeframe trend.' : '';
+    const conflictKu = conflicting ? ' ⚠️ دژایەتی ئاراستەی کاتە بەرزترەکان دەکات.' : '';
     const headlineEn =
-      r.signal === 'buy'
-        ? `Bullish confluence (${r.score}/4) — momentum favors buyers.`
-        : r.signal === 'sell'
-        ? `Bearish confluence (${r.score}/4) — momentum favors sellers.`
-        : `Mixed signals (${r.score}/4) — wait for a clearer setup.`;
+      rec === 'hold'
+        ? `No clean edge — confidence ${sig.confidence}%. Wait for a clearer setup.${conflictEn}`
+        : `${dirEn} setup — confidence ${sig.confidence}%.${conflictEn}`;
     const headline =
-      r.signal === 'buy'
-        ? `هاوکێشەی بەرزبوونەوە (${r.score}/4) — مەیلی کڕین.`
-        : r.signal === 'sell'
-        ? `هاوکێشەی داشکان (${r.score}/4) — مەیلی فرۆشتن.`
-        : `سیگناڵی تێکەڵ (${r.score}/4) — چاوەڕێی هەلێکی ڕوونتر بکە.`;
+      rec === 'hold'
+        ? `هەلێکی ڕوون نییە — متمانە ${sig.confidence}%. چاوەڕێی هەلێکی ڕوونتر بکە.${conflictKu}`
+        : `دۆخی ${dirKu} — متمانە ${sig.confidence}%.${conflictKu}`;
+
+    const tpDelta1 = sig.takeProfit1 - px;
+    const targets: string[] = [];
+    if (sig.takeProfit1) targets.push(`${fmtMoney(sig.takeProfit1)} (${tpDelta1 >= 0 ? '+' : '-'}${fmtMoney(Math.abs(tpDelta1))})`);
+    if (sig.takeProfit2) targets.push(`${fmtMoney(sig.takeProfit2)}`);
+
+    const slDelta = px - sig.stopLoss;
+    const drivers: KeyDriver[] = [];
+    if (sig.rsi != null) {
+      drivers.push({
+        indicator: 'RSI',
+        effect: sig.rsi > 55 ? 'buy' : sig.rsi < 45 ? 'sell' : 'neutral',
+        influence: 'high',
+        note: `RSI ${sig.rsi.toFixed(0)}`,
+        noteEn: `RSI ${sig.rsi.toFixed(0)}`,
+      });
+    }
+    if (sig.ema20 != null && sig.ema50 != null) {
+      const up = sig.ema20 > sig.ema50;
+      drivers.push({
+        indicator: 'EMA20/50',
+        effect: up ? 'buy' : 'sell',
+        influence: 'high',
+        note: `EMA20 ${up ? '>' : '<'} EMA50`,
+        noteEn: `EMA20 ${up ? '>' : '<'} EMA50`,
+      });
+    }
+
+    const srEn =
+      sig.support != null && sig.resistance != null
+        ? `Support / Resistance: ${fmtMoney(sig.support)} / ${fmtMoney(sig.resistance)}`
+        : undefined;
+    const srKu =
+      sig.support != null && sig.resistance != null
+        ? `پاڵپشت/بەربەست: ${fmtMoney(sig.support)} / ${fmtMoney(sig.resistance)}`
+        : undefined;
+
     return {
-      recommendation: r.signal,
-      confidence: r.confidence,
+      recommendation: rec,
+      confidence: sig.confidence,
       headline,
       headlineEn,
-      entry: fmtMoney(currentPrice),
-      targets: [`${fmtMoney(r.tp)} (+${fmtMoney(Math.abs(tpDelta))})`],
-      stopLoss: `${fmtMoney(r.sl)} (-${fmtMoney(Math.abs(slDelta))})`,
-      stopLossIndicator: 'EMA',
-      stopLossBasis: `پاڵپشت/بەربەست: ${fmtMoney(r.support)} / ${fmtMoney(r.resistance)}`,
-      stopLossBasisEn: `Support / Resistance: ${fmtMoney(r.support)} / ${fmtMoney(r.resistance)}`,
+      entry: fmtMoney(sig.entry || px),
+      targets: targets.length ? targets : [fmtMoney(px)],
+      stopLoss: sig.stopLoss ? `${fmtMoney(sig.stopLoss)} (-${fmtMoney(Math.abs(slDelta))})` : '—',
+      stopLossIndicator: 'ATR',
+      stopLossBasis: srKu,
+      stopLossBasisEn: srEn,
       horizonDays: 1,
-      riskLevel: r.risk,
-      riskNote: `مەترسی: ${r.riskLabelKu}`,
-      riskNoteEn: `Risk: ${r.riskLabel}`,
-      reasoning: `هێز: ${r.score}/4 · RSI: ${r.rsi != null ? r.rsi.toFixed(1) : '—'} → ${r.rsiStatusKu}`,
-      reasoningEn: `Strength: ${r.score}/4 · RSI: ${r.rsi != null ? r.rsi.toFixed(1) : '—'} → ${r.rsiStatus}`,
-      keyDrivers: r.reasons.map((reason) => ({
-        indicator: reason.en.replace(/\s*[✅🔴🟢⚠️].*$/u, '').trim() || 'Signal',
-        effect: (r.signal === 'hold' ? 'neutral' : r.signal) as SignalType,
-        influence: 'high' as Influence,
-        note: reason.ku,
-        noteEn: reason.en,
-      })),
+      riskLevel,
+      riskNote: `مەترسی: ${riskLevel === 'high' ? 'بەرز' : riskLevel === 'low' ? 'نزم' : 'مامناوەند'}`,
+      riskNoteEn: `Risk: ${riskLevel === 'high' ? 'High' : riskLevel === 'low' ? 'Low' : 'Medium'}`,
+      reasoning: sig.reasonKu ?? `هێز: ${sig.score} · RSI: ${sig.rsi != null ? sig.rsi.toFixed(1) : '—'}`,
+      reasoningEn: sig.reasonEn ?? `Score: ${sig.score} · RSI: ${sig.rsi != null ? sig.rsi.toFixed(1) : '—'}`,
+      keyDrivers: drivers,
     };
+  };
+
+  // Produce the unified summary from whichever engine applies to this symbol.
+  const computeUnifiedSummary = (): { summary: TradeSummary; generatedAt: string } | null => {
+    if (assetKey && canonicalSignal) {
+      return { summary: signalToSummary(canonicalSignal), generatedAt: new Date(canonicalSignal.updatedAt).toISOString() };
+    }
+    if (!candles.length) return null;
+    const decimals = currentPrice >= 1000 ? 2 : currentPrice >= 1 ? 2 : 6;
+    const local: LocalSignal = buildLocalSignal(candles, currentPrice, decimals);
+    return { summary: signalToSummary(local), generatedAt: new Date().toISOString() };
   };
 
   const runAiAnalysis = async () => {
@@ -500,20 +606,15 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       }
     } catch { /* ignore */ }
 
-    const result = analyzeMarket({
-      price: currentPrice,
-      ema9: indicators.ema9,
-      ema21: indicators.ema21,
-      ema50: indicators.ema50,
-      rsi: indicators.rsi,
-      macdLine: indicators.macd?.macd ?? null,
-      macdSignal: indicators.macd?.signal ?? null,
-    });
-    const summaryOut = ruleToSummary(result);
-    setTradeSummary(summaryOut);
-    setGeneratedAt(result.generatedAt);
+    const out = computeUnifiedSummary();
+    if (!out) {
+      setAiError(biLabel('داتای پێویست نییە بۆ شیکاری.', 'Not enough data to analyze.'));
+      return;
+    }
+    setTradeSummary(out.summary);
+    setGeneratedAt(out.generatedAt);
     try {
-      localStorage.setItem(ruleCacheKey, JSON.stringify({ summary: summaryOut, generatedAt: result.generatedAt }));
+      localStorage.setItem(ruleCacheKey, JSON.stringify({ summary: out.summary, generatedAt: out.generatedAt }));
     } catch { /* ignore quota errors */ }
   };
 
@@ -651,24 +752,16 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
   const hasData = candles.length > 0;
 
-  // Auto-run the rule-based analysis instantly whenever data is ready or the
-  // price/indicators change — no taps, no spinner, no API. (Throttled to ~recompute
-  // only when inputs actually move.)
+  // Auto-run the unified analysis instantly whenever data is ready or the
+  // price/indicators/canonical signal change — no taps, no spinner, no API.
   useEffect(() => {
     if (!hasData || currentPrice <= 0) return;
-    const result = analyzeMarket({
-      price: currentPrice,
-      ema9: indicators.ema9,
-      ema21: indicators.ema21,
-      ema50: indicators.ema50,
-      rsi: indicators.rsi,
-      macdLine: indicators.macd?.macd ?? null,
-      macdSignal: indicators.macd?.signal ?? null,
-    });
-    setTradeSummary(ruleToSummary(result));
-    setGeneratedAt(result.generatedAt);
+    const out = computeUnifiedSummary();
+    if (!out) return;
+    setTradeSummary(out.summary);
+    setGeneratedAt(out.generatedAt);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasData, currentPrice, indicators]);
+  }, [hasData, currentPrice, indicators, canonicalSignal, assetKey]);
 
   const gaugePct = (summary.score + 100) / 2; // 0..100
 
