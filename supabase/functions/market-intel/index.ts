@@ -884,7 +884,18 @@ function oneNewsMessage(body: string): string {
 }
 
 // ───────────────────── core scan ─────────────────────
-interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number; }
+// One open timeframe "leg" of a trade. Every signal sent to the channel (5M/15M/
+// 30M/1H) is tracked as its own leg so it can report its own result the moment its
+// candle/period closes (or earlier on TP/SL). `activeFrom` = when its message went
+// live; `expiresAt` = activeFrom + that timeframe's period.
+interface OpenLeg {
+  id?: string;
+  signal: "BUY" | "SELL";
+  entry: number; tp: number; sl: number;
+  tf: string;
+  activeFrom: number;
+  expiresAt: number;
+}
 // A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
 // `reason` tells the user why this specific target was sent (very important, cooldown, news, etc.).
 interface SignalMsg { text: string; important: boolean; reason: string; }
