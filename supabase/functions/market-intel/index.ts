@@ -65,6 +65,18 @@ const TIMEFRAME_CASCADE: { tf: string; delayMs: number }[] = [
   { tf: "1H",  delayMs: 30 * 60_000 },
 ];
 
+// How long each timeframe's candle/period runs. Once a leg has been live for its
+// full period (and it never hit TP/SL) the bot reports a "period closed" result
+// (pips won/lost vs entry) and closes that leg — so EVERY signal that goes out is
+// always followed by its own outcome message, before any new signal is sent.
+const TF_PERIOD_MS: Record<string, number> = {
+  "5M": 5 * 60_000,
+  "15M": 15 * 60_000,
+  "30M": 30 * 60_000,
+  "1H": 60 * 60_000,
+};
+
+
 
 // News is broadcast at most once per 60 minutes (its own standalone message).
 const NEWS_MIN_GAP_MS = 60 * 60_000;
@@ -756,16 +768,17 @@ function newSignalLine(
   ].join("\n");
 }
 
-// Outcome message when a signal closes on TP or SL.
+// Outcome message when a signal closes on TP or SL (tagged with its timeframe).
 function outcomeLine(
   symbol: string, sig: "BUY" | "SELL", hit: "tp" | "sl",
-  entry: number, close: number, pips: number,
+  entry: number, close: number, pips: number, tf?: string,
 ): string {
   const m = ASSET_META[symbol];
+  const tfTag = tf ? ` · ⏱ ${tf}` : "";
   if (hit === "tp") {
     return [
       `🟢✅ <b>TARGET HIT / تارگێت تەواوبوو</b> 🎉`,
-      `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
+      `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}${tfTag}`,
       `📈🟢 Result / ئەنجام: <b>+${pips} pips</b>`,
       `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
       `سیگنالەکە سەرکەوتوو بوو 🟢✅`,
@@ -773,11 +786,38 @@ function outcomeLine(
   }
   return [
     `🔴❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
-    `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}`,
+    `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}${tfTag}`,
     `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
     `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
     `🟠⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
     `🚪 تکایە پۆزیشنەکە دابخە / Please close your position`,
+  ].join("\n");
+}
+
+// Result message when a timeframe's candle/period closes WITHOUT hitting TP or SL.
+// Reports the running P/L (pips won/lost vs entry) at the moment the period ended,
+// so every signal sent for a timeframe always gets its own outcome.
+function periodCloseLine(
+  symbol: string, sig: "BUY" | "SELL", tf: string,
+  entry: number, close: number, pips: number, win: boolean,
+): string {
+  const m = ASSET_META[symbol];
+  if (win) {
+    return [
+      `🟢 <b>${tf} CANDLE CLOSED · IN PROFIT</b> 🎯`,
+      `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig} · ⏱ ${tf}`,
+      `📈🟢 Result / ئەنجام: <b>+${pips} pips</b>`,
+      `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+      `کاتی ${tf} تەواوبوو لە قازاندا 🟢 · ${tf} period closed in profit`,
+    ].join("\n");
+  }
+  return [
+    `🔴 <b>${tf} CANDLE CLOSED · IN LOSS</b>`,
+    `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig} · ⏱ ${tf}`,
+    `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
+    `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+    `کاتی ${tf} تەواوبوو لە زیاندا 🔴 · ${tf} period closed in loss`,
+
   ].join("\n");
 }
 
@@ -844,7 +884,18 @@ function oneNewsMessage(body: string): string {
 }
 
 // ───────────────────── core scan ─────────────────────
-interface OpenSig { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number; }
+// One open timeframe "leg" of a trade. Every signal sent to the channel (5M/15M/
+// 30M/1H) is tracked as its own leg so it can report its own result the moment its
+// candle/period closes (or earlier on TP/SL). `activeFrom` = when its message went
+// live; `expiresAt` = activeFrom + that timeframe's period.
+interface OpenLeg {
+  id?: string;
+  signal: "BUY" | "SELL";
+  entry: number; tp: number; sl: number;
+  tf: string;
+  activeFrom: number;
+  expiresAt: number;
+}
 // A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
 // `reason` tells the user why this specific target was sent (very important, cooldown, news, etc.).
 interface SignalMsg { text: string; important: boolean; reason: string; }
@@ -855,7 +906,7 @@ interface TfQueueItem { dueAt: number; text: string; reason: string; symbol: str
 async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAlerts: string[]; quotes: Quote[] }> {
   const quotes = await getPrices();
   const priceState = await getState("prices");      // { "XAU/USD": { price, signal } }
-  const openState = await getState("open_signals"); // { "XAU/USD": OpenSig }
+  const openState = await getState("open_signals"); // { "XAU/USD": OpenLeg[] }
   const enabledRegions = await getEnabledRegions(); // which markets may open new targets
   // Pending higher-timeframe (15M/30M/1H) signals waiting for their staggered send time.
   const tfQueue = ((await getState("tf_queue")).items as TfQueueItem[]) ?? [];
@@ -873,40 +924,83 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
       trend: q.changePct >= 0 ? "up" : "down", signal: sig, updated_at: new Date().toISOString(),
     });
 
-    const open = openState[q.symbol] as OpenSig | undefined;
-
-    // 1) Manage an OPEN position → did price hit TP or SL?
-    if (open) {
-      const isBuy = open.signal === "BUY";
-      let hit: "tp" | "sl" | null = null;
-      if (isBuy) {
-        if (q.price >= open.tp) hit = "tp";
-        else if (q.price <= open.sl) hit = "sl";
-      } else {
-        if (q.price <= open.tp) hit = "tp";
-        else if (q.price >= open.sl) hit = "sl";
-      }
-      if (hit) {
-        const pips = toPips(q.price - open.entry, m.pip);
-        outcomeAlerts.push(outcomeLine(q.symbol, open.signal, hit, open.entry, q.price, pips));
-        if (open.id) {
-          await admin.from("ai_signals").update({
-            status: hit === "tp" ? "target_hit" : "stopped_out",
-            result_pips: hit === "tp" ? pips : -pips,
-            close_price: q.price,
-            closed_at: new Date().toISOString(),
-          }).eq("id", open.id);
-        }
-        delete openState[q.symbol];
-      }
-      // Only one active signal per symbol — never stack a second one.
-      const prevOpen = priceState[q.symbol] as { lastSignalAt?: number; lastSignalDir?: Signal; lastAuditKey?: string } | undefined;
-      priceState[q.symbol] = {
-        price: q.price, signal: sig,
-        lastSignalAt: prevOpen?.lastSignalAt, lastSignalDir: prevOpen?.lastSignalDir, lastAuditKey: prevOpen?.lastAuditKey,
-      };
-      continue;
+    // Migrate any legacy single-object open position to the new per-leg array.
+    const rawOpen = openState[q.symbol];
+    let legs: OpenLeg[] = [];
+    if (Array.isArray(rawOpen)) {
+      legs = rawOpen as OpenLeg[];
+    } else if (rawOpen && typeof rawOpen === "object") {
+      const o = rawOpen as { id?: string; signal: "BUY" | "SELL"; entry: number; tp: number; sl: number };
+      legs = [{ ...o, tf: "15M", activeFrom: 0, expiresAt: Date.now() + TF_PERIOD_MS["15M"] }];
     }
+
+    // 1) Manage every OPEN leg → did price hit TP/SL, or did its candle/period close?
+    if (legs.length) {
+      const nowTs = Date.now();
+      const stillOpen: OpenLeg[] = [];
+      for (const leg of legs) {
+        // Leg not live yet (queued higher-TF re-post) → keep waiting.
+        if (nowTs < leg.activeFrom) { stillOpen.push(leg); continue; }
+
+        const isBuy = leg.signal === "BUY";
+        let hit: "tp" | "sl" | null = null;
+        if (isBuy) {
+          if (q.price >= leg.tp) hit = "tp";
+          else if (q.price <= leg.sl) hit = "sl";
+        } else {
+          if (q.price <= leg.tp) hit = "tp";
+          else if (q.price >= leg.sl) hit = "sl";
+        }
+
+        // a) Hit TP or SL → close this leg with a tagged outcome.
+        if (hit) {
+          const pips = toPips(q.price - leg.entry, m.pip);
+          outcomeAlerts.push(outcomeLine(q.symbol, leg.signal, hit, leg.entry, q.price, pips, leg.tf));
+          if (leg.id) {
+            await admin.from("ai_signals").update({
+              status: hit === "tp" ? "target_hit" : "stopped_out",
+              result_pips: hit === "tp" ? pips : -pips,
+              close_price: q.price,
+              closed_at: new Date().toISOString(),
+            }).eq("id", leg.id);
+          }
+          continue; // leg closed → drop it
+        }
+
+        // b) The timeframe's candle/period closed without hitting TP/SL → report P/L now.
+        if (nowTs >= leg.expiresAt) {
+          const win = isBuy ? q.price >= leg.entry : q.price <= leg.entry;
+          const pips = toPips(q.price - leg.entry, m.pip);
+          outcomeAlerts.push(periodCloseLine(q.symbol, leg.signal, leg.tf, leg.entry, q.price, pips, win));
+          if (leg.id) {
+            await admin.from("ai_signals").update({
+              status: win ? "target_hit" : "stopped_out",
+              result_pips: win ? pips : -pips,
+              close_price: q.price,
+              closed_at: new Date().toISOString(),
+            }).eq("id", leg.id);
+          }
+          continue; // leg closed → drop it
+        }
+
+        stillOpen.push(leg); // still running
+      }
+
+      if (stillOpen.length) openState[q.symbol] = stillOpen;
+      else delete openState[q.symbol];
+
+      // While ANY leg is still open we never stack a new trade for this symbol — the
+      // current trade's outcomes are always reported before a fresh signal goes out.
+      if (stillOpen.length) {
+        const prevOpen = priceState[q.symbol] as { lastSignalAt?: number; lastSignalDir?: Signal; lastAuditKey?: string } | undefined;
+        priceState[q.symbol] = {
+          price: q.price, signal: sig,
+          lastSignalAt: prevOpen?.lastSignalAt, lastSignalDir: prevOpen?.lastSignalDir, lastAuditKey: prevOpen?.lastAuditKey,
+        };
+        continue;
+      }
+    }
+
 
     // 2) No open position → consider opening a NEW signal when timing is right.
     const prev = priceState[q.symbol] as
@@ -947,11 +1041,6 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
 
-        const { data: ins } = await admin.from("ai_signals").insert({
-          asset: m.name, signal: sig, entry, tp, sl,
-          confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
-        }).select("id").maybeSingle();
-
         const highConf = confidence >= TARGET_IMPORTANT_CONFIDENCE;
         const strongMoveImp = Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
         let reason = "⏱ Cooldown passed / throttle finished · کاتژمێری کۆتایی هات";
@@ -961,21 +1050,39 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 
         // Staggered re-posts of the SAME trade so late joiners still see it. Every
         // message carries the identical engine entry/SL/TP — no per-TF widening.
+        // Each timeframe becomes its OWN tracked leg (its own ai_signals row) so it
+        // reports its own result the moment its candle/period closes.
         const now = Date.now();
+        const newLegs: OpenLeg[] = [];
         for (const tfDef of TIMEFRAME_CASCADE) {
+          const activeFrom = now + tfDef.delayMs;
+          const expiresAt = activeFrom + (TF_PERIOD_MS[tfDef.tf] ?? TF_PERIOD_MS["15M"]);
+
+          const { data: ins } = await admin.from("ai_signals").insert({
+            asset: m.name, signal: sig, entry, tp, sl, confidence,
+            status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
+            timeframe: tfDef.tf,
+          }).select("id").maybeSingle();
+
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
           const text = newSignalLine(q, sig as "BUY" | "SELL", entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
           if (tfDef.delayMs === 0) {
             // First message fires immediately as a high-priority signal so it always reaches the channel.
             signalAlerts.push({ text, important: true, reason: tfReason });
           } else {
-            tfQueue.push({ dueAt: now + tfDef.delayMs, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
+            tfQueue.push({ dueAt: activeFrom, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
           }
+          newLegs.push({
+            id: ins?.id as string | undefined,
+            signal: sig as "BUY" | "SELL",
+            entry, tp, sl, tf: tfDef.tf, activeFrom, expiresAt,
+          });
         }
-        openState[q.symbol] = { id: ins?.id as string | undefined, signal: sig as "BUY" | "SELL", entry, tp, sl };
+        openState[q.symbol] = newLegs;
         lastSignalAt = Date.now();
         lastSignalDir = sig; // remember the direction we actually broadcast
       }
+
 
       // Persist the audit record (best-effort — never block signal flow on logging).
       // The scan loop ticks ~every 5s, so to avoid flooding we log every SENT signal,
@@ -2857,21 +2964,31 @@ Deno.serve(async (req) => {
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
 
-        const { data: ins } = await admin.from("ai_signals").insert({
-          asset: m.name, signal: sig, entry, tp, sl,
-          confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
-        }).select("id").maybeSingle();
-
         const reason = "🚀 First signal (manual start) · یەکەم سیگنال (دەستپێکی دەستی)";
         const now = Date.now();
+        const newLegs: OpenLeg[] = [];
         for (const tfDef of TIMEFRAME_CASCADE) {
+          const activeFrom = now + tfDef.delayMs;
+          const expiresAt = activeFrom + (TF_PERIOD_MS[tfDef.tf] ?? TF_PERIOD_MS["15M"]);
+
+          const { data: ins } = await admin.from("ai_signals").insert({
+            asset: m.name, signal: sig, entry, tp, sl, confidence,
+            status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
+            timeframe: tfDef.tf,
+          }).select("id").maybeSingle();
+
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
           const text = newSignalLine(q, sig, entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
           if (tfDef.delayMs === 0) forcedAlerts.push({ text, important: true, reason: tfReason });
-          else tfQueue.push({ dueAt: now + tfDef.delayMs, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
+          else tfQueue.push({ dueAt: activeFrom, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
+          newLegs.push({
+            id: ins?.id as string | undefined,
+            signal: sig, entry, tp, sl, tf: tfDef.tf, activeFrom, expiresAt,
+          });
         }
 
-        openState[symbol] = { id: ins?.id as string | undefined, signal: sig, entry, tp, sl };
+        openState[symbol] = newLegs;
+
         priceState[symbol] = { price: q.price, signal: sig, lastSignalAt: now, lastSignalDir: sig, lastAuditKey: "sent:fresh" };
         await admin.from("signal_audit_log").insert({
           symbol: m.name, signal: sig, price: q.price, change_pct: q.changePct, outcome: "sent", reason: "forced",

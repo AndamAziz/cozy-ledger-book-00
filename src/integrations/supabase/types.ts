@@ -62,6 +62,7 @@ export type Database = {
           sl: number | null
           sl_pips: number | null
           status: string
+          timeframe: string | null
           tp: number | null
           tp_pips: number | null
         }
@@ -79,6 +80,7 @@ export type Database = {
           sl?: number | null
           sl_pips?: number | null
           status?: string
+          timeframe?: string | null
           tp?: number | null
           tp_pips?: number | null
         }
@@ -96,6 +98,7 @@ export type Database = {
           sl?: number | null
           sl_pips?: number | null
           status?: string
+          timeframe?: string | null
           tp?: number | null
           tp_pips?: number | null
         }

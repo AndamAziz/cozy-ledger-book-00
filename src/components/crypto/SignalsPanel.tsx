@@ -177,8 +177,9 @@ export function SignalsPanel() {
             <div className="flex justify-between"><span className="text-[#848e9c]">EMA20</span><span className="text-white font-bold">{signal.ema20?.toFixed(signal.decimals) ?? '—'}</span></div>
             <div className="flex justify-between"><span className="text-[#848e9c]">EMA50</span><span className="text-white font-bold">{signal.ema50?.toFixed(signal.decimals) ?? '—'}</span></div>
             <div className="flex justify-between"><span className="text-[#848e9c]">ATR</span><span className="text-white font-bold">{signal.atr.toFixed(signal.decimals)}</span></div>
-            <div className="flex justify-between"><span className="text-[#848e9c]">Confidence</span><span className="text-white font-bold">{signal.confidence}%</span></div>
-            <div className="flex justify-between"><span className="text-[#848e9c]">ConfScore</span><span className="text-white font-bold">{signal.confluenceDebug.confScore}% {signal.confluenceDebug.confDir}</span></div>
+            <div className="flex justify-between"><span className="text-[#848e9c]">Signal Confidence</span><span className="text-white font-bold">{signal.confidence}%</span></div>
+            <div className="flex justify-between"><span className="text-[#848e9c]">TF Agreement</span><span className="text-white font-bold">{signal.confluenceDebug.confScore}% {signal.confluenceDebug.confDir}</span></div>
+
             <div className="flex justify-between"><span className="text-[#848e9c]">Damp</span><span className="text-white font-bold">×{signal.confluenceDebug.damp.toFixed(2)}</span></div>
             <div className="flex justify-between"><span className="text-[#848e9c]">Combined</span><span className="text-white font-bold">{signal.confluenceDebug.combinedBefore}→{signal.confluenceDebug.combinedAfter}</span></div>
             <div className="flex justify-between"><span className="text-[#848e9c]">Align</span><span className="text-white font-bold">{signal.confluenceAlignment}</span></div>

@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_signals ADD COLUMN IF NOT EXISTS timeframe text;
