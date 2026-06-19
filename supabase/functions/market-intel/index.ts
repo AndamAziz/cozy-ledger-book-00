@@ -906,7 +906,7 @@ interface TfQueueItem { dueAt: number; text: string; reason: string; symbol: str
 async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAlerts: string[]; quotes: Quote[] }> {
   const quotes = await getPrices();
   const priceState = await getState("prices");      // { "XAU/USD": { price, signal } }
-  const openState = await getState("open_signals"); // { "XAU/USD": OpenSig }
+  const openState = await getState("open_signals"); // { "XAU/USD": OpenLeg[] }
   const enabledRegions = await getEnabledRegions(); // which markets may open new targets
   // Pending higher-timeframe (15M/30M/1H) signals waiting for their staggered send time.
   const tfQueue = ((await getState("tf_queue")).items as TfQueueItem[]) ?? [];
