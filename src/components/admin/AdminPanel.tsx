@@ -26,7 +26,8 @@ import {
   Pencil,
   Trash2,
   Crown,
-  History
+  History,
+  Mail
 } from 'lucide-react';
 import {
   Select,
