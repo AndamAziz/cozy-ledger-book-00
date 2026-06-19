@@ -52,17 +52,19 @@ const TARGET_IMPORTANT_MOVE_PCT = 0.6;   // |change| ≥ this % ⇒ send target 
 const PRICE_INTERVAL_MS = 5_000;
 const LOOP_WINDOW_MS = 50_000;
 
-// Multi-timeframe signal cascade. When a NEW signal opens we post the 5M setup
-// immediately, then auto-post the higher timeframes on a staggered schedule so
-// users see the same trade confirmed across 5M → 15M → 30M → 1H. Each higher
-// timeframe uses a wider target / stop (it's a longer hold). Delays are measured
-// from the moment the first (5M) signal is sent.
-const TIMEFRAME_CASCADE: { tf: string; delayMs: number; tpMult: number; slMult: number }[] = [
-  { tf: "5M",  delayMs: 0,            tpMult: 1.0, slMult: 1.0 },
-  { tf: "15M", delayMs: 5 * 60_000,  tpMult: 1.8, slMult: 1.4 },
-  { tf: "30M", delayMs: 15 * 60_000, tpMult: 2.6, slMult: 1.9 },
-  { tf: "1H",  delayMs: 30 * 60_000, tpMult: 4.0, slMult: 2.8 },
+// Multi-timeframe signal cascade. When a NEW signal opens we post the setup
+// immediately, then auto-re-post the SAME trade on a staggered schedule so users
+// who join late still see it. Every message uses the IDENTICAL ATR-based
+// entry/SL/TP from the shared engine (byte-for-byte equal to the app) — the only
+// thing that changes per row is the send time and the confirmation label.
+// Delays are measured from the moment the first signal is sent.
+const TIMEFRAME_CASCADE: { tf: string; delayMs: number }[] = [
+  { tf: "5M",  delayMs: 0 },
+  { tf: "15M", delayMs: 5 * 60_000 },
+  { tf: "30M", delayMs: 15 * 60_000 },
+  { tf: "1H",  delayMs: 30 * 60_000 },
 ];
+
 
 // News is broadcast at most once per 60 minutes (its own standalone message).
 const NEWS_MIN_GAP_MS = 60 * 60_000;
