@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Lock, Eye, EyeOff, CheckCircle2, Mail } from 'lucide-react';
+import { isResetEmailAvailable } from '@/lib/emailDns';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -74,6 +75,16 @@ export default function ResetPassword() {
 
     setResendLoading(true);
     try {
+      // Block resend until the sender domain DNS is verified/active.
+      const available = await isResetEmailAvailable();
+      if (!available) {
+        toast({
+          title: t('resetUnavailableTitle'),
+          description: t('resetUnavailableDesc'),
+          variant: 'destructive',
+        });
+        return;
+      }
       const { error } = await supabase.auth.resetPasswordForEmail(resendEmail.trim(), {
         redirectTo: `${window.location.origin}/reset-password`,
       });
