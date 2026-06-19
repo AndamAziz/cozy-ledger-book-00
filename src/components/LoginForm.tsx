@@ -95,12 +95,48 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
 
   const switchTab = (signup: boolean) => {
     setIsSignupMode(signup);
+    setIsForgotMode(false);
+    setResetSent(false);
     setEmail('');
     setPassword('');
     setConfirmPassword('');
     setCompanyName('');
     setShowPassword(false);
     setShowConfirmPassword(false);
+  };
+
+  const openForgotMode = () => {
+    setIsForgotMode(true);
+    setResetSent(false);
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast({ title: t('error'), description: t('enterEmail'), variant: 'destructive' });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        { redirectTo: `${window.location.origin}/reset-password` }
+      );
+      if (error) {
+        toast({ title: t('error'), description: error.message || t('error'), variant: 'destructive' });
+      } else {
+        // Always show success to avoid leaking which emails exist
+        setResetSent(true);
+        toast({ title: t('resetLinkSent'), description: t('resetLinkSentDesc') });
+      }
+    } catch (err) {
+      toast({ title: t('error'), description: t('error'), variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
