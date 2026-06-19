@@ -335,10 +335,13 @@ export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promis
   const levelSeries = series[1]?.length ? series[1] : series[0]?.length ? series[0] : series[2] || [];
   const effectivePrice = price > 0 ? price : levelSeries.length ? levelSeries[levelSeries.length - 1].close : 0;
   const levels = buildKeyLevels(levelSeries, effectivePrice);
-  // ATR for the trade setup uses the M5 (live) series to match the default
-  // Signals/bot view, falling back to M15, then the key-level series.
-  const atrSeries = series[5]?.length ? series[5] : series[4]?.length ? series[4] : levelSeries;
-  const setup = buildTradeSetup(confluence.dir, effectivePrice, atrSeries, 2);
+  // ATR for the trade setup uses the M15 series — the SAME base timeframe the
+  // Telegram bot uses (computeEngine → buildAssetSignal @ M15) — so Confluence,
+  // Signals@M15 and Telegram all produce identical ATR-based Entry/SL/TP.
+  // AI_TIMEFRAMES order: [D1, H4, H1, M30, M15, M5] → index 4 = M15.
+  const atrSeries = series[4]?.length ? series[4] : series[5]?.length ? series[5] : levelSeries;
+  const decimals = asset === 'btc' ? 0 : 2;
+  const setup = buildTradeSetup(confluence.dir, effectivePrice, atrSeries, decimals);
   const signalChangedAt = recordDirection(asset, confluence.dir);
 
   return { trends, confluence, levels, setup, price: effectivePrice, signalChangedAt };
