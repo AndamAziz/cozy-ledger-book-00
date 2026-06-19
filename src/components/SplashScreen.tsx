@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Button } from '@/components/ui/button';
+import { RefreshCw, WifiOff } from 'lucide-react';
 
-export const SplashScreen = () => {
+interface SplashScreenProps {
+  /** When true, shows an error message with a retry button instead of the spinner. */
+  timedOut?: boolean;
+  /** Called when the user taps the retry button. Defaults to a full page reload. */
+  onRetry?: () => void;
+}
+
+export const SplashScreen = ({ timedOut = false, onRetry }: SplashScreenProps) => {
   const [isVisible, setIsVisible] = useState(true);
   const [showText, setShowText] = useState(false);
   const [showSubtext, setShowSubtext] = useState(false);
@@ -17,6 +26,14 @@ export const SplashScreen = () => {
       clearTimeout(subtextTimer);
     };
   }, []);
+
+  const handleRetry = () => {
+    if (onRetry) {
+      onRetry();
+    } else {
+      window.location.reload();
+    }
+  };
 
   if (!isVisible) return null;
 
@@ -75,23 +92,43 @@ export const SplashScreen = () => {
           </p>
         </div>
 
-        {/* Loading indicator */}
-        <div className={`transition-all duration-500 ${showSubtext ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="flex items-center justify-center gap-2">
-            {/* Animated dots */}
-            <div className="flex gap-1.5">
-              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-primary animate-bounce" 
-                   style={{ animationDelay: '0ms', animationDuration: '1s' }} />
-              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-primary/80 animate-bounce" 
-                   style={{ animationDelay: '150ms', animationDuration: '1s' }} />
-              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-primary/60 animate-bounce" 
-                   style={{ animationDelay: '300ms', animationDuration: '1s' }} />
+        {/* Loading indicator OR timeout error */}
+        {timedOut ? (
+          <div className="transition-all duration-500 opacity-100 max-w-sm mx-auto">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                <WifiOff className="h-6 w-6 text-destructive" />
+              </div>
             </div>
+            <p className="text-sm sm:text-base font-semibold text-foreground mb-2">
+              {t('loadingTakingLong')}
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-5">
+              {t('loadingTakingLongMsg')}
+            </p>
+            <Button onClick={handleRetry} className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              {t('retry')}
+            </Button>
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground/70 mt-4">
-            {t('loading')}
-          </p>
-        </div>
+        ) : (
+          <div className={`transition-all duration-500 ${showSubtext ? 'opacity-100' : 'opacity-0'}`}>
+            <div className="flex items-center justify-center gap-2">
+              {/* Animated dots */}
+              <div className="flex gap-1.5">
+                <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-primary animate-bounce" 
+                     style={{ animationDelay: '0ms', animationDuration: '1s' }} />
+                <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-primary/80 animate-bounce" 
+                     style={{ animationDelay: '150ms', animationDuration: '1s' }} />
+                <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-primary/60 animate-bounce" 
+                     style={{ animationDelay: '300ms', animationDuration: '1s' }} />
+              </div>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground/70 mt-4">
+              {t('loading')}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

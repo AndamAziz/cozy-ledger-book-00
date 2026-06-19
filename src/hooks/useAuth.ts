@@ -8,12 +8,18 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let resolved = false;
+    const finish = () => {
+      resolved = true;
+      setIsLoading(false);
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        setIsLoading(false);
+        finish();
       }
     );
 
@@ -21,10 +27,25 @@ export function useAuth() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setIsLoading(false);
+      finish();
+    }).catch((error) => {
+      console.error('getSession failed:', error);
+      finish();
     });
 
-    return () => subscription.unsubscribe();
+    // Safety fallback: if getSession hangs silently (e.g. network/storage stall),
+    // stop loading after 8s so the user is never stuck on the splash screen.
+    const safetyTimer = setTimeout(() => {
+      if (!resolved) {
+        console.warn('Auth session check timed out — falling back.');
+        setIsLoading(false);
+      }
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string; errorKey?: string }> => {

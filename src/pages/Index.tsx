@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -189,8 +189,22 @@ const Index = () => {
     setShowOnboarding(false);
   };
 
-  if (isLoading || (isAuthenticated && roleLoading)) {
-    return <SplashScreen />;
+  // Safety net: never leave the user stuck on an infinite splash screen.
+  // If auth/role checks haven't resolved after 10s, show a retry option.
+  const isInitialLoading = isLoading || (isAuthenticated && roleLoading);
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (!isInitialLoading) {
+      setLoadTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setLoadTimedOut(true), 10000);
+    return () => clearTimeout(timer);
+  }, [isInitialLoading]);
+
+  if (isInitialLoading) {
+    return <SplashScreen timedOut={loadTimedOut} />;
   }
 
   if (!isAuthenticated) {

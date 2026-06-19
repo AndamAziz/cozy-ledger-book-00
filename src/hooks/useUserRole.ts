@@ -123,6 +123,12 @@ export function useUserRole(user: User | null) {
 
     checkUserStatus(true);
 
+    // Safety fallback: if the role/approval queries hang, stop loading after 8s
+    // so the user isn't stuck on the splash screen forever.
+    const safetyTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 8000);
+
     const channel = supabase
       .channel('user-approval-changes')
       .on(
@@ -140,6 +146,7 @@ export function useUserRole(user: User | null) {
       .subscribe();
 
     return () => {
+      clearTimeout(safetyTimer);
       supabase.removeChannel(channel);
     };
   }, [user]);
