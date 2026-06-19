@@ -8,6 +8,8 @@
  *  - With 1 lot, a $1 price move = $100 P/L.
  */
 
+import type { OHLCCandle } from './krakenApi';
+
 export type RiskSide = 'buy' | 'sell';
 
 export interface RiskInput {
