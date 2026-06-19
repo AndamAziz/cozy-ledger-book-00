@@ -335,7 +335,10 @@ export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promis
   const levelSeries = series[1]?.length ? series[1] : series[0]?.length ? series[0] : series[2] || [];
   const effectivePrice = price > 0 ? price : levelSeries.length ? levelSeries[levelSeries.length - 1].close : 0;
   const levels = buildKeyLevels(levelSeries, effectivePrice);
-  const setup = buildTradeSetup(confluence.dir, effectivePrice, levels);
+  // ATR for the trade setup uses the M5 (live) series to match the default
+  // Signals/bot view, falling back to M15, then the key-level series.
+  const atrSeries = series[5]?.length ? series[5] : series[4]?.length ? series[4] : levelSeries;
+  const setup = buildTradeSetup(confluence.dir, effectivePrice, atrSeries, 2);
   const signalChangedAt = recordDirection(asset, confluence.dir);
 
   return { trends, confluence, levels, setup, price: effectivePrice, signalChangedAt };
