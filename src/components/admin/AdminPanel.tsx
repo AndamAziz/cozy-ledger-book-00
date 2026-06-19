@@ -44,6 +44,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TelegramHealthCard } from './TelegramHealthCard';
+import { ReviewModeration } from './ReviewModeration';
 
 interface UserApproval {
   id: string;
@@ -726,6 +727,12 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
         {/* Telegram Bot Health */}
         <TelegramHealthCard />
+
+        {/* Customer Reviews Moderation */}
+        <div className="mb-4">
+          <ReviewModeration />
+        </div>
+
 
         {/* Active Filter Indicator */}
         {activeFilter !== 'all' && (

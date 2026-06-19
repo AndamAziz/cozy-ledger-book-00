@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { ReviewsShowcase } from '@/components/reviews/ReviewsShowcase';
 import {
   Wallet,
   Film,
@@ -332,7 +333,7 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
   const NextIcon = dir === 'rtl' ? ChevronLeft : ChevronRight;
 
   return (
-    <div className="relative min-h-screen min-h-[100dvh] flex flex-col overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 safe-area-inset">
+    <div className="relative min-h-screen min-h-[100dvh] flex flex-col overflow-x-hidden overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5 safe-area-inset">
       {/* Decorative orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-20 -start-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
@@ -369,7 +370,7 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="relative z-10 flex-1 flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
+        className="relative z-10 flex min-h-[360px] flex-shrink-0 overflow-x-auto snap-x snap-mandatory no-scrollbar"
         style={{ scrollSnapType: 'x mandatory' }}
       >
         {FEATURES.map((feature, i) => {
@@ -414,6 +415,13 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
             }`}
           />
         ))}
+      </div>
+
+      {/* Customer reviews section */}
+      <div className="relative z-10 px-5 sm:px-8 pb-2">
+        <div className="max-w-md mx-auto w-full">
+          <ReviewsShowcase limit={2} />
+        </div>
       </div>
 
       {/* CTA */}

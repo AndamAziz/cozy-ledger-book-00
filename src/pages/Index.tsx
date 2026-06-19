@@ -19,6 +19,8 @@ import { SalesTab } from '@/components/SalesTab';
 import { ReportsTab } from '@/components/ReportsTab';
 import { SplashScreen } from '@/components/SplashScreen';
 import { OnboardingScreen } from '@/components/OnboardingScreen';
+import { ReviewForm } from '@/components/reviews/ReviewForm';
+import { REVIEWS_I18N, getReviewLang } from '@/lib/reviews';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Users, Sparkles, Tv, Film } from 'lucide-react';
@@ -31,14 +33,16 @@ interface DashboardProps {
   companyName?: string | null;
   daysUntilExpiry?: number | null;
   userEmail?: string;
+  user: import('@supabase/supabase-js').User | null;
 }
 
-const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEmail }: DashboardProps) => {
+const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEmail, user }: DashboardProps) => {
   const { logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
   const financeData = useFinanceData();
+  const reviewI18n = REVIEWS_I18N[getReviewLang(language)];
 
   const summary = financeData.getSummary();
   const lowStockItems = financeData.getLowStockItems();
@@ -151,6 +155,18 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           {activeTab === 'reports' && (
             <ReportsTab incomeData={financeData.incomeData} expenseData={financeData.expenseData} cigaretteData={financeData.cigaretteData} salesData={financeData.salesData} summary={summary} currentMonthLabel={financeData.getCurrentMonthLabel()} currentMonthKey={financeData.currentMonthKey} />
           )}
+
+          {/* Customer reviews */}
+          <div className="mt-4 sm:mt-6 grid gap-3 no-print">
+            <ReviewForm user={user} reviewerName={companyName} />
+            <Button
+              variant="outline"
+              onClick={() => navigate('/reviews')}
+              className="w-full rounded-xl border-gold/40 text-foreground hover:bg-gold/10"
+            >
+              {reviewI18n.seeAll}
+            </Button>
+          </div>
         </div>
       </div>
     </>
@@ -209,6 +225,7 @@ const Index = () => {
       companyName={approvalStatus?.companyName}
       daysUntilExpiry={approvalStatus?.daysUntilExpiry}
       userEmail={user?.email}
+      user={user}
     />
   );
 };
