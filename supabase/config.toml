@@ -27,3 +27,5 @@ project_id = "jpatltcqhpclxenzvboa"
     verify_jwt = true
   [functions.email-dns-status]
     verify_jwt = false
+  [functions.account-provider-check]
+    verify_jwt = false
