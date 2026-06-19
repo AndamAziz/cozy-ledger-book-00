@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle2, Mail } from 'lucide-react';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -14,14 +14,14 @@ export default function ResetPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isDone, setIsDone] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendSent, setResendSent] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const { toast } = useToast();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // The Supabase client auto-detects the recovery token in the URL and
-    // establishes a temporary session. Wait for that session before allowing
-    // the password update.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         setIsReady(true);
@@ -60,13 +60,30 @@ export default function ResetPassword() {
       }
       setIsDone(true);
       toast({ title: t('passwordUpdated'), description: t('passwordUpdatedDesc') });
-      // Sign out the temporary recovery session so the user logs in fresh.
       await supabase.auth.signOut({ scope: 'local' });
       setTimeout(() => navigate('/'), 1800);
     } catch {
       toast({ title: t('error'), description: t('error'), variant: 'destructive' });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!resendEmail.trim()) return;
+
+    setResendLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resendEmail.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResendSent(true);
+      toast({ title: t('success'), description: t('resendResetSuccessDesc') });
+    } catch {
+      toast({ title: t('error'), description: t('errorOccurred'), variant: 'destructive' });
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -103,6 +120,20 @@ export default function ResetPassword() {
                 <Button
                   type="button"
                   onClick={() => navigate('/')}
+                  className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success text-base font-bold rounded-xl"
+                >
+                  {t('backToLogin')}
+                </Button>
+              </div>
+            ) : resendSent ? (
+              <div className="text-center space-y-6">
+                <div className="w-16 h-16 rounded-full bg-success/20 mx-auto flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-success" />
+                </div>
+                <p className="text-slate-300 text-sm">{t('resendResetSuccessDesc')}</p>
+                <Button
+                  type="button"
+                  onClick={() => { setResendSent(false); setResendEmail(''); navigate('/'); }}
                   className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success text-base font-bold rounded-xl"
                 >
                   {t('backToLogin')}
@@ -155,9 +186,15 @@ export default function ResetPassword() {
                   </label>
                 </div>
 
+                {!isReady && (
+                  <div className="rounded-xl bg-warning/10 border border-warning/30 p-3 text-center">
+                    <p className="text-xs text-warning">{t('resetSessionInvalid')}</p>
+                  </div>
+                )}
+
                 <Button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !isReady}
                   className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success hover:shadow-lg hover:shadow-primary/40 text-base font-bold rounded-xl transition-all duration-300"
                 >
                   {isLoading ? (
@@ -169,6 +206,39 @@ export default function ResetPassword() {
                     t('updatePassword')
                   )}
                 </Button>
+
+                <div className="pt-2 border-t border-slate-700/50 space-y-3">
+                  <p className="text-xs text-center text-slate-400">{t('linkExpired')}</p>
+                  <div className="relative">
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 z-10">
+                      <Mail className="w-5 h-5" />
+                    </span>
+                    <input
+                      type="email"
+                      value={resendEmail}
+                      onChange={(e) => setResendEmail(e.target.value)}
+                      placeholder={t('enterEmail')}
+                      disabled={resendLoading}
+                      className="w-full py-3 pr-12 pl-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-sm outline-none transition-all focus:border-primary focus:bg-slate-800/80"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendLoading || !resendEmail.trim()}
+                    variant="outline"
+                    className="w-full py-3 h-auto text-sm font-semibold rounded-xl border-primary/30 text-primary hover:text-primary hover:bg-primary/10"
+                  >
+                    {resendLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        <span>{t('loading')}</span>
+                      </div>
+                    ) : (
+                      t('resendResetEmail')
+                    )}
+                  </Button>
+                </div>
 
                 <div className="text-center">
                   <button
