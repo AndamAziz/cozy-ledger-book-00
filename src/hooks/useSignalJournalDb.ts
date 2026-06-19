@@ -112,8 +112,11 @@ export function useSignalJournalDb(storeKey: string) {
         () => load(),
       )
       .subscribe();
+    // Polling fallback so accuracy stays in sync even if realtime is unavailable.
+    const interval = setInterval(load, 60_000);
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [asset, load]);
 
