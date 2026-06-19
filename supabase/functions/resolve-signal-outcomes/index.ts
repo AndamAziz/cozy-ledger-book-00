@@ -186,6 +186,13 @@ Deno.serve(async (req) => {
       const res = resolveOutcome({ side, entry, sl, tp1, tp2, candles, openedAtMs: new Date(r.created_at).getTime() });
       const pips = res.outcome === "open" ? 0 : outcomePips(res, side, entry, meta.pip);
 
+      // Guard: never close a still-running fresh signal as "expired". A signal is
+      // only allowed to expire once it has been live longer than the longest TF
+      // period + cascade (~95 min). Decisive SL/TP hits are always honoured.
+      const ageMin = (Date.now() - new Date(r.created_at).getTime()) / 60_000;
+      const prematureExpiry = res.outcome === "expired" && r.status === "open" && ageMin < 95;
+      const persistable = res.outcome !== "open" && !prematureExpiry;
+
       if (res.outcome === "tp1") neu.tp1++;
       else if (res.outcome === "tp2") neu.tp2++;
       else if (res.outcome === "sl") neu.sl++;
@@ -201,7 +208,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (!dryRun && res.outcome !== "open") {
+      if (!dryRun && persistable) {
         const tp2Pips = outcomePips({ outcome: "tp2", exitPrice: tp2, closedAtMs: null, stage: 2 }, side, entry, meta.pip);
         const { error: upErr } = await admin.from("ai_signals").update({
           outcome: res.outcome,
