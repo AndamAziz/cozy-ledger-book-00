@@ -416,6 +416,13 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
         ))}
       </div>
 
+      {/* Customer reviews section */}
+      <div className="relative z-10 px-5 sm:px-8 pb-2">
+        <div className="max-w-md mx-auto w-full">
+          <ReviewsShowcase limit={2} />
+        </div>
+      </div>
+
       {/* CTA */}
       <div className="relative z-10 px-5 pb-7 sm:px-8 sm:pb-9">
         <Button
