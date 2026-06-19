@@ -428,6 +428,8 @@ export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
     atr,
     decimals: p.decimals,
     conflict,
+    confluenceAlignment,
+    confluenceDebug: { confScore, confDir, damp, combinedBefore, combinedAfter: combined },
     reasonKu,
     reasonEn,
     newsWarningKu,
