@@ -102,9 +102,17 @@ serve(async (req: Request): Promise<Response> => {
 
     if (updateError) {
       console.error("Error updating password:", updateError);
+      const msg = updateError.message || "";
+      const isWeak =
+        (updateError as { code?: string }).code === "weak_password" ||
+        /weak|pwned|easy to guess/i.test(msg);
       return new Response(
-        JSON.stringify({ error: updateError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: isWeak
+            ? "This password is too weak or has appeared in a data breach. Please choose a stronger, unique password."
+            : msg,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
