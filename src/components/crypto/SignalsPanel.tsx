@@ -128,6 +128,19 @@ export function SignalsPanel() {
       {/* Signal card */}
       <SignalCard signal={signal} loading={loading && !signal} emoji={meta.emoji} />
 
+      {/* Higher-TF confluence conflict warning */}
+      {signal?.confluenceAlignment === 'conflicting' && (
+        <div className="flex items-start gap-2 rounded-lg border border-[#f0b90b55] bg-[#f0b90b14] px-3 py-2">
+          <span className="text-sm leading-none mt-0.5">⚠️</span>
+          <div className="text-[11px] leading-snug text-[#f0b90b]">
+            {bi(
+              `بەرامبەر ئاراستەی کاتە بەرزەکانە (${signal.confluenceDebug.confScore}٪ ${signal.confluenceDebug.confDir === 'down' ? 'دابەزین' : 'بەرزبوونەوە'})`,
+              `Conflicts with higher-TF trend (${signal.confluenceDebug.confScore}% ${signal.confluenceDebug.confDir === 'down' ? 'bearish' : 'bullish'})`,
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Multi-timeframe strip */}
       {signal && (
         <div className="rounded-xl bg-[#0d1117] border border-[#1a1e2e] p-3">
