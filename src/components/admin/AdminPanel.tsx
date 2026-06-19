@@ -1080,6 +1080,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           </Button>
                         )}
                       </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">
+                          {t('adminBannerNote')}
+                        </p>
+                      )}
                     </div>
                   </div>
                 );
