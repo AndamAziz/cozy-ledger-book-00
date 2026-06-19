@@ -1120,20 +1120,21 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
           lines.push(`🎯 تارگێتەکە بە پەیامێکی جیا دەنێردرێت / Trade target sent separately`);
 
           // Concrete trade target → SEPARATE signal message (news-driven ⇒ important).
+          // Direction comes from the data surprise; risk model = same ATR engine.
           const m = ASSET_META["XAU/USD"];
           if (goldPrice) {
+            const goldEng = await getEngine("XAU/USD", goldPrice);
+            const { entry, tp, sl } = levelsForDir("XAU/USD", goldPrice, dir as "BUY" | "SELL", goldEng?.atr ?? null);
             const isBuy = dir === "BUY";
-            const tp = +(goldPrice * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
-            const sl = +(goldPrice * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
-            const tpPips = toPips(tp - goldPrice, m.pip);
-            const slPips = toPips(sl - goldPrice, m.pip);
+            const tpPips = toPips(tp - entry, m.pip);
+            const slPips = toPips(sl - entry, m.pip);
             signalAlerts.push({
               important: true,
               reason: "📰 High-impact news / هەواڵی کاریگەری بەرز",
               text: [
                 `📰 News-driven / بەهۆی هەواڵ: <b>${esc(ev.title)}</b>`,
                 `${sigBadge(dir)} <b>${dir} GOLD</b> / ${sigKu(dir)}ی ئاڵتوون`,
-                `📍 Entry / دەستپێک: <code>$${fmt(goldPrice)}</code>`,
+                `📍 Entry / دەستپێک: <code>$${fmt(entry)}</code>`,
                 `🎯🟢 TP / تارگێت: <code>$${fmt(tp)}</code> (${isBuy ? "+" : "-"}${tpPips} pips)`,
                 `🛑🔴 SL / لۆست ستۆپ: <code>$${fmt(sl)}</code> (${isBuy ? "-" : "+"}${slPips} pips)`,
               ].join("\n"),
