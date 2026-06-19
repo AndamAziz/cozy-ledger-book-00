@@ -397,13 +397,9 @@ export function buildLocalSignal(candles: OHLCCandle[], price: number, decimals:
   const d = decideFromScores(tech.score, 0, 0, perTF, false);
 
   const atr = calculateATR(candles);
-  const slDist = atr > 0 ? atr * 1.5 : px * 0.005;
-  const dirSign = d.action === 'buy' ? 1 : d.action === 'sell' ? -1 : 0;
-  const entry = +px.toFixed(decimals);
-  const stopLoss = dirSign !== 0 ? +(px - dirSign * slDist).toFixed(decimals) : 0;
-  const takeProfit1 = dirSign !== 0 ? +(px + dirSign * slDist * 1.5).toFixed(decimals) : 0;
-  const takeProfit2 = dirSign !== 0 ? +(px + dirSign * slDist * 3).toFixed(decimals) : 0;
-  const riskReward = dirSign !== 0 ? 1.5 : 0;
+  // Unified ATR-based risk model (shared with Confluence, Signals, bot, Telegram).
+  const lv = atrLevels(d.action === 'wait' ? 'none' : d.action, px, atr, decimals);
+  const { entry, stopLoss, takeProfit1, takeProfit2, slDist, riskReward } = lv;
 
   const emas = [tech.ema20, tech.ema50].filter((v): v is number => v != null && Number.isFinite(v));
   const support = emas.length ? Math.min(...emas, px - slDist) : px - slDist;
