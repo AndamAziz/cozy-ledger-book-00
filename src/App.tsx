@@ -15,6 +15,7 @@ import BotDetail from "./pages/BotDetail";
 import Reviews from "./pages/Reviews";
 import ResetPassword from "./pages/ResetPassword";
 import EmailStatus from "./pages/EmailStatus";
+import Trust from "./pages/Trust";
 import NotFound from "./pages/NotFound";
 
 
