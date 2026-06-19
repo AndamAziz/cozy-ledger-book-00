@@ -428,6 +428,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
       if (error) throw error;
 
+      await logActivity('expiry_changed', selectedUser.user_id, selectedUser.email, { action: `Expiry set to ${newExpiry.toISOString().split('T')[0]}` });
+
       toast({
         title: t('success'),
         description: t('expiryChanged'),
@@ -1105,9 +1107,26 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                       </div>
                       ) : (
                         <div className="flex flex-wrap gap-2 items-center">
-                          <p className="text-xs text-muted-foreground italic flex-1">
-                            {t('adminBannerNote')}
-                          </p>
+                          {!user.isAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                if (user.expires_at) {
+                                  const date = new Date(user.expires_at);
+                                  setCustomExpiryDate(date.toISOString().split('T')[0]);
+                                } else {
+                                  setCustomExpiryDate(new Date().toISOString().split('T')[0]);
+                                }
+                                setShowExpiryDialog(true);
+                              }}
+                              className="rounded-lg text-xs border-primary/30 text-primary hover:text-primary"
+                            >
+                              <Calendar className="h-3 w-3 ml-1" />
+                              {t('renewExpiry')}
+                            </Button>
+                          )}
                           {!user.isAdmin && (
                             <Button
                               variant="outline"
@@ -1119,6 +1138,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                               {t('sendResetEmail')}
                             </Button>
                           )}
+                          <p className="text-xs text-muted-foreground italic w-full">
+                            {t('adminRenewNote')}
+                          </p>
                         </div>
                       )}
                     </div>
