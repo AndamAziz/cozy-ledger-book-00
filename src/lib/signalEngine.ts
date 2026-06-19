@@ -295,7 +295,30 @@ export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
 
   // Combined score: technical is the spine, macro tilts it.
   const macroWeight = p.asset === 'gold' || p.asset === 'btc' ? 0.4 : 0.25;
-  const combined = Math.round(tech.score * (1 - macroWeight) + macro.score * macroWeight);
+  let combined = Math.round(tech.score * (1 - macroWeight) + macro.score * macroWeight);
+
+  // ── Higher-TF confluence filter ──
+  // Independent 6-TF bias derived from the same per-TF trends (mirrors
+  // computeConfluence). If a majority of timeframes oppose the selected-TF lean,
+  // damp the score proportional to the disagreement so marginal calls flip but
+  // high-conviction calls survive (reduced). computeConfluence() itself is untouched.
+  const PEN_MAX = 0.5; // max haircut when all 6 TFs oppose
+  const CONF_MAJORITY = 50; // % threshold before any penalty engages
+  const confTotal = perTF.length || 1;
+  const confDominant = Math.max(upCount, downCount);
+  const confScore = Math.round((confDominant / confTotal) * 100); // 0..100
+  const confDir: TrendDir = upCount > downCount ? 'up' : downCount > upCount ? 'down' : 'neutral';
+  const signalDir: TrendDir = combined > 0 ? 'up' : combined < 0 ? 'down' : 'neutral';
+
+  const combinedBefore = combined;
+  let damp = 1;
+  const opposed =
+    signalDir !== 'neutral' && confDir !== 'neutral' && confDir !== signalDir && confScore >= CONF_MAJORITY;
+  if (opposed) {
+    const opposition = (confScore - CONF_MAJORITY) / (100 - CONF_MAJORITY); // 0 at 50%, 1 at 100%
+    damp = 1 - PEN_MAX * opposition; // ×1.0 .. ×0.5
+    combined = Math.round(combined * damp);
+  }
 
   // Confidence: scaled magnitude, boosted slightly when timeframes align.
   const alignment = Math.abs(upCount - downCount) / SIGNAL_TIMEFRAMES.length; // 0..1
@@ -308,6 +331,25 @@ export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
   else if (confidence < 60) action = 'neutral';
 
   if (action === 'wait' || action === 'neutral') confidence = Math.min(confidence, 59);
+
+  // Alignment vs the independent 6-TF confluence, based on the FINAL action so
+  // the badge appears whenever a directional call survives but still fights the
+  // broader trend.
+  const confluenceAlignment: 'aligned' | 'conflicting' | 'neutral' =
+    (action === 'buy' || action === 'sell') && confDir !== 'neutral' && confScore >= CONF_MAJORITY
+      ? confDir === (action === 'buy' ? 'up' : 'down')
+        ? 'aligned'
+        : 'conflicting'
+      : 'neutral';
+
+  if (typeof console !== 'undefined') {
+    // Debug: verify the confluence filter on real data before fine-tuning.
+    console.debug(
+      `[signal:${p.asset}/${p.timeframe}] confScore=${confScore}% confDir=${confDir} signalDir=${signalDir} ` +
+        `damp=${damp.toFixed(2)} combined ${combinedBefore}→${combined} align=${confluenceAlignment}`,
+    );
+  }
+
 
   // ATR-based risk model: SL = 1.5x ATR, TP1 = 1.5R, TP2 = 3R.
   const atr = calculateATR(p.candles);
