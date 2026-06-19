@@ -18,6 +18,7 @@ import { InventoryTab } from '@/components/InventoryTab';
 import { SalesTab } from '@/components/SalesTab';
 import { ReportsTab } from '@/components/ReportsTab';
 import { SplashScreen } from '@/components/SplashScreen';
+import { OnboardingScreen } from '@/components/OnboardingScreen';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Users, Sparkles, Tv, Film } from 'lucide-react';
