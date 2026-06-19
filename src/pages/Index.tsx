@@ -31,14 +31,16 @@ interface DashboardProps {
   companyName?: string | null;
   daysUntilExpiry?: number | null;
   userEmail?: string;
+  user: import('@supabase/supabase-js').User | null;
 }
 
-const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEmail }: DashboardProps) => {
+const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEmail, user }: DashboardProps) => {
   const { logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
   const financeData = useFinanceData();
+  const reviewI18n = REVIEWS_I18N[getReviewLang(language)];
 
   const summary = financeData.getSummary();
   const lowStockItems = financeData.getLowStockItems();
