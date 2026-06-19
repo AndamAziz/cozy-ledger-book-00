@@ -892,6 +892,8 @@ interface OpenLeg {
   id?: string;
   signal: "BUY" | "SELL";
   entry: number; tp: number; sl: number;
+  /** TP2 (3R) — second take-profit level used for first-touch outcome labelling. */
+  tp2?: number;
   tf: string;
   activeFrom: number;
   expiresAt: number;
@@ -943,13 +945,21 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
         if (nowTs < leg.activeFrom) { stillOpen.push(leg); continue; }
 
         const isBuy = leg.signal === "BUY";
+        // Live first-touch on the 5s spot stream: TP2 (3R) > TP1 (1.5R) > SL.
+        // This is the immediate Telegram alert; the candle-based resolver
+        // (resolve-signal-outcomes) later re-confirms each outcome authoritatively
+        // from intrabar high/low and rewrites it with resolved_by='candle'.
         let hit: "tp" | "sl" | null = null;
+        let outcome: "tp1" | "tp2" | "sl" | null = null;
+        const tp2 = leg.tp2 ?? leg.entry + 2 * (leg.tp - leg.entry);
         if (isBuy) {
-          if (q.price >= leg.tp) hit = "tp";
-          else if (q.price <= leg.sl) hit = "sl";
+          if (q.price >= tp2) { hit = "tp"; outcome = "tp2"; }
+          else if (q.price >= leg.tp) { hit = "tp"; outcome = "tp1"; }
+          else if (q.price <= leg.sl) { hit = "sl"; outcome = "sl"; }
         } else {
-          if (q.price <= leg.tp) hit = "tp";
-          else if (q.price >= leg.sl) hit = "sl";
+          if (q.price <= tp2) { hit = "tp"; outcome = "tp2"; }
+          else if (q.price <= leg.tp) { hit = "tp"; outcome = "tp1"; }
+          else if (q.price >= leg.sl) { hit = "sl"; outcome = "sl"; }
         }
 
         // a) Hit TP or SL → close this leg with a tagged outcome.
@@ -959,27 +969,35 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           if (leg.id) {
             await admin.from("ai_signals").update({
               status: hit === "tp" ? "target_hit" : "stopped_out",
-              close_reason: hit === "tp" ? "tp" : "sl",
+              outcome,
+              close_reason: outcome,
               result_pips: hit === "tp" ? pips : -pips,
               close_price: q.price,
               closed_at: new Date().toISOString(),
+              resolved_by: "tick",
             }).eq("id", leg.id);
           }
           continue; // leg closed → drop it
         }
 
-        // b) The timeframe's candle/period closed without hitting TP/SL → report P/L now.
+        // b) The timeframe's candle/period closed without hitting TP/SL.
+        //    This is NOT a win or a loss — neither target nor stop was reached —
+        //    so it is recorded as `expired` and EXCLUDED from win-rate. (The old
+        //    code counted a mere price-direction drift as a "target_hit", which
+        //    inflated the win rate. That bug is fixed here.)
         if (nowTs >= leg.expiresAt) {
           const win = isBuy ? q.price >= leg.entry : q.price <= leg.entry;
           const pips = toPips(q.price - leg.entry, m.pip);
           outcomeAlerts.push(periodCloseLine(q.symbol, leg.signal, leg.tf, leg.entry, q.price, pips, win));
           if (leg.id) {
             await admin.from("ai_signals").update({
-              status: win ? "target_hit" : "stopped_out",
+              status: "expired",
+              outcome: "expired",
               close_reason: "period_close",
-              result_pips: win ? pips : -pips,
+              result_pips: pips * (win ? 1 : -1),
               close_price: q.price,
               closed_at: new Date().toISOString(),
+              resolved_by: "tick",
             }).eq("id", leg.id);
           }
           continue; // leg closed → drop it
@@ -1037,9 +1055,10 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
 
       if (actionable && timingOk && fresh && strongMove && cooldownOk) {
         // ATR-based levels from the SAME engine as the app — identical entry/SL/TP.
-        const { entry, tp, sl } = quoteLevels(q, sig as "BUY" | "SELL");
+        const { entry, tp, sl, tp2 } = quoteLevels(q, sig as "BUY" | "SELL");
         const tpPips = toPips(tp - entry, m.pip);
         const slPips = toPips(sl - entry, m.pip);
+        const tp2Pips = toPips(tp2 - entry, m.pip);
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
 
@@ -1061,8 +1080,9 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           const expiresAt = activeFrom + (TF_PERIOD_MS[tfDef.tf] ?? TF_PERIOD_MS["15M"]);
 
           const { data: ins } = await admin.from("ai_signals").insert({
-            asset: m.name, signal: sig, entry, tp, sl, confidence,
-            status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
+            asset: m.name, signal: sig, entry, tp, tp2, sl, confidence,
+            status: "open", outcome: "open", market_session: session,
+            tp_pips: tpPips, sl_pips: slPips, tp2_pips: tp2Pips,
             timeframe: tfDef.tf,
           }).select("id").maybeSingle();
 
@@ -1077,7 +1097,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           newLegs.push({
             id: ins?.id as string | undefined,
             signal: sig as "BUY" | "SELL",
-            entry, tp, sl, tf: tfDef.tf, activeFrom, expiresAt,
+            entry, tp, tp2, sl, tf: tfDef.tf, activeFrom, expiresAt,
           });
         }
         openState[q.symbol] = newLegs;
@@ -2960,9 +2980,10 @@ Deno.serve(async (req) => {
           : q.eng && q.eng.score > 0 ? "BUY"
           : q.changePct < 0 ? "SELL" : "BUY";
         // ATR-based levels from the SAME engine as the app — identical entry/SL/TP.
-        const { entry, tp, sl } = quoteLevels(q, sig);
+        const { entry, tp, sl, tp2 } = quoteLevels(q, sig);
         const tpPips = toPips(tp - entry, m.pip);
         const slPips = toPips(sl - entry, m.pip);
+        const tp2Pips = toPips(tp2 - entry, m.pip);
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
 
@@ -2974,8 +2995,9 @@ Deno.serve(async (req) => {
           const expiresAt = activeFrom + (TF_PERIOD_MS[tfDef.tf] ?? TF_PERIOD_MS["15M"]);
 
           const { data: ins } = await admin.from("ai_signals").insert({
-            asset: m.name, signal: sig, entry, tp, sl, confidence,
-            status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
+            asset: m.name, signal: sig, entry, tp, tp2, sl, confidence,
+            status: "open", outcome: "open", market_session: session,
+            tp_pips: tpPips, sl_pips: slPips, tp2_pips: tp2Pips,
             timeframe: tfDef.tf,
           }).select("id").maybeSingle();
 
@@ -2985,7 +3007,7 @@ Deno.serve(async (req) => {
           else tfQueue.push({ dueAt: activeFrom, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
           newLegs.push({
             id: ins?.id as string | undefined,
-            signal: sig, entry, tp, sl, tf: tfDef.tf, activeFrom, expiresAt,
+            signal: sig, entry, tp, tp2, sl, tf: tfDef.tf, activeFrom, expiresAt,
           });
         }
 

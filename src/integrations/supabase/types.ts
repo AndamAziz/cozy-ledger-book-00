@@ -58,6 +58,8 @@ export type Database = {
           entry: number | null
           id: string
           market_session: string | null
+          outcome: string | null
+          resolved_by: string | null
           result_pips: number | null
           signal: string
           sl: number | null
@@ -66,6 +68,8 @@ export type Database = {
           timeframe: string | null
           tp: number | null
           tp_pips: number | null
+          tp2: number | null
+          tp2_pips: number | null
         }
         Insert: {
           asset: string
@@ -77,6 +81,8 @@ export type Database = {
           entry?: number | null
           id?: string
           market_session?: string | null
+          outcome?: string | null
+          resolved_by?: string | null
           result_pips?: number | null
           signal: string
           sl?: number | null
@@ -85,6 +91,8 @@ export type Database = {
           timeframe?: string | null
           tp?: number | null
           tp_pips?: number | null
+          tp2?: number | null
+          tp2_pips?: number | null
         }
         Update: {
           asset?: string
@@ -96,6 +104,8 @@ export type Database = {
           entry?: number | null
           id?: string
           market_session?: string | null
+          outcome?: string | null
+          resolved_by?: string | null
           result_pips?: number | null
           signal?: string
           sl?: number | null
@@ -104,6 +114,8 @@ export type Database = {
           timeframe?: string | null
           tp?: number | null
           tp_pips?: number | null
+          tp2?: number | null
+          tp2_pips?: number | null
         }
         Relationships: []
       }
