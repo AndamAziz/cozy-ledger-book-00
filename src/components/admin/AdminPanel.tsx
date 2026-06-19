@@ -671,6 +671,24 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           )
         )}
 
+        {/* Audit log trigger */}
+        <div className="mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setShowActivityLogDialog(true);
+              fetchActivityLogs();
+            }}
+            className="rounded-lg flex items-center gap-1.5"
+          >
+            <History className="h-4 w-4" />
+            <span className="text-xs md:text-sm">{t('activityLog')}</span>
+          </Button>
+        </div>
+
+
+
 
         {/* Statistics Cards - Compact & Clickable */}
         <div className="grid grid-cols-4 md:grid-cols-7 gap-2 md:gap-3 mb-6">
@@ -1410,6 +1428,83 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Audit Log Dialog */}
+      <Dialog open={showActivityLogDialog} onOpenChange={setShowActivityLogDialog}>
+        <DialogContent className="rounded-2xl max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              {t('activityLogTitle')}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto -mx-2 px-2">
+            {isLoadingLogs ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : activityLogs.length === 0 ? (
+              <div className="text-center py-12">
+                <History className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <p className="text-muted-foreground">{t('noActivityLogs')}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {activityLogs.map((log) => {
+                  const isRoleChange = log.action_type === 'make_admin' || log.action_type === 'remove_admin';
+                  return (
+                    <div
+                      key={log.id}
+                      className={`rounded-xl border p-3 ${isRoleChange ? 'border-primary/30 bg-primary/5' : 'border-border/40 bg-secondary/20'}`}
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isRoleChange ? 'bg-primary/20 text-primary' : 'bg-success/20 text-success'}`}>
+                          {getActionTypeLabel(log.action_type)}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatDate(log.created_at)}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                        <p className="flex items-center gap-1.5">
+                          <Shield className="h-3 w-3 text-primary" />
+                          <span className="text-foreground font-medium">{log.admin_email || '—'}</span>
+                        </p>
+                        {log.target_user_email && (
+                          <p className="flex items-center gap-1.5">
+                            <UserCheck className="h-3 w-3" />
+                            {log.target_user_email}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={fetchActivityLogs}
+              className="rounded-xl flex items-center gap-1.5"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoadingLogs ? 'animate-spin' : ''}`} />
+              {t('refresh')}
+            </Button>
+            <Button
+              onClick={() => setShowActivityLogDialog(false)}
+              className="rounded-xl"
+            >
+              {t('cancel')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
