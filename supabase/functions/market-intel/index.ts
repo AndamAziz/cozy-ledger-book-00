@@ -1171,9 +1171,8 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
           if (sd !== "HOLD") goldDir = sd;
         }
         if (goldDir && goldPrice) {
-          const m = ASSET_META["XAU/USD"];
-          const isBuy = goldDir === "BUY";
-          const tp = +(goldPrice * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
+          const goldEng = await getEngine("XAU/USD", goldPrice);
+          const { tp } = levelsForDir("XAU/USD", goldPrice, goldDir, goldEng?.atr ?? null);
           sLines.push(`📈 Signal: ${sigEmoji(goldDir)} <b>${goldDir}</b> → Target <code>$${fmt(tp)}</code>`);
           sLines.push(`📈 سیگنال: ${sigKu(goldDir)} → تارگێت <code>$${fmt(tp)}</code>`);
         } else {
