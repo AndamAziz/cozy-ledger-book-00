@@ -260,6 +260,47 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+
+              {/* Confirm Password - Only in signup mode */}
+              {isSignupMode && (
+                <div>
+                  <div className="relative group">
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                      <Lock className="w-5 h-5" />
+                    </span>
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder=" "
+                      disabled={isLoading}
+                      className={`peer w-full py-4 pr-12 pl-12 bg-slate-800/60 border-2 rounded-xl text-white text-base outline-none transition-all focus:bg-slate-800/80 placeholder-transparent ${
+                        passwordsMismatch
+                          ? 'border-destructive focus:border-destructive'
+                          : 'border-slate-700/50 focus:border-primary'
+                      }`}
+                    />
+                    <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
+                      peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                      peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
+                      {t('confirmPassword')}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-primary transition-colors p-1"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {passwordsMismatch && (
+                    <p className="mt-2 text-sm text-destructive text-right">
+                      {t('passwordsDoNotMatch')}
+                    </p>
+                  )}
+                </div>
+              )}
+              
               
               {/* Submit Button */}
               <Button 
