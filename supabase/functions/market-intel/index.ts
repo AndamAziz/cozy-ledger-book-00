@@ -559,14 +559,20 @@ function priceFmt(symbol: string, n: number): string {
 
 // Full BUY/SELL trade setup — premium, English-only, Telegram-ready layout.
 function newSignalLine(
-  q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
+  q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, tpPips: number, slPips: number,
   confidence: number, session: string, tf?: string,
 ): string {
   const m = ASSET_META[q.symbol];
   const isBuy = sig === "BUY";
   const sigIcon = isBuy ? "🟢" : "🔴";
-  const tpDelta = Math.abs(tp - q.price);
-  const slDelta = Math.abs(sl - q.price);
+  // Derive pip distance from the EXACT prices shown (entry/TP/SL) so the printed
+  // pip + dollar figures always reconcile with the printed levels.
+  const pip = m.pip;
+  const tpPipsExact = toPips(tp - q.price, pip) || tpPips;
+  const slPipsExact = toPips(sl - q.price, pip) || slPips;
+  // Dollar P/L follows the platform's standard 0.01-lot rule ($0.10 / pip).
+  const tpUsd = pipsToDollars(tpPipsExact);
+  const slUsd = pipsToDollars(slPipsExact);
 
   const strength = confidence >= 80 ? "Strong" : confidence >= 65 ? "Medium" : "Weak";
   const risk = confidence >= 80 ? "Low" : confidence >= 65 ? "Medium" : "High";
