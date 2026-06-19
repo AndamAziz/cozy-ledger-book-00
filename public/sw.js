@@ -1,4 +1,4 @@
-const CACHE_NAME = 'city-taxperts-v1';
+const CACHE_NAME = 'city-taxperts-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache immediately on install
