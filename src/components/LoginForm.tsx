@@ -6,10 +6,11 @@ import { Mail, Lock, LogIn, UserPlus, Building2, Eye, EyeOff } from 'lucide-reac
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { isResetEmailAvailable } from '@/lib/emailDns';
+import { getAccountProviderInfo } from '@/lib/accountProvider';
 
 interface LoginFormProps {
-  onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  onSignup: (email: string, password: string, companyName: string) => Promise<{ success: boolean; error?: string }>;
+  onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string; errorKey?: string }>;
+  onSignup: (email: string, password: string, companyName: string) => Promise<{ success: boolean; error?: string; errorKey?: string }>;
 }
 
 export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
