@@ -225,6 +225,7 @@ const Index = () => {
       companyName={approvalStatus?.companyName}
       daysUntilExpiry={approvalStatus?.daysUntilExpiry}
       userEmail={user?.email}
+      user={user}
     />
   );
 };
