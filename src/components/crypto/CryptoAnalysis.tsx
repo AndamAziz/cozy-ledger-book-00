@@ -7,7 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { Sparkles, TrendingUp, TrendingDown, Minus, Loader2, AlertCircle, Target, ShieldAlert, LogIn, OctagonX, CalendarClock, Gauge, Lightbulb, BarChart3, Image as ImageIcon, Upload, Send, X, ChevronRight, ChevronLeft, Copy, Check, Eye, EyeOff, Clock, Globe } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
-import { buildLocalSignal, AssetSignal, LocalSignal, AssetKey, SignalTF, SignalAction } from '@/lib/signalEngine';
+import { buildLocalSignal, LocalSignal, AssetKey, SignalTF, SignalAction } from '@/lib/signalEngine';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
 
 interface CryptoAnalysisProps {
