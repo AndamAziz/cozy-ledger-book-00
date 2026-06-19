@@ -671,6 +671,24 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           )
         )}
 
+        {/* Audit log trigger */}
+        <div className="mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setShowActivityLogDialog(true);
+              fetchActivityLogs();
+            }}
+            className="rounded-lg flex items-center gap-1.5"
+          >
+            <History className="h-4 w-4" />
+            <span className="text-xs md:text-sm">{t('activityLog')}</span>
+          </Button>
+        </div>
+
+
+
 
         {/* Statistics Cards - Compact & Clickable */}
         <div className="grid grid-cols-4 md:grid-cols-7 gap-2 md:gap-3 mb-6">
