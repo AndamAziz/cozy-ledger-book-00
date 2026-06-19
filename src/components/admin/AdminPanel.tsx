@@ -119,11 +119,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       
       const adminUserIds = new Set(adminRoles?.filter(r => r.role === 'admin').map(r => r.user_id) || []);
       
-      // Mark admins and filter them out by role (no hardcoded email)
+      // Mark admins but KEEP them in the list so they appear under the Admin filter
       const usersWithAdminStatus = data?.map(u => ({
         ...u,
         isAdmin: adminUserIds.has(u.user_id)
-      })).filter(u => !adminUserIds.has(u.user_id)) || [];
+      })) || [];
       
       setUsers(usersWithAdminStatus);
     } catch (error) {
