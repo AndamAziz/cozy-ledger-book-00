@@ -1,6 +1,6 @@
 import { OHLCCandle } from './krakenApi';
 import { calculateRSI, calculateMACD, STANDARD_INDICATOR_SETTINGS, bestIndicatorSettings } from './indicators';
-import { trendFromCandles, TrendDir, getSessionStatuses } from './aiAnalysis';
+import { trendFromCandles, TrendDir, getSessionStatuses, aggregateCandles } from './aiAnalysis';
 
 export type SignalAction = 'buy' | 'sell' | 'wait' | 'neutral';
 export type AssetKey = 'gold' | 'btc' | 'eurusd' | 'gbpusd' | 'usdjpy';
