@@ -84,7 +84,9 @@ export function SignalCard({ signal, loading, emoji }: Props) {
           {showConfidence ? (
             <div className="text-right">
               <div className="text-2xl font-bold tabular-nums" style={{ color }}>{signal.confidence}%</div>
-              <div className="text-[10px] text-[#848e9c]">{bi('متمانە', 'Confidence')}</div>
+              <div className="text-[10px] text-[#848e9c]">{bi('متمانەی سیگناڵ', 'Signal Confidence')}</div>
+              <div className="text-[8px] leading-tight text-[#5e6673] max-w-[110px]">{bi('هێزی سیگناڵ (نەک ڕێککەوتنی کاتەکان)', 'conviction (not TF agreement)')}</div>
+
             </div>
           ) : (
             <div className="text-right max-w-[40%]">
