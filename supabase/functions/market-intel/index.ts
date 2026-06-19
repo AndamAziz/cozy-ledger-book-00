@@ -663,19 +663,11 @@ function nowStamp(): string {
   return new Date().toUTCString();
 }
 
-// Wrap a single trade target / outcome into its own standalone Telegram message.
-// Each target is sent separately and never bundled with other targets or news.
+// Wrap a single trade target into its own standalone Telegram message.
+// The signal body is already a fully-formatted, self-contained premium card,
+// so we send it as-is (no extra header/footer).
 function oneSignalMessage(_subtitle: string, body: string, _reason?: string): string {
-  return [
-    "━━━━━━━━━━━━━━━",
-    "📊 <b>CTP SIGNAL · سیگناڵی CTP</b>",
-    "━━━━━━━━━━━━━━━",
-    "",
-    body,
-    "",
-    "━━━━━━━━━━━━━━━",
-    `<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>`,
-  ].join("\n");
+  return body;
 }
 
 // Standalone CALENDAR-only message (economic events only — no signals, no news).
