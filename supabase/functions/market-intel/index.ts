@@ -672,12 +672,12 @@ function signalRationale(q: Quote, sig: "BUY" | "SELL"): { en: string; ku: strin
 // Full BUY/SELL trade setup with entry, full target and stop loss (clean RTL layout).
 // All indicator lines reflect the REAL engine values (no fabricated RSI/EMA/MACD).
 function newSignalLine(
-  q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
+  q: Quote, sig: "BUY" | "SELL", entry: number, tp: number, sl: number, _tpPips: number, _slPips: number,
   confidence: number, session: string, tf?: string,
 ): string {
   const m = ASSET_META[q.symbol];
-  const tpDelta = Math.abs(tp - q.price);
-  const slDelta = Math.abs(sl - q.price);
+  const tpDelta = Math.abs(tp - entry);
+  const slDelta = Math.abs(sl - entry);
   const isBuy = sig === "BUY";
   const sigKuW = isBuy ? "کڕین" : "فرۆشتن";
   const strength = confidence >= 80 ? ["Strong", "بەهێز"] : confidence >= 65 ? ["Medium", "مامناوەند"] : ["Weak", "لاواز"];
