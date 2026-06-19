@@ -304,8 +304,8 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    // Works for both LTR (positive scrollLeft) and modern RTL (negative scrollLeft)
-    const idx = Math.round(Math.abs(el.scrollLeft) / el.clientWidth);
+    // Scroll container is forced LTR, so scrollLeft is always standard/positive
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
     setActiveIndex(Math.min(FEATURES.length - 1, Math.max(0, idx)));
   };
 
@@ -313,9 +313,7 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
     const el = scrollRef.current;
     if (!el) return;
     const clamped = Math.min(FEATURES.length - 1, Math.max(0, index));
-    // Modern browsers use negative scrollLeft for RTL containers
-    const target = dir === 'rtl' ? -(clamped * el.clientWidth) : clamped * el.clientWidth;
-    el.scrollTo({ left: target, behavior: 'smooth' });
+    el.scrollTo({ left: clamped * el.clientWidth, behavior: 'smooth' });
   };
 
   const handleNext = () => {
