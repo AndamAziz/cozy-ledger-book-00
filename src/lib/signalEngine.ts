@@ -398,7 +398,7 @@ export function buildLocalSignal(candles: OHLCCandle[], price: number, decimals:
 
   const atr = calculateATR(candles);
   // Unified ATR-based risk model (shared with Confluence, Signals, bot, Telegram).
-  const lv = atrLevels(d.action === 'wait' ? 'none' : d.action, px, atr, decimals);
+  const lv = atrLevels(d.action === 'buy' || d.action === 'sell' ? d.action : 'none', px, atr, decimals);
   const { entry, stopLoss, takeProfit1, takeProfit2, slDist, riskReward } = lv;
 
   const emas = [tech.ema20, tech.ema50].filter((v): v is number => v != null && Number.isFinite(v));
