@@ -2964,21 +2964,31 @@ Deno.serve(async (req) => {
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
 
-        const { data: ins } = await admin.from("ai_signals").insert({
-          asset: m.name, signal: sig, entry, tp, sl,
-          confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
-        }).select("id").maybeSingle();
-
         const reason = "🚀 First signal (manual start) · یەکەم سیگنال (دەستپێکی دەستی)";
         const now = Date.now();
+        const newLegs: OpenLeg[] = [];
         for (const tfDef of TIMEFRAME_CASCADE) {
+          const activeFrom = now + tfDef.delayMs;
+          const expiresAt = activeFrom + (TF_PERIOD_MS[tfDef.tf] ?? TF_PERIOD_MS["15M"]);
+
+          const { data: ins } = await admin.from("ai_signals").insert({
+            asset: m.name, signal: sig, entry, tp, sl, confidence,
+            status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
+            timeframe: tfDef.tf,
+          }).select("id").maybeSingle();
+
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
           const text = newSignalLine(q, sig, entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
           if (tfDef.delayMs === 0) forcedAlerts.push({ text, important: true, reason: tfReason });
-          else tfQueue.push({ dueAt: now + tfDef.delayMs, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
+          else tfQueue.push({ dueAt: activeFrom, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
+          newLegs.push({
+            id: ins?.id as string | undefined,
+            signal: sig, entry, tp, sl, tf: tfDef.tf, activeFrom, expiresAt,
+          });
         }
 
-        openState[symbol] = { id: ins?.id as string | undefined, signal: sig, entry, tp, sl };
+        openState[symbol] = newLegs;
+
         priceState[symbol] = { price: q.price, signal: sig, lastSignalAt: now, lastSignalDir: sig, lastAuditKey: "sent:fresh" };
         await admin.from("signal_audit_log").insert({
           symbol: m.name, signal: sig, price: q.price, change_pct: q.changePct, outcome: "sent", reason: "forced",
