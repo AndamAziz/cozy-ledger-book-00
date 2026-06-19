@@ -304,22 +304,28 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
+    // Scroll container is forced LTR, so scrollLeft is always standard/positive
     const idx = Math.round(el.scrollLeft / el.clientWidth);
-    setActiveIndex(Math.abs(idx));
+    setActiveIndex(Math.min(FEATURES.length - 1, Math.max(0, idx)));
   };
 
   const goTo = (index: number) => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ left: index * el.clientWidth, behavior: 'smooth' });
+    const clamped = Math.min(FEATURES.length - 1, Math.max(0, index));
+    el.scrollTo({ left: clamped * el.clientWidth, behavior: 'smooth' });
   };
 
   const handleNext = () => {
     if (isLast) {
       onComplete();
-    } else {
-      goTo(activeIndex + 1);
+      return;
     }
+    const next = activeIndex + 1;
+    setActiveIndex(next);
+    goTo(next);
+    // Bring the carousel back into view in case the page was scrolled down
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Keep active index in sync on resize
@@ -366,10 +372,11 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
         <p className="text-xs sm:text-sm text-muted-foreground mt-1">{ui.subtitle}</p>
       </div>
 
-      {/* Swipeable feature cards */}
+      {/* Swipeable feature cards (container forced LTR for reliable scroll math) */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
+        dir="ltr"
         className="relative z-10 flex min-h-[360px] flex-shrink-0 overflow-x-auto snap-x snap-mandatory no-scrollbar"
         style={{ scrollSnapType: 'x mandatory' }}
       >
@@ -378,6 +385,7 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
           return (
             <div
               key={i}
+              dir={dir}
               className="snap-center shrink-0 w-full h-full flex items-center justify-center px-5 sm:px-8 py-4"
             >
               <div className="glass-card w-full max-w-md p-6 sm:p-8 animate-fade-in">
@@ -403,8 +411,8 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
         })}
       </div>
 
-      {/* Dots */}
-      <div className="relative z-10 flex items-center justify-center gap-2 py-4">
+      {/* Dots (forced LTR to match the carousel order) */}
+      <div dir="ltr" className="relative z-10 flex items-center justify-center gap-2 py-4">
         {FEATURES.map((_, i) => (
           <button
             key={i}
