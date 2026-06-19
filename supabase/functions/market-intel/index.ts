@@ -2747,7 +2747,7 @@ Deno.serve(async (req) => {
       const sTpPips = toPips(sampleTp - sampleEntry, sm.pip);
       const sSlPips = toPips(sampleSl - sampleEntry, sm.pip);
       const signalSample = newSignalLine(sample, "BUY", sampleEntry, sampleTp, sampleSl, sTpPips, sSlPips, 78, sessionLabel());
-      const outcomeSample = outcomeLine(sample.symbol, "BUY", "tp", sample.price, sampleTp, sTpPips);
+      const outcomeSample = outcomeLine(sample.symbol, "BUY", "tp", sampleEntry, sampleTp, sTpPips);
 
       const liveNews = (await fetchNews()).slice(0, 3);
       const testPriceBySymbol: Record<string, number> = {};
