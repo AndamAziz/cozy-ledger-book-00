@@ -2821,35 +2821,28 @@ Deno.serve(async (req) => {
           : q.eng && q.eng.score < 0 ? "SELL"
           : q.eng && q.eng.score > 0 ? "BUY"
           : q.changePct < 0 ? "SELL" : "BUY";
-        const isBuy = sig === "BUY";
-        const tp = +(q.price * (isBuy ? 1 + m.tpPct / 100 : 1 - m.tpPct / 100)).toFixed(2);
-        const sl = +(q.price * (isBuy ? 1 - m.slPct / 100 : 1 + m.slPct / 100)).toFixed(2);
-        const tpPips = toPips(tp - q.price, m.pip);
-        const slPips = toPips(sl - q.price, m.pip);
+        // ATR-based levels from the SAME engine as the app — identical entry/SL/TP.
+        const { entry, tp, sl } = quoteLevels(q, sig);
+        const tpPips = toPips(tp - entry, m.pip);
+        const slPips = toPips(sl - entry, m.pip);
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
 
         const { data: ins } = await admin.from("ai_signals").insert({
-          asset: m.name, signal: sig, entry: q.price, tp, sl,
+          asset: m.name, signal: sig, entry, tp, sl,
           confidence, status: "open", market_session: session, tp_pips: tpPips, sl_pips: slPips,
         }).select("id").maybeSingle();
 
         const reason = "🚀 First signal (manual start) · یەکەم سیگنال (دەستپێکی دەستی)";
         const now = Date.now();
         for (const tfDef of TIMEFRAME_CASCADE) {
-          const tpPctTf = m.tpPct * tfDef.tpMult;
-          const slPctTf = m.slPct * tfDef.slMult;
-          const tpTf = +(q.price * (isBuy ? 1 + tpPctTf / 100 : 1 - tpPctTf / 100)).toFixed(2);
-          const slTf = +(q.price * (isBuy ? 1 - slPctTf / 100 : 1 + slPctTf / 100)).toFixed(2);
-          const tpPipsTf = toPips(tpTf - q.price, m.pip);
-          const slPipsTf = toPips(slTf - q.price, m.pip);
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
-          const text = newSignalLine(q, sig, tpTf, slTf, tpPipsTf, slPipsTf, confidence, session, tfDef.tf);
+          const text = newSignalLine(q, sig, entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
           if (tfDef.delayMs === 0) forcedAlerts.push({ text, important: true, reason: tfReason });
           else tfQueue.push({ dueAt: now + tfDef.delayMs, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
         }
 
-        openState[symbol] = { id: ins?.id as string | undefined, signal: sig, entry: q.price, tp, sl };
+        openState[symbol] = { id: ins?.id as string | undefined, signal: sig, entry, tp, sl };
         priceState[symbol] = { price: q.price, signal: sig, lastSignalAt: now, lastSignalDir: sig, lastAuditKey: "sent:fresh" };
         await admin.from("signal_audit_log").insert({
           symbol: m.name, signal: sig, price: q.price, change_pct: q.changePct, outcome: "sent", reason: "forced",
