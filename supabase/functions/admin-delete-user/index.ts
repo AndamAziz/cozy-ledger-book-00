@@ -54,6 +54,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Only the CEO may delete a user account.
+    const CEO_EMAIL = 'andam@outlook.com';
+    if (adminEmail.toLowerCase() !== CEO_EMAIL) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: Only the CEO can delete user accounts' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { userId, targetEmail } = await req.json();
 
     if (!userId) {
