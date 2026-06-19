@@ -13,6 +13,7 @@ import GestureQA from "./pages/GestureQA";
 import Bots from "./pages/Bots";
 import BotDetail from "./pages/BotDetail";
 import Reviews from "./pages/Reviews";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/bots" element={<Bots />} />
                 <Route path="/bots/:id" element={<BotDetail />} />
                 <Route path="/reviews" element={<Reviews />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

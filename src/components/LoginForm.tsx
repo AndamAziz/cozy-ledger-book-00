@@ -18,6 +18,8 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
   const [companyName, setCompanyName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSignupMode, setIsSignupMode] = useState(false);
+  const [isForgotMode, setIsForgotMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -93,12 +95,48 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
 
   const switchTab = (signup: boolean) => {
     setIsSignupMode(signup);
+    setIsForgotMode(false);
+    setResetSent(false);
     setEmail('');
     setPassword('');
     setConfirmPassword('');
     setCompanyName('');
     setShowPassword(false);
     setShowConfirmPassword(false);
+  };
+
+  const openForgotMode = () => {
+    setIsForgotMode(true);
+    setResetSent(false);
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      toast({ title: t('error'), description: t('enterEmail'), variant: 'destructive' });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        { redirectTo: `${window.location.origin}/reset-password` }
+      );
+      if (error) {
+        toast({ title: t('error'), description: error.message || t('error'), variant: 'destructive' });
+      } else {
+        // Always show success to avoid leaking which emails exist
+        setResetSent(true);
+        toast({ title: t('resetLinkSent'), description: t('resetLinkSentDesc') });
+      }
+    } catch (err) {
+      toast({ title: t('error'), description: t('error'), variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -165,6 +203,75 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               </p>
             </div>
             
+            {isForgotMode ? (
+              <div className="animate-fade-in">
+                {resetSent ? (
+                  <div className="text-center space-y-6">
+                    <div className="w-16 h-16 rounded-full bg-success/20 mx-auto flex items-center justify-center">
+                      <Mail className="w-8 h-8 text-success" />
+                    </div>
+                    <p className="text-slate-300 text-sm">{t('resetLinkSentDesc')}</p>
+                    <Button
+                      type="button"
+                      onClick={() => switchTab(false)}
+                      className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success text-base font-bold rounded-xl"
+                    >
+                      {t('backToLogin')}
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleForgotPassword} className="space-y-6">
+                    <div className="text-center mb-2">
+                      <h2 className="text-lg font-bold text-white mb-1">{t('resetPasswordTitle')}</h2>
+                      <p className="text-slate-400 text-sm">{t('resetPasswordDesc')}</p>
+                    </div>
+                    <div className="relative group">
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                        <Mail className="w-5 h-5" />
+                      </span>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder=" "
+                        disabled={isLoading}
+                        className="peer w-full py-4 pr-12 pl-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                      />
+                      <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
+                        peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                        peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
+                        {t('email')}
+                      </label>
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success hover:shadow-lg hover:shadow-primary/40 text-base font-bold rounded-xl transition-all duration-300"
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>{t('loading')}</span>
+                        </div>
+                      ) : (
+                        t('sendResetLink')
+                      )}
+                    </Button>
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => switchTab(false)}
+                        className="text-sm text-primary hover:text-success font-semibold transition-colors"
+                        disabled={isLoading}
+                      >
+                        {t('backToLogin')}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            ) : (
+            <>
             {/* Tabs */}
             <div className="flex gap-2 mb-8 bg-slate-800/50 p-1.5 rounded-xl">
               <button
@@ -261,7 +368,21 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 </button>
               </div>
 
-              {/* Confirm Password - Only in signup mode */}
+              {/* Forgot password link - login mode only */}
+              {!isSignupMode && (
+                <div className="text-left -mt-2">
+                  <button
+                    type="button"
+                    onClick={openForgotMode}
+                    className="text-sm text-primary hover:text-success font-medium transition-colors"
+                    disabled={isLoading}
+                  >
+                    {t('forgotPassword')}
+                  </button>
+                </div>
+              )}
+
+
               {isSignupMode && (
                 <div>
                   <div className="relative group">
@@ -388,6 +509,8 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 </button>
               </p>
             </div>
+            </>
+            )}
           </div>
         </div>
         
