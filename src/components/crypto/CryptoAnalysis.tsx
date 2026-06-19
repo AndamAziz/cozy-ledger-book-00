@@ -191,6 +191,7 @@ function intervalToSignalTF(interval?: number, label?: string): SignalTF {
   return 'M5';
 }
 
+export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, interval, timeframeLabel, tradeSymbol, tradeLabel }: CryptoAnalysisProps) {
 
   const [aiText, setAiText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
