@@ -1,6 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { passesNewsQualityGate } from "./news-quality.ts";
+import {
+  buildAssetSignal,
+  buildLocalSignal,
+  EngineSignal,
+} from "./signal-core.ts";
+import {
+  fetchGoldAllTF,
+  fetchBtcAllTF,
+  fetchOilAllTF,
+  fetchMacro as fetchEngineMacro,
+  fetchEvents as fetchEngineEvents,
+} from "./signal-data.ts";
 
 // ───────────────────── config ─────────────────────
 const TELEGRAM_GATEWAY = "https://connector-gateway.lovable.dev/telegram";
@@ -77,14 +89,36 @@ const sigKu = (s: Signal) => (s === "BUY" ? "کڕین" : s === "SELL" ? "فرۆ�
 // Colored dot for % change: green up / red down / yellow flat.
 const changeDot = (pct: number) => (pct > 0 ? "🟢" : pct < 0 ? "🔴" : "🟡");
 
-// Rule-based signal from the day's % change.
-function ruleSignal(changePct: number): Signal {
-  if (changePct >= 0.15) return "BUY";
-  if (changePct <= -0.15) return "SELL";
+interface Quote {
+  symbol: string;
+  price: number;
+  changePct: number;
+  /** Real analysis from the SAME engine the app uses (null if candles unavailable). */
+  eng?: EngineSignal | null;
+}
+
+// Map the engine's action → the bot's BUY/SELL/HOLD signal. WAIT/NEUTRAL → HOLD
+// (no trade). This is the ONLY place a direction is derived for the bot, and it
+// comes straight from `decideFromScores` via the shared engine — never from the
+// raw daily % change anymore.
+function quoteSignal(q: Quote): Signal {
+  const a = q.eng?.action;
+  if (a === "buy") return "BUY";
+  if (a === "sell") return "SELL";
+  // No engine data yet → conservative fallback on the day's move (rare).
+  if (!q.eng) {
+    if (q.changePct >= 0.15) return "BUY";
+    if (q.changePct <= -0.15) return "SELL";
+  }
   return "HOLD";
 }
 
-interface Quote { symbol: string; price: number; changePct: number; }
+// Engine confidence for a quote (0..100). Falls back to a move-based estimate
+// only when the engine produced no result (no candles).
+function quoteConfidence(q: Quote): number {
+  if (q.eng) return q.eng.confidence;
+  return Math.min(95, 60 + Math.round(Math.abs(q.changePct) * 10));
+}
 
 // ───────────────────── price sources ─────────────────────
 async function fetchGold(): Promise<Quote | null> {
@@ -146,9 +180,70 @@ function applyChange(q: Quote): Quote {
   return q;
 }
 
+// ───────────────────── engine analysis (same core as the app) ─────────────────────
+// The full multi-timeframe engine is expensive (6 TF fetches + macro + events per
+// asset), so we cache its result per symbol and recompute at most once per minute —
+// matching the cron cadence and keeping the bot's signal in lock-step with the app
+// (the app refreshes every 5 min; a 60s bot cache is always at least as fresh).
+const ENGINE_TTL_MS = 60_000;
+const engineCache: Record<string, { ts: number; sig: EngineSignal | null }> = {};
+
+const GOLD_CURRENCIES = ["USD", "EUR", "CHF", "GBP", "JPY"];
+
+async function computeEngine(symbol: string, livePrice: number): Promise<EngineSignal | null> {
+  try {
+    if (symbol === "XAU/USD") {
+      const [byTF, macro, events] = await Promise.all([fetchGoldAllTF(), fetchEngineMacro(), fetchEngineEvents()]);
+      const base = byTF.M15 ?? [];
+      const price = base.length ? base[base.length - 1].close : livePrice;
+      if (!base.length) return null;
+      return buildAssetSignal({
+        asset: "gold", decimals: 2, currencies: GOLD_CURRENCIES, timeframe: "M15",
+        price, candles: base, candlesByTF: byTF, macro, events,
+      });
+    }
+    if (symbol === "BTC/USD") {
+      const [byTF, macro, events] = await Promise.all([fetchBtcAllTF(), fetchEngineMacro(), fetchEngineEvents()]);
+      const base = byTF.M15 ?? [];
+      const price = base.length ? base[base.length - 1].close : livePrice;
+      if (!base.length) return null;
+      return buildAssetSignal({
+        asset: "btc", decimals: 0, currencies: ["USD"], timeframe: "M15",
+        price, candles: base, candlesByTF: byTF, macro, events,
+      });
+    }
+    if (symbol === "WTI/USD") {
+      const series = await fetchOilAllTF();
+      if (!series.length) return null;
+      const price = series[series.length - 1].close;
+      return buildLocalSignal(series, price, 2);
+    }
+  } catch (e) {
+    console.error("computeEngine error", symbol, String(e));
+  }
+  return null;
+}
+
+async function getEngine(symbol: string, livePrice: number): Promise<EngineSignal | null> {
+  const c = engineCache[symbol];
+  if (c && Date.now() - c.ts < ENGINE_TTL_MS) return c.sig;
+  const sig = await computeEngine(symbol, livePrice);
+  // Keep the previous good analysis if a transient fetch failed (never regress to fabricated values).
+  if (sig === null && c?.sig) return c.sig;
+  engineCache[symbol] = { ts: Date.now(), sig };
+  return sig;
+}
+
 async function getPrices(): Promise<Quote[]> {
   const [gold, oil, btc] = await Promise.all([fetchGold(), fetchOil(), fetchBtc()]);
-  return [gold, oil, btc].filter((q): q is Quote => !!q).map(applyChange);
+  const quotes = [gold, oil, btc].filter((q): q is Quote => !!q).map(applyChange);
+  // Attach the engine analysis (cached) so every consumer uses identical, real numbers.
+  await Promise.all(
+    quotes.map(async (q) => {
+      q.eng = await getEngine(q.symbol, q.price);
+    }),
+  );
+  return quotes;
 }
 
 // ───────────────────── economic calendar ─────────────────────
@@ -525,23 +620,37 @@ function priceLine(q: Quote, sig: Signal): string {
 
 const fmt = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 
-// Build a short, plausible bilingual rationale from the available indicators
-// (signal direction + size of the day's move). Kept concise for clean messaging.
+// Build a bilingual rationale from the REAL engine indicators (RSI / MACD cross /
+// EMA20-vs-EMA50). Falls back to a generic line only when no engine data exists.
 function signalRationale(q: Quote, sig: "BUY" | "SELL"): { en: string; ku: string } {
-  const move = Math.abs(q.changePct);
   const en: string[] = [];
   const ku: string[] = [];
-  en.push(sig === "BUY" ? "EMA crossover up" : "EMA crossover down");
-  ku.push(sig === "BUY" ? "EMA کراوسئۆڤەری سەرەوە" : "EMA کراوسئۆڤەری خوارەوە");
-  en.push(sig === "BUY" ? "MACD bullish" : "MACD bearish");
-  ku.push(sig === "BUY" ? "MACD بەهێز" : "MACD لاواز");
-  if (move >= 0.6) { en.push("Strong momentum"); ku.push("جوڵەی بەهێز"); }
-  else if (move < 0.4) { en.push("Low volatility risk"); ku.push("مەترسیی کەم"); }
-  else { en.push("Steady trend"); ku.push("ترێندی ئارام"); }
+  const e = q.eng;
+  if (e) {
+    if (e.ema20 != null && e.ema50 != null) {
+      const up = e.ema20 > e.ema50;
+      en.push(up ? "EMA20 > EMA50" : "EMA20 < EMA50");
+      ku.push(up ? "EMA20 > EMA50" : "EMA20 < EMA50");
+    }
+    if (e.macd) {
+      const bull = e.macd.macd > e.macd.signal;
+      en.push(bull ? "MACD bullish cross" : "MACD bearish cross");
+      ku.push(bull ? "MACD بڕینی بەرزبوونەوە" : "MACD بڕینی دابەزین");
+    }
+    if (e.rsi != null) {
+      const r = Math.round(e.rsi);
+      en.push(`RSI ${r}${r < 30 ? " oversold" : r > 70 ? " overbought" : r > 50 ? " bullish" : " bearish"}`);
+      ku.push(`RSI ${r}`);
+    }
+    return { en: en.join(" + ") || (sig === "BUY" ? "Bullish setup" : "Bearish setup"), ku: ku.join(" + ") };
+  }
+  en.push(sig === "BUY" ? "Bullish setup" : "Bearish setup");
+  ku.push(sig === "BUY" ? "دۆخی بەرزبوونەوە" : "دۆخی دابەزین");
   return { en: en.join(" + "), ku: ku.join(" + ") };
 }
 
 // Full BUY/SELL trade setup with entry, full target and stop loss (clean RTL layout).
+// All indicator lines reflect the REAL engine values (no fabricated RSI/EMA/MACD).
 function newSignalLine(
   q: Quote, sig: "BUY" | "SELL", tp: number, sl: number, _tpPips: number, _slPips: number,
   confidence: number, session: string, tf?: string,
@@ -553,20 +662,36 @@ function newSignalLine(
   const sigKuW = isBuy ? "کڕین" : "فرۆشتن";
   const strength = confidence >= 80 ? ["Strong", "بەهێز"] : confidence >= 65 ? ["Medium", "مامناوەند"] : ["Weak", "لاواز"];
   const risk = confidence >= 80 ? ["Low", "کەم"] : confidence >= 65 ? ["Medium", "مامناوەند"] : ["High", "بەرز"];
-  const rsi = Math.max(20, Math.min(80, Math.round(50 + q.changePct * 6)));
-  const reasonLines = isBuy
-    ? [
-        "EMA9 &gt; EMA21 ✅ کراوسئۆڤەری بەرز",
-        "MACD Bullish ✅ بەهێز",
-        `RSI: ${rsi} ✅ ناوەند`,
-        "Price &gt; EMA50 ✅ بەرز",
-      ]
-    : [
-        "EMA9 &lt; EMA21 ✅ کراوسئۆڤەری خوار",
-        "MACD Bearish ✅ بەهێز",
-        `RSI: ${rsi} ✅ ناوەند`,
-        "Price &lt; EMA50 ✅ خوار",
-      ];
+
+  // Real indicator readout from the engine.
+  const e = q.eng;
+  const reasonLines: string[] = [];
+  if (e) {
+    if (e.ema20 != null && e.ema50 != null) {
+      const up = e.ema20 > e.ema50;
+      reasonLines.push(`EMA20 ${up ? "&gt;" : "&lt;"} EMA50 ${up ? "✅ بەرز" : "🔻 خوار"}`);
+    }
+    if (e.macd) {
+      const bull = e.macd.macd > e.macd.signal;
+      reasonLines.push(`MACD ${bull ? "Bullish ✅ بەهێز" : "Bearish 🔻 لاواز"}`);
+    }
+    if (e.rsi != null) {
+      const r = Math.round(e.rsi);
+      const tag = r < 30 ? "زۆر فرۆشراو" : r > 70 ? "زۆر کڕدراو" : r > 50 ? "بەرز" : "خوار";
+      reasonLines.push(`RSI: ${r} · ${tag}`);
+    }
+    if (e.ema50 != null) {
+      const above = q.eng!.price > e.ema50;
+      reasonLines.push(`Price ${above ? "&gt;" : "&lt;"} EMA50 ${above ? "✅ بەرز" : "🔻 خوار"}`);
+    }
+    if (e.confluenceAlignment === "conflicting") {
+      reasonLines.push("⚠️ پێچەوانەی ئاراستەی کاتی بەرزتر · Conflicts with higher-TF trend");
+    }
+  }
+  if (reasonLines.length === 0) {
+    reasonLines.push(isBuy ? "Bullish setup · دۆخی بەرزبوونەوە" : "Bearish setup · دۆخی دابەزین");
+  }
+
   return [
     `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
     tf ? `⏱ <b>Timeframe: ${tf}</b> · چوارچێوەی کات` : "",
@@ -695,7 +820,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
   for (const q of quotes) {
     const m = ASSET_META[q.symbol];
     if (!m) continue;
-    const sig = ruleSignal(q.changePct);
+    const sig = quoteSignal(q);
 
     // Persist latest snapshot for the dashboard.
     await admin.from("market_prices").upsert({
@@ -1470,14 +1595,14 @@ async function fastestSourceLine(): Promise<string | null> {
 // target here — targets are sent separately when the buy/sell moment arrives.
 function sessionOpenReport(region: Region, quotes: Quote[]): string {
   const label = `${REGION_EMOJI[region]} ${region} (${REGION_KU[region]})`;
-  const sigs = quotes.map((q) => ruleSignal(q.changePct));
+  const sigs = quotes.map((q) => quoteSignal(q));
   const buys = sigs.filter((s) => s === "BUY").length;
   const sells = sigs.filter((s) => s === "SELL").length;
   let bias = "🟡 Neutral / مامناوەند — چاوەڕێی جوڵە بکە";
   if (buys > sells) bias = "🟢 Bullish bias / مەیلی کڕین — ئامادە بە بۆ BUY";
   else if (sells > buys) bias = "🔴 Bearish bias / مەیلی فرۆشتن — ئامادە بە بۆ SELL";
   const priceBlock = quotes.length
-    ? quotes.map((q) => priceLine(q, ruleSignal(q.changePct))).join("\n\n")
+    ? quotes.map((q) => priceLine(q, quoteSignal(q))).join("\n\n")
     : "—";
   return [
     "🔔 <b>MARKET OPEN / بازاڕ کرایەوە</b>",
@@ -1727,8 +1852,8 @@ function nextSessionLine(region: Region): string {
 async function sessionOpenMessage(region: Region, quotes: Quote[], now: Date): Promise<string> {
   const { gold, oil, btc } = q3(quotes);
   const bstLabel = sessionLocalLabel(SESSION_OPEN_HOURS[region], now);
-  const buys = quotes.filter((q) => ruleSignal(q.changePct) === "BUY").length;
-  const sells = quotes.filter((q) => ruleSignal(q.changePct) === "SELL").length;
+  const buys = quotes.filter((q) => quoteSignal(q) === "BUY").length;
+  const sells = quotes.filter((q) => quoteSignal(q) === "SELL").length;
   const overall = buys > sells ? "BULLISH 🟢" : sells > buys ? "BEARISH 🔴" : "NEUTRAL 🟡";
   const overallKu = buys > sells ? "بەرزبوونەوە" : sells > buys ? "دابەزین" : "مامناوەند";
   const ev = region === "New York"
@@ -2558,7 +2683,7 @@ Deno.serve(async (req) => {
     // confirm it lands in the bot chat — bypasses the dedupe/trigger logic.
     if (test) {
       const quotes = await getPrices();
-      const priceBlock = quotes.map((q) => priceLine(q, ruleSignal(q.changePct)));
+      const priceBlock = quotes.map((q) => priceLine(q, quoteSignal(q)));
 
       // Build a sample full trade signal + a sample TP outcome from live gold price.
       const sample = quotes[0] ?? { symbol: "XAU/USD", price: 4275, changePct: 0.3 } as Quote;
