@@ -1034,7 +1034,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           <X className="h-3 w-3 ml-1" />
                           {t('revoke')}
                         </Button>
-                        {isCEO && !user.isAdmin && (
+                        {!user.isAdmin && (
                           <Button
                             variant="outline"
                             size="sm"
