@@ -12,6 +12,7 @@ import Movies from "./pages/Movies";
 import GestureQA from "./pages/GestureQA";
 import Bots from "./pages/Bots";
 import BotDetail from "./pages/BotDetail";
+import Reviews from "./pages/Reviews";
 import NotFound from "./pages/NotFound";
 
 
