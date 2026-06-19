@@ -964,6 +964,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         </div>
                       </div>
                       
+                      {isCEO ? (
                       <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
