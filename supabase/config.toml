@@ -1,31 +1,25 @@
 project_id = "jpatltcqhpclxenzvboa"
 
-[functions.admin-change-password]
-verify_jwt = false
-
-[functions.admin-delete-user]
-verify_jwt = false
-
-[functions.admin-make-admin]
-verify_jwt = false
-
-[functions.admin-remove-admin]
-verify_jwt = false
-
-[functions.crypto-analysis]
-verify_jwt = false
-
-[functions.movies-ai]
-verify_jwt = false
-
-[functions.send-telegram-signal]
-verify_jwt = false
-
-[functions.telegram-stats]
-verify_jwt = false
-
-[functions.groq-analysis]
-verify_jwt = false
-
-[functions.telegram-webhook]
-verify_jwt = false
+[functions]
+  [functions.admin-change-password]
+    verify_jwt = false
+  [functions.admin-delete-user]
+    verify_jwt = false
+  [functions.admin-make-admin]
+    verify_jwt = false
+  [functions.admin-remove-admin]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.crypto-analysis]
+    verify_jwt = false
+  [functions.groq-analysis]
+    verify_jwt = false
+  [functions.movies-ai]
+    verify_jwt = false
+  [functions.send-telegram-signal]
+    verify_jwt = false
+  [functions.telegram-stats]
+    verify_jwt = false
+  [functions.telegram-webhook]
+    verify_jwt = false
