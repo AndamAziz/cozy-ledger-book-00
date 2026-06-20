@@ -953,6 +953,8 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
 
       {/* Buy / Refresh / Sell controls directly above the chart (MT5 style) */}
       <TradeControls
+        marketClosed={marketClosed}
+        marketClosedLabel={reopenLabel}
         amount={tradeAmount}
         pct={tradePct}
         currentPrice={livePrice()}
