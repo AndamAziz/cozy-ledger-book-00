@@ -1048,8 +1048,11 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
     const prev = priceState[q.symbol] as
       { price?: number; signal?: Signal; lastSignalAt?: number; lastSignalDir?: Signal; lastAuditKey?: string } | undefined;
     const actionable = sig === "BUY" || sig === "SELL";
-    // requireSession assets only open while an ENABLED region is live (user-configurable).
-    const timingOk = !m.requireSession || enabledSessionOpen(enabledRegions);
+    // Gold/Oil/Forex (requireSession) only open new signals while (a) the FX market
+    // is OPEN — never on the weekend (signalAllowed), and (b) an ENABLED region is
+    // live (user-configurable). Crypto (requireSession=false) trades 24/7.
+    const timingOk = signalAllowed(m.requireSession) &&
+      (!m.requireSession || enabledSessionOpen(enabledRegions));
     // Avoid re-opening the SAME direction we last SENT a signal for. We compare against
     // lastSignalDir (only updated when a signal is actually broadcast) — NOT the per-tick
     // observed signal — otherwise a direction that was merely observed while the market was
