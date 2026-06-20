@@ -683,6 +683,10 @@ async function setEnabledRegions(regions: string[]): Promise<Region[]> {
 }
 
 function openSessions(d = new Date()): SessionDef[] {
+  // FX / metals / energy are CLOSED all weekend — no session is "open" then,
+  // even if the clock hour matches a weekday session window. Crypto is handled
+  // separately (requireSession=false) and keeps trading 24/7.
+  if (isForexMarketClosed(d)) return [];
   const h = d.getUTCHours();
   return SESSIONS.filter((s) => (s.start <= s.end ? h >= s.start && h < s.end : h >= s.start || h < s.end));
 }
