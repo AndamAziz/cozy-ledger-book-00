@@ -110,6 +110,19 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
   // Unique key for this metal so its position is isolated from other assets.
   const mySymbol = `metal:${name || ''}`;
 
+  // Gold / Oil / Forex follow the real market week (closed all weekend). A ticking
+  // "now" keeps the open/closed state and countdown fresh without a page refresh.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(id);
+  }, []);
+  const marketStatus = getMarketStatus('metal', now);
+  const marketClosed = !marketStatus.open;
+  const reopenLabel = marketClosed && marketStatus.nextChange
+    ? `${marketStatus.label} · ${timeUntil(marketStatus.nextChange, now)}`
+    : marketStatus.label;
+
   const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 
   const livePrice = () => (currentPrice && currentPrice > 0
