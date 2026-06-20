@@ -48,6 +48,10 @@ interface TradeControlsProps {
   sellLeg: LegInfo | null;
   /** Label of an OPEN position that belongs to a DIFFERENT asset (or null). */
   otherPositionLabel: string | null;
+  /** When true the underlying market is closed (e.g. Gold/Oil/Forex on the weekend): new trades are blocked. */
+  marketClosed?: boolean;
+  /** Human label shown while the market is closed, e.g. "Closed · opens Sun 22:00 UTC · 1d 4h". */
+  marketClosedLabel?: string;
   /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
   timeframeLabel?: string;
   /** Duration (minutes) of one candle of the selected timeframe — for the hold hint. */
