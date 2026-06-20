@@ -727,7 +727,7 @@ async function processBot(bot: Record<string, unknown>) {
   // GUARD A2) WEEKEND MARKET CLOSURE — Gold/Oil/Forex (non-crypto) bots must not
   // open new trades while the spot market is closed (Fri 22:00 → Sun 22:00 UTC).
   // Crypto bots are unaffected (24/7).
-  if (!CRYPTO_BINANCE[symbol] && isForexMarketClosed()) {
+  if (botWeekendBlocked(!!CRYPTO_BINANCE[symbol])) {
     await log(botId, userId, "info",
       `[${hhmmss()}] 🔴 Market closed (weekend) - no new ${symbol} trades until Sun 22:00 UTC`);
     await setPauseReason(bot, "market_closed", "bot_paused", "🔴 Bot Paused - Market Closed",
