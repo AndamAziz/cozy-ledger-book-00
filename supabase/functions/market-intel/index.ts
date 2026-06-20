@@ -619,6 +619,53 @@ const REGION_EMOJI: Record<string, string> = { Asia: "🌏", London: "🇬🇧",
 type Region = "Asia" | "London" | "New York";
 const ALL_REGIONS: Region[] = ["Asia", "London", "New York"];
 
+// ───────────────────── forex / metals / energy market WEEK (UTC) ─────────────────────
+// Spot Forex, Gold/Silver and Oil trade a continuous week that OPENS Sunday 22:00 UTC
+// (Sydney open / 17:00 ET) and CLOSES Friday 22:00 UTC (NY close / 17:00 ET).
+// They are CLOSED all weekend. Crypto is 24/7 and is NOT affected by this.
+const FX_OPEN_DOW = 0;        // Sunday
+const FX_OPEN_HOUR_UTC = 22;  // Sunday 22:00 UTC reopen
+const FX_CLOSE_DOW = 5;       // Friday
+const FX_CLOSE_HOUR_UTC = 22; // Friday 22:00 UTC close
+
+// True when the FX/metals/energy market is CLOSED for the weekend.
+function isForexMarketClosed(d = new Date()): boolean {
+  const dow = d.getUTCDay(); // 0=Sun … 6=Sat
+  const h = d.getUTCHours();
+  if (dow === 6) return true;                      // all of Saturday
+  if (dow === FX_OPEN_DOW) return h < FX_OPEN_HOUR_UTC;   // Sunday before 22:00
+  if (dow === FX_CLOSE_DOW) return h >= FX_CLOSE_HOUR_UTC; // Friday from 22:00
+  return false;                                    // Mon–Thu: open
+}
+function isForexMarketOpen(d = new Date()): boolean {
+  return !isForexMarketClosed(d);
+}
+
+// Next time the FX market reopens (Sunday 22:00 UTC) as an absolute Date.
+function nextForexOpen(from = new Date()): Date {
+  const d = new Date(from);
+  d.setUTCHours(FX_OPEN_HOUR_UTC, 0, 0, 0);
+  let diff = (FX_OPEN_DOW - d.getUTCDay() + 7) % 7;
+  if (diff === 0 && d.getTime() <= from.getTime()) diff = 7;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d;
+}
+// Next time the FX market closes (Friday 22:00 UTC) as an absolute Date.
+function nextForexClose(from = new Date()): Date {
+  const d = new Date(from);
+  d.setUTCHours(FX_CLOSE_HOUR_UTC, 0, 0, 0);
+  let diff = (FX_CLOSE_DOW - d.getUTCDay() + 7) % 7;
+  if (diff === 0 && d.getTime() <= from.getTime()) diff = 7;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d;
+}
+// "Sun 22:00 UTC" style label.
+function fxWhen(dt: Date): string {
+  return dt.toLocaleString("en-GB", {
+    weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC",
+  }) + " UTC";
+}
+
 // Which market regions are allowed to open NEW targets. Configurable & stored in
 // market_alert_state["session_config"].regions. Empty/missing ⇒ all regions on.
 async function getEnabledRegions(): Promise<Region[]> {
