@@ -3209,10 +3209,15 @@ Deno.serve(async (req) => {
     let targetsSent = 0;
 
     // 0) SESSION OPEN / CLOSE posts → one standalone message each, logged per day.
+    //    Market weekend open/close transitions are already ATOMICALLY CLAIMED in
+    //    evaluateSessionPosts() (so they can never double-send); only per-region
+    //    session posts are recorded here, after a confirmed send.
     for (const p of sessionPosts) {
       const ok = await sendTelegram(`ctp_session_${p.kind}`, p.text);
       sent = ok || sent;
-      if (ok) await recordSessionPost(p.region, p.kind, new Date().toISOString().slice(0, 10));
+      if (ok && p.region !== "Market") {
+        await recordSessionPost(p.region, p.kind, new Date().toISOString().slice(0, 10));
+      }
     }
 
 
