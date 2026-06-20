@@ -325,6 +325,19 @@ export function TradeControls({
       </div>
 
 
+      {/* Banner: market is closed for the weekend (Gold / Oil / Forex) */}
+      {marketClosed && (
+        <div className="mb-2 flex items-center gap-2 rounded-md bg-[#f6465d]/10 border border-[#f6465d]/30 px-2.5 py-1.5 text-[10px] sm:text-xs text-[#f6465d]">
+          <Clock className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            <span className="font-bold">{bi('بازاڕ داخراوە', 'Market closed', 'Piyasa kapalı')}</span>
+            {' — '}
+            {bi('نرخ زیندوویە بەڵام مامەڵەی نوێ ناکرێت', 'live prices only, no new trades', 'sadece canlı fiyat, yeni işlem yok')}
+            {marketClosedLabel ? <span className="block mt-0.5 opacity-90">{marketClosedLabel}</span> : null}
+          </span>
+        </div>
+      )}
+
       {/* Banner: an open position lives on a different asset */}
       {otherPositionLabel && (
         <div className="mb-2 flex items-center gap-2 rounded-md bg-[#f0b90b]/10 border border-[#f0b90b]/30 px-2.5 py-1.5 text-[10px] sm:text-xs text-[#f0b90b]">
@@ -336,6 +349,7 @@ export function TradeControls({
           </span>
         </div>
       )}
+
 
       {/* One-click quick-trade settings: instant lot-size presets + a default
           TP/SL preset that auto-applies the moment a trade opens. */}
