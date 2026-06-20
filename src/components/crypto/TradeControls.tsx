@@ -426,7 +426,7 @@ export function TradeControls({
         {/* SELL block */}
         <button
           onClick={handleSell}
-          disabled={depleted || !!otherPositionLabel}
+          disabled={tradingBlocked}
           className={`relative flex-1 flex flex-col justify-center items-center overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
             sellLeg && sellLeg.qty > 0
               ? 'bg-[#f43f5e]/10 border-[#f43f5e] after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-[#f43f5e] after:content-[""]'
@@ -512,7 +512,7 @@ export function TradeControls({
         {/* BUY block */}
         <button
           onClick={handleBuy}
-          disabled={depleted || !!otherPositionLabel}
+          disabled={tradingBlocked}
           className={`relative flex-1 flex flex-col justify-center items-center overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
             buyLeg && buyLeg.qty > 0
               ? 'bg-[#22c55e]/10 border-[#22c55e] after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-[#22c55e] after:content-[""]'
@@ -631,7 +631,7 @@ export function TradeControls({
             {recommendation && recSide !== 'neutral' && (
               <button
                 onClick={recIsBuy ? handleBuy : handleSell}
-                disabled={depleted || !!otherPositionLabel}
+                disabled={tradingBlocked}
                 className={`mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs sm:text-sm font-bold border transition-colors active:scale-95 disabled:opacity-40 disabled:pointer-events-none ${
                   recIsBuy
                     ? 'bg-[#0ecb81] text-black border-[#0ecb81] hover:bg-[#0ecb81]/90'
