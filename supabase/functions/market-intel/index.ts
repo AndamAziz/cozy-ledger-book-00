@@ -2147,16 +2147,66 @@ async function sessionCloseMessage(region: Region, quotes: Quote[], day: string)
 
 
 // Dedup helpers against session_posts_log.
-async function wasSessionPosted(region: Region, kind: "open" | "close", day: string): Promise<boolean> {
+async function wasSessionPosted(region: string, kind: string, day: string): Promise<boolean> {
   const { data } = await admin.from("session_posts_log")
     .select("id").eq("region", region).eq("kind", kind).eq("session_date", day).limit(1).maybeSingle();
   return !!data;
 }
-async function recordSessionPost(region: Region, kind: "open" | "close", day: string) {
+async function recordSessionPost(region: string, kind: string, day: string) {
   await admin.from("session_posts_log").insert({ region, kind, session_date: day });
 }
 
-interface SessionPost { region: Region; kind: "open" | "close"; text: string; }
+interface SessionPost { region: string; kind: string; text: string; }
+
+// ── weekend market OPEN / CLOSE transition cards (FX / Gold / Oil) ──
+// Fired on the REAL market transition (Friday 22:00 UTC close, Sunday 22:00 UTC
+// reopen), not on a fixed daily timer that ignores weekends.
+function marketCloseMessage(now: Date, quotes: Quote[]): string {
+  const { gold, oil, btc } = q3(quotes);
+  const reopen = nextForexOpen(now);
+  return [
+    "━━━━━━━━━━━━━━━",
+    "🔴 <b>MARKET CLOSED · بازاڕ داخرا</b>",
+    "🥇 Gold · 🛢 Oil · 💱 Forex",
+    "━━━━━━━━━━━━━━━",
+    `🕒 Closed at: <b>${fxWhen(now)}</b>`,
+    `⏭ Reopens: <b>${fxWhen(reopen)}</b>`,
+    "",
+    "💰 <b>Closing Prices / نرخی داخستن:</b>",
+    priceWithChangeLine(gold, "🥇", "Gold"),
+    priceWithChangeLine(oil, "🛢", "Oil"),
+    "",
+    "₿ Crypto stays OPEN 24/7 · کریپتۆ کراوەیە",
+    priceWithChangeLine(btc, "₿", "BTC"),
+    "",
+    "🛑 No new Gold/Oil/Forex signals until reopen.",
+    "هیچ سیگناڵێکی نوێ بۆ زێڕ/نەوت/فۆرێکس نانێردرێت تا کردنەوە.",
+    "━━━━━━━━━━━━━━━",
+    "<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>",
+  ].join("\n");
+}
+function marketOpenMessage(now: Date, quotes: Quote[]): string {
+  const { gold, oil, btc } = q3(quotes);
+  const close = nextForexClose(now);
+  return [
+    "━━━━━━━━━━━━━━━",
+    "🟢 <b>MARKET OPEN · بازاڕ کرایەوە</b>",
+    "🥇 Gold · 🛢 Oil · 💱 Forex",
+    "━━━━━━━━━━━━━━━",
+    `🕒 Opened at: <b>${fxWhen(now)}</b>`,
+    `⏭ Closes: <b>${fxWhen(close)}</b>`,
+    "",
+    "💰 <b>Live Prices / نرخی زیندوو:</b>",
+    priceWithChangeLine(gold, "🥇", "Gold"),
+    priceWithChangeLine(oil, "🛢", "Oil"),
+    priceWithChangeLine(btc, "₿", "BTC"),
+    "",
+    "✅ Signals & session alerts are now ACTIVE.",
+    "سیگناڵ و ئاگاداری سێشن چالاکن.",
+    "━━━━━━━━━━━━━━━",
+    "<i>ئەمە ڕاوێژی دارایی نییە · Not financial advice</i>",
+  ].join("\n");
+}
 
 // Fire any session open/close posts due in the current UTC hour (deduped per day).
 async function evaluateSessionPosts(): Promise<SessionPost[]> {
@@ -2166,6 +2216,21 @@ async function evaluateSessionPosts(): Promise<SessionPost[]> {
   const out: SessionPost[] = [];
   let quotes: Quote[] | null = null;
   const getQ = async (): Promise<Quote[]> => (quotes ??= await getPrices());
+
+  // 1) Weekend market OPEN / CLOSE transitions (always evaluated — these are the
+  //    very events that were previously missed). Deduped per day.
+  const dow = now.getUTCDay();
+  if (dow === FX_CLOSE_DOW && hour === FX_CLOSE_HOUR_UTC && !(await wasSessionPosted("Market", "close", day))) {
+    out.push({ region: "Market", kind: "close", text: marketCloseMessage(now, await getQ()) });
+  }
+  if (dow === FX_OPEN_DOW && hour === FX_OPEN_HOUR_UTC && !(await wasSessionPosted("Market", "open", day))) {
+    out.push({ region: "Market", kind: "open", text: marketOpenMessage(now, await getQ()) });
+  }
+
+  // 2) Per-session OPEN / CLOSE posts — ONLY while the FX market is actually open.
+  //    During the weekend these are suppressed entirely (this was the bug: an
+  //    "Asia Session Open" card fired on Saturday because only the hour was checked).
+  if (isForexMarketClosed(now)) return out;
 
   for (const region of ALL_REGIONS) {
     if (SESSION_OPEN_HOURS[region] === hour && !(await wasSessionPosted(region, "open", day))) {
