@@ -2210,13 +2210,18 @@ async function evaluateSessionPosts(): Promise<SessionPost[]> {
   const getQ = async (): Promise<Quote[]> => (quotes ??= await getPrices());
 
   // 1) Weekend market OPEN / CLOSE transitions (always evaluated — these are the
-  //    very events that were previously missed). Deduped per day.
-  const dow = now.getUTCDay();
-  if (dow === FX_CLOSE_DOW && hour === FX_CLOSE_HOUR_UTC && !(await wasSessionPosted("Market", "close", day))) {
-    out.push({ region: "Market", kind: "close", text: marketCloseMessage(now, await getQ()) });
-  }
-  if (dow === FX_OPEN_DOW && hour === FX_OPEN_HOUR_UTC && !(await wasSessionPosted("Market", "open", day))) {
-    out.push({ region: "Market", kind: "open", text: marketOpenMessage(now, await getQ()) });
+  //    very events that were previously missed). The transition is week-anchored
+  //    (unique key per kind + date) and ATOMICALLY CLAIMED before sending, so each
+  //    weekly open/close is produced at most ONCE even across cron retries/overlaps.
+  const transition = dueMarketTransition(now);
+  if (transition && await claimSessionPost("Market", transition.kind, transition.day)) {
+    out.push({
+      region: "Market",
+      kind: transition.kind,
+      text: transition.kind === "close"
+        ? marketCloseMessage(now, await getQ())
+        : marketOpenMessage(now, await getQ()),
+    });
   }
 
   // 2) Per-session OPEN / CLOSE posts — ONLY while the FX market is actually open.
