@@ -165,6 +165,8 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
   // A position on another asset must be closed first.
   const handleAdd = (side: 'buy' | 'sell', tpSlPct?: number) => {
     if (balance <= 0) return;
+    // Gold/Oil/Forex cannot be traded while the market is closed for the weekend.
+    if (marketClosed) return;
     const price = livePrice();
     if (price <= 0) return;
     if (otherPositionLabel) return;
