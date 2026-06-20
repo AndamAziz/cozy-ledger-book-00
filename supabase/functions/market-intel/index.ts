@@ -12,6 +12,10 @@ import {
   nextForexOpen,
 } from "./market-week.ts";
 import {
+  dueMarketTransition,
+  signalAllowed,
+} from "./weekend-guard.ts";
+import {
   buildAssetSignal,
   buildLocalSignal,
   EngineSignal,
