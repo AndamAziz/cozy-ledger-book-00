@@ -2127,6 +2127,27 @@ async function recordSessionPost(region: string, kind: string, day: string) {
   await admin.from("session_posts_log").insert({ region, kind, session_date: day });
 }
 
+// ── ATOMIC idempotency claim ──
+// Atomically claims a (region, kind, session_date) slot BEFORE the notification
+// is sent. Relies on the UNIQUE (region, kind, session_date) constraint on
+// session_posts_log: only the FIRST caller's row is inserted; any concurrent or
+// retried invocation gets an empty result (ignoreDuplicates) and returns false,
+// so the notification is sent at most ONCE — even if the cron runs multiple times,
+// overlaps, or retries after an error. Returns true only for the winning caller.
+async function claimSessionPost(region: string, kind: string, day: string): Promise<boolean> {
+  const { data, error } = await admin.from("session_posts_log")
+    .upsert({ region, kind, session_date: day }, {
+      onConflict: "region,kind,session_date",
+      ignoreDuplicates: true,
+    })
+    .select("id");
+  if (error) {
+    console.error(`[claimSessionPost] ${region}/${kind}/${day} failed:`, error.message);
+    return false;
+  }
+  return Array.isArray(data) && data.length > 0;
+}
+
 interface SessionPost { region: string; kind: string; text: string; }
 
 // ── weekend market OPEN / CLOSE transition cards (FX / Gold / Oil) ──
