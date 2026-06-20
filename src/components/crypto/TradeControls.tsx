@@ -110,6 +110,8 @@ export function TradeControls({
   buyLeg,
   sellLeg,
   otherPositionLabel,
+  marketClosed = false,
+  marketClosedLabel,
   timeframeMinutes,
   balance,
   realizedPnl = 0,
@@ -127,6 +129,9 @@ export function TradeControls({
     language === 'tr' ? (tr ?? en) : language === 'en' ? en : ku;
 
   const depleted = balance <= 0;
+  // New trades are blocked when the demo balance is gone OR the market is closed
+  // (Gold/Oil/Forex over the weekend). Existing legs can still be closed.
+  const tradingBlocked = depleted || marketClosed || !!otherPositionLabel;
 
   // One-click default TP/SL preset (% of entry) auto-applied when a trade opens.
   // null = off (no automatic TP/SL).
