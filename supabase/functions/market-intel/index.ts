@@ -2,10 +2,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { passesNewsQualityGate } from "./news-quality.ts";
 import {
-  FX_CLOSE_DOW,
-  FX_CLOSE_HOUR_UTC,
-  FX_OPEN_DOW,
-  FX_OPEN_HOUR_UTC,
   fxWhen,
   isForexMarketClosed,
   nextForexClose,
