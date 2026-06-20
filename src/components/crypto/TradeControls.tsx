@@ -48,6 +48,10 @@ interface TradeControlsProps {
   sellLeg: LegInfo | null;
   /** Label of an OPEN position that belongs to a DIFFERENT asset (or null). */
   otherPositionLabel: string | null;
+  /** When true the underlying market is closed (e.g. Gold/Oil/Forex on the weekend): new trades are blocked. */
+  marketClosed?: boolean;
+  /** Human label shown while the market is closed, e.g. "Closed · opens Sun 22:00 UTC · 1d 4h". */
+  marketClosedLabel?: string;
   /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
   timeframeLabel?: string;
   /** Duration (minutes) of one candle of the selected timeframe — for the hold hint. */
@@ -106,6 +110,8 @@ export function TradeControls({
   buyLeg,
   sellLeg,
   otherPositionLabel,
+  marketClosed = false,
+  marketClosedLabel,
   timeframeMinutes,
   balance,
   realizedPnl = 0,
@@ -123,6 +129,9 @@ export function TradeControls({
     language === 'tr' ? (tr ?? en) : language === 'en' ? en : ku;
 
   const depleted = balance <= 0;
+  // New trades are blocked when the demo balance is gone OR the market is closed
+  // (Gold/Oil/Forex over the weekend). Existing legs can still be closed.
+  const tradingBlocked = depleted || marketClosed || !!otherPositionLabel;
 
   // One-click default TP/SL preset (% of entry) auto-applied when a trade opens.
   // null = off (no automatic TP/SL).
@@ -316,6 +325,19 @@ export function TradeControls({
       </div>
 
 
+      {/* Banner: market is closed for the weekend (Gold / Oil / Forex) */}
+      {marketClosed && (
+        <div className="mb-2 flex items-center gap-2 rounded-md bg-[#f6465d]/10 border border-[#f6465d]/30 px-2.5 py-1.5 text-[10px] sm:text-xs text-[#f6465d]">
+          <Clock className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            <span className="font-bold">{bi('بازاڕ داخراوە', 'Market closed', 'Piyasa kapalı')}</span>
+            {' — '}
+            {bi('نرخ زیندوویە بەڵام مامەڵەی نوێ ناکرێت', 'live prices only, no new trades', 'sadece canlı fiyat, yeni işlem yok')}
+            {marketClosedLabel ? <span className="block mt-0.5 opacity-90">{marketClosedLabel}</span> : null}
+          </span>
+        </div>
+      )}
+
       {/* Banner: an open position lives on a different asset */}
       {otherPositionLabel && (
         <div className="mb-2 flex items-center gap-2 rounded-md bg-[#f0b90b]/10 border border-[#f0b90b]/30 px-2.5 py-1.5 text-[10px] sm:text-xs text-[#f0b90b]">
@@ -327,6 +349,7 @@ export function TradeControls({
           </span>
         </div>
       )}
+
 
       {/* One-click quick-trade settings: instant lot-size presets + a default
           TP/SL preset that auto-applies the moment a trade opens. */}
@@ -403,7 +426,7 @@ export function TradeControls({
         {/* SELL block */}
         <button
           onClick={handleSell}
-          disabled={depleted || !!otherPositionLabel}
+          disabled={tradingBlocked}
           className={`relative flex-1 flex flex-col justify-center items-center overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
             sellLeg && sellLeg.qty > 0
               ? 'bg-[#f43f5e]/10 border-[#f43f5e] after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-[#f43f5e] after:content-[""]'
@@ -489,7 +512,7 @@ export function TradeControls({
         {/* BUY block */}
         <button
           onClick={handleBuy}
-          disabled={depleted || !!otherPositionLabel}
+          disabled={tradingBlocked}
           className={`relative flex-1 flex flex-col justify-center items-center overflow-hidden rounded-lg border transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none group ${
             buyLeg && buyLeg.qty > 0
               ? 'bg-[#22c55e]/10 border-[#22c55e] after:absolute after:inset-x-0 after:top-0 after:h-[3px] after:bg-[#22c55e] after:content-[""]'
@@ -608,7 +631,7 @@ export function TradeControls({
             {recommendation && recSide !== 'neutral' && (
               <button
                 onClick={recIsBuy ? handleBuy : handleSell}
-                disabled={depleted || !!otherPositionLabel}
+                disabled={tradingBlocked}
                 className={`mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs sm:text-sm font-bold border transition-colors active:scale-95 disabled:opacity-40 disabled:pointer-events-none ${
                   recIsBuy
                     ? 'bg-[#0ecb81] text-black border-[#0ecb81] hover:bg-[#0ecb81]/90'

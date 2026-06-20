@@ -14,6 +14,7 @@ import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
 import { LivePriceBadge } from '@/components/crypto/LivePriceBadge';
 
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
+import { getMarketStatus, timeUntil } from '@/lib/marketHours';
 import type { OHLCCandle } from '@/lib/krakenApi';
 
 interface MetalsChartProps {
@@ -109,6 +110,19 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
   // Unique key for this metal so its position is isolated from other assets.
   const mySymbol = `metal:${name || ''}`;
 
+  // Gold / Oil / Forex follow the real market week (closed all weekend). A ticking
+  // "now" keeps the open/closed state and countdown fresh without a page refresh.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(id);
+  }, []);
+  const marketStatus = getMarketStatus('metal', now);
+  const marketClosed = !marketStatus.open;
+  const reopenLabel = marketClosed && marketStatus.nextChange
+    ? `${marketStatus.label} · ${timeUntil(marketStatus.nextChange, now)}`
+    : marketStatus.label;
+
   const fmtQty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 3 });
 
   const livePrice = () => (currentPrice && currentPrice > 0
@@ -151,6 +165,8 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
   // A position on another asset must be closed first.
   const handleAdd = (side: 'buy' | 'sell', tpSlPct?: number) => {
     if (balance <= 0) return;
+    // Gold/Oil/Forex cannot be traded while the market is closed for the weekend.
+    if (marketClosed) return;
     const price = livePrice();
     if (price <= 0) return;
     if (otherPositionLabel) return;
@@ -937,6 +953,8 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
 
       {/* Buy / Refresh / Sell controls directly above the chart (MT5 style) */}
       <TradeControls
+        marketClosed={marketClosed}
+        marketClosedLabel={reopenLabel}
         amount={tradeAmount}
         pct={tradePct}
         currentPrice={livePrice()}
