@@ -6,6 +6,7 @@ import {
   assessVolatility,
   volatilityPercent,
 } from "./volatility.ts";
+import { botWeekendBlocked } from "./weekend-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -124,16 +125,9 @@ function calcMACD(closes: number[]): { histogram: number } | null {
 }
 
 // ───────────────────── market week (UTC) ─────────────────────
-// Spot Forex / Gold / Oil are CLOSED from Friday 22:00 UTC to Sunday 22:00 UTC.
-// Crypto is 24/7. Bots on non-crypto symbols must NOT open trades on the weekend.
-function isForexMarketClosed(d = new Date()): boolean {
-  const dow = d.getUTCDay(); // 0=Sun … 6=Sat
-  const h = d.getUTCHours();
-  if (dow === 6) return true; // all of Saturday
-  if (dow === 0) return h < 22; // Sunday before 22:00 UTC
-  if (dow === 5) return h >= 22; // Friday from 22:00 UTC
-  return false; // Mon–Thu
-}
+// isForexMarketClosed / botWeekendBlocked live in ./weekend-guard.ts (pure,
+// unit-tested). Spot Forex / Gold / Oil are CLOSED Fri 22:00 → Sun 22:00 UTC;
+// crypto is 24/7. Bots on non-crypto symbols must NOT open trades on the weekend.
 
 // ───────────────────── prices & candles ─────────────────────
 async function getPrice(symbol: string): Promise<number | null> {
@@ -733,7 +727,7 @@ async function processBot(bot: Record<string, unknown>) {
   // GUARD A2) WEEKEND MARKET CLOSURE — Gold/Oil/Forex (non-crypto) bots must not
   // open new trades while the spot market is closed (Fri 22:00 → Sun 22:00 UTC).
   // Crypto bots are unaffected (24/7).
-  if (!CRYPTO_BINANCE[symbol] && isForexMarketClosed()) {
+  if (botWeekendBlocked(!!CRYPTO_BINANCE[symbol])) {
     await log(botId, userId, "info",
       `[${hhmmss()}] 🔴 Market closed (weekend) - no new ${symbol} trades until Sun 22:00 UTC`);
     await setPauseReason(bot, "market_closed", "bot_paused", "🔴 Bot Paused - Market Closed",

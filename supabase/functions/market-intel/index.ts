@@ -2,15 +2,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { passesNewsQualityGate } from "./news-quality.ts";
 import {
-  FX_CLOSE_DOW,
-  FX_CLOSE_HOUR_UTC,
-  FX_OPEN_DOW,
-  FX_OPEN_HOUR_UTC,
   fxWhen,
   isForexMarketClosed,
   nextForexClose,
   nextForexOpen,
 } from "./market-week.ts";
+import {
+  dueMarketTransition,
+  signalAllowed,
+} from "./weekend-guard.ts";
 import {
   buildAssetSignal,
   buildLocalSignal,
@@ -1044,8 +1044,11 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
     const prev = priceState[q.symbol] as
       { price?: number; signal?: Signal; lastSignalAt?: number; lastSignalDir?: Signal; lastAuditKey?: string } | undefined;
     const actionable = sig === "BUY" || sig === "SELL";
-    // requireSession assets only open while an ENABLED region is live (user-configurable).
-    const timingOk = !m.requireSession || enabledSessionOpen(enabledRegions);
+    // Gold/Oil/Forex (requireSession) only open new signals while (a) the FX market
+    // is OPEN — never on the weekend (signalAllowed), and (b) an ENABLED region is
+    // live (user-configurable). Crypto (requireSession=false) trades 24/7.
+    const timingOk = signalAllowed(m.requireSession) &&
+      (!m.requireSession || enabledSessionOpen(enabledRegions));
     // Avoid re-opening the SAME direction we last SENT a signal for. We compare against
     // lastSignalDir (only updated when a signal is actually broadcast) — NOT the per-tick
     // observed signal — otherwise a direction that was merely observed while the market was
@@ -2123,6 +2126,27 @@ async function recordSessionPost(region: string, kind: string, day: string) {
   await admin.from("session_posts_log").insert({ region, kind, session_date: day });
 }
 
+// ── ATOMIC idempotency claim ──
+// Atomically claims a (region, kind, session_date) slot BEFORE the notification
+// is sent. Relies on the UNIQUE (region, kind, session_date) constraint on
+// session_posts_log: only the FIRST caller's row is inserted; any concurrent or
+// retried invocation gets an empty result (ignoreDuplicates) and returns false,
+// so the notification is sent at most ONCE — even if the cron runs multiple times,
+// overlaps, or retries after an error. Returns true only for the winning caller.
+async function claimSessionPost(region: string, kind: string, day: string): Promise<boolean> {
+  const { data, error } = await admin.from("session_posts_log")
+    .upsert({ region, kind, session_date: day }, {
+      onConflict: "region,kind,session_date",
+      ignoreDuplicates: true,
+    })
+    .select("id");
+  if (error) {
+    console.error(`[claimSessionPost] ${region}/${kind}/${day} failed:`, error.message);
+    return false;
+  }
+  return Array.isArray(data) && data.length > 0;
+}
+
 interface SessionPost { region: string; kind: string; text: string; }
 
 // ── weekend market OPEN / CLOSE transition cards (FX / Gold / Oil) ──
@@ -2185,13 +2209,18 @@ async function evaluateSessionPosts(): Promise<SessionPost[]> {
   const getQ = async (): Promise<Quote[]> => (quotes ??= await getPrices());
 
   // 1) Weekend market OPEN / CLOSE transitions (always evaluated — these are the
-  //    very events that were previously missed). Deduped per day.
-  const dow = now.getUTCDay();
-  if (dow === FX_CLOSE_DOW && hour === FX_CLOSE_HOUR_UTC && !(await wasSessionPosted("Market", "close", day))) {
-    out.push({ region: "Market", kind: "close", text: marketCloseMessage(now, await getQ()) });
-  }
-  if (dow === FX_OPEN_DOW && hour === FX_OPEN_HOUR_UTC && !(await wasSessionPosted("Market", "open", day))) {
-    out.push({ region: "Market", kind: "open", text: marketOpenMessage(now, await getQ()) });
+  //    very events that were previously missed). The transition is week-anchored
+  //    (unique key per kind + date) and ATOMICALLY CLAIMED before sending, so each
+  //    weekly open/close is produced at most ONCE even across cron retries/overlaps.
+  const transition = dueMarketTransition(now);
+  if (transition && await claimSessionPost("Market", transition.kind, transition.day)) {
+    out.push({
+      region: "Market",
+      kind: transition.kind,
+      text: transition.kind === "close"
+        ? marketCloseMessage(now, await getQ())
+        : marketOpenMessage(now, await getQ()),
+    });
   }
 
   // 2) Per-session OPEN / CLOSE posts — ONLY while the FX market is actually open.
@@ -3179,10 +3208,15 @@ Deno.serve(async (req) => {
     let targetsSent = 0;
 
     // 0) SESSION OPEN / CLOSE posts → one standalone message each, logged per day.
+    //    Market weekend open/close transitions are already ATOMICALLY CLAIMED in
+    //    evaluateSessionPosts() (so they can never double-send); only per-region
+    //    session posts are recorded here, after a confirmed send.
     for (const p of sessionPosts) {
       const ok = await sendTelegram(`ctp_session_${p.kind}`, p.text);
       sent = ok || sent;
-      if (ok) await recordSessionPost(p.region, p.kind, new Date().toISOString().slice(0, 10));
+      if (ok && p.region !== "Market") {
+        await recordSessionPost(p.region, p.kind, new Date().toISOString().slice(0, 10));
+      }
     }
 
 
