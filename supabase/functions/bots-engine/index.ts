@@ -6,7 +6,7 @@ import {
   assessVolatility,
   volatilityPercent,
 } from "./volatility.ts";
-import { botWeekendBlocked, isForexMarketClosed } from "./weekend-guard.ts";
+import { botWeekendBlocked } from "./weekend-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
