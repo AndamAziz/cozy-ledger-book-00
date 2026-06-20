@@ -730,6 +730,19 @@ async function processBot(bot: Record<string, unknown>) {
   // (No time-of-day filter anymore — the bot trades 24/7 and gates on live
   //  volatility instead, evaluated below once we have the latest candles.)
 
+  // GUARD A2) WEEKEND MARKET CLOSURE — Gold/Oil/Forex (non-crypto) bots must not
+  // open new trades while the spot market is closed (Fri 22:00 → Sun 22:00 UTC).
+  // Crypto bots are unaffected (24/7).
+  if (!CRYPTO_BINANCE[symbol] && isForexMarketClosed()) {
+    await log(botId, userId, "info",
+      `[${hhmmss()}] 🔴 Market closed (weekend) - no new ${symbol} trades until Sun 22:00 UTC`);
+    await setPauseReason(bot, "market_closed", "bot_paused", "🔴 Bot Paused - Market Closed",
+      `${symbol} market is closed for the weekend. Trading resumes Sunday 22:00 UTC.`);
+    return;
+  }
+
+
+
 
 
   // GUARD C) NEWS FILTER — no new trades within 60 min of a high-impact USD event.
