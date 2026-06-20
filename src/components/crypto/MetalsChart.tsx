@@ -14,6 +14,7 @@ import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
 import { LivePriceBadge } from '@/components/crypto/LivePriceBadge';
 
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
+import { getMarketStatus, timeUntil } from '@/lib/marketHours';
 import type { OHLCCandle } from '@/lib/krakenApi';
 
 interface MetalsChartProps {
