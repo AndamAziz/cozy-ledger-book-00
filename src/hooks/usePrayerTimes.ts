@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { dateStrInTz, detectTimezone } from '@/lib/prayerTz';
 
 // Aladhan calculation methods. 3 = Muslim World League (default for Kurdistan/Iraq).
@@ -56,17 +56,28 @@ export function usePrayerTimes(method: number, timezone?: string) {
 
   const tz = timezone || detectTimezone();
 
+  // Monotonic request id: only the latest in-flight request is allowed to
+  // commit its result. This prevents a slow earlier response (e.g. after a
+  // rapid method switch) from overwriting newer data with stale times.
+  const reqIdRef = useRef(0);
+
   const fetchByCoords = useCallback(async (loc: PrayerLocation, m: number, zone: string) => {
+    const myReqId = ++reqIdRef.current;
     setLoading(true);
     setError(null);
     try {
       // Pin both the request date and the returned timings to the chosen zone so
       // the schedule is correct even when the device clock is in another zone.
+      // `cache: 'no-store'` guarantees a fresh calculation for the selected method
+      // (no browser/intermediate cache can serve a different method's result).
       const res = await fetch(
-        `https://api.aladhan.com/v1/timings/${dateStrInTz(zone)}?latitude=${loc.latitude}&longitude=${loc.longitude}&method=${m}&timezonestring=${encodeURIComponent(zone)}`
+        `https://api.aladhan.com/v1/timings/${dateStrInTz(zone)}?latitude=${loc.latitude}&longitude=${loc.longitude}&method=${m}&timezonestring=${encodeURIComponent(zone)}`,
+        { cache: 'no-store' }
       );
       if (!res.ok) throw new Error('network');
       const json = await res.json();
+      // A newer request started after this one — discard this (stale) result.
+      if (myReqId !== reqIdRef.current) return;
       const t = json.data.timings;
       const clean = (v: string) => v.split(' ')[0];
       setData({
@@ -83,9 +94,9 @@ export function usePrayerTimes(method: number, timezone?: string) {
         method: m,
       });
     } catch {
-      setError('fetch');
+      if (myReqId === reqIdRef.current) setError('fetch');
     } finally {
-      setLoading(false);
+      if (myReqId === reqIdRef.current) setLoading(false);
     }
   }, []);
 
