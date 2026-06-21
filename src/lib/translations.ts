@@ -441,7 +441,7 @@ export const translations = {
     actionResetEmailSent: 'ئیمەیڵی ڕێکخستنەوە نێردرا',
     admin: 'ئەدمین',
     target: 'ئامانج',
-    cryptoTracker: 'شوێنپێگری کریپتۆ',
+    cryptoTracker: 'Trading',
     cryptoTrackerDesc: 'نرخی زیندەی دراوە دیجیتاڵەکان',
   },
   en: {
@@ -884,7 +884,7 @@ export const translations = {
     actionResetEmailSent: 'Reset email sent',
     admin: 'Admin',
     target: 'Target',
-    cryptoTracker: 'Crypto Tracker',
+    cryptoTracker: 'Trading',
     cryptoTrackerDesc: 'Live cryptocurrency prices',
   },
   ar: {
@@ -1327,7 +1327,7 @@ export const translations = {
     actionResetEmailSent: 'تم إرسال بريد إعادة التعيين',
     admin: 'المشرف',
     target: 'الهدف',
-    cryptoTracker: 'متتبع العملات الرقمية',
+    cryptoTracker: 'Trading',
     cryptoTrackerDesc: 'أسعار العملات الرقمية مباشرة',
   },
   fa: {
@@ -1770,7 +1770,7 @@ export const translations = {
     actionResetEmailSent: 'ایمیل بازنشانی ارسال شد',
     admin: 'ادمین',
     target: 'هدف',
-    cryptoTracker: 'ردیاب رمزارز',
+    cryptoTracker: 'Trading',
     cryptoTrackerDesc: 'قیمت زنده ارزهای دیجیتال',
   },
   tr: {
@@ -2213,7 +2213,7 @@ export const translations = {
     actionResetEmailSent: 'Sıfırlama e-postası gönderildi',
     admin: 'Yönetici',
     target: 'Hedef',
-    cryptoTracker: 'Kripto Takibi',
+    cryptoTracker: 'Trading',
     cryptoTrackerDesc: 'Canlı kripto para fiyatları',
   },
 } as const;
