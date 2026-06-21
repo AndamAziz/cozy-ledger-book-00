@@ -1,7 +1,7 @@
 {
   "name": "Central Tech Platform",
   "short_name": "CTP",
-  "description": "Central Tech Platform - سیستەمی بەڕێوەبردنی دارایی و کۆگا",
+  "description": "Central Tech Platform",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a1f3a",
