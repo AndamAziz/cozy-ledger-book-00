@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   fetchSurahList,
   fetchSurahDetail,
+  fetchSurahTranslation,
   getStoredFontSize,
   setStoredFontSize,
   getBookmarks,
@@ -14,6 +15,8 @@ import {
   setLastRead,
   getStoredReciter,
   setStoredReciter,
+  getStoredShowTranslation,
+  setStoredShowTranslation,
   DEFAULT_FONT,
   DEFAULT_RECITER,
   RECITERS,
