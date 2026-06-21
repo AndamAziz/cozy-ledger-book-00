@@ -177,35 +177,55 @@ async function fetchYahooFuturesMetals(): Promise<Record<string, number>> {
   }
 }
 
+// Keyed/limited metals sources (goldapi.io, TwelveData, Yahoo futures), merged and
+// cached for 60s. Only invoked to fill metals the free gold-api.com couldn't supply,
+// so the fast 4s spot refresh never hammers these quota-limited APIs.
+async function fetchKeyedMetalsFallback(): Promise<Record<string, number>> {
+  if (keyedMetalsCache && Date.now() - keyedMetalsCacheTs < KEYED_METALS_TTL) {
+    return keyedMetalsCache;
+  }
+  const [goldApi, twelveData, yahooFutures] = await Promise.all([
+    fetchGoldApiMetals(),
+    fetchTwelveDataMetals(),
+    fetchYahooFuturesMetals(),
+  ]);
+  const merged: Record<string, number> = {};
+  for (const code of GOLDAPI_METALS) {
+    const v = goldApi[code] ?? twelveData[code] ?? yahooFutures[code];
+    if (Number.isFinite(v) && (v as number) > 0) merged[code] = v as number;
+  }
+  if (Object.keys(merged).length > 0) {
+    keyedMetalsCache = merged;
+    keyedMetalsCacheTs = Date.now();
+  }
+  return keyedMetalsCache ?? merged;
+}
+
 async function fetchSpotMetals(): Promise<{ prices: Record<string, number>; sources: string[] }> {
   if (metalsSpotCache && Date.now() - metalsSpotCacheTs < METALS_SPOT_CACHE_TTL) {
     return { prices: metalsSpotCache, sources: ["spot-cache"] };
   }
 
-  // Priority: gold-api.com (free, accurate spot for all 4 metals), then GoldAPI, then
-  // TwelveData (XAU only on current plan), then Yahoo futures as a key-free last resort.
-  const [goldApiCom, goldApi, twelveData, yahooFutures] = await Promise.all([
-    fetchGoldApiComMetals(),
-    fetchGoldApiMetals(),
-    fetchTwelveDataMetals(),
-    fetchYahooFuturesMetals(),
-  ]);
-
+  // Fast path: free gold-api.com (no key, ~4s cadence) — the ONLY source hit at 4s.
+  const goldApiCom = await fetchGoldApiComMetals();
   const prices: Record<string, number> = {};
   const sources: string[] = [];
   for (const code of GOLDAPI_METALS) {
     if (goldApiCom[code]) {
       prices[code] = goldApiCom[code];
       if (!sources.includes("gold-api-com-spot")) sources.push("gold-api-com-spot");
-    } else if (goldApi[code]) {
-      prices[code] = goldApi[code];
-      if (!sources.includes("goldapi-spot")) sources.push("goldapi-spot");
-    } else if (twelveData[code]) {
-      prices[code] = twelveData[code];
-      if (!sources.includes("twelvedata-spot")) sources.push("twelvedata-spot");
-    } else if (yahooFutures[code]) {
-      prices[code] = yahooFutures[code];
-      if (!sources.includes("yahoo-futures")) sources.push("yahoo-futures");
+    }
+  }
+
+  // Fill any metals the free source missed from the 60s-cached keyed fallback.
+  const missing = GOLDAPI_METALS.filter((code) => !prices[code]);
+  if (missing.length > 0) {
+    const fallback = await fetchKeyedMetalsFallback();
+    for (const code of missing) {
+      if (fallback[code]) {
+        prices[code] = fallback[code];
+        if (!sources.includes("keyed-fallback")) sources.push("keyed-fallback");
+      }
     }
   }
 
