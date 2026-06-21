@@ -126,6 +126,7 @@ const T = {
     serverHint: "ئەگەر فیلمەکە کار نەکرد، سێرڤەرێکی تر تاقیبکەرەوە 👇",
     movieTag: "فیلم",
     tvTag: "زنجیرە",
+    actorTag: "ئەکتەر",
     latest: "نوێترین",
     trendingToday: "ترێندی ئەمڕۆ",
     top10: "تۆپ ١٠",
