@@ -23,7 +23,8 @@ import { ReviewForm } from '@/components/reviews/ReviewForm';
 import { REVIEWS_I18N, getReviewLang } from '@/lib/reviews';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
-import { Users, Sparkles, Tv, Film } from 'lucide-react';
+import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
+import { Users, Sparkles, Tv, Film, Bitcoin } from 'lucide-react';
 
 type TabType = 'finance' | 'inventory' | 'sales' | 'reports';
 
