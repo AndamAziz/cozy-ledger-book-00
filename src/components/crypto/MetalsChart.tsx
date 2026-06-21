@@ -955,6 +955,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       <TradeControls
         marketClosed={marketClosed}
         marketClosedLabel={reopenLabel}
+        reopenAt={marketStatus.nextChange}
         amount={tradeAmount}
         pct={tradePct}
         currentPrice={livePrice()}
