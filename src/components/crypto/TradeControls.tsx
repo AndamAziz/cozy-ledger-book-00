@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { suggestHoldMinutes, suggestHoldAcrossTimeframes } from '@/lib/indicators';
 import { DEMO_LEVERAGE } from '@/contexts/DemoAccountContext';
+import { countdownDigits } from '@/lib/marketHours';
 
 /** Total bid/ask spread in basis points (0.02% => 2 bps). */
 export const TRADE_SPREAD_BPS = 2;
