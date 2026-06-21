@@ -1903,7 +1903,7 @@ function MovieModal({
             style={{
               position: "absolute",
               top: 10,
-              left: 10,
+              insetInlineStart: 10,
               zIndex: 4,
               width: 28,
               height: 28,
