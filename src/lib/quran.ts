@@ -144,6 +144,19 @@ export async function fetchSurahDetail(
 const FONT_SIZE_KEY = 'quran-arabic-font-size';
 const LAST_READ_KEY = 'quran-last-read';
 const BOOKMARKS_KEY = 'quran-bookmarks';
+const RECITER_KEY = 'quran-reciter';
+
+export function getStoredReciter(): string {
+  if (typeof window === 'undefined') return DEFAULT_RECITER;
+  const raw = localStorage.getItem(RECITER_KEY);
+  if (raw && RECITERS.some((r) => r.id === raw)) return raw;
+  return DEFAULT_RECITER;
+}
+
+export function setStoredReciter(id: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(RECITER_KEY, id);
+}
 
 export const MIN_FONT = 22;
 export const MAX_FONT = 56;
