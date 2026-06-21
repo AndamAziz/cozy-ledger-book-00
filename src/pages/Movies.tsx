@@ -1570,7 +1570,7 @@ function Hero({
 
 
 
-function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
+function MovieCard({ movie, t, onClick }: { movie: Movie; t: Record<string, string>; onClick: () => void }) {
   const rating = parseFloat(movie.rating) || 0;
   const isTv = movie.media === "tv";
   return (
