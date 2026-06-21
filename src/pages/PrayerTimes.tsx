@@ -234,6 +234,15 @@ function toMinutes(hhmm: string): number {
   return h * 60 + m;
 }
 
+/** Format a 24h "HH:MM" string as 12-hour time with AM/PM (e.g. "9:46 PM"). */
+function formatTime12(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  if (!isFinite(h) || !isFinite(m)) return hhmm;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
 export default function PrayerTimes() {
   const navigate = useNavigate();
   const { language, dir } = useLanguage();
