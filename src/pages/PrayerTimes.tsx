@@ -463,6 +463,7 @@ export default function PrayerTimes() {
               <QiblaCompass
                 bearing={qibla}
                 distanceKm={distance}
+                declination={declination}
                 dir={dir}
                 i18n={{
                   qiblaTitle: s.qiblaTitle,
