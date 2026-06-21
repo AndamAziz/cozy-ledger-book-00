@@ -220,6 +220,13 @@ const STR: Record<Language, PageStrings> = {
     pointPhone: 'گوشی را بچرخانید تا فلش رو به بالا قرار گیرد',
     distance: (km) => `${km} کیلومتر تا مکه`,
     aligned: 'رو به قبله',
+    accuracyLabel: 'دقت قطب‌نما',
+    accuracyGood: 'خوب',
+    accuracyLow: 'دقت پایین',
+    accuracyUnstable: 'نیاز به کالیبراسیون',
+    calibrationTip: 'جهت ناپایدار است. گوشی را چند بار به شکل عدد ۸ حرکت دهید، دور از فلز، آهنربا و وسایل الکترونیکی، تا قطب‌نما کالیبره شود.',
+    tzLabel: 'منطقه زمانی',
+    tzAuto: (z) => `به‌طور خودکار شناسایی شد (${z})`,
   },
   tr: {
     title: 'Namaz Vakitleri ve Kıble',
