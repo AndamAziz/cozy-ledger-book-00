@@ -14,8 +14,46 @@
 // use only and is pending an explicit licensing decision.
 
 const API_BASE = 'https://api.alquran.cloud/v1';
-export const RECITER_EDITION = 'ar.alafasy';
-export const RECITER_NAME = 'Mishary Rashid Alafasy';
+const AUDIO_CDN = 'https://cdn.islamic.network/quran/audio';
+
+// Available audio reciters (alquran.cloud audio editions, served from the
+// Islamic Network CDN). Audio URLs are derived per-ayah from the global ayah
+// number, so switching reciter never requires a refetch and keeps position.
+// `bitrate` reflects the kbps folder actually available for each edition.
+export interface Reciter {
+  id: string; // edition identifier
+  name: string; // English / transliterated name
+  arabicName: string;
+  bitrate: number;
+}
+
+export const RECITERS: Reciter[] = [
+  { id: 'ar.alafasy', name: 'Mishary Rashid Alafasy', arabicName: 'مشاري راشد العفاسي', bitrate: 128 },
+  { id: 'ar.abdurrahmaansudais', name: 'Abdul Rahman As-Sudais', arabicName: 'عبد الرحمن السديس', bitrate: 192 },
+  { id: 'ar.abdulbasitmurattal', name: 'Abdul Basit (Murattal)', arabicName: 'عبد الباسط عبد الصمد', bitrate: 192 },
+  { id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary', arabicName: 'محمود خليل الحصري', bitrate: 128 },
+  { id: 'ar.minshawi', name: 'Mohamed Siddiq Al-Minshawi', arabicName: 'محمد صديق المنشاوي', bitrate: 128 },
+  { id: 'ar.muhammadayyoub', name: 'Muhammad Ayyoub', arabicName: 'محمد أيوب', bitrate: 128 },
+  { id: 'ar.hudhaify', name: 'Ali Al-Hudhaify', arabicName: 'علي الحذيفي', bitrate: 128 },
+];
+
+export const DEFAULT_RECITER = 'ar.alafasy';
+// Text edition used to fetch the Arabic Uthmani script (audio is derived separately).
+export const TEXT_EDITION = 'quran-uthmani';
+
+export function getReciterName(id: string): string {
+  return RECITERS.find((r) => r.id === id)?.name ?? RECITERS[0].name;
+}
+
+// Derive the audio URL for an ayah (by its global ayah number) for any reciter.
+export function ayahAudioUrl(reciter: string, globalAyahNumber: number): string {
+  const r = RECITERS.find((x) => x.id === reciter) ?? RECITERS[0];
+  return `${AUDIO_CDN}/${r.bitrate}/${r.id}/${globalAyahNumber}.mp3`;
+}
+
+// Backwards-compatible exports.
+export const RECITER_EDITION = DEFAULT_RECITER;
+export const RECITER_NAME = RECITERS[0].name;
 
 export interface SurahMeta {
   number: number;
@@ -82,7 +120,7 @@ export async function fetchSurahDetail(
       page: number;
       sajda: boolean | { id: number };
     }>;
-  }>(`/surah/${surahNumber}/${RECITER_EDITION}`, signal);
+  }>(`/surah/${surahNumber}/${TEXT_EDITION}`, signal);
 
   return {
     number: data.number,
@@ -95,7 +133,8 @@ export async function fetchSurahDetail(
       number: a.number,
       numberInSurah: a.numberInSurah,
       text: a.text,
-      audio: a.audio,
+      // Default audio (Alafasy); the reader derives the URL per selected reciter.
+      audio: ayahAudioUrl(DEFAULT_RECITER, a.number),
       juz: a.juz,
       page: a.page,
       sajda: typeof a.sajda === 'object' ? true : Boolean(a.sajda),
@@ -108,6 +147,19 @@ export async function fetchSurahDetail(
 const FONT_SIZE_KEY = 'quran-arabic-font-size';
 const LAST_READ_KEY = 'quran-last-read';
 const BOOKMARKS_KEY = 'quran-bookmarks';
+const RECITER_KEY = 'quran-reciter';
+
+export function getStoredReciter(): string {
+  if (typeof window === 'undefined') return DEFAULT_RECITER;
+  const raw = localStorage.getItem(RECITER_KEY);
+  if (raw && RECITERS.some((r) => r.id === raw)) return raw;
+  return DEFAULT_RECITER;
+}
+
+export function setStoredReciter(id: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(RECITER_KEY, id);
+}
 
 export const MIN_FONT = 22;
 export const MAX_FONT = 56;

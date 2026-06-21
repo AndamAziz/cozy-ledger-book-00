@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Play, Pause, Bookmark, BookmarkCheck, Minus, Plus, MapPin, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, Pause, Bookmark, BookmarkCheck, Minus, Plus, MapPin, Loader2, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { SurahDetail } from '@/lib/quran';
-import { RECITER_NAME } from '@/lib/quran';
+import { RECITERS, ayahAudioUrl, getReciterName } from '@/lib/quran';
 import type { QuranStrings } from '@/lib/quranI18n';
 
 const BISMILLAH = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
@@ -20,6 +27,8 @@ interface SurahReaderProps {
   maxFont: number;
   isBookmarked: (surah: number, ayah: number) => boolean;
   toggleBookmark: (surah: number, ayah: number) => void;
+  reciter: string;
+  setReciter: (id: string) => void;
   isRTL: boolean;
   s: QuranStrings;
 }
@@ -28,7 +37,7 @@ export function SurahReader(props: SurahReaderProps) {
   const {
     surah, isLoading, isError, onRetry, onBack,
     fontSize, setFontSize, minFont, maxFont,
-    isBookmarked, toggleBookmark, isRTL, s,
+    isBookmarked, toggleBookmark, reciter, setReciter, isRTL, s,
   } = props;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -43,12 +52,14 @@ export function SurahReader(props: SurahReaderProps) {
     }
   }, [surah?.number]);
 
+  // Play current ayah; re-runs when the reciter changes so switching mid-surah
+  // swaps the audio source but keeps the same ayah (reading position preserved).
   useEffect(() => {
     const el = audioRef.current;
     if (!el || playingIndex == null || !surah) return;
-    el.src = surah.ayahs[playingIndex].audio;
+    el.src = ayahAudioUrl(reciter, surah.ayahs[playingIndex].number);
     el.play().catch(() => setPlayingIndex(null));
-  }, [playingIndex, surah]);
+  }, [playingIndex, surah, reciter]);
 
   const handleEnded = () => {
     if (!surah || playingIndex == null) return;
@@ -117,6 +128,27 @@ export function SurahReader(props: SurahReaderProps) {
         </div>
       </div>
 
+      {/* Reciter selector */}
+      <div className="flex items-center gap-2">
+        <Mic className="h-4 w-4 text-gold flex-shrink-0" />
+        <Select value={reciter} onValueChange={setReciter}>
+          <SelectTrigger className="h-9 flex-1 border-gold/40 bg-card text-sm" aria-label={s.reciter}>
+            <SelectValue placeholder={s.reciter} />
+          </SelectTrigger>
+          <SelectContent className="max-h-72">
+            {RECITERS.map((r) => (
+              <SelectItem key={r.id} value={r.id}>
+                <span className="flex items-center gap-2">
+                  <span>{r.name}</span>
+                  <span className="quran-arabic text-muted-foreground text-sm">{r.arabicName}</span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+
       {isLoading || !surah ? (
         <div className="space-y-3">
           <Skeleton className="h-24 rounded-xl" />
@@ -134,7 +166,7 @@ export function SurahReader(props: SurahReaderProps) {
               <span aria-hidden>•</span>
               <span>{surah.numberOfAyahs} {s.ayahs}</span>
               <span aria-hidden>•</span>
-              <span>{s.reciter}: {RECITER_NAME}</span>
+              <span>{s.reciter}: {getReciterName(reciter)}</span>
             </div>
             {surah.number !== 1 && surah.number !== 9 && (
               <p className="quran-arabic text-2xl text-foreground mt-4" style={{ lineHeight: 1.8 }}>{BISMILLAH}</p>

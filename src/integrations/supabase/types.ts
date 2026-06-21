@@ -693,6 +693,36 @@ export type Database = {
         }
         Relationships: []
       }
+      quran_preferences: {
+        Row: {
+          bookmarks: string[]
+          created_at: string
+          font_size: number
+          last_read: Json | null
+          reciter: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bookmarks?: string[]
+          created_at?: string
+          font_size?: number
+          last_read?: Json | null
+          reciter?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bookmarks?: string[]
+          created_at?: string
+          font_size?: number
+          last_read?: Json | null
+          reciter?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           comment: string

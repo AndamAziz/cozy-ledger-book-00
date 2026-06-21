@@ -4,13 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, BookOpen, BookMarked } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/hooks/useAuth';
 import { QURAN_I18N } from '@/lib/quranI18n';
 import {
   useSurahList,
   useSurahDetail,
-  useQuranFontSize,
-  useQuranBookmarks,
-  useLastRead,
+  useQuranPrefs,
 } from '@/hooks/useQuran';
 import type { SurahMeta } from '@/lib/quran';
 import { SurahList } from '@/components/quran/SurahList';
@@ -25,11 +24,15 @@ const Quran = () => {
 
   const [selected, setSelected] = useState<number | null>(null);
 
+  const { user } = useAuth();
   const list = useSurahList();
   const detail = useSurahDetail(selected);
-  const { fontSize, setFontSize, MIN_FONT, MAX_FONT } = useQuranFontSize();
-  const { isBookmarked, toggleBookmark } = useQuranBookmarks();
-  const { lastRead, saveLastRead } = useLastRead();
+  const {
+    fontSize, setFontSize, MIN_FONT, MAX_FONT,
+    isBookmarked, toggleBookmark,
+    lastRead, saveLastRead,
+    reciter, setReciter,
+  } = useQuranPrefs(user?.id ?? null);
 
   // Persist last-read position whenever a surah opens.
   useEffect(() => {
@@ -117,6 +120,8 @@ const Quran = () => {
             maxFont={MAX_FONT}
             isBookmarked={isBookmarked}
             toggleBookmark={toggleBookmark}
+            reciter={reciter}
+            setReciter={setReciter}
             isRTL={isRTL}
             s={s}
           />

@@ -161,7 +161,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           </div>
 
           {/* Prayer Times & Qibla + Holy Quran */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
             <button
               onClick={() => navigate('/prayer')}
               className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-gold/10 to-transparent border border-primary/30 hover:border-gold/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
