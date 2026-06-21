@@ -126,6 +126,7 @@ const T = {
     serverHint: "ئەگەر فیلمەکە کار نەکرد، سێرڤەرێکی تر تاقیبکەرەوە 👇",
     movieTag: "فیلم",
     tvTag: "زنجیرە",
+    actorTag: "ئەکتەر",
     latest: "نوێترین",
     trendingToday: "ترێندی ئەمڕۆ",
     top10: "تۆپ ١٠",
@@ -202,6 +203,7 @@ const T = {
     serverHint: "If the movie doesn't load, try another server 👇",
     movieTag: "MOVIE",
     tvTag: "TV",
+    actorTag: "ACTOR",
     latest: "Latest",
     trendingToday: "Trending Today",
     top10: "TOP 10",
@@ -295,6 +297,7 @@ interface Movie {
   popularity: string;
   type: string;
   embed_url: string;
+  fromActor?: boolean;
 }
 
 interface CastMember {
@@ -526,7 +529,7 @@ export default function Movies() {
           return true;
         })
         .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-        .map(mapTmdbResult);
+        .map((r) => ({ ...mapTmdbResult(r), fromActor: true }));
     } catch {
       return [];
     }
@@ -1032,7 +1035,7 @@ export default function Movies() {
           ) : (
             <Grid>
               {filtered.map((m, i) => (
-                <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} onClick={() => setSelected(m)} />
+                <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} t={t} onClick={() => setSelected(m)} />
               ))}
             </Grid>
           ))}
@@ -1567,7 +1570,7 @@ function Hero({
 
 
 
-function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
+function MovieCard({ movie, t, onClick }: { movie: Movie; t: Record<string, string>; onClick: () => void }) {
   const rating = parseFloat(movie.rating) || 0;
   const isTv = movie.media === "tv";
   return (
@@ -1628,6 +1631,26 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
             }}
           >
             ★ {rating.toFixed(1)}
+          </div>
+        )}
+        {/* Actor credit badge (bottom-start) */}
+        {movie.fromActor && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 8,
+              insetInlineStart: 8,
+              background: "#10b981",
+              color: "#fff",
+              fontSize: 10.5,
+              fontWeight: 900,
+              padding: "3px 9px",
+              borderRadius: 7,
+              letterSpacing: ".6px",
+              boxShadow: "0 2px 8px rgba(0,0,0,.45)",
+            }}
+          >
+            {t.actorTag}
           </div>
         )}
         {/* play overlay */}
