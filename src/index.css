@@ -368,3 +368,65 @@
   .ticker-track { animation: none; }
 }
 
+/* =====================================================================
+   Quran section — mosque-inspired, calm cream/gold light theme.
+   Scoped via .quran-scope so all semantic tokens & shadcn components
+   re-skin automatically without touching the dark app-wide theme.
+   ===================================================================== */
+.quran-scope {
+  --background: 40 44% 96%;
+  --foreground: 28 30% 18%;
+
+  --card: 40 50% 99%;
+  --card-foreground: 28 30% 18%;
+
+  --popover: 40 50% 99%;
+  --popover-foreground: 28 30% 18%;
+
+  --primary: 152 38% 30%;          /* deep emerald/green */
+  --primary-foreground: 40 50% 98%;
+
+  --secondary: 40 38% 90%;
+  --secondary-foreground: 28 30% 22%;
+
+  --muted: 40 35% 91%;
+  --muted-foreground: 30 18% 42%;
+
+  --accent: 41 70% 50%;            /* warm gold */
+  --accent-foreground: 30 50% 12%;
+
+  --gold: 41 78% 52%;
+  --gold-foreground: 30 50% 12%;
+
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 40 50% 98%;
+
+  --border: 38 32% 82%;
+  --input: 38 32% 82%;
+  --ring: 152 38% 30%;
+
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+  /* Subtle geometric Islamic-pattern accent */
+  background-image:
+    radial-gradient(hsl(41 70% 50% / 0.05) 1px, transparent 1px),
+    radial-gradient(hsl(152 38% 30% / 0.04) 1px, transparent 1px);
+  background-size: 28px 28px, 28px 28px;
+  background-position: 0 0, 14px 14px;
+}
+
+.quran-arabic {
+  font-family: 'Amiri', 'Noto Sans Arabic', serif;
+  line-height: 2.1;
+  direction: rtl;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.quran-scope .quran-divider {
+  background-image: var(--gradient-gold);
+  height: 2px;
+  opacity: 0.4;
+}
+
+
