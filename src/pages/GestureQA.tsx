@@ -166,7 +166,7 @@ export default function GestureQA() {
   return (
     <div className="min-h-[100dvh] bg-background text-foreground" dir={dir}>
       <Helmet>
-        <title>{bi('پشکنینی سواپ/پینچ', 'Swipe / Pinch QA')} — City Taxperts</title>
+        <title>{bi('پشکنینی سواپ/پینچ', 'Swipe / Pinch QA')} — Central Tech Platform</title>
         <meta
           name="description"
           content={bi(

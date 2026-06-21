@@ -71,7 +71,7 @@ export const SplashScreen = ({ timedOut = false, onRetry }: SplashScreenProps) =
             <div className="absolute inset-1 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-success flex items-center justify-center overflow-hidden">
               <img 
                 src="/app-icon.svg" 
-                alt="City Taxperts Logo" 
+                alt="Central Tech Platform Logo" 
                 className="w-16 h-16 sm:w-24 sm:h-24 object-contain drop-shadow-lg"
               />
             </div>
@@ -81,7 +81,7 @@ export const SplashScreen = ({ timedOut = false, onRetry }: SplashScreenProps) =
         {/* App Title with staggered animation */}
         <div className={`transition-all duration-700 ease-out ${showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent mb-2">
-            City Taxperts
+            Central Tech Platform
           </h1>
         </div>
 

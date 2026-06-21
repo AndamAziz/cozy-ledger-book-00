@@ -698,7 +698,7 @@ export default function Movies() {
     >
       <style>{GLOBAL_CSS}</style>
       <Helmet>
-        <title>{lang === "ku" ? "فیلمەکان 🎬 - CITY TAXPERTS" : "Movies 🎬 - CITY TAXPERTS"}</title>
+        <title>{lang === "ku" ? "فیلمەکان 🎬 - CENTRAL TECH PLATFORM" : "Movies 🎬 - CENTRAL TECH PLATFORM"}</title>
         <meta
           name="description"
           content={

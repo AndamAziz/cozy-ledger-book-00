@@ -13,10 +13,10 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
   
   const handleWhatsAppContact = () => {
     const messages = {
-      ku: `سڵاو، کاتی بەکارهێنانی ئەکاونتم (${email}) لە City Taxperts ئەپ بەسەرچووە و داوای درێژکردنەوەی دەکەم.`,
-      en: `Hello, my subscription for account (${email}) on City Taxperts app has expired. I request a renewal.`,
-      ar: `مرحباً، انتهت صلاحية اشتراك حسابي (${email}) في تطبيق City Taxperts. أطلب التجديد.`,
-      fa: `سلام، اشتراک حساب من (${email}) در اپلیکیشن City Taxperts منقضی شده است. درخواست تمدید دارم.`,
+      ku: `سڵاو، کاتی بەکارهێنانی ئەکاونتم (${email}) لە Central Tech Platform ئەپ بەسەرچووە و داوای درێژکردنەوەی دەکەم.`,
+      en: `Hello, my subscription for account (${email}) on Central Tech Platform app has expired. I request a renewal.`,
+      ar: `مرحباً، انتهت صلاحية اشتراك حسابي (${email}) في تطبيق Central Tech Platform. أطلب التجديد.`,
+      fa: `سلام، اشتراک حساب من (${email}) در اپلیکیشن Central Tech Platform منقضی شده است. درخواست تمدید دارم.`,
     };
     const message = encodeURIComponent(messages[language]);
     window.open(`https://wa.me/447482828237?text=${message}`, '_blank');

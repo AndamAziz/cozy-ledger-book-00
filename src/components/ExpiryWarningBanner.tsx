@@ -18,10 +18,10 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
 
   const handleWhatsAppContact = () => {
     const messages = {
-      ku: `سڵاو، کاتی بەکارهێنانی ئەکاونتم (${email}) لە City Taxperts ئەپ نزیکە لە بەسەرچوون و داوای درێژکردنەوەی دەکەم.`,
-      en: `Hello, my subscription for account (${email}) on City Taxperts app is about to expire. I request a renewal.`,
-      ar: `مرحباً، اشتراك حسابي (${email}) في تطبيق City Taxperts على وشك الانتهاء. أطلب التجديد.`,
-      fa: `سلام، اشتراک حساب من (${email}) در اپلیکیشن City Taxperts در حال انقضا است. درخواست تمدید دارم.`,
+      ku: `سڵاو، کاتی بەکارهێنانی ئەکاونتم (${email}) لە Central Tech Platform ئەپ نزیکە لە بەسەرچوون و داوای درێژکردنەوەی دەکەم.`,
+      en: `Hello, my subscription for account (${email}) on Central Tech Platform app is about to expire. I request a renewal.`,
+      ar: `مرحباً، اشتراك حسابي (${email}) في تطبيق Central Tech Platform على وشك الانتهاء. أطلب التجديد.`,
+      fa: `سلام، اشتراک حساب من (${email}) در اپلیکیشن Central Tech Platform در حال انقضا است. درخواست تمدید دارم.`,
     };
     const message = encodeURIComponent(messages[language]);
     window.open(`https://wa.me/447482828237?text=${message}`, '_blank');

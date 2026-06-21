@@ -30,10 +30,10 @@ export default function Trust() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Helmet>
-        <title>Trust & Security | City Taxperts</title>
+        <title>Trust & Security | Central Tech Platform</title>
         <meta
           name="description"
-          content="How City Taxperts protects your data, privacy, and account security."
+          content="How Central Tech Platform protects your data, privacy, and account security."
         />
       </Helmet>
 

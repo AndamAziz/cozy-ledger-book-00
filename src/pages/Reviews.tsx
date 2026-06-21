@@ -56,7 +56,7 @@ const Reviews = () => {
   return (
     <>
       <Helmet>
-        <title>{i18n.allReviews} - City Taxperts</title>
+        <title>{i18n.allReviews} - Central Tech Platform</title>
         <meta name="description" content={i18n.subtitle} />
       </Helmet>
 
