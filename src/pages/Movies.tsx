@@ -75,10 +75,10 @@ const T = {
     title: "فیلم",
     titleSuffix: "ەکان",
     back: "← گەڕانەوە",
-    searchPlaceholder: "گەڕان بۆ هەر فیلمێک... (ناو، وەسف، یان IMDB ID وەک tt0371746)",
+    searchPlaceholder: "گەڕان بۆ فیلم و سریال... (ناو، وەسف، یان IMDB ID وەک tt0371746)",
     smartSearch: "گەڕانی زیرەک",
     aiFound: "AI ناوی ڕاستەقینەی دۆزییەوە:",
-    noMovies: "هیچ فیلمێک نەدۆزرایەوە",
+    noMovies: "هیچ فیلم یان سریالێک نەدۆزرایەوە",
     first: "یەکەم",
     last: "کۆتایی",
     watch: "▶ سەیرکردن",
@@ -151,10 +151,10 @@ const T = {
     title: "Mov",
     titleSuffix: "ies",
     back: "← Back",
-    searchPlaceholder: "Search any movie... (name, description, or IMDB ID like tt0371746)",
+    searchPlaceholder: "Search movies & series... (name, description, or IMDB ID like tt0371746)",
     smartSearch: "Smart Search",
     aiFound: "AI found the real title:",
-    noMovies: "No movies found",
+    noMovies: "No movies or series found",
     first: "First",
     last: "Last",
     watch: "▶ Watch Now",
@@ -583,14 +583,38 @@ export default function Movies() {
       return;
     }
     if (/^tt\d{6,}$/i.test(q)) return; // handled on submit
+    let cancelled = false;
     const id = setTimeout(async () => {
       setAiSearching(true);
-      const results = await searchTmdb(q);
-      setSearchResults(results);
-      setAiSearching(false);
+      let results = await searchTmdb(q);
+      /* no hits → auto AI typo-fix / translate, then search again */
+      if (results.length === 0 && q.length >= 3) {
+        try {
+          const { data } = await supabase.functions.invoke("movies-ai", {
+            body: { action: "resolve-title", query: q },
+          });
+          if (!cancelled && data?.title) {
+            const fixed = await searchTmdb(data.title);
+            if (fixed.length > 0) {
+              setAiTitle(data.title);
+              results = fixed;
+            }
+          }
+        } catch {
+          /* ignore — keep empty */
+        }
+      }
+      if (!cancelled) {
+        setSearchResults(results);
+        setAiSearching(false);
+      }
     }, 450);
-    return () => clearTimeout(id);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
   }, [search, searchTmdb]);
+
 
   const searching = searchResults !== null;
   const baseList = searching ? searchResults! : movies;
