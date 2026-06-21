@@ -14,8 +14,43 @@
 // use only and is pending an explicit licensing decision.
 
 const API_BASE = 'https://api.alquran.cloud/v1';
-export const RECITER_EDITION = 'ar.alafasy';
-export const RECITER_NAME = 'Mishary Rashid Alafasy';
+const AUDIO_CDN = 'https://cdn.islamic.network/quran/audio/128';
+
+// Available audio reciters (alquran.cloud audio editions, served from the
+// Islamic Network CDN). Audio URLs are derived per-ayah from the global ayah
+// number, so switching reciter never requires a refetch and keeps position.
+export interface Reciter {
+  id: string; // edition identifier
+  name: string; // English / transliterated name
+  arabicName: string;
+}
+
+export const RECITERS: Reciter[] = [
+  { id: 'ar.alafasy', name: 'Mishary Rashid Alafasy', arabicName: 'مشاري راشد العفاسي' },
+  { id: 'ar.abdurrahmaansudais', name: 'Abdul Rahman As-Sudais', arabicName: 'عبد الرحمن السديس' },
+  { id: 'ar.abdulbasitmurattal', name: 'Abdul Basit (Murattal)', arabicName: 'عبد الباسط عبد الصمد' },
+  { id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary', arabicName: 'محمود خليل الحصري' },
+  { id: 'ar.minshawi', name: 'Mohamed Siddiq Al-Minshawi', arabicName: 'محمد صديق المنشاوي' },
+  { id: 'ar.muhammadayyoub', name: 'Muhammad Ayyoub', arabicName: 'محمد أيوب' },
+  { id: 'ar.hudhaify', name: 'Ali Al-Hudhaify', arabicName: 'علي الحذيفي' },
+];
+
+export const DEFAULT_RECITER = 'ar.alafasy';
+// Text edition used to fetch the Arabic Uthmani script (audio is derived separately).
+export const TEXT_EDITION = 'quran-uthmani';
+
+export function getReciterName(id: string): string {
+  return RECITERS.find((r) => r.id === id)?.name ?? RECITERS[0].name;
+}
+
+// Derive the audio URL for an ayah (by its global ayah number) for any reciter.
+export function ayahAudioUrl(reciter: string, globalAyahNumber: number): string {
+  return `${AUDIO_CDN}/${reciter}/${globalAyahNumber}.mp3`;
+}
+
+// Backwards-compatible exports.
+export const RECITER_EDITION = DEFAULT_RECITER;
+export const RECITER_NAME = RECITERS[0].name;
 
 export interface SurahMeta {
   number: number;
