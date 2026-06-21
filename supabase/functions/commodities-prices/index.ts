@@ -65,7 +65,9 @@ async function fetchGoldApiComMetals(): Promise<Record<string, number>> {
 }
 
 // ─── Live prices cache ───
-const CACHE_TTL = 1000;
+// 4s matches the free gold-api.com upstream cadence (it sends Cache-Control: max-age=4),
+// so polling faster yields duplicate data. This is the fastest *meaningful* refresh.
+const CACHE_TTL = 4000;
 let cachedPrices: Record<string, number> | null = null;
 let cacheTimestamp = 0;
 
@@ -78,7 +80,16 @@ const OIL_API_CACHE_TTL = 3 * 60 * 1000; // 3 minutes (max 20 req/hour on demo)
 const GOLDAPI_METALS = ["XAU", "XAG", "XPT", "XPD"];
 let metalsSpotCache: Record<string, number> | null = null;
 let metalsSpotCacheTs = 0;
-const METALS_SPOT_CACHE_TTL = 30 * 1000; // 30s — spot prices, keeps API calls low
+// 4s — free gold-api.com refreshes ~every 4s. Quota-limited keyed sources are NOT
+// called at this cadence; they are isolated behind KEYED_METALS_TTL below.
+const METALS_SPOT_CACHE_TTL = 4 * 1000;
+
+// ─── Keyed metals fallback cache (goldapi.io / TwelveData — limited quotas) ───
+// Only used to fill metals the free source can't provide. Cached far longer so the
+// fast 4s spot refresh never burns the monthly/daily quotas on these keyed APIs.
+let keyedMetalsCache: Record<string, number> | null = null;
+let keyedMetalsCacheTs = 0;
+const KEYED_METALS_TTL = 60 * 1000; // 60s
 
 function parseStooqPrice(csv: string): number | null {
   const lines = csv.trim().split(/\r?\n/);
