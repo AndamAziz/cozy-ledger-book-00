@@ -49,9 +49,10 @@ export function useMetalsData() {
     };
 
     load();
-    // Poll every 1s when market open (hits the cached backend feed, so the
-    // displayed spot price stays fresh without extra upstream cost), 60s closed.
-    const getInterval = () => isCommoditiesMarketOpen() ? 1000 : 60000;
+    // Poll every 4s when market open — the free spot source (gold-api.com) refreshes
+    // ~every 4s (Cache-Control: max-age=4), so this is the fastest interval that yields
+    // genuinely new prices without wasted requests. 60s when closed.
+    const getInterval = () => isCommoditiesMarketOpen() ? 4000 : 60000;
     let timer = window.setInterval(load, getInterval());
 
     const checkTimer = window.setInterval(() => {
