@@ -438,9 +438,9 @@ export default function Movies() {
 
   const searchByImdbId = useCallback(async (imdbId: string) => {
     try {
-      const r = await fetch(
-        `https://api.themoviedb.org/3/find/${imdbId}?api_key=${TMDB_KEY}&external_source=imdb_id`,
-      );
+      const r = await tmdbFetch(`find/${imdbId}`, {
+        external_source: "imdb_id",
+      });
       const d = await r.json();
       const tv = d?.tv_results?.[0];
       const mv = d?.movie_results?.[0];
@@ -476,10 +476,12 @@ export default function Movies() {
 
   const searchTmdb = useCallback(async (q: string): Promise<Movie[]> => {
     try {
-      const r = await fetch(
-        `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}` +
-          `&query=${encodeURIComponent(q)}&include_adult=false&language=en-US&page=1`,
-      );
+      const r = await tmdbFetch("search/multi", {
+        query: q,
+        include_adult: false,
+        language: "en-US",
+        page: 1,
+      });
       const d = await r.json();
       const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
       return list
