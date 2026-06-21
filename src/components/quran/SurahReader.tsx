@@ -42,7 +42,9 @@ export function SurahReader(props: SurahReaderProps) {
   const {
     surah, isLoading, isError, onRetry, onBack,
     fontSize, setFontSize, minFont, maxFont,
-    isBookmarked, toggleBookmark, reciter, setReciter, isRTL, s,
+    isBookmarked, toggleBookmark, reciter, setReciter,
+    translation, translationLoading, translationError,
+    showTranslation, onToggleTranslation, isRTL, s,
   } = props;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
