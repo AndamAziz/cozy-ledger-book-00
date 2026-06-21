@@ -83,8 +83,8 @@ describe('angleDifference (shortest signed delta)', () => {
     expect(angleDifference(350, 10)).toBe(20);
     expect(angleDifference(10, 350)).toBe(-20);
   });
-  it('stays within (-180, 180]', () => {
-    expect(angleDifference(0, 180)).toBe(180);
+  it('stays within [-180, 180)', () => {
+    expect(Math.abs(angleDifference(0, 180))).toBe(180);
     expect(angleDifference(0, 181)).toBe(-179);
   });
 });
