@@ -249,14 +249,22 @@ export function setStoredShowTranslation(value: boolean): void {
 
 export function getStoredReciter(): string {
   if (typeof window === 'undefined') return DEFAULT_RECITER;
-  const raw = localStorage.getItem(RECITER_KEY);
-  if (raw && RECITERS.some((r) => r.id === raw)) return raw;
+  try {
+    const raw = localStorage.getItem(RECITER_KEY);
+    if (raw && RECITERS.some((r) => r.id === raw)) return raw;
+  } catch {
+    // Storage may be unavailable (e.g. Safari private mode).
+  }
   return DEFAULT_RECITER;
 }
 
 export function setStoredReciter(id: string): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(RECITER_KEY, id);
+  try {
+    localStorage.setItem(RECITER_KEY, id);
+  } catch {
+    // Ignore quota/availability errors (e.g. Safari private mode).
+  }
 }
 
 export const MIN_FONT = 22;
