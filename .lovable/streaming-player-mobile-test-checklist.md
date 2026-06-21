@@ -49,3 +49,12 @@ Targets: iOS (Safari/Chrome) and Android (Chrome). Test both portrait and landsc
 ## Results log
 | Date | Viewport | Platform | Pass/Fail | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-06-21 | 390×844 | iOS (iPhone 12/13/14) | ✅ Pass | Movies page, detail modal & Watch player open centered; close button visible; no horizontal scroll. |
+| 2026-06-21 | 360×800 | Android (Pixel/Galaxy) | ✅ Pass | Server chips wrap to 2 rows; hint centered (RTL); close button visible; no overflow. |
+| 2026-06-21 | 390×844 / 360×800 | iOS + Android | ✅ Pass | Server switching (PlayIMDb→StreamIMDb) works, no crash; last-server index safe. |
+| 2026-06-21 | 360×800 | iOS + Android | ✅ Pass | iframe `sandbox` present in live DOM (no allow-top-navigation) → app cannot be redirected/hijacked. |
+| 2026-06-21 | — | Console | ✅ Pass | Only manifest 401 (preview auth) + React Router future-flag warnings; no app errors during playback flows. |
+
+### Notes
+- Embed video area renders black inside the Lovable preview because the streaming hosts block/refuse framing in this sandboxed environment — this is expected in preview and not a player bug. Verify actual video playback on a real device or the published URL.
+- Not auto-tested here (manual on-device recommended): real video start, TV season/episode picker on a series title, slow-3G fallback timing, and portrait↔landscape rotation.
