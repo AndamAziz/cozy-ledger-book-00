@@ -35,13 +35,13 @@ export interface Reciter {
 }
 
 export const RECITERS: Reciter[] = [
-  { id: 'ar.alafasy', name: 'Mishary Rashid Alafasy', arabicName: 'مشاري راشد العفاسي', bitrate: 128 },
-  { id: 'ar.abdurrahmaansudais', name: 'Abdul Rahman As-Sudais', arabicName: 'عبد الرحمن السديس', bitrate: 192 },
-  { id: 'ar.abdulbasitmurattal', name: 'Abdul Basit (Murattal)', arabicName: 'عبد الباسط عبد الصمد', bitrate: 192 },
-  { id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary', arabicName: 'محمود خليل الحصري', bitrate: 128 },
-  { id: 'ar.minshawi', name: 'Mohamed Siddiq Al-Minshawi', arabicName: 'محمد صديق المنشاوي', bitrate: 128 },
-  { id: 'ar.muhammadayyoub', name: 'Muhammad Ayyoub', arabicName: 'محمد أيوب', bitrate: 128 },
-  { id: 'ar.hudhaify', name: 'Ali Al-Hudhaify', arabicName: 'علي الحذيفي', bitrate: 128 },
+  { id: 'ar.alafasy', name: 'Mishary Rashid Alafasy', shortName: 'Alafasy', arabicName: 'مشاري راشد العفاسي', bitrate: 128 },
+  { id: 'ar.abdurrahmaansudais', name: 'Abdul Rahman As-Sudais', shortName: 'Sudais', arabicName: 'عبد الرحمن السديس', bitrate: 192 },
+  { id: 'ar.abdulbasitmurattal', name: 'Abdul Basit (Murattal)', shortName: 'Abdul Basit', arabicName: 'عبد الباسط عبد الصمد', bitrate: 192 },
+  { id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary', shortName: 'Al-Husary', arabicName: 'محمود خليل الحصري', bitrate: 128 },
+  { id: 'ar.minshawi', name: 'Mohamed Siddiq Al-Minshawi', shortName: 'Minshawi', arabicName: 'محمد صديق المنشاوي', bitrate: 128 },
+  { id: 'ar.muhammadayyoub', name: 'Muhammad Ayyoub', shortName: 'Ayyoub', arabicName: 'محمد أيوب', bitrate: 128 },
+  { id: 'ar.hudhaify', name: 'Ali Al-Hudhaify', shortName: 'Hudhaify', arabicName: 'علي الحذيفي', bitrate: 128 },
 ];
 
 export const DEFAULT_RECITER = 'ar.alafasy';
