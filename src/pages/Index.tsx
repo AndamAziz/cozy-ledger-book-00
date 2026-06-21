@@ -160,8 +160,8 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             </button>
           </div>
 
-          {/* Prayer Times & Qibla */}
-          <div className="mb-3 sm:mb-5 no-print">
+          {/* Prayer Times & Qibla + Holy Quran */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
             <button
               onClick={() => navigate('/prayer')}
               className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-gold/10 to-transparent border border-primary/30 hover:border-gold/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
@@ -171,7 +171,17 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               </div>
               <span className="font-bold text-foreground text-xs sm:text-sm truncate">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
             </button>
+            <button
+              onClick={() => navigate('/quran')}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-gold/20 via-primary/10 to-transparent border border-gold/30 hover:border-gold/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
+            >
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-primary flex items-center justify-center shadow-md shadow-gold/30 flex-shrink-0">
+                <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">📖 {QURAN_LABEL[language] || QURAN_LABEL.en}</span>
+            </button>
           </div>
+
 
 
 
