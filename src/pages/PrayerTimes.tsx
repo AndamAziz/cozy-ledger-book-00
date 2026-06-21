@@ -336,7 +336,7 @@ export default function PrayerTimes() {
   // Determine next prayer + countdown
   const { nextKey, countdown } = useMemo(() => {
     if (!data) return { nextKey: null as PrayerKey | null, countdown: '' };
-    const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+    const nowMin = nowMinutesInTz(resolvedTz, now);
     // Only the 5 obligatory prayers count for "next" (skip Sunrise as a prayer but keep it for highlight logic order)
     const order: PrayerKey[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
     let next: PrayerKey | null = null;
