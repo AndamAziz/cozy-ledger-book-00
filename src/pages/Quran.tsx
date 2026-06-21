@@ -4,13 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, BookOpen, BookMarked } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/hooks/useAuth';
 import { QURAN_I18N } from '@/lib/quranI18n';
 import {
   useSurahList,
   useSurahDetail,
-  useQuranFontSize,
-  useQuranBookmarks,
-  useLastRead,
+  useQuranPrefs,
 } from '@/hooks/useQuran';
 import type { SurahMeta } from '@/lib/quran';
 import { SurahList } from '@/components/quran/SurahList';
