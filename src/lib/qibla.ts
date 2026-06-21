@@ -1,4 +1,5 @@
 // Qibla direction utilities — great-circle (initial) bearing to the Kaaba.
+import geomagnetism from 'geomagnetism';
 
 // Kaaba coordinates (Masjid al-Haram, Mecca)
 export const KAABA_LAT = 21.4225;
