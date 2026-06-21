@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { TelegramHealthCard } from './TelegramHealthCard';
 import { ReviewModeration } from './ReviewModeration';
+import { normalizeBrandText } from '@/lib/brand';
 
 interface UserApproval {
   id: string;
@@ -131,6 +132,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       // Mark admins but KEEP them in the list so they appear under the Admin filter
       const usersWithAdminStatus = data?.map(u => ({
         ...u,
+        company_name: normalizeBrandText(u.company_name),
         isAdmin: adminUserIds.has(u.user_id)
       })) || [];
       
@@ -591,8 +593,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   };
 
   const filteredUsers = users.filter(user => {
+    const displayCompanyName = normalizeBrandText(user.company_name);
     const matchesSearch = user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (user.company_name && user.company_name.toLowerCase().includes(searchQuery.toLowerCase()));
+      (displayCompanyName && displayCompanyName.toLowerCase().includes(searchQuery.toLowerCase()));
     
     if (!matchesSearch) return false;
     
