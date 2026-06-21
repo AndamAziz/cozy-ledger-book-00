@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Play, Pause, Bookmark, BookmarkCheck, Minus, Plus, MapPin, Loader2, Mic } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, Pause, Bookmark, BookmarkCheck, Minus, Plus, MapPin, Loader2, Mic, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -29,6 +29,11 @@ interface SurahReaderProps {
   toggleBookmark: (surah: number, ayah: number) => void;
   reciter: string;
   setReciter: (id: string) => void;
+  translation: string[] | undefined;
+  translationLoading: boolean;
+  translationError: boolean;
+  showTranslation: boolean;
+  onToggleTranslation: () => void;
   isRTL: boolean;
   s: QuranStrings;
 }
