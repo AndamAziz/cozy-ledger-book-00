@@ -152,10 +152,10 @@ export function usePrayerTimes(method: number, timezone?: string) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch timings whenever location or method changes.
+  // Fetch timings whenever location, method, or timezone changes.
   useEffect(() => {
-    if (location) fetchByCoords(location, method);
-  }, [location, method, fetchByCoords]);
+    if (location) fetchByCoords(location, method, tz);
+  }, [location, method, tz, fetchByCoords]);
 
   // Refresh at midnight (new day -> new times).
   useEffect(() => {
@@ -164,10 +164,10 @@ export function usePrayerTimes(method: number, timezone?: string) {
     midnight.setHours(24, 0, 30, 0);
     const ms = midnight.getTime() - now.getTime();
     const timer = setTimeout(() => {
-      if (location) fetchByCoords(location, method);
+      if (location) fetchByCoords(location, method, tz);
     }, ms);
     return () => clearTimeout(timer);
-  }, [location, method, fetchByCoords]);
+  }, [location, method, tz, fetchByCoords]);
 
   return {
     location,
