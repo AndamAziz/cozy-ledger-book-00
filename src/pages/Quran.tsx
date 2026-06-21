@@ -24,11 +24,15 @@ const Quran = () => {
 
   const [selected, setSelected] = useState<number | null>(null);
 
+  const { user } = useAuth();
   const list = useSurahList();
   const detail = useSurahDetail(selected);
-  const { fontSize, setFontSize, MIN_FONT, MAX_FONT } = useQuranFontSize();
-  const { isBookmarked, toggleBookmark } = useQuranBookmarks();
-  const { lastRead, saveLastRead } = useLastRead();
+  const {
+    fontSize, setFontSize, MIN_FONT, MAX_FONT,
+    isBookmarked, toggleBookmark,
+    lastRead, saveLastRead,
+    reciter, setReciter,
+  } = useQuranPrefs(user?.id ?? null);
 
   // Persist last-read position whenever a surah opens.
   useEffect(() => {
