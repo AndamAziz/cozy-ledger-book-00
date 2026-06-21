@@ -249,6 +249,19 @@ export function SurahReader(props: SurahReaderProps) {
                   <p className="quran-arabic text-foreground" style={{ fontSize: `${fontSize}px`, lineHeight: 2.1 }}>
                     {text}
                   </p>
+                  {showTranslation && (
+                    <div className="mt-3 pt-3 border-t border-border/60" dir="rtl">
+                      {translationLoading ? (
+                        <Skeleton className="h-4 w-3/4" />
+                      ) : translationError ? (
+                        <p className="text-xs text-destructive">{s.translationError}</p>
+                      ) : translation && translation[index] ? (
+                        <p className="quran-kurdish text-sm leading-relaxed text-muted-foreground">
+                          {translation[index]}
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               );
             })}
