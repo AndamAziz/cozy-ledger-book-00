@@ -96,11 +96,9 @@ export function QiblaCompass({ bearing, distanceKm, declination, dir, i18n }: Qi
     }
 
     // Prefer the absolute (true Earth-frame) event when available, fall back to relative.
-    if ('ondeviceorientationabsolute' in window) {
-      window.addEventListener('deviceorientationabsolute', handleOrientation as EventListener, true);
-    } else {
-      window.addEventListener('deviceorientation', handleOrientation as EventListener, true);
-    }
+    const eventName =
+      'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+    window.addEventListener(eventName, handleOrientation as EventListener, true);
     setEnabled(true);
 
     // If no sensor data arrives shortly, fall back to the static bearing display.
