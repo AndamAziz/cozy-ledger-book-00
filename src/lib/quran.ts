@@ -174,12 +174,44 @@ function cleanTranslation(html: string): string {
     .trim();
 }
 
+// Persistent translation cache (localStorage). Surah translations never change,
+// so once fetched a surah is stored and reused across reloads/sessions — no
+// repeated network calls. Bump CACHE_VERSION if the translation source changes.
+const TRANSLATION_CACHE_VERSION = 1;
+const translationCacheKey = (surahNumber: number) =>
+  `quran-tr-${KURDISH_TRANSLATION_ID}-v${TRANSLATION_CACHE_VERSION}-${surahNumber}`;
+
+function getCachedTranslation(surahNumber: number): string[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(translationCacheKey(surahNumber));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? (parsed as string[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedTranslation(surahNumber: number, data: string[]): void {
+  if (typeof window === 'undefined' || data.length === 0) return;
+  try {
+    localStorage.setItem(translationCacheKey(surahNumber), JSON.stringify(data));
+  } catch {
+    // Storage full / unavailable — ignore; in-memory React Query cache still applies.
+  }
+}
+
 // Fetch the Kurdish (Tafsîrî Asan) translation for a surah. The returned array
 // is indexed by ayah position (index 0 = ayah 1), matching SurahDetail.ayahs.
+// Reads from localStorage first to avoid redundant network requests.
 export async function fetchSurahTranslation(
   surahNumber: number,
   signal?: AbortSignal,
 ): Promise<string[]> {
+  const cached = getCachedTranslation(surahNumber);
+  if (cached) return cached;
+
   const res = await fetch(
     `${QURAN_COM_API}/quran/translations/${KURDISH_TRANSLATION_ID}?chapter_number=${surahNumber}`,
     { signal },
@@ -188,7 +220,9 @@ export async function fetchSurahTranslation(
     throw new Error(`Translation API error (${res.status})`);
   }
   const json = (await res.json()) as { translations: Array<{ text: string }> };
-  return (json.translations ?? []).map((t) => cleanTranslation(t.text));
+  const data = (json.translations ?? []).map((t) => cleanTranslation(t.text));
+  setCachedTranslation(surahNumber, data);
+  return data;
 }
 
 
