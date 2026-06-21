@@ -19,6 +19,8 @@ const ALLOWED_PATHS: RegExp[] = [
   /^(movie|tv)\/[0-9]+\/videos$/,
   /^find\/tt[0-9]+$/i,
   /^search\/multi$/,
+  /^search\/person$/,
+  /^person\/[0-9]+\/combined_credits$/,
   /^trending\/all\/(day|week)$/,
 ];
 

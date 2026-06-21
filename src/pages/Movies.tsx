@@ -75,7 +75,7 @@ const T = {
     title: "فیلم",
     titleSuffix: "ەکان",
     back: "← گەڕانەوە",
-    searchPlaceholder: "گەڕان بۆ فیلم و سریال... (ناو، وەسف، یان IMDB ID وەک tt0371746)",
+    searchPlaceholder: "گەڕان بە ناوی فیلم، سریال، یان ئەکتەر...",
     smartSearch: "گەڕانی زیرەک",
     aiFound: "AI ناوی ڕاستەقینەی دۆزییەوە:",
     noMovies: "هیچ فیلم یان سریالێک نەدۆزرایەوە",
@@ -151,7 +151,7 @@ const T = {
     title: "Mov",
     titleSuffix: "ies",
     back: "← Back",
-    searchPlaceholder: "Search movies & series... (name, description, or IMDB ID like tt0371746)",
+    searchPlaceholder: "Search by movie, series, or actor name...",
     smartSearch: "Smart Search",
     aiFound: "AI found the real title:",
     noMovies: "No movies or series found",
@@ -508,6 +508,30 @@ export default function Movies() {
   // ---- POWERFUL CATALOG SEARCH (movies + TV series, full TMDB database) ----
 
 
+  // Fetch all movies & series an actor/person appeared in (by their TMDB id).
+  const searchPersonCredits = useCallback(async (personId: number): Promise<Movie[]> => {
+    try {
+      const r = await tmdbFetch(`person/${personId}/combined_credits`);
+      const d = await r.json();
+      const cast: TmdbSearchResult[] = Array.isArray(d.cast) ? d.cast : [];
+      const crew: TmdbSearchResult[] = Array.isArray(d.crew) ? d.crew : [];
+      const all = [...cast, ...crew];
+      const seen = new Set<string>();
+      return all
+        .filter((m) => (m.media_type === "movie" || m.media_type === "tv") && m.poster_path)
+        .filter((m) => {
+          const key = `${m.media_type}-${m.id}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+        .map(mapTmdbResult);
+    } catch {
+      return [];
+    }
+  }, []);
+
   const searchTmdb = useCallback(async (q: string): Promise<Movie[]> => {
     try {
       const r = await tmdbFetch("search/multi", {
@@ -518,14 +542,42 @@ export default function Movies() {
       });
       const d = await r.json();
       const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
-      return list
+
+      // Direct movie/series title matches.
+      const titleMatches = list
         .filter((m) => (m.media_type === "movie" || m.media_type === "tv") && m.poster_path)
         .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
         .map(mapTmdbResult);
+
+      // Actor / person matches → pull all their movies & series.
+      const people = list
+        .filter((m) => m.media_type === "person")
+        .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+        .slice(0, 2);
+
+      let personMovies: Movie[] = [];
+      if (people.length > 0) {
+        const creditLists = await Promise.all(
+          people.map((p) => searchPersonCredits(p.id)),
+        );
+        personMovies = creditLists.flat();
+      }
+
+      // Merge, dedupe by media+id, keep title matches first.
+      const merged: Movie[] = [];
+      const seen = new Set<string>();
+      for (const m of [...titleMatches, ...personMovies]) {
+        const key = `${m.media}-${m.tmdb_id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push(m);
+      }
+      return merged;
     } catch {
       return [];
     }
-  }, []);
+  }, [searchPersonCredits]);
+
 
   const clearSearch = useCallback(() => {
     setSearch("");
