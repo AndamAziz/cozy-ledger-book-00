@@ -198,6 +198,19 @@ const FONT_SIZE_KEY = 'quran-arabic-font-size';
 const LAST_READ_KEY = 'quran-last-read';
 const BOOKMARKS_KEY = 'quran-bookmarks';
 const RECITER_KEY = 'quran-reciter';
+const SHOW_TRANSLATION_KEY = 'quran-show-translation';
+
+export function getStoredShowTranslation(): boolean {
+  if (typeof window === 'undefined') return true;
+  const raw = localStorage.getItem(SHOW_TRANSLATION_KEY);
+  // Default ON so the newly added Kurdish translation is visible.
+  return raw == null ? true : raw === '1';
+}
+
+export function setStoredShowTranslation(value: boolean): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(SHOW_TRANSLATION_KEY, value ? '1' : '0');
+}
 
 export function getStoredReciter(): string {
   if (typeof window === 'undefined') return DEFAULT_RECITER;
