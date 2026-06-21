@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { SurahDetail } from '@/lib/quran';
-import { RECITERS, ayahAudioUrl, getReciterName } from '@/lib/quran';
+import { RECITERS, ayahAudioUrl, bismillahAudioUrl, surahNeedsBismillah, getReciterName } from '@/lib/quran';
 import type { QuranStrings } from '@/lib/quranI18n';
 
 const BISMILLAH = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
@@ -42,27 +42,44 @@ export function SurahReader(props: SurahReaderProps) {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
+  // When true, the Bismillah clip plays BEFORE the audio for the current
+  // playingIndex. Used to prepend Bismillah ahead of ayah 1 for every surah
+  // except Al-Fatiha (1) and At-Tawbah (9).
+  const [bismillahPending, setBismillahPending] = useState(false);
   const BackIcon = isRTL ? ArrowRight : ArrowLeft;
 
   // Reset audio when surah changes
   useEffect(() => {
     setPlayingIndex(null);
+    setBismillahPending(false);
     if (audioRef.current) {
       audioRef.current.pause();
     }
   }, [surah?.number]);
 
-  // Play current ayah; re-runs when the reciter changes so switching mid-surah
-  // swaps the audio source but keeps the same ayah (reading position preserved).
+  // Play the current segment. Re-runs when the reciter changes so switching
+  // mid-surah swaps the audio source but keeps the same position (Bismillah or
+  // ayah). When bismillahPending is true we play the standalone Bismillah clip
+  // first; handleEnded then clears the flag to play the actual ayah.
   useEffect(() => {
     const el = audioRef.current;
     if (!el || playingIndex == null || !surah) return;
-    el.src = ayahAudioUrl(reciter, surah.ayahs[playingIndex].number);
-    el.play().catch(() => setPlayingIndex(null));
-  }, [playingIndex, surah, reciter]);
+    el.src = bismillahPending
+      ? bismillahAudioUrl(reciter)
+      : ayahAudioUrl(reciter, surah.ayahs[playingIndex].number);
+    el.play().catch(() => {
+      setPlayingIndex(null);
+      setBismillahPending(false);
+    });
+  }, [playingIndex, surah, reciter, bismillahPending]);
 
   const handleEnded = () => {
     if (!surah || playingIndex == null) return;
+    // Finished the Bismillah clip → now play ayah 1 (same index).
+    if (bismillahPending) {
+      setBismillahPending(false);
+      return;
+    }
     const next = playingIndex + 1;
     if (next < surah.ayahs.length) {
       setPlayingIndex(next);
@@ -71,12 +88,21 @@ export function SurahReader(props: SurahReaderProps) {
     }
   };
 
+  // Start playback at a given ayah index, prepending Bismillah when the surah
+  // requires it and we are starting at its first ayah.
+  const startAt = (index: number) => {
+    const needsBismillah = !!surah && surahNeedsBismillah(surah.number) && index === 0;
+    setBismillahPending(needsBismillah);
+    setPlayingIndex(index);
+  };
+
   const togglePlayAll = () => {
     if (playingIndex != null) {
       audioRef.current?.pause();
       setPlayingIndex(null);
+      setBismillahPending(false);
     } else {
-      setPlayingIndex(0);
+      startAt(0);
     }
   };
 
@@ -84,8 +110,9 @@ export function SurahReader(props: SurahReaderProps) {
     if (playingIndex === index) {
       audioRef.current?.pause();
       setPlayingIndex(null);
+      setBismillahPending(false);
     } else {
-      setPlayingIndex(index);
+      startAt(index);
     }
   };
 

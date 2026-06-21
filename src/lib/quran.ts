@@ -51,6 +51,22 @@ export function ayahAudioUrl(reciter: string, globalAyahNumber: number): string 
   return `${AUDIO_CDN}/${r.bitrate}/${r.id}/${globalAyahNumber}.mp3`;
 }
 
+// Global ayah number 1 (Al-Fatiha:1) is the standalone Bismillah recitation.
+// The per-ayah audio files for ayah 1 of every OTHER surah do NOT contain the
+// Bismillah, so we prepend this clip to keep recitation religiously accurate.
+const BISMILLAH_GLOBAL_AYAH = 1;
+
+export function bismillahAudioUrl(reciter: string): string {
+  return ayahAudioUrl(reciter, BISMILLAH_GLOBAL_AYAH);
+}
+
+// Every surah begins with Bismillah recited before ayah 1, EXCEPT:
+//  - Surah 1 (Al-Fatiha): Bismillah IS ayah 1, so it plays naturally.
+//  - Surah 9 (At-Tawbah): the one surah that does not begin with Bismillah.
+export function surahNeedsBismillah(surahNumber: number): boolean {
+  return surahNumber !== 1 && surahNumber !== 9;
+}
+
 // Backwards-compatible exports.
 export const RECITER_EDITION = DEFAULT_RECITER;
 export const RECITER_NAME = RECITERS[0].name;
