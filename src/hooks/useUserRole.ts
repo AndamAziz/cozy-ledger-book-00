@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
+import { normalizeBrandText } from '@/lib/brand';
 
 interface ApprovalStatus {
   isApproved: boolean;
@@ -91,7 +92,7 @@ export function useUserRole(user: User | null) {
             expiresAt,
             isExpired,
             daysUntilExpiry,
-            companyName: approvalData.company_name,
+            companyName: normalizeBrandText(approvalData.company_name),
             isActive,
           });
         } else {

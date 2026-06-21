@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { normalizeBrandText } from '@/lib/brand';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -91,7 +92,7 @@ export function useAuth() {
         setTimeout(async () => {
           await supabase
             .from('user_approvals')
-            .update({ company_name: companyName })
+            .update({ company_name: normalizeBrandText(companyName) })
             .eq('user_id', data.user!.id);
         }, 100);
       }
