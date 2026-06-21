@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, MessageCircle, LogOut, Calendar, Shield } from 'lucide-react';
+import { AlertTriangle, MessageCircle, LogOut, Calendar, Shield, Send } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ExpiredSubscriptionProps {
