@@ -151,7 +151,7 @@ const T = {
     title: "Mov",
     titleSuffix: "ies",
     back: "← Back",
-    searchPlaceholder: "Search movies & series... (name, description, or IMDB ID like tt0371746)",
+    searchPlaceholder: "Search by movie, series, or actor name...",
     smartSearch: "Smart Search",
     aiFound: "AI found the real title:",
     noMovies: "No movies or series found",
