@@ -29,6 +29,7 @@ export const KURDISH_TRANSLATION_AUTHOR = 'Burhan Muhammad-Amin';
 export interface Reciter {
   id: string; // edition identifier
   name: string; // English / transliterated name
+  shortName: string; // compact label for small UI buttons
   arabicName: string;
   bitrate: number;
 }
