@@ -74,3 +74,34 @@ export function magneticDeclination(lat: number, lng: number): number {
   }
 }
 
+/**
+ * Convert a *magnetic* compass heading to a *true*-north heading using the
+ * local magnetic declination (degrees east of true North is positive).
+ * Result is normalised to 0–360.
+ */
+export function magneticToTrue(magneticHeading: number, declination: number): number {
+  return (((magneticHeading + declination) % 360) + 360) % 360;
+}
+
+/** Shortest signed angular difference a→b in degrees, range (-180, 180]. */
+export function angleDifference(a: number, b: number): number {
+  return ((b - a + 540) % 360) - 180;
+}
+
+/**
+ * On-screen angle of the Qibla needle relative to where the phone currently
+ * points (its top edge). 0° means the Qibla is straight ahead (arrow up).
+ *
+ * Sign convention: rotating the phone clockwise (heading increases) must make
+ * the needle rotate counter-clockwise on screen (relative angle decreases), so
+ * the needle keeps pointing at the same real-world direction.
+ */
+export function relativeQiblaAngle(bearing: number, heading: number): number {
+  return (((bearing - heading) % 360) + 360) % 360;
+}
+
+/** True when the relative Qibla angle is within `tol` degrees of straight ahead. */
+export function isAlignedToQibla(relative: number, tol = 6): boolean {
+  return relative < tol || relative > 360 - tol;
+}
+
