@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import CryptoTracker from "./pages/CryptoTracker";
 import Movies from "./pages/Movies";
 import PrayerTimes from "./pages/PrayerTimes";
+import Quran from "./pages/Quran";
 import GestureQA from "./pages/GestureQA";
 import Bots from "./pages/Bots";
 import BotDetail from "./pages/BotDetail";
