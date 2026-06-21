@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, MessageCircle, LogOut, Calendar, Shield } from 'lucide-react';
+import { AlertTriangle, MessageCircle, LogOut, Calendar, Shield, Send } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ExpiredSubscriptionProps {
@@ -96,9 +96,25 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
               </div>
             </Button>
 
-            <p className="text-center text-xs text-muted-foreground mb-6">
+            <p className="text-center text-xs text-muted-foreground mb-4">
               {t('phoneNumber')}: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
             </p>
+
+            {/* Telegram (CEO) Contact Button */}
+            <Button
+              onClick={() => window.open('https://t.me/ANDAMAZIZ', '_blank')}
+              className="w-full py-7 text-lg font-bold rounded-xl shadow-xl bg-[#229ED9] hover:bg-[#1c8cc2] text-white hover:scale-[1.02] transition-all duration-300 mb-2"
+            >
+              <div className="flex items-center gap-3">
+                <Send className="h-6 w-6" />
+                Telegram (CEO)
+              </div>
+            </Button>
+
+            <p className="text-center text-xs text-muted-foreground mb-6">
+              Telegram: <span dir="ltr" className="font-mono">@ANDAMAZIZ</span>
+            </p>
+
 
             {/* Logout Button */}
             <Button 
