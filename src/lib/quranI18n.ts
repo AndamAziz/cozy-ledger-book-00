@@ -28,6 +28,10 @@ export interface QuranStrings {
   ayah: string;
   bismillah: string;
   translationNote: string;
+  showTranslation: string;
+  hideTranslation: string;
+  translationLabel: string;
+  translationError: string;
 }
 
 export const QURAN_I18N: Record<Language, QuranStrings> = {
