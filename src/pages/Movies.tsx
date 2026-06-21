@@ -355,8 +355,10 @@ export default function Movies() {
 
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const [genre, setGenre] = useState("all");
   const [search, setSearch] = useState("");
   const [aiSearching, setAiSearching] = useState(false);
@@ -392,7 +394,8 @@ export default function Movies() {
 
   const fetchMovies = useCallback(
     async (p: number, media: "movie" | "tv", g: string) => {
-      setLoading(true);
+      if (p === 1) setLoading(true);
+      else setLoadingMore(true);
       try {
         let r: Response;
         if (g && g !== "all") {
@@ -413,13 +416,22 @@ export default function Movies() {
         const items: Movie[] = (Array.isArray(data.results) ? data.results : [])
           .filter((x: TmdbSearchResult) => x.poster_path)
           .map((x: TmdbSearchResult) => mapTmdbResult({ ...x, media_type: media }));
-        setMovies(items);
         setTotalPages(Math.min(data.total_pages || 1, 200));
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (p === 1) {
+          setMovies(items);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          /* append, de-duplicating by tmdb_id */
+          setMovies((prev) => {
+            const seen = new Set(prev.map((m) => m.tmdb_id));
+            return [...prev, ...items.filter((m) => !seen.has(m.tmdb_id))];
+          });
+        }
       } catch {
-        setMovies([]);
+        if (p === 1) setMovies([]);
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     },
     [],
@@ -433,6 +445,28 @@ export default function Movies() {
   useEffect(() => {
     setPage(1);
   }, [mediaTab, genre]);
+
+  /* infinite scroll — load next page when sentinel scrolls into view */
+  useEffect(() => {
+    if (view === "search") return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          !loading &&
+          !loadingMore &&
+          page < totalPages
+        ) {
+          setPage((p) => p + 1);
+        }
+      },
+      { rootMargin: "600px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [view, loading, loadingMore, page, totalPages]);
 
 
 
@@ -927,8 +961,33 @@ export default function Movies() {
             </Grid>
           ))}
 
-        {/* Pagination (catalog views only) */}
-        {view !== "search" && <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />}
+        {/* Infinite scroll sentinel + loader (catalog views only) */}
+        {view !== "search" && !loading && filtered.length > 0 && (
+          <>
+            {loadingMore && (
+              <Grid>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={`more-${i}`}>
+                    <div
+                      className="mv-skel"
+                      style={{ width: "100%", aspectRatio: "2/3", borderRadius: 14 }}
+                    />
+                    <div
+                      className="mv-skel"
+                      style={{ height: 12, borderRadius: 6, marginTop: 8, width: "80%" }}
+                    />
+                  </div>
+                ))}
+              </Grid>
+            )}
+            <div ref={sentinelRef} style={{ height: 1 }} aria-hidden />
+            {page >= totalPages && (
+              <div style={{ textAlign: "center", padding: "24px 0", color: C.muted, fontSize: 13 }}>
+                ✦
+              </div>
+            )}
+          </>
+        )}
       </main>
 
       {/* ===== Bottom Navigation Bar ===== */}
@@ -1557,61 +1616,6 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
 }
 
 
-function Pagination({
-  page,
-  totalPages,
-  onChange,
-  t,
-}: {
-  page: number;
-  totalPages: number;
-  onChange: (p: number) => void;
-  t: (typeof T)["ku"];
-}) {
-  const btn = (label: string, p: number, disabled: boolean, active = false) => (
-    <button
-      onClick={() => !disabled && onChange(p)}
-      disabled={disabled}
-      style={{
-        background: active ? C.gold : C.panel,
-        color: active ? "#0A0A0F" : disabled ? "#55556a" : C.text,
-        border: `1px solid ${active ? C.gold : C.border}`,
-        borderRadius: 10,
-        padding: "8px 14px",
-        minWidth: 42,
-        cursor: disabled ? "not-allowed" : "pointer",
-        fontWeight: 700,
-        fontSize: 14,
-      }}
-    >
-      {label}
-    </button>
-  );
-
-  const pages: number[] = [];
-  const start = Math.max(1, page - 2);
-  const end = Math.min(totalPages, start + 4);
-  for (let i = start; i <= end; i++) pages.push(i);
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: 8,
-        justifyContent: "center",
-        alignItems: "center",
-        marginTop: 30,
-        flexWrap: "wrap",
-      }}
-    >
-      {btn(t.first, 1, page === 1)}
-      {btn("‹", page - 1, page === 1)}
-      {pages.map((p) => btn(String(p), p, false, p === page))}
-      {btn("›", page + 1, page === totalPages)}
-      {btn(t.last, totalPages, page === totalPages)}
-    </div>
-  );
-}
 
 // ====== Modal ======
 type Tab = "info" | "cast" | "ai" | "subs";
