@@ -583,14 +583,38 @@ export default function Movies() {
       return;
     }
     if (/^tt\d{6,}$/i.test(q)) return; // handled on submit
+    let cancelled = false;
     const id = setTimeout(async () => {
       setAiSearching(true);
-      const results = await searchTmdb(q);
-      setSearchResults(results);
-      setAiSearching(false);
+      let results = await searchTmdb(q);
+      /* no hits → auto AI typo-fix / translate, then search again */
+      if (results.length === 0 && q.length >= 3) {
+        try {
+          const { data } = await supabase.functions.invoke("movies-ai", {
+            body: { action: "resolve-title", query: q },
+          });
+          if (!cancelled && data?.title) {
+            const fixed = await searchTmdb(data.title);
+            if (fixed.length > 0) {
+              setAiTitle(data.title);
+              results = fixed;
+            }
+          }
+        } catch {
+          /* ignore — keep empty */
+        }
+      }
+      if (!cancelled) {
+        setSearchResults(results);
+        setAiSearching(false);
+      }
     }, 450);
-    return () => clearTimeout(id);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
   }, [search, searchTmdb]);
+
 
   const searching = searchResults !== null;
   const baseList = searching ? searchResults! : movies;
