@@ -1081,33 +1081,7 @@ export type Database = {
       }
     }
     Views: {
-      public_reviews: {
-        Row: {
-          comment: string | null
-          created_at: string | null
-          id: string | null
-          is_approved: boolean | null
-          rating: number | null
-          reviewer_name: string | null
-        }
-        Insert: {
-          comment?: string | null
-          created_at?: string | null
-          id?: string | null
-          is_approved?: boolean | null
-          rating?: number | null
-          reviewer_name?: string | null
-        }
-        Update: {
-          comment?: string | null
-          created_at?: string | null
-          id?: string | null
-          is_approved?: boolean | null
-          rating?: number | null
-          reviewer_name?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       delete_email: {
