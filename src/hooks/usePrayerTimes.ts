@@ -113,21 +113,27 @@ export function usePrayerTimes(method: number) {
     );
   }, []);
 
-  const setManualCity = useCallback(async (city: string, country: string, m: number) => {
+  const setManualCity = useCallback(async (city: string, country: string, _m: number) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        `https://api.aladhan.com/v1/timingsByCity/${todayStr()}?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=${m}`
+      // Geocode the city to real coordinates (Aladhan's city meta is unreliable
+      // for Qibla/distance). Open-Meteo geocoding is free and key-less.
+      const geoRes = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=10&language=en&format=json`
       );
-      if (!res.ok) throw new Error('network');
-      const json = await res.json();
-      if (json.code !== 200) throw new Error('notfound');
-      const meta = json.data.meta;
+      if (!geoRes.ok) throw new Error('network');
+      const geo = await geoRes.json();
+      const results: Array<{ latitude: number; longitude: number; name: string; country?: string }> = geo.results || [];
+      if (results.length === 0) throw new Error('notfound');
+      // Prefer a result whose country matches the user's input, else first.
+      const wanted = country.trim().toLowerCase();
+      const match =
+        results.find((r) => (r.country || '').toLowerCase().includes(wanted)) || results[0];
       const loc: PrayerLocation = {
-        latitude: meta.latitude,
-        longitude: meta.longitude,
-        label: `${city}, ${country}`,
+        latitude: match.latitude,
+        longitude: match.longitude,
+        label: `${match.name}${match.country ? ', ' + match.country : ''}`,
         source: 'city',
       };
       saveCachedLocation(loc);
