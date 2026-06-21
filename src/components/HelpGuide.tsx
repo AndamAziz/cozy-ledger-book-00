@@ -27,6 +27,7 @@ interface GuideSection {
 interface GuideContent {
   title: string;
   subtitle: string;
+  tabLabel: string;
   sections: GuideSection[];
 }
 
