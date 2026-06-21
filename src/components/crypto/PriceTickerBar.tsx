@@ -17,6 +17,8 @@ const FX_FLAG: Record<string, string> = {
   EUR: "🇪🇺", GBP: "🇬🇧", JPY: "🇯🇵", CHF: "🇨🇭", CAD: "🇨🇦", AUD: "🇦🇺",
 };
 
+const MIN_ITEMS_FOR_SEAMLESS_LOOP = 24;
+
 interface TickerItem {
   key: string;
   emoji: string;
@@ -96,16 +98,22 @@ export function PriceTickerBar() {
     return out;
   }, [metals, currencies, crypto]);
 
-  // Slow, readable speed: ~5s per item for the full (single) list.
-  const durationSec = Math.max(50, items.length * 5);
+  const visibleItems = useMemo(() => {
+    if (items.length === 0) return [];
+    const copies = Math.max(2, Math.ceil(MIN_ITEMS_FOR_SEAMLESS_LOOP / items.length));
+    return Array.from({ length: copies }, () => items).flat();
+  }, [items]);
+
+  // Slow, readable speed: ~4.5s per visible item for the full duplicated loop.
+  const durationSec = Math.max(70, visibleItems.length * 4.5);
 
   const renderRow = (ariaHidden: boolean) =>
-    items.map((it) => {
+    visibleItems.map((it, index) => {
       const up = (it.changePct ?? 0) >= 0;
       return (
         <div
-          key={(ariaHidden ? "b:" : "a:") + it.key}
-          className="flex items-center gap-2 px-5 whitespace-nowrap"
+          key={`${ariaHidden ? "b" : "a"}:${it.key}:${index}`}
+          className="flex shrink-0 items-center gap-2 px-4 sm:px-5 whitespace-nowrap"
         >
           <span className="text-base leading-none">{it.emoji}</span>
           <span className="text-sm font-bold text-foreground">{it.label}</span>
@@ -130,7 +138,7 @@ export function PriceTickerBar() {
   if (items.length === 0) return null;
 
   return (
-    <div className="ticker-mask relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl py-2.5 mb-3 sm:mb-5 no-print">
+    <div className="ticker-mask relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl py-2.5 mb-3 sm:mb-5 no-print" dir="ltr">
       <div
         className={cn("ticker-track", dir === "rtl" && "ticker-track-rtl")}
         dir="ltr"

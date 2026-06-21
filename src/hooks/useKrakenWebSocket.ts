@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { TRACKED_PAIRS } from '@/lib/krakenApi';
+import { TRACKED_PAIRS, normalizeKrakenPair } from '@/lib/krakenApi';
 
 interface TickerUpdate {
   pair: string;
@@ -79,7 +79,7 @@ export function useKrakenWebSocket({ onTickerUpdate, onOHLCUpdate, ohlcPair, ohl
       if (!Array.isArray(data)) return;
 
       const channelName = data[data.length - 2];
-      const pair = data[data.length - 1];
+      const pair = normalizeKrakenPair(data[data.length - 1]);
 
       if (channelName === 'ticker' && onTickerRef.current) {
         const ticker = data[1];

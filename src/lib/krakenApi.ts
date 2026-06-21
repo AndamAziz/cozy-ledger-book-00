@@ -76,6 +76,10 @@ export function getSymbolFromPair(pair: string): string {
   return pair.replace('/USD', '');
 }
 
+export function normalizeKrakenPair(pair: string): string {
+  return pair === 'XDG/USD' ? 'DOGE/USD' : pair;
+}
+
 export function getDisplaySymbol(symbol: string): string {
   return symbol === 'XBT' ? 'BTC' : symbol;
 }
@@ -89,6 +93,7 @@ const REST_PAIR_MAP: Record<string, string> = {
   'XBT/USD': 'XXBTZUSD',
   'ETH/USD': 'XETHZUSD',
   'XRP/USD': 'XXRPZUSD',
+  'DOGE/USD': 'XDGUSD',
   'LTC/USD': 'XLTCZUSD',
   'XLM/USD': 'XXLMZUSD',
   'XTZ/USD': 'XTZUSD',
