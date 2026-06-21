@@ -1902,23 +1902,23 @@ function MovieModal({
             aria-label={t.close}
             style={{
               position: "absolute",
-              top: 14,
-              right: 14,
+              top: 48,
+              left: 26,
               zIndex: 4,
-              width: 46,
-              height: 46,
+              width: 34,
+              height: 34,
               borderRadius: "50%",
               background: "rgba(0,0,0,.72)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
               color: "#fff",
-              border: "2px solid rgba(255,255,255,0.32)",
+              border: "1.5px solid rgba(255,255,255,0.3)",
               cursor: "pointer",
-              fontSize: 22,
+              fontSize: 17,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 8px 24px rgba(0,0,0,.62)",
+              boxShadow: "0 5px 16px rgba(0,0,0,.58)",
               transition: "transform .18s, background .18s, box-shadow .18s",
               lineHeight: 1,
               padding: 0,
@@ -1931,7 +1931,7 @@ function MovieModal({
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "rgba(0,0,0,.72)";
               e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.62)";
+              e.currentTarget.style.boxShadow = "0 5px 16px rgba(0,0,0,.58)";
             }}
             onMouseDown={(e) => {
               e.currentTarget.style.transform = "scale(0.92)";
