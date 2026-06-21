@@ -2590,7 +2590,7 @@ function PlayerOverlay({
               }}
             >
               {servers.map((s, i) => {
-                const on = i === active;
+                const on = i === safeActive;
                 return (
                   <button
                     key={s.name}
