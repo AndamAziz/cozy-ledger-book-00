@@ -4,34 +4,46 @@
   "description": "Central Tech Platform - سیستەمی بەڕێوەبردنی دارایی و کۆگا",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1e3a8a",
-  "theme_color": "#1e3a8a",
+  "background_color": "#0a1f3a",
+  "theme_color": "#0a1f3a",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/app-icon-192.png",
+      "src": "/app-icon-192.png?v=4",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/app-icon-512.png",
+      "src": "/app-icon-512.png?v=4",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/apple-touch-icon.png",
+      "src": "/maskable-icon-192.png?v=4",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/maskable-icon-512.png?v=4",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png?v=4",
       "type": "image/png",
       "sizes": "180x180"
     },
     {
-      "src": "/favicon-32x32.png",
+      "src": "/favicon-32x32.png?v=4",
       "type": "image/png",
       "sizes": "32x32"
     },
     {
-      "src": "/favicon-16x16.png",
+      "src": "/favicon-16x16.png?v=4",
       "type": "image/png",
       "sizes": "16x16"
     }
