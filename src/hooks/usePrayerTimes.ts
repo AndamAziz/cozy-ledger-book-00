@@ -47,19 +47,23 @@ function saveCachedLocation(loc: PrayerLocation) {
   } catch { /* noop */ }
 }
 
-export function usePrayerTimes(method: number) {
+export function usePrayerTimes(method: number, timezone?: string) {
   const [location, setLocation] = useState<PrayerLocation | null>(() => loadCachedLocation());
   const [data, setData] = useState<PrayerTimesData | null>(null);
   const [loading, setLoading] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchByCoords = useCallback(async (loc: PrayerLocation, m: number) => {
+  const tz = timezone || detectTimezone();
+
+  const fetchByCoords = useCallback(async (loc: PrayerLocation, m: number, zone: string) => {
     setLoading(true);
     setError(null);
     try {
+      // Pin both the request date and the returned timings to the chosen zone so
+      // the schedule is correct even when the device clock is in another zone.
       const res = await fetch(
-        `https://api.aladhan.com/v1/timings/${todayStr()}?latitude=${loc.latitude}&longitude=${loc.longitude}&method=${m}`
+        `https://api.aladhan.com/v1/timings/${dateStrInTz(zone)}?latitude=${loc.latitude}&longitude=${loc.longitude}&method=${m}&timezonestring=${encodeURIComponent(zone)}`
       );
       if (!res.ok) throw new Error('network');
       const json = await res.json();
