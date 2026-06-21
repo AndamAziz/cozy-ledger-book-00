@@ -551,6 +551,11 @@ export default function PrayerTimes() {
                   pointPhone: s.pointPhone,
                   distance: s.distance,
                   aligned: s.aligned,
+                  accuracyLabel: s.accuracyLabel,
+                  accuracyGood: s.accuracyGood,
+                  accuracyLow: s.accuracyLow,
+                  accuracyUnstable: s.accuracyUnstable,
+                  calibrationTip: s.calibrationTip,
                 }}
               />
             </div>
