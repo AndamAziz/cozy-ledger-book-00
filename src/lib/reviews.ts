@@ -2,7 +2,7 @@ export type ReviewLang = 'ku' | 'en' | 'ar' | 'fa' | 'tr';
 
 export interface Review {
   id: string;
-  user_id: string;
+  user_id?: string;
   reviewer_name: string;
   rating: number;
   comment: string;
