@@ -136,7 +136,7 @@ const Quran = () => {
         )}
 
         <p className="text-center text-[10px] text-muted-foreground mt-8">
-          Source: alquran.cloud · Quran text (public domain) · Audio: Islamic Network CDN
+          Source: alquran.cloud · Quran text (public domain) · Audio: Islamic Network CDN · Kurdish: Tafsîrî Asan (Burhan Muhammad-Amin) via quran.com
         </p>
       </div>
     </div>
