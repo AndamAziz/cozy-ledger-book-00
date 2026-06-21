@@ -299,7 +299,14 @@ export default function PrayerTimes() {
   });
   useEffect(() => { localStorage.setItem(METHOD_STORAGE_KEY, String(method)); }, [method]);
 
-  const { location, data, loading, permissionDenied, error, requestGps, setManualCity } = usePrayerTimes(method);
+  // Time zone: stored preference ('auto' or an IANA id) → resolved concrete zone.
+  const [tzPref, setTzPref] = useState<string>(() => getStoredPrayerTz());
+  useEffect(() => { setStoredPrayerTz(tzPref); }, [tzPref]);
+  const resolvedTz = useMemo(() => resolveTimezone(tzPref), [tzPref]);
+  const detectedTz = useMemo(() => detectTimezone(), []);
+  const tzList = useMemo(() => listTimezones(), []);
+
+  const { location, data, loading, permissionDenied, error, requestGps, setManualCity } = usePrayerTimes(method, resolvedTz);
 
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
