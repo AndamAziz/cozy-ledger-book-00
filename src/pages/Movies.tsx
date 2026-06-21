@@ -1019,8 +1019,8 @@ function Grid({ children }: { children: React.ReactNode }) {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-        gap: 16,
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 12,
       }}
     >
       {children}
