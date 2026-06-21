@@ -203,6 +203,7 @@ const T = {
     serverHint: "If the movie doesn't load, try another server 👇",
     movieTag: "MOVIE",
     tvTag: "TV",
+    actorTag: "ACTOR",
     latest: "Latest",
     trendingToday: "Trending Today",
     top10: "TOP 10",
