@@ -44,6 +44,17 @@ export function useSurahDetail(surahNumber: number | null) {
   });
 }
 
+export function useSurahTranslation(surahNumber: number | null) {
+  return useQuery({
+    queryKey: ['quran', 'translation', surahNumber],
+    queryFn: ({ signal }) => fetchSurahTranslation(surahNumber as number, signal),
+    enabled: surahNumber != null,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
+  });
+}
+
+
 interface RemotePrefs {
   bookmarks: string[];
   last_read: LastRead | null;
