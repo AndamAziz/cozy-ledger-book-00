@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   fetchSurahList,
   fetchSurahDetail,
+  fetchSurahTranslation,
   getStoredFontSize,
   setStoredFontSize,
   getBookmarks,
@@ -14,6 +15,8 @@ import {
   setLastRead,
   getStoredReciter,
   setStoredReciter,
+  getStoredShowTranslation,
+  setStoredShowTranslation,
   DEFAULT_FONT,
   DEFAULT_RECITER,
   RECITERS,
@@ -41,6 +44,17 @@ export function useSurahDetail(surahNumber: number | null) {
   });
 }
 
+export function useSurahTranslation(surahNumber: number | null) {
+  return useQuery({
+    queryKey: ['quran', 'translation', surahNumber],
+    queryFn: ({ signal }) => fetchSurahTranslation(surahNumber as number, signal),
+    enabled: surahNumber != null,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
+  });
+}
+
+
 interface RemotePrefs {
   bookmarks: string[];
   last_read: LastRead | null;
@@ -62,6 +76,7 @@ export function useQuranPrefs(userId: string | null) {
   const [bookmarks, setBookmarksState] = useState<string[]>(() => getBookmarks());
   const [lastRead, setLastReadState] = useState<LastRead | null>(() => getLastRead());
   const [reciter, setReciterState] = useState<string>(() => getStoredReciter());
+  const [showTranslation, setShowTranslationState] = useState<boolean>(() => getStoredShowTranslation());
   const [synced, setSynced] = useState(false);
 
   const userIdRef = useRef<string | null>(userId);
@@ -202,6 +217,15 @@ export function useQuranPrefs(userId: string | null) {
     [persistRemote],
   );
 
+  // Translation visibility is a local UI preference (localStorage only).
+  const toggleTranslation = useCallback(() => {
+    setShowTranslationState((prev) => {
+      const next = !prev;
+      setStoredShowTranslation(next);
+      return next;
+    });
+  }, []);
+
   return {
     fontSize,
     setFontSize,
@@ -212,6 +236,8 @@ export function useQuranPrefs(userId: string | null) {
     saveLastRead,
     reciter,
     setReciter,
+    showTranslation,
+    toggleTranslation,
     synced,
     DEFAULT_FONT,
     DEFAULT_RECITER,

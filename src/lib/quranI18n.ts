@@ -28,6 +28,10 @@ export interface QuranStrings {
   ayah: string;
   bismillah: string;
   translationNote: string;
+  showTranslation: string;
+  hideTranslation: string;
+  translationLabel: string;
+  translationError: string;
 }
 
 export const QURAN_I18N: Record<Language, QuranStrings> = {
@@ -55,7 +59,11 @@ export const QURAN_I18N: Record<Language, QuranStrings> = {
     surah: 'سورەت',
     ayah: 'ئایەت',
     bismillah: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-    translationNote: 'وەرگێڕانی کوردی دواتر زیاد دەکرێت.',
+    translationNote: 'وەرگێڕانی کوردی: تەفسیری ئاسان — بورهان محمد ئەمین.',
+    showTranslation: 'پیشاندانی وەرگێڕان',
+    hideTranslation: 'شاردنەوەی وەرگێڕان',
+    translationLabel: 'وەرگێڕانی کوردی',
+    translationError: 'وەرگێڕان بار نەکرا',
   },
   en: {
     title: 'The Holy Quran',
@@ -81,7 +89,11 @@ export const QURAN_I18N: Record<Language, QuranStrings> = {
     surah: 'Surah',
     ayah: 'Ayah',
     bismillah: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-    translationNote: 'Kurdish translation will be added later.',
+    translationNote: 'Kurdish translation: Tafsîrî Asan — Burhan Muhammad-Amin.',
+    showTranslation: 'Show translation',
+    hideTranslation: 'Hide translation',
+    translationLabel: 'Kurdish translation',
+    translationError: 'Failed to load translation',
   },
   ar: {
     title: 'القرآن الكريم',
@@ -107,7 +119,11 @@ export const QURAN_I18N: Record<Language, QuranStrings> = {
     surah: 'سورة',
     ayah: 'آية',
     bismillah: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-    translationNote: 'ستتم إضافة الترجمة الكردية لاحقًا.',
+    translationNote: 'الترجمة الكردية: تفسيري آسان — برهان محمد أمين.',
+    showTranslation: 'إظهار الترجمة',
+    hideTranslation: 'إخفاء الترجمة',
+    translationLabel: 'الترجمة الكردية',
+    translationError: 'فشل تحميل الترجمة',
   },
   fa: {
     title: 'قرآن کریم',
@@ -133,7 +149,11 @@ export const QURAN_I18N: Record<Language, QuranStrings> = {
     surah: 'سوره',
     ayah: 'آیه',
     bismillah: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-    translationNote: 'ترجمه کردی بعداً اضافه خواهد شد.',
+    translationNote: 'ترجمه کردی: تفسیری آسان — برهان محمد امین.',
+    showTranslation: 'نمایش ترجمه',
+    hideTranslation: 'پنهان کردن ترجمه',
+    translationLabel: 'ترجمه کردی',
+    translationError: 'بارگذاری ترجمه ناموفق بود',
   },
   tr: {
     title: 'Kur’an-ı Kerim',
@@ -159,6 +179,10 @@ export const QURAN_I18N: Record<Language, QuranStrings> = {
     surah: 'Sure',
     ayah: 'Ayet',
     bismillah: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-    translationNote: 'Kürtçe çeviri daha sonra eklenecektir.',
+    translationNote: 'Kürtçe çeviri: Tafsîrî Asan — Burhan Muhammad-Amin.',
+    showTranslation: 'Çeviriyi göster',
+    hideTranslation: 'Çeviriyi gizle',
+    translationLabel: 'Kürtçe çeviri',
+    translationError: 'Çeviri yüklenemedi',
   },
 };

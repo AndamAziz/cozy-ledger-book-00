@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Play, Pause, Bookmark, BookmarkCheck, Minus, Plus, MapPin, Loader2, Mic } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, Pause, Bookmark, BookmarkCheck, Minus, Plus, MapPin, Loader2, Mic, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -29,6 +29,11 @@ interface SurahReaderProps {
   toggleBookmark: (surah: number, ayah: number) => void;
   reciter: string;
   setReciter: (id: string) => void;
+  translation: string[] | undefined;
+  translationLoading: boolean;
+  translationError: boolean;
+  showTranslation: boolean;
+  onToggleTranslation: () => void;
   isRTL: boolean;
   s: QuranStrings;
 }
@@ -37,7 +42,9 @@ export function SurahReader(props: SurahReaderProps) {
   const {
     surah, isLoading, isError, onRetry, onBack,
     fontSize, setFontSize, minFont, maxFont,
-    isBookmarked, toggleBookmark, reciter, setReciter, isRTL, s,
+    isBookmarked, toggleBookmark, reciter, setReciter,
+    translation, translationLoading, translationError,
+    showTranslation, onToggleTranslation, isRTL, s,
   } = props;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -155,7 +162,7 @@ export function SurahReader(props: SurahReaderProps) {
         </div>
       </div>
 
-      {/* Reciter selector */}
+      {/* Reciter selector + translation toggle */}
       <div className="flex items-center gap-2">
         <Mic className="h-4 w-4 text-gold flex-shrink-0" />
         <Select value={reciter} onValueChange={setReciter}>
@@ -173,7 +180,18 @@ export function SurahReader(props: SurahReaderProps) {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant={showTranslation ? 'default' : 'outline'}
+          size="sm"
+          onClick={onToggleTranslation}
+          className={showTranslation ? 'bg-gold text-background hover:bg-gold/90 flex-shrink-0' : 'border-gold/40 flex-shrink-0'}
+          aria-pressed={showTranslation}
+        >
+          <Languages className="h-4 w-4 me-1" />
+          {showTranslation ? s.hideTranslation : s.showTranslation}
+        </Button>
       </div>
+
 
 
       {isLoading || !surah ? (
@@ -231,6 +249,19 @@ export function SurahReader(props: SurahReaderProps) {
                   <p className="quran-arabic text-foreground" style={{ fontSize: `${fontSize}px`, lineHeight: 2.1 }}>
                     {text}
                   </p>
+                  {showTranslation && (
+                    <div className="mt-3 pt-3 border-t border-border/60" dir="rtl">
+                      {translationLoading ? (
+                        <Skeleton className="h-4 w-3/4" />
+                      ) : translationError ? (
+                        <p className="text-xs text-destructive">{s.translationError}</p>
+                      ) : translation && translation[index] ? (
+                        <p className="quran-kurdish text-sm leading-relaxed text-muted-foreground">
+                          {translation[index]}
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               );
             })}

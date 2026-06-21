@@ -9,12 +9,18 @@
 //  - The Quran's Arabic text is in the public domain (sourced via
 //    Tanzil / GlobalQuran). Audio is served from the Islamic Network CDN.
 //
-// NOTE: Kurdish translation intentionally NOT bundled yet — the
-// Tanzil "Tafsiri Asan" translation is licensed for non-commercial
-// use only and is pending an explicit licensing decision.
+// Kurdish translation: "Tafsîrî Asan" by Burhan Muhammad-Amin, served via
+// the quran.com API (resource id 81). Sorani Kurdish, intended for free
+// distribution (dawah). Shown alongside the Arabic text as an optional layer.
 
 const API_BASE = 'https://api.alquran.cloud/v1';
 const AUDIO_CDN = 'https://cdn.islamic.network/quran/audio';
+const QURAN_COM_API = 'https://api.quran.com/api/v4';
+
+// Kurdish translation resource on quran.com.
+export const KURDISH_TRANSLATION_ID = 81;
+export const KURDISH_TRANSLATION_NAME = 'Tafsîrî Asan';
+export const KURDISH_TRANSLATION_AUTHOR = 'Burhan Muhammad-Amin';
 
 // Available audio reciters (alquran.cloud audio editions, served from the
 // Islamic Network CDN). Audio URLs are derived per-ayah from the global ayah
@@ -158,12 +164,53 @@ export async function fetchSurahDetail(
   };
 }
 
+// Strip any HTML markup (e.g. footnote <sup> tags) the translation API may
+// embed, leaving clean reading text.
+function cleanTranslation(html: string): string {
+  return html
+    .replace(/<sup[^>]*>.*?<\/sup>/gis, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Fetch the Kurdish (Tafsîrî Asan) translation for a surah. The returned array
+// is indexed by ayah position (index 0 = ayah 1), matching SurahDetail.ayahs.
+export async function fetchSurahTranslation(
+  surahNumber: number,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const res = await fetch(
+    `${QURAN_COM_API}/quran/translations/${KURDISH_TRANSLATION_ID}?chapter_number=${surahNumber}`,
+    { signal },
+  );
+  if (!res.ok) {
+    throw new Error(`Translation API error (${res.status})`);
+  }
+  const json = (await res.json()) as { translations: Array<{ text: string }> };
+  return (json.translations ?? []).map((t) => cleanTranslation(t.text));
+}
+
+
 // ---- Local persistence (bookmarks, last read, font size) ----
 
 const FONT_SIZE_KEY = 'quran-arabic-font-size';
 const LAST_READ_KEY = 'quran-last-read';
 const BOOKMARKS_KEY = 'quran-bookmarks';
 const RECITER_KEY = 'quran-reciter';
+const SHOW_TRANSLATION_KEY = 'quran-show-translation';
+
+export function getStoredShowTranslation(): boolean {
+  if (typeof window === 'undefined') return true;
+  const raw = localStorage.getItem(SHOW_TRANSLATION_KEY);
+  // Default ON so the newly added Kurdish translation is visible.
+  return raw == null ? true : raw === '1';
+}
+
+export function setStoredShowTranslation(value: boolean): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(SHOW_TRANSLATION_KEY, value ? '1' : '0');
+}
 
 export function getStoredReciter(): string {
   if (typeof window === 'undefined') return DEFAULT_RECITER;
