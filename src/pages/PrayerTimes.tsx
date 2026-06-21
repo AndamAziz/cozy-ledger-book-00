@@ -179,6 +179,13 @@ const STR: Record<Language, PageStrings> = {
     pointPhone: 'أدر هاتفك حتى يشير السهم للأعلى',
     distance: (km) => `${km} كم إلى مكة`,
     aligned: 'باتجاه القبلة',
+    accuracyLabel: 'دقة البوصلة',
+    accuracyGood: 'جيدة',
+    accuracyLow: 'دقة منخفضة',
+    accuracyUnstable: 'تحتاج إلى معايرة',
+    calibrationTip: 'الاتجاه غير مستقر. حرّك هاتفك على شكل الرقم ٨ عدة مرات، بعيداً عن المعادن والمغناطيس والأجهزة الإلكترونية، لمعايرة البوصلة.',
+    tzLabel: 'المنطقة الزمنية',
+    tzAuto: (z) => `تم اكتشافها تلقائياً (${z})`,
   },
   fa: {
     title: 'اوقات نماز و قبله',
