@@ -1,31 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { dateStrInTz, detectTimezone } from '@/lib/prayerTz';
+import type { PrayerLocation, PrayerTimesData } from '@/lib/prayer';
 
-// Aladhan calculation methods. 3 = Muslim World League (default for Kurdistan/Iraq).
-export const CALC_METHODS = [
-  { id: 3, key: 'mwl' },
-  { id: 4, key: 'ummAlQura' },
-  { id: 2, key: 'isna' },
-  { id: 5, key: 'egypt' },
-  { id: 1, key: 'karachi' },
-] as const;
-
-export type PrayerKey = 'Fajr' | 'Sunrise' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha';
-export const PRAYER_ORDER: PrayerKey[] = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-
-export interface PrayerLocation {
-  latitude: number;
-  longitude: number;
-  label?: string;
-  source: 'gps' | 'city' | 'cache';
-}
-
-export interface PrayerTimesData {
-  timings: Record<PrayerKey, string>; // "HH:MM" 24h
-  dateReadable: string;
-  hijri: string;
-  method: number;
-}
+// Re-export constants/types so existing importers keep working. These come from
+// a pure module (no hooks/components) so this hook file stays a clean Fast
+// Refresh boundary — see src/lib/prayer.ts for the rationale.
+export { CALC_METHODS, PRAYER_ORDER } from '@/lib/prayer';
+export type { PrayerKey, PrayerLocation, PrayerTimesData } from '@/lib/prayer';
 
 const LOCATION_CACHE_KEY = 'prayer:location:v2';
 
