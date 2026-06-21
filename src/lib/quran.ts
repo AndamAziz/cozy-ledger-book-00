@@ -14,25 +14,27 @@
 // use only and is pending an explicit licensing decision.
 
 const API_BASE = 'https://api.alquran.cloud/v1';
-const AUDIO_CDN = 'https://cdn.islamic.network/quran/audio/128';
+const AUDIO_CDN = 'https://cdn.islamic.network/quran/audio';
 
 // Available audio reciters (alquran.cloud audio editions, served from the
 // Islamic Network CDN). Audio URLs are derived per-ayah from the global ayah
 // number, so switching reciter never requires a refetch and keeps position.
+// `bitrate` reflects the kbps folder actually available for each edition.
 export interface Reciter {
   id: string; // edition identifier
   name: string; // English / transliterated name
   arabicName: string;
+  bitrate: number;
 }
 
 export const RECITERS: Reciter[] = [
-  { id: 'ar.alafasy', name: 'Mishary Rashid Alafasy', arabicName: 'مشاري راشد العفاسي' },
-  { id: 'ar.abdurrahmaansudais', name: 'Abdul Rahman As-Sudais', arabicName: 'عبد الرحمن السديس' },
-  { id: 'ar.abdulbasitmurattal', name: 'Abdul Basit (Murattal)', arabicName: 'عبد الباسط عبد الصمد' },
-  { id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary', arabicName: 'محمود خليل الحصري' },
-  { id: 'ar.minshawi', name: 'Mohamed Siddiq Al-Minshawi', arabicName: 'محمد صديق المنشاوي' },
-  { id: 'ar.muhammadayyoub', name: 'Muhammad Ayyoub', arabicName: 'محمد أيوب' },
-  { id: 'ar.hudhaify', name: 'Ali Al-Hudhaify', arabicName: 'علي الحذيفي' },
+  { id: 'ar.alafasy', name: 'Mishary Rashid Alafasy', arabicName: 'مشاري راشد العفاسي', bitrate: 128 },
+  { id: 'ar.abdurrahmaansudais', name: 'Abdul Rahman As-Sudais', arabicName: 'عبد الرحمن السديس', bitrate: 192 },
+  { id: 'ar.abdulbasitmurattal', name: 'Abdul Basit (Murattal)', arabicName: 'عبد الباسط عبد الصمد', bitrate: 192 },
+  { id: 'ar.husary', name: 'Mahmoud Khalil Al-Husary', arabicName: 'محمود خليل الحصري', bitrate: 128 },
+  { id: 'ar.minshawi', name: 'Mohamed Siddiq Al-Minshawi', arabicName: 'محمد صديق المنشاوي', bitrate: 128 },
+  { id: 'ar.muhammadayyoub', name: 'Muhammad Ayyoub', arabicName: 'محمد أيوب', bitrate: 128 },
+  { id: 'ar.hudhaify', name: 'Ali Al-Hudhaify', arabicName: 'علي الحذيفي', bitrate: 128 },
 ];
 
 export const DEFAULT_RECITER = 'ar.alafasy';
@@ -45,7 +47,8 @@ export function getReciterName(id: string): string {
 
 // Derive the audio URL for an ayah (by its global ayah number) for any reciter.
 export function ayahAudioUrl(reciter: string, globalAyahNumber: number): string {
-  return `${AUDIO_CDN}/${reciter}/${globalAyahNumber}.mp3`;
+  const r = RECITERS.find((x) => x.id === reciter) ?? RECITERS[0];
+  return `${AUDIO_CDN}/${r.bitrate}/${r.id}/${globalAyahNumber}.mp3`;
 }
 
 // Backwards-compatible exports.
