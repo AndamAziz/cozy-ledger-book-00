@@ -351,7 +351,7 @@ export default function PrayerTimes() {
     const sec = Math.floor((diff * 60) % 60);
     const cd = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
     return { nextKey: next, countdown: cd };
-  }, [data, now]);
+  }, [data, now, resolvedTz]);
 
   const qibla = location ? qiblaBearing(location.latitude, location.longitude) : 0;
   const distance = location ? qiblaDistanceKm(location.latitude, location.longitude) : 0;
