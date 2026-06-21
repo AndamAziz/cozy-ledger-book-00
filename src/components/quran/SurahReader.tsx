@@ -162,7 +162,7 @@ export function SurahReader(props: SurahReaderProps) {
         </div>
       </div>
 
-      {/* Reciter selector */}
+      {/* Reciter selector + translation toggle */}
       <div className="flex items-center gap-2">
         <Mic className="h-4 w-4 text-gold flex-shrink-0" />
         <Select value={reciter} onValueChange={setReciter}>
@@ -180,7 +180,18 @@ export function SurahReader(props: SurahReaderProps) {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant={showTranslation ? 'default' : 'outline'}
+          size="sm"
+          onClick={onToggleTranslation}
+          className={showTranslation ? 'bg-gold text-background hover:bg-gold/90 flex-shrink-0' : 'border-gold/40 flex-shrink-0'}
+          aria-pressed={showTranslation}
+        >
+          <Languages className="h-4 w-4 me-1" />
+          {showTranslation ? s.hideTranslation : s.showTranslation}
+        </Button>
       </div>
+
 
 
       {isLoading || !surah ? (
