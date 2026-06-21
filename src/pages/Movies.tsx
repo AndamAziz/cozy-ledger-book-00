@@ -1688,9 +1688,9 @@ function MovieModal({
     let alive = true;
     (async () => {
       try {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/${mediaPath}/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits,external_ids`,
-        );
+        const r = await tmdbFetch(`${mediaPath}/${movie.tmdb_id}`, {
+          append_to_response: "credits,external_ids",
+        });
         const d = await r.json();
         if (!alive) return;
         if (d.backdrop_path) setBackdrop(TMDB_BACKDROP + d.backdrop_path);
@@ -1722,9 +1722,7 @@ function MovieModal({
     let alive = true;
     (async () => {
       try {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/tv/${movie.tmdb_id}/aggregate_credits?api_key=${TMDB_KEY}`,
-        );
+        const r = await tmdbFetch(`tv/${movie.tmdb_id}/aggregate_credits`);
         const d = await r.json();
         if (!alive) return;
         if (Array.isArray(d.cast)) {
@@ -1753,9 +1751,7 @@ function MovieModal({
     }
     setTrailerLoading(true);
     try {
-      const r = await fetch(
-        `https://api.themoviedb.org/3/${mediaPath}/${movie.tmdb_id}/videos?api_key=${TMDB_KEY}`,
-      );
+      const r = await tmdbFetch(`${mediaPath}/${movie.tmdb_id}/videos`);
       const d = await r.json();
       const yt = (d.results || []).find(
         (v: { site: string; type: string }) =>
