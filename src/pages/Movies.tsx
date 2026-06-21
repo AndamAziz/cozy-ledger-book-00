@@ -17,9 +17,33 @@ const C = {
   border: "rgba(255,255,255,0.08)",
 };
 
-const TMDB_KEY = "4e44d9029b1270a757cddc766a1bcb63";
+// Image hosts are public CDN paths (no API key needed).
 const TMDB_BACKDROP = "https://image.tmdb.org/t/p/w1280";
 const TMDB_PROFILE = "https://image.tmdb.org/t/p/w185";
+
+// All TMDB API calls go through our server-side proxy so the API key is never
+// exposed in the browser. The proxy injects the key and allow-lists endpoints.
+const TMDB_PROXY = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tmdb`;
+const TMDB_PROXY_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+async function tmdbFetch(
+  path: string,
+  params: Record<string, string | number | boolean | undefined> = {},
+): Promise<Response> {
+  const url = new URL(TMDB_PROXY);
+  url.searchParams.set("path", path);
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") {
+      url.searchParams.set(k, String(v));
+    }
+  }
+  return fetch(url.toString(), {
+    headers: {
+      apikey: TMDB_PROXY_KEY,
+      Authorization: `Bearer ${TMDB_PROXY_KEY}`,
+    },
+  });
+}
 
 // Official IMDb streaming domains (source for all movies & series).
 // playimdb.com is primary; the rest are mirrors used if it is blocked.
