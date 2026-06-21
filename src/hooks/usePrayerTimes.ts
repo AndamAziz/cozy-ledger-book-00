@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { dateStrInTz, detectTimezone } from '@/lib/prayerTz';
 import type { PrayerLocation, PrayerTimesData } from '@/lib/prayer';
 
-// Re-export constants/types so existing importers keep working. These come from
-// a pure module (no hooks/components) so this hook file stays a clean Fast
-// Refresh boundary — see src/lib/prayer.ts for the rationale.
-export { CALC_METHODS, PRAYER_ORDER } from '@/lib/prayer';
+// Type-only re-exports are erased at compile time, so they don't affect the
+// Fast Refresh boundary. Value constants (CALC_METHODS, PRAYER_ORDER) are NOT
+// re-exported here — importers get them from the pure module @/lib/prayer so
+// this file stays a clean hook-only refresh boundary. See src/lib/prayer.ts.
 export type { PrayerKey, PrayerLocation, PrayerTimesData } from '@/lib/prayer';
 
 const LOCATION_CACHE_KEY = 'prayer:location:v2';
