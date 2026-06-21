@@ -52,6 +52,8 @@ interface TradeControlsProps {
   marketClosed?: boolean;
   /** Human label shown while the market is closed, e.g. "Closed · opens Sun 22:00 UTC · 1d 4h". */
   marketClosedLabel?: string;
+  /** Exact UTC time the market reopens — drives a live digital countdown timer. */
+  reopenAt?: Date | null;
   /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
   timeframeLabel?: string;
   /** Duration (minutes) of one candle of the selected timeframe — for the hold hint. */
