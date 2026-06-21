@@ -9,6 +9,7 @@ import { QURAN_I18N } from '@/lib/quranI18n';
 import {
   useSurahList,
   useSurahDetail,
+  useSurahTranslation,
   useQuranPrefs,
 } from '@/hooks/useQuran';
 import type { SurahMeta } from '@/lib/quran';
@@ -27,11 +28,13 @@ const Quran = () => {
   const { user } = useAuth();
   const list = useSurahList();
   const detail = useSurahDetail(selected);
+  const translation = useSurahTranslation(selected);
   const {
     fontSize, setFontSize, MIN_FONT, MAX_FONT,
     isBookmarked, toggleBookmark,
     lastRead, saveLastRead,
     reciter, setReciter,
+    showTranslation, toggleTranslation,
   } = useQuranPrefs(user?.id ?? null);
 
   // Persist last-read position whenever a surah opens.
