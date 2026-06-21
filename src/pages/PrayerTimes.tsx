@@ -7,6 +7,16 @@ import { Language } from '@/lib/translations';
 import { usePrayerTimes, PRAYER_ORDER, PrayerKey, CALC_METHODS } from '@/hooks/usePrayerTimes';
 import { qiblaBearing, qiblaDistanceKm, magneticDeclination } from '@/lib/qibla';
 import { QiblaCompass } from '@/components/prayer/QiblaCompass';
+import {
+  getStoredPrayerTz,
+  setStoredPrayerTz,
+  resolveTimezone,
+  detectTimezone,
+  listTimezones,
+  nowMinutesInTz,
+  tzShortLabel,
+  AUTO_TZ,
+} from '@/lib/prayerTz';
 
 const PRAYER_ICONS: Record<PrayerKey, typeof Moon> = {
   Fajr: Moon,
