@@ -423,6 +423,14 @@
   letter-spacing: 0;
 }
 
+/* Kurdish (Sorani) translation text — readable Arabic-script body font, RTL */
+.quran-kurdish {
+  font-family: 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Amiri', serif;
+  direction: rtl;
+  text-align: right;
+  letter-spacing: 0;
+}
+
 .quran-scope .quran-divider {
   background-image: var(--gradient-gold);
   height: 2px;
