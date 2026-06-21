@@ -117,7 +117,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     try {
       const { data, error } = await supabase
         .from('user_approvals')
-        .select('*')
+        .select('id, user_id, email, is_approved, approved_at, expires_at, created_at, updated_at, company_name, is_active')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
