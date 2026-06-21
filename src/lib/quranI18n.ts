@@ -149,7 +149,11 @@ export const QURAN_I18N: Record<Language, QuranStrings> = {
     surah: 'سوره',
     ayah: 'آیه',
     bismillah: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-    translationNote: 'ترجمه کردی بعداً اضافه خواهد شد.',
+    translationNote: 'ترجمه کردی: تفسیری آسان — برهان محمد امین.',
+    showTranslation: 'نمایش ترجمه',
+    hideTranslation: 'پنهان کردن ترجمه',
+    translationLabel: 'ترجمه کردی',
+    translationError: 'بارگذاری ترجمه ناموفق بود',
   },
   tr: {
     title: 'Kur’an-ı Kerim',
