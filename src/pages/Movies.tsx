@@ -2457,30 +2457,31 @@ function PlayerOverlay({
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [autoTrying, setAutoTrying] = useState(false);
+  const loadedRef = useRef(false);
   const list = servers && servers.length > 0 ? servers : [];
-  const currentSrc = list.length > 0 ? list[active].url : src || "";
+  // Clamp the index defensively so we never read an out-of-range server.
+  const safeActive = Math.min(Math.max(active, 0), Math.max(list.length - 1, 0));
+  const currentSrc = list.length > 0 ? list[safeActive]?.url ?? "" : src || "";
 
   // Automatic fallback: if the active domain doesn't load within a few
   // seconds (blocked / X-Frame-Options / network error), try the next one.
   useEffect(() => {
     if (list.length <= 1) return;
+    loadedRef.current = false;
     setLoaded(false);
     const timer = setTimeout(() => {
-      setLoaded((isLoaded) => {
-        if (!isLoaded && active < list.length - 1) {
-          setAutoTrying(true);
-          setActive((i) => Math.min(i + 1, list.length - 1));
-        }
-        return isLoaded;
-      });
+      if (!loadedRef.current && safeActive < list.length - 1) {
+        setAutoTrying(true);
+        setActive((i) => Math.min(i + 1, list.length - 1));
+      }
     }, 7000);
     return () => clearTimeout(timer);
-  }, [active, currentSrc, list.length]);
+  }, [safeActive, currentSrc, list.length]);
 
   const goNext = () => {
-    if (active < list.length - 1) {
+    if (safeActive < list.length - 1) {
       setAutoTrying(true);
-      setActive((i) => i + 1);
+      setActive((i) => Math.min(i + 1, list.length - 1));
     }
   };
 
@@ -2527,7 +2528,12 @@ function PlayerOverlay({
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             referrerPolicy="origin"
+            // Block the embed from redirecting/hijacking the whole app (the
+            // main cause of the player "crashing" the page) while still
+            // allowing the video, fullscreen and new-tab popups to work.
+            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox"
             onLoad={() => {
+              loadedRef.current = true;
               setLoaded(true);
               setAutoTrying(false);
             }}
@@ -2561,7 +2567,7 @@ function PlayerOverlay({
                   borderTopColor: C.gold,
                 }}
               />
-              {list.length > 0 ? `Trying ${list[active].name}…` : "Trying next server…"}
+              {list.length > 0 ? `Trying ${list[safeActive]?.name ?? ""}…` : "Trying next server…"}
             </div>
           )}
         </div>
@@ -2584,7 +2590,7 @@ function PlayerOverlay({
               }}
             >
               {servers.map((s, i) => {
-                const on = i === active;
+                const on = i === safeActive;
                 return (
                   <button
                     key={s.name}
