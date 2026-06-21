@@ -131,6 +131,20 @@ export function TradeControls({
   const bi = (ku: string, en: string, tr?: string) =>
     language === 'tr' ? (tr ?? en) : language === 'en' ? en : ku;
 
+  // Live, 1-second digital countdown to the market reopening time. Only ticks
+  // while the market is actually closed so it never wastes work when open.
+  const [countdown, setCountdown] = useState(() => countdownDigits(reopenAt ?? null));
+  useEffect(() => {
+    if (!marketClosed || !reopenAt) {
+      setCountdown('');
+      return;
+    }
+    const update = () => setCountdown(countdownDigits(reopenAt));
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [marketClosed, reopenAt]);
+
   const depleted = balance <= 0;
   // New trades are blocked when the demo balance is gone OR the market is closed
   // (Gold/Oil/Forex over the weekend). Existing legs can still be closed.
