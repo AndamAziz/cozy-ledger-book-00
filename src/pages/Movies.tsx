@@ -2567,7 +2567,7 @@ function PlayerOverlay({
                   borderTopColor: C.gold,
                 }}
               />
-              {list.length > 0 ? `Trying ${list[active].name}…` : "Trying next server…"}
+              {list.length > 0 ? `Trying ${list[safeActive]?.name ?? ""}…` : "Trying next server…"}
             </div>
           )}
         </div>
