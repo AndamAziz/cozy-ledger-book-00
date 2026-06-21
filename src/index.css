@@ -330,18 +330,24 @@
 
 /* Live price ticker (marquee) */
 @keyframes ticker-scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
 }
 @keyframes ticker-scroll-rtl {
-  from { transform: translateX(-50%); }
-  to { transform: translateX(0); }
+  from { transform: translate3d(-50%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 .ticker-track {
-  display: flex;
+  display: inline-flex;
+  min-width: max-content;
   width: max-content;
   will-change: transform;
+  direction: ltr;
   animation: ticker-scroll 80s linear infinite;
+}
+.ticker-track > div {
+  display: flex;
+  flex: 0 0 auto;
 }
 .ticker-track-rtl {
   animation-name: ticker-scroll-rtl;
