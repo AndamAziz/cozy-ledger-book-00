@@ -1902,36 +1902,36 @@ function MovieModal({
             aria-label={t.close}
             style={{
               position: "absolute",
-              top: 48,
-              left: 26,
+              top: 10,
+              left: 10,
               zIndex: 4,
-              width: 34,
-              height: 34,
+              width: 28,
+              height: 28,
               borderRadius: "50%",
-              background: "rgba(0,0,0,.72)",
+              background: "rgba(0,0,0,.65)",
               backdropFilter: "blur(8px)",
               WebkitBackdropFilter: "blur(8px)",
               color: "#fff",
-              border: "1.5px solid rgba(255,255,255,0.3)",
+              border: "1px solid rgba(255,255,255,0.25)",
               cursor: "pointer",
-              fontSize: 17,
+              fontSize: 14,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 5px 16px rgba(0,0,0,.58)",
+              boxShadow: "0 4px 12px rgba(0,0,0,.5)",
               transition: "transform .18s, background .18s, box-shadow .18s",
               lineHeight: 1,
               padding: 0,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,.88)";
+              e.currentTarget.style.background = "rgba(0,0,0,.85)";
               e.currentTarget.style.transform = "scale(1.08)";
-              e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,.6)";
+              e.currentTarget.style.boxShadow = "0 6px 18px rgba(0,0,0,.6)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,.72)";
+              e.currentTarget.style.background = "rgba(0,0,0,.65)";
               e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.boxShadow = "0 5px 16px rgba(0,0,0,.58)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,.5)";
             }}
             onMouseDown={(e) => {
               e.currentTarget.style.transform = "scale(0.92)";
