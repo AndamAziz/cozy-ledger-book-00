@@ -381,7 +381,7 @@ export default function PrayerTimes() {
                     <div>
                       <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {s.next}</p>
                       <p className="text-2xl sm:text-3xl font-extrabold text-foreground mt-0.5">{s.prayers[nextKey]}</p>
-                      <p className="text-sm text-primary font-semibold mt-0.5">{data.timings[nextKey]}</p>
+                      <p className="text-sm text-primary font-semibold mt-0.5">{formatTime12(data.timings[nextKey])}</p>
                     </div>
                     <div className="text-end">
                       <p className="text-3xl sm:text-4xl font-extrabold text-gold tabular-nums">{countdown}</p>
