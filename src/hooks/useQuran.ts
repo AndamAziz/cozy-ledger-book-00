@@ -76,6 +76,7 @@ export function useQuranPrefs(userId: string | null) {
   const [bookmarks, setBookmarksState] = useState<string[]>(() => getBookmarks());
   const [lastRead, setLastReadState] = useState<LastRead | null>(() => getLastRead());
   const [reciter, setReciterState] = useState<string>(() => getStoredReciter());
+  const [showTranslation, setShowTranslationState] = useState<boolean>(() => getStoredShowTranslation());
   const [synced, setSynced] = useState(false);
 
   const userIdRef = useRef<string | null>(userId);
