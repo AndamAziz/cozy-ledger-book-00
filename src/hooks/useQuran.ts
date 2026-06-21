@@ -217,6 +217,15 @@ export function useQuranPrefs(userId: string | null) {
     [persistRemote],
   );
 
+  // Translation visibility is a local UI preference (localStorage only).
+  const toggleTranslation = useCallback(() => {
+    setShowTranslationState((prev) => {
+      const next = !prev;
+      setStoredShowTranslation(next);
+      return next;
+    });
+  }, []);
+
   return {
     fontSize,
     setFontSize,
@@ -227,6 +236,8 @@ export function useQuranPrefs(userId: string | null) {
     saveLastRead,
     reciter,
     setReciter,
+    showTranslation,
+    toggleTranslation,
     synced,
     DEFAULT_FONT,
     DEFAULT_RECITER,
