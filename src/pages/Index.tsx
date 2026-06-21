@@ -25,7 +25,15 @@ import { REVIEWS_I18N, getReviewLang } from '@/lib/reviews';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
-import { Users, Sparkles, Tv, Film, Bitcoin } from 'lucide-react';
+import { Users, Sparkles, Tv, Film, Bitcoin, Moon } from 'lucide-react';
+
+const PRAYER_LABEL: Record<string, string> = {
+  en: 'Prayer Times & Qibla',
+  ku: 'کاتەکانی نوێژ و قیبلە',
+  ar: 'أوقات الصلاة والقبلة',
+  fa: 'اوقات نماز و قبله',
+  tr: 'Namaz Vakitleri ve Kıble',
+};
 
 type TabType = 'finance' | 'inventory' | 'sales' | 'reports';
 
