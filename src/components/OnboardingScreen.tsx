@@ -257,35 +257,35 @@ const FEATURES: Feature[] = [
 
 const UI: Record<Lang, { welcome: string; subtitle: string; skip: string; next: string; getStarted: string }> = {
   ku: {
-    welcome: 'بەخێربێیت بۆ City Taxperts',
+    welcome: 'بەخێربێیت بۆ Central Tech Platform',
     subtitle: 'هەموو ئامرازەکانت لە یەک شوێندا',
     skip: 'پەڕاندن',
     next: 'دواتر',
     getStarted: 'دەست پێبکە',
   },
   en: {
-    welcome: 'Welcome to City Taxperts',
+    welcome: 'Welcome to Central Tech Platform',
     subtitle: 'All your tools in one place',
     skip: 'Skip',
     next: 'Continue',
     getStarted: 'Get Started',
   },
   ar: {
-    welcome: 'مرحبًا بك في City Taxperts',
+    welcome: 'مرحبًا بك في Central Tech Platform',
     subtitle: 'كل أدواتك في مكان واحد',
     skip: 'تخطٍ',
     next: 'متابعة',
     getStarted: 'ابدأ الآن',
   },
   fa: {
-    welcome: 'به City Taxperts خوش آمدید',
+    welcome: 'به Central Tech Platform خوش آمدید',
     subtitle: 'همه ابزارهای شما در یک مکان',
     skip: 'رد کردن',
     next: 'ادامه',
     getStarted: 'شروع کنید',
   },
   tr: {
-    welcome: "City Taxperts'e Hoş Geldiniz",
+    welcome: "Central Tech Platform'e Hoş Geldiniz",
     subtitle: 'Tüm araçlarınız tek yerde',
     skip: 'Atla',
     next: 'Devam',
@@ -350,9 +350,9 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
       <div className="relative z-10 flex items-center justify-between px-5 pt-5 sm:px-8 sm:pt-7">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-success flex items-center justify-center shadow-lg shadow-primary/30 overflow-hidden">
-            <img src="/app-icon.svg" alt="City Taxperts" className="w-6 h-6 object-contain" />
+            <img src="/app-icon.svg" alt="Central Tech Platform" className="w-6 h-6 object-contain" />
           </div>
-          <span className="font-bold text-sm text-foreground">City Taxperts</span>
+          <span className="font-bold text-sm text-foreground">Central Tech Platform</span>
         </div>
         <Button
           variant="ghost"
