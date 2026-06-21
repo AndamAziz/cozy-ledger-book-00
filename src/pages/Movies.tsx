@@ -306,7 +306,7 @@ interface CastMember {
 }
 
 // Module-level TMDB result → Movie mapper (used by search + hero)
-function mapTmdbResult(r: TmdbSearchResult): Movie {
+function mapTmdbResult(r: TmdbSearchResult, fromActor?: boolean): Movie {
   const isTv = r.media_type === "tv";
   return {
     tmdb_id: r.id,
@@ -320,6 +320,7 @@ function mapTmdbResult(r: TmdbSearchResult): Movie {
     popularity: String(r.popularity || ""),
     type: isTv ? "tv" : "movie",
     embed_url: "",
+    fromActor: fromActor || false,
   };
 }
 
