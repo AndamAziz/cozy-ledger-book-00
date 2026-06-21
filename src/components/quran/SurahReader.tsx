@@ -37,7 +37,7 @@ export function SurahReader(props: SurahReaderProps) {
   const {
     surah, isLoading, isError, onRetry, onBack,
     fontSize, setFontSize, minFont, maxFont,
-    isBookmarked, toggleBookmark, isRTL, s,
+    isBookmarked, toggleBookmark, reciter, setReciter, isRTL, s,
   } = props;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -52,12 +52,14 @@ export function SurahReader(props: SurahReaderProps) {
     }
   }, [surah?.number]);
 
+  // Play current ayah; re-runs when the reciter changes so switching mid-surah
+  // swaps the audio source but keeps the same ayah (reading position preserved).
   useEffect(() => {
     const el = audioRef.current;
     if (!el || playingIndex == null || !surah) return;
-    el.src = surah.ayahs[playingIndex].audio;
+    el.src = ayahAudioUrl(reciter, surah.ayahs[playingIndex].number);
     el.play().catch(() => setPlayingIndex(null));
-  }, [playingIndex, surah]);
+  }, [playingIndex, surah, reciter]);
 
   const handleEnded = () => {
     if (!surah || playingIndex == null) return;
