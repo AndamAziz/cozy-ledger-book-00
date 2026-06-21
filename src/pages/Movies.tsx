@@ -295,6 +295,7 @@ interface Movie {
   popularity: string;
   type: string;
   embed_url: string;
+  fromActor?: boolean;
 }
 
 interface CastMember {
