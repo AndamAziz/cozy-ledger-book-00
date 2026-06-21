@@ -138,6 +138,18 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-accent to-amber-400 flex items-center justify-center shadow-md shadow-accent/30 flex-shrink-0">
                 <Film className="h-4 w-4 sm:h-5 sm:w-5 text-accent-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">Movies 🎬</span>
+            </button>
+            <button
+              onClick={() => navigate('/crypto')}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#f0b90b]/20 via-[#f0b90b]/10 to-transparent border border-[#f0b90b]/30 hover:border-[#f0b90b]/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3"
+            >
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-[#f0b90b] to-[#f0b90b]/80 flex items-center justify-center shadow-md shadow-[#f0b90b]/30 flex-shrink-0">
+                <Bitcoin className="h-4 w-4 sm:h-5 sm:w-5 text-black" />
+              </div>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">{t('cryptoTracker')}</span>
+            </button>
           </div>
 
           {/* Prayer Times & Qibla */}
@@ -150,18 +162,6 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
                 <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
               <span className="font-bold text-foreground text-xs sm:text-sm truncate">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
-            </button>
-          </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">Movies 🎬</span>
-            </button>
-            <button
-              onClick={() => navigate('/crypto')}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#f0b90b]/20 via-[#f0b90b]/10 to-transparent border border-[#f0b90b]/30 hover:border-[#f0b90b]/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3"
-            >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-[#f0b90b] to-[#f0b90b]/80 flex items-center justify-center shadow-md shadow-[#f0b90b]/30 flex-shrink-0">
-                <Bitcoin className="h-4 w-4 sm:h-5 sm:w-5 text-black" />
-              </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">{t('cryptoTracker')}</span>
             </button>
           </div>
 
