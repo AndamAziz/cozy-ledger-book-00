@@ -341,7 +341,7 @@
   display: flex;
   width: max-content;
   will-change: transform;
-  animation: ticker-scroll 40s linear infinite;
+  animation: ticker-scroll 80s linear infinite;
 }
 .ticker-track-rtl {
   animation-name: ticker-scroll-rtl;
