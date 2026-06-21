@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, MessageCircle, LogOut, Calendar, Shield, Send } from 'lucide-react';
+import { AlertTriangle, MessageCircle, LogOut, Calendar, Shield, Send, Copy, Check } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { toast } from '@/hooks/use-toast';
 
 interface ExpiredSubscriptionProps {
   email: string;
@@ -8,32 +10,92 @@ interface ExpiredSubscriptionProps {
   onLogout: () => void;
 }
 
+const CEO_TELEGRAM = 'ANDAMAZIZ';
+
 export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubscriptionProps) {
   const { t, language } = useLanguage();
-  
-  const handleWhatsAppContact = () => {
-    const messages = {
-      ku: `سڵاو، کاتی بەکارهێنانی ئەکاونتم (${email}) لە Central Tech Platform ئەپ بەسەرچووە و داوای درێژکردنەوەی دەکەم.`,
-      en: `Hello, my subscription for account (${email}) on Central Tech Platform app has expired. I request a renewal.`,
-      ar: `مرحباً، انتهت صلاحية اشتراك حسابي (${email}) في تطبيق Central Tech Platform. أطلب التجديد.`,
-      fa: `سلام، اشتراک حساب من (${email}) در اپلیکیشن Central Tech Platform منقضی شده است. درخواست تمدید دارم.`,
-    };
-    const message = encodeURIComponent(messages[language]);
-    window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
-  };
+  const [copied, setCopied] = useState(false);
 
   const localeMap = {
     ku: 'ku-Arab',
     en: 'en-US',
     ar: 'ar-SA',
     fa: 'fa-IR',
-  };
+    tr: 'tr-TR',
+  } as const;
 
-  const expiredDate = new Date(expiresAt).toLocaleDateString(localeMap[language], {
+  const lang = (['ku', 'en', 'ar', 'fa', 'tr'].includes(language) ? language : 'en') as keyof typeof localeMap;
+
+  const expiredDate = new Date(expiresAt).toLocaleDateString(localeMap[lang], {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+
+  // Ready-made message the user copies and sends to the CEO on Telegram.
+  const templates: Record<keyof typeof localeMap, string> = {
+    ku: `سڵاو CEO 👋\nکاتی بەکارهێنانی ئەکاونتم بەسەرچووە و داوای نوێکردنەوەی دەکەم.\n\n📧 ئیمەیل: ${email}\n📅 بەرواری بەسەرچوون: ${expiredDate}\n\nتکایە ئەکاونتەکەم چالاک بکەرەوە. سوپاس 🙏`,
+    en: `Hello CEO 👋\nMy account subscription has expired and I would like to renew it.\n\n📧 Email: ${email}\n📅 Expiry date: ${expiredDate}\n\nPlease reactivate my account. Thank you 🙏`,
+    ar: `مرحباً CEO 👋\nانتهت صلاحية اشتراك حسابي وأرغب في تجديده.\n\n📧 البريد الإلكتروني: ${email}\n📅 تاريخ الانتهاء: ${expiredDate}\n\nيرجى إعادة تفعيل حسابي. شكراً 🙏`,
+    fa: `سلام CEO 👋\nاشتراک حساب من منقضی شده و می‌خواهم آن را تمدید کنم.\n\n📧 ایمیل: ${email}\n📅 تاریخ انقضا: ${expiredDate}\n\nلطفاً حساب من را دوباره فعال کنید. سپاس 🙏`,
+    tr: `Merhaba CEO 👋\nHesap aboneliğimin süresi doldu ve yenilemek istiyorum.\n\n📧 E-posta: ${email}\n📅 Bitiş tarihi: ${expiredDate}\n\nLütfen hesabımı yeniden etkinleştirin. Teşekkürler 🙏`,
+  };
+
+  const ceoMessage = templates[lang];
+
+  const copyHints: Record<keyof typeof localeMap, string> = {
+    ku: 'پەیامەکە کۆپی کرا — لە تەلەگرام پەیستی بکە و بینێرە بۆ CEO',
+    en: 'Message copied — paste it in Telegram and send to the CEO',
+    ar: 'تم نسخ الرسالة — الصقها في تيليجرام وأرسلها إلى الـ CEO',
+    fa: 'پیام کپی شد — آن را در تلگرام بچسبانید و برای CEO بفرستید',
+    tr: 'Mesaj kopyalandı — Telegram\'a yapıştırıp CEO\'ya gönderin',
+  };
+
+  const copyButtonLabels: Record<keyof typeof localeMap, string> = {
+    ku: 'کۆپیکردنی پەیام',
+    en: 'Copy message',
+    ar: 'نسخ الرسالة',
+    fa: 'کپی پیام',
+    tr: 'Mesajı kopyala',
+  };
+
+  const templateTitles: Record<keyof typeof localeMap, string> = {
+    ku: 'ئەم پەیامە بنێرە بۆ CEO 👇',
+    en: 'Send this message to the CEO 👇',
+    ar: 'أرسل هذه الرسالة إلى الـ CEO 👇',
+    fa: 'این پیام را برای CEO بفرستید 👇',
+    tr: 'Bu mesajı CEO\'ya gönderin 👇',
+  };
+
+  const copyMessage = async () => {
+    try {
+      await navigator.clipboard.writeText(ceoMessage);
+    } catch {
+      // Fallback for browsers/contexts without async clipboard
+      const ta = document.createElement('textarea');
+      ta.value = ceoMessage;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); } catch { /* noop */ }
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    toast({ description: copyHints[lang] });
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleTelegramContact = async () => {
+    await copyMessage();
+    window.open(`https://t.me/${CEO_TELEGRAM}`, '_blank');
+  };
+
+  const handleWhatsAppContact = () => {
+    const message = encodeURIComponent(ceoMessage);
+    window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
@@ -85,6 +147,39 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
               </div>
             </div>
 
+            {/* CEO message template */}
+            <div className="bg-secondary/40 rounded-2xl p-4 mb-4 border border-border/50">
+              <p className="text-sm font-semibold text-foreground mb-2">{templateTitles[lang]}</p>
+              <pre className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed font-sans bg-background/40 rounded-xl p-3 border border-border/40 mb-3">
+{ceoMessage}
+              </pre>
+              <Button
+                variant="outline"
+                onClick={copyMessage}
+                className="w-full rounded-xl border-primary/40 hover:bg-primary/10"
+              >
+                <div className="flex items-center gap-2">
+                  {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                  {copyButtonLabels[lang]}
+                </div>
+              </Button>
+            </div>
+
+            {/* Telegram (CEO) Contact Button */}
+            <Button
+              onClick={handleTelegramContact}
+              className="w-full py-7 text-lg font-bold rounded-xl shadow-xl bg-[#229ED9] hover:bg-[#1c8cc2] text-white hover:scale-[1.02] transition-all duration-300 mb-2"
+            >
+              <div className="flex items-center gap-3">
+                <Send className="h-6 w-6" />
+                Telegram (CEO)
+              </div>
+            </Button>
+
+            <p className="text-center text-xs text-muted-foreground mb-4">
+              Telegram: <span dir="ltr" className="font-mono">@ANDAMAZIZ</span>
+            </p>
+
             {/* WhatsApp Contact Button */}
             <Button 
               onClick={handleWhatsAppContact}
@@ -96,25 +191,9 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
               </div>
             </Button>
 
-            <p className="text-center text-xs text-muted-foreground mb-4">
+            <p className="text-center text-xs text-muted-foreground mb-6">
               {t('phoneNumber')}: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
             </p>
-
-            {/* Telegram (CEO) Contact Button */}
-            <Button
-              onClick={() => window.open('https://t.me/ANDAMAZIZ', '_blank')}
-              className="w-full py-7 text-lg font-bold rounded-xl shadow-xl bg-[#229ED9] hover:bg-[#1c8cc2] text-white hover:scale-[1.02] transition-all duration-300 mb-2"
-            >
-              <div className="flex items-center gap-3">
-                <Send className="h-6 w-6" />
-                Telegram (CEO)
-              </div>
-            </Button>
-
-            <p className="text-center text-xs text-muted-foreground mb-6">
-              Telegram: <span dir="ltr" className="font-mono">@ANDAMAZIZ</span>
-            </p>
-
 
             {/* Logout Button */}
             <Button 
