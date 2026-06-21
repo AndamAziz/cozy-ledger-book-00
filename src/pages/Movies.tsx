@@ -1899,37 +1899,39 @@ function MovieModal({
           />
           <button
             onClick={onClose}
+            aria-label={t.close}
             style={{
               position: "absolute",
-              top: 12,
-              insetInlineStart: 12,
-              width: 42,
-              height: 42,
+              top: 14,
+              right: 14,
+              zIndex: 4,
+              width: 46,
+              height: 46,
               borderRadius: "50%",
-              background: "rgba(0,0,0,.55)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
+              background: "rgba(0,0,0,.72)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
               color: "#fff",
-              border: "1.5px solid rgba(255,255,255,0.18)",
+              border: "2px solid rgba(255,255,255,0.32)",
               cursor: "pointer",
-              fontSize: 20,
+              fontSize: 22,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 4px 14px rgba(0,0,0,.45)",
+              boxShadow: "0 8px 24px rgba(0,0,0,.62)",
               transition: "transform .18s, background .18s, box-shadow .18s",
               lineHeight: 1,
               padding: 0,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,.8)";
+              e.currentTarget.style.background = "rgba(0,0,0,.88)";
               e.currentTarget.style.transform = "scale(1.08)";
               e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,.6)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,.55)";
+              e.currentTarget.style.background = "rgba(0,0,0,.72)";
               e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,.45)";
+              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.62)";
             }}
             onMouseDown={(e) => {
               e.currentTarget.style.transform = "scale(0.92)";
