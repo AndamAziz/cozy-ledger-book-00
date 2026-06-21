@@ -89,7 +89,11 @@ export const QURAN_I18N: Record<Language, QuranStrings> = {
     surah: 'Surah',
     ayah: 'Ayah',
     bismillah: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-    translationNote: 'Kurdish translation will be added later.',
+    translationNote: 'Kurdish translation: Tafsîrî Asan — Burhan Muhammad-Amin.',
+    showTranslation: 'Show translation',
+    hideTranslation: 'Hide translation',
+    translationLabel: 'Kurdish translation',
+    translationError: 'Failed to load translation',
   },
   ar: {
     title: 'القرآن الكريم',
