@@ -25,7 +25,15 @@ import { REVIEWS_I18N, getReviewLang } from '@/lib/reviews';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
-import { Users, Sparkles, Tv, Film, Bitcoin } from 'lucide-react';
+import { Users, Sparkles, Tv, Film, Bitcoin, Moon } from 'lucide-react';
+
+const PRAYER_LABEL: Record<string, string> = {
+  en: 'Prayer Times & Qibla',
+  ku: 'کاتەکانی نوێژ و قیبلە',
+  ar: 'أوقات الصلاة والقبلة',
+  fa: 'اوقات نماز و قبله',
+  tr: 'Namaz Vakitleri ve Kıble',
+};
 
 type TabType = 'finance' | 'inventory' | 'sales' | 'reports';
 
@@ -141,6 +149,19 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
                 <Bitcoin className="h-4 w-4 sm:h-5 sm:w-5 text-black" />
               </div>
               <span className="font-bold text-foreground text-xs sm:text-sm truncate">{t('cryptoTracker')}</span>
+            </button>
+          </div>
+
+          {/* Prayer Times & Qibla */}
+          <div className="mb-3 sm:mb-5 no-print">
+            <button
+              onClick={() => navigate('/prayer')}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-gold/10 to-transparent border border-primary/30 hover:border-gold/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
+            >
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary to-gold flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0">
+                <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
             </button>
           </div>
 
