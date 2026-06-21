@@ -355,8 +355,10 @@ export default function Movies() {
 
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const [genre, setGenre] = useState("all");
   const [search, setSearch] = useState("");
   const [aiSearching, setAiSearching] = useState(false);
