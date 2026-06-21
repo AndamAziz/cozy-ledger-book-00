@@ -261,6 +261,13 @@ const STR: Record<Language, PageStrings> = {
     pointPhone: 'Ok yukarıyı gösterene kadar telefonu çevirin',
     distance: (km) => `Mekke\'ye ${km} km`,
     aligned: 'Kıbleye dönük',
+    accuracyLabel: 'Pusula doğruluğu',
+    accuracyGood: 'İyi',
+    accuracyLow: 'Düşük doğruluk',
+    accuracyUnstable: 'Kalibrasyon gerekli',
+    calibrationTip: 'Yön kararsız. Pusulayı kalibre etmek için telefonunuzu metal, mıknatıs ve elektronik cihazlardan uzakta birkaç kez 8 şeklinde hareket ettirin.',
+    tzLabel: 'Saat dilimi',
+    tzAuto: (z) => `Otomatik algılandı (${z})`,
   },
 };
 
