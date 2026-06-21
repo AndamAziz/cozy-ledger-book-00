@@ -80,3 +80,21 @@ export function timeUntil(target: Date | null, now = new Date()): string {
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 }
+
+/**
+ * Live digital countdown like "47:23:10" (HH:MM:SS) or "1d 04:12:30" when more
+ * than a day remains. Returns "" once the target time has passed.
+ */
+export function countdownDigits(target: Date | null, now = new Date()): string {
+  if (!target) return "";
+  const ms = target.getTime() - now.getTime();
+  if (ms <= 0) return "";
+  const totalSec = Math.floor(ms / 1000);
+  const d = Math.floor(totalSec / 86400);
+  const h = Math.floor((totalSec % 86400) / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const clock = `${pad(h)}:${pad(m)}:${pad(s)}`;
+  return d > 0 ? `${d}d ${clock}` : clock;
+}

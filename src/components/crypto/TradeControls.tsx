@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { suggestHoldMinutes, suggestHoldAcrossTimeframes } from '@/lib/indicators';
 import { DEMO_LEVERAGE } from '@/contexts/DemoAccountContext';
+import { countdownDigits } from '@/lib/marketHours';
 
 /** Total bid/ask spread in basis points (0.02% => 2 bps). */
 export const TRADE_SPREAD_BPS = 2;
@@ -52,6 +53,8 @@ interface TradeControlsProps {
   marketClosed?: boolean;
   /** Human label shown while the market is closed, e.g. "Closed · opens Sun 22:00 UTC · 1d 4h". */
   marketClosedLabel?: string;
+  /** Exact UTC time the market reopens — drives a live digital countdown timer. */
+  reopenAt?: Date | null;
   /** Label of the selected chart timeframe (e.g. 1m / 5m / 15m). */
   timeframeLabel?: string;
   /** Duration (minutes) of one candle of the selected timeframe — for the hold hint. */
@@ -112,6 +115,7 @@ export function TradeControls({
   otherPositionLabel,
   marketClosed = false,
   marketClosedLabel,
+  reopenAt,
   timeframeMinutes,
   balance,
   realizedPnl = 0,
@@ -127,6 +131,20 @@ export function TradeControls({
   const { language } = useLanguage();
   const bi = (ku: string, en: string, tr?: string) =>
     language === 'tr' ? (tr ?? en) : language === 'en' ? en : ku;
+
+  // Live, 1-second digital countdown to the market reopening time. Only ticks
+  // while the market is actually closed so it never wastes work when open.
+  const [countdown, setCountdown] = useState(() => countdownDigits(reopenAt ?? null));
+  useEffect(() => {
+    if (!marketClosed || !reopenAt) {
+      setCountdown('');
+      return;
+    }
+    const update = () => setCountdown(countdownDigits(reopenAt));
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [marketClosed, reopenAt]);
 
   const depleted = balance <= 0;
   // New trades are blocked when the demo balance is gone OR the market is closed
@@ -325,17 +343,25 @@ export function TradeControls({
       </div>
 
 
-      {/* Banner: market is closed for the weekend (Gold / Oil / Forex) */}
+      {/* Banner: market is closed for the weekend (Gold / Oil / Forex).
+          Auto-hidden the moment the market reopens. */}
       {marketClosed && (
         <div className="mb-2 flex items-center gap-2 rounded-md bg-[#f6465d]/10 border border-[#f6465d]/30 px-2.5 py-1.5 text-[10px] sm:text-xs text-[#f6465d]">
           <Clock className="h-3.5 w-3.5 shrink-0" />
-          <span>
+          <span className="min-w-0">
             <span className="font-bold">{bi('بازاڕ داخراوە', 'Market closed', 'Piyasa kapalı')}</span>
             {' — '}
             {bi('نرخ زیندوویە بەڵام مامەڵەی نوێ ناکرێت', 'live prices only, no new trades', 'sadece canlı fiyat, yeni işlem yok')}
-            {marketClosedLabel ? <span className="block mt-0.5 opacity-90">{marketClosedLabel}</span> : null}
+            {countdown ? (
+              <span className="block mt-0.5 font-bold tabular-nums tracking-wide">
+                {bi('دەکرێتەوە لە', 'Reopens in', 'Yeniden açılış')} {countdown}
+              </span>
+            ) : marketClosedLabel ? (
+              <span className="block mt-0.5 opacity-90">{marketClosedLabel}</span>
+            ) : null}
           </span>
         </div>
+
       )}
 
       {/* Banner: an open position lives on a different asset */}

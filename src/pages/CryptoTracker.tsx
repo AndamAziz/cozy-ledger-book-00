@@ -208,31 +208,9 @@ export default function CryptoTracker() {
             <span className="hidden xs:inline text-sm font-extrabold tracking-tight text-white">CENTRAL <span className="text-[#f0b90b]">TECH PLATFORM</span></span>
           </button>
 
-          {/* Live price ticker (center) */}
-          <div className="flex-1 min-w-0 flex items-center justify-center gap-3 overflow-x-auto no-scrollbar">
-            {(() => {
-              const btc = coinsMap.get('XBT/USD');
-              const gold = metals.find((m) => m.code === 'XAU');
-              const tick = (label: string, price: number, change: number, color: string) => (
-                <span className="flex items-center gap-1 whitespace-nowrap text-[11px]">
-                  <span className="font-bold" style={{ color }}>{label}</span>
-                  <span className="text-white font-semibold">${price > 0 ? price.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}</span>
-                  {price > 0 && (
-                    <span className={change >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>
-                      {change >= 0 ? '▲' : '▼'}{Math.abs(change).toFixed(2)}%
-                    </span>
-                  )}
-                </span>
-              );
-              return (
-                <>
-                  {tick('BTC', btc?.price ?? 0, btc?.change24h ?? 0, '#f0b90b')}
-                  <span className="h-3 w-px bg-[#1a1e2e]" />
-                  {tick('XAU', gold?.price ?? 0, gold?.change ?? 0, '#d4af37')}
-                </>
-              );
-            })()}
-          </div>
+          {/* Spacer — prices are shown in the main price card below (no redundant header ticker) */}
+          <div className="flex-1 min-w-0" />
+
 
           {/* Notification bell */}
           <button
