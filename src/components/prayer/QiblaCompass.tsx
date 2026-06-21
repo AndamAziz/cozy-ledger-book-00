@@ -270,7 +270,7 @@ export function QiblaCompass({ bearing, distanceKm, declination, dir, i18n }: Qi
         {/* On-screen calibration tip when heading quality is low/unstable */}
         {showCalibration && (
           <div className="mt-4 w-full rounded-xl bg-gold/10 border border-gold/30 px-3 py-2.5 flex items-start gap-2">
-            <RefreshCcw className="h-4 w-4 text-gold mt-0.5 flex-shrink-0 animate-spin-slow" />
+            <RefreshCcw className="h-4 w-4 text-gold mt-0.5 flex-shrink-0 animate-pulse" />
             <p className="text-xs text-foreground/90 leading-snug">{i18n.calibrationTip}</p>
           </div>
         )}
