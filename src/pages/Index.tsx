@@ -57,6 +57,9 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
 
       <div className="min-h-screen min-h-[100dvh] p-1.5 sm:p-3 md:p-6 safe-area-inset">
         <div className="max-w-5xl mx-auto">
+          {/* Live price ticker */}
+          <PriceTickerBar />
+
           {/* Admin Button */}
           {isAdmin && (
             <div className="mb-2 sm:mb-3 no-print">
