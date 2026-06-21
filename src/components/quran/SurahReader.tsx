@@ -145,7 +145,7 @@ export function SurahReader(props: SurahReaderProps) {
               <span aria-hidden>•</span>
               <span>{surah.numberOfAyahs} {s.ayahs}</span>
               <span aria-hidden>•</span>
-              <span>{s.reciter}: {RECITER_NAME}</span>
+              <span>{s.reciter}: {getReciterName(reciter)}</span>
             </div>
             {surah.number !== 1 && surah.number !== 9 && (
               <p className="quran-arabic text-2xl text-foreground mt-4" style={{ lineHeight: 1.8 }}>{BISMILLAH}</p>
