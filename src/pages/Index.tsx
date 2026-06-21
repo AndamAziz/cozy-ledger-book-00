@@ -17,6 +17,7 @@ import { FinanceTab } from '@/components/FinanceTab';
 import { InventoryTab } from '@/components/InventoryTab';
 import { SalesTab } from '@/components/SalesTab';
 import { ReportsTab } from '@/components/ReportsTab';
+import { HelpGuide } from '@/components/HelpGuide';
 import { SplashScreen } from '@/components/SplashScreen';
 import { OnboardingScreen } from '@/components/OnboardingScreen';
 import { ReviewForm } from '@/components/reviews/ReviewForm';
@@ -150,12 +151,15 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
 
 
           {/* Tab Navigation */}
-          <div className="relative mb-3 sm:mb-5 md:mb-7 no-print">
-            <div className="grid grid-cols-4 gap-1 sm:gap-1.5 md:gap-2.5 p-1.5 sm:p-2 md:p-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 shadow-xl shadow-black/10">
+          <div className="relative mb-3 sm:mb-5 md:mb-7 no-print flex items-stretch gap-1.5 sm:gap-2">
+            <div className="flex-1 grid grid-cols-4 gap-1 sm:gap-1.5 md:gap-2.5 p-1.5 sm:p-2 md:p-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 shadow-xl shadow-black/10">
               <TabButton active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon="💰" label={t('finance')} />
               <TabButton active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon="📦" label={t('inventory')} />
               <TabButton active={activeTab === 'sales'} onClick={() => setActiveTab('sales')} icon="🛒" label={t('sales')} />
               <TabButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon="📊" label={t('reports')} />
+            </div>
+            <div className="flex items-center">
+              <HelpGuide />
             </div>
           </div>
 
