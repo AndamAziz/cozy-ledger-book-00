@@ -125,6 +125,11 @@ const Quran = () => {
             toggleBookmark={toggleBookmark}
             reciter={reciter}
             setReciter={setReciter}
+            translation={translation.data}
+            translationLoading={translation.isLoading}
+            translationError={translation.isError}
+            showTranslation={showTranslation}
+            onToggleTranslation={toggleTranslation}
             isRTL={isRTL}
             s={s}
           />
