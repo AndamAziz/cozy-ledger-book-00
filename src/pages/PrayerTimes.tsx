@@ -52,6 +52,15 @@ interface PageStrings {
   pointPhone: string;
   distance: (km: string) => string;
   aligned: string;
+  // compass accuracy / calibration
+  accuracyLabel: string;
+  accuracyGood: string;
+  accuracyLow: string;
+  accuracyUnstable: string;
+  calibrationTip: string;
+  // timezone
+  tzLabel: string;
+  tzAuto: (zone: string) => string;
 }
 
 const STR: Record<Language, PageStrings> = {
