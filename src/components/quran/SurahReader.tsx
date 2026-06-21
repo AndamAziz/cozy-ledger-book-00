@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Play, Pause, Bookmark, BookmarkCheck, Minus, Plus, MapPin, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, Pause, Bookmark, BookmarkCheck, Minus, Plus, MapPin, Loader2, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { SurahDetail } from '@/lib/quran';
-import { RECITER_NAME } from '@/lib/quran';
+import { RECITERS, ayahAudioUrl, getReciterName } from '@/lib/quran';
 import type { QuranStrings } from '@/lib/quranI18n';
 
 const BISMILLAH = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
@@ -20,6 +27,8 @@ interface SurahReaderProps {
   maxFont: number;
   isBookmarked: (surah: number, ayah: number) => boolean;
   toggleBookmark: (surah: number, ayah: number) => void;
+  reciter: string;
+  setReciter: (id: string) => void;
   isRTL: boolean;
   s: QuranStrings;
 }
