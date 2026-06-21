@@ -119,7 +119,11 @@ export const QURAN_I18N: Record<Language, QuranStrings> = {
     surah: 'سورة',
     ayah: 'آية',
     bismillah: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-    translationNote: 'ستتم إضافة الترجمة الكردية لاحقًا.',
+    translationNote: 'الترجمة الكردية: تفسيري آسان — برهان محمد أمين.',
+    showTranslation: 'إظهار الترجمة',
+    hideTranslation: 'إخفاء الترجمة',
+    translationLabel: 'الترجمة الكردية',
+    translationError: 'فشل تحميل الترجمة',
   },
   fa: {
     title: 'قرآن کریم',
