@@ -294,6 +294,10 @@ export default function PrayerTimes() {
 
   const qibla = location ? qiblaBearing(location.latitude, location.longitude) : 0;
   const distance = location ? qiblaDistanceKm(location.latitude, location.longitude) : 0;
+  const declination = useMemo(
+    () => (location ? magneticDeclination(location.latitude, location.longitude) : 0),
+    [location]
+  );
 
   const handleCity = (e: React.FormEvent) => {
     e.preventDefault();
