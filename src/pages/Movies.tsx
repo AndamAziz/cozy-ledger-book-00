@@ -527,7 +527,7 @@ export default function Movies() {
           return true;
         })
         .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-        .map(mapTmdbResult);
+        .map((r) => ({ ...mapTmdbResult(r), fromActor: true }));
     } catch {
       return [];
     }
