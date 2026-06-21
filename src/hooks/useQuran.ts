@@ -75,7 +75,7 @@ export function useQuranPrefs(userId: string | null) {
       void supabase
         .from('quran_preferences')
         .upsert(
-          { user_id: uid, ...patch },
+          { user_id: uid, ...patch } as never,
           { onConflict: 'user_id' },
         )
         .then(({ error }) => {
