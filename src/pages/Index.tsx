@@ -189,7 +189,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
   );
 };
 
-const ONBOARDING_SEEN_KEY = 'city-taxperts-onboarding-seen';
+const ONBOARDING_SEEN_KEY = 'central-tech-platform-onboarding-seen';
 
 const Index = () => {
   const { user, isAuthenticated, isLoading, login, signup, logout } = useAuth();

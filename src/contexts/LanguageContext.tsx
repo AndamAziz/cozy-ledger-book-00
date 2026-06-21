@@ -10,7 +10,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const LANGUAGE_STORAGE_KEY = 'city-taxperts-language';
+const LANGUAGE_STORAGE_KEY = 'central-tech-platform-language';
 
 // RTL languages
 const RTL_LANGUAGES: Language[] = ['ku', 'ar', 'fa'];
