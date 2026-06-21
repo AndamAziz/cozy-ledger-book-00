@@ -179,6 +179,10 @@ export const QURAN_I18N: Record<Language, QuranStrings> = {
     surah: 'Sure',
     ayah: 'Ayet',
     bismillah: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-    translationNote: 'Kürtçe çeviri daha sonra eklenecektir.',
+    translationNote: 'Kürtçe çeviri: Tafsîrî Asan — Burhan Muhammad-Amin.',
+    showTranslation: 'Çeviriyi göster',
+    hideTranslation: 'Çeviriyi gizle',
+    translationLabel: 'Kürtçe çeviri',
+    translationError: 'Çeviri yüklenemedi',
   },
 };
