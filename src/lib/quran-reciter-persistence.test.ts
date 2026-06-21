@@ -124,8 +124,8 @@ describe("quran-reciter cross-browser persistence", () => {
     });
     useStorage(throwing);
 
-    // setStoredReciter currently does not swallow this; document behaviour.
-    expect(() => setStoredReciter(RECITERS[2].id)).toThrow();
+    // Helpers swallow storage failures gracefully.
+    expect(() => setStoredReciter(RECITERS[2].id)).not.toThrow();
     // Reading still yields a safe default rather than crashing.
     expect(getStoredReciter()).toBe(DEFAULT_RECITER);
   });
