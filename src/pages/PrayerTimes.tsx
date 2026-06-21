@@ -513,9 +513,24 @@ export default function PrayerTimes() {
                       <option key={m.id} value={m.id}>{s.methods[m.key]}</option>
                     ))}
                   </select>
+
+                  {/* Time zone selector (auto-detect fallback) */}
+                  <label className="text-xs text-muted-foreground block mb-1.5 mt-3">{s.tzLabel}</label>
+                  <select
+                    value={tzPref}
+                    onChange={(e) => setTzPref(e.target.value)}
+                    dir="ltr"
+                    className="w-full rounded-xl bg-background/60 border border-white/10 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                  >
+                    <option value={AUTO_TZ}>{s.tzAuto(detectedTz)}</option>
+                    {tzList.map((z) => (
+                      <option key={z} value={z}>{tzShortLabel(z)} · {z}</option>
+                    ))}
+                  </select>
+
                   <p className="text-[11px] text-muted-foreground mt-2 flex items-start gap-1.5">
                     <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                    {s.source(methodName)}
+                    {s.source(methodName)} · {resolvedTz}
                   </p>
                 </div>
               </div>
