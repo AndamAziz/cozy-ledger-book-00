@@ -274,9 +274,14 @@ export function HelpGuide() {
           type="button"
           aria-label={guide.title}
           title={guide.title}
-          className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-gold/20 via-gold/10 to-transparent border border-gold/30 hover:border-gold/50 flex items-center justify-center text-gold transition-all duration-200 touch-manipulation active:scale-95"
+          className="group relative p-2 sm:p-2.5 md:p-3.5 rounded-xl sm:rounded-2xl font-semibold transition-all duration-200 flex flex-col items-center gap-1 sm:gap-1.5 md:gap-2 border overflow-hidden active:scale-95 touch-manipulation bg-gradient-to-br from-gold/20 via-gold/10 to-transparent border-gold/30 hover:border-gold/50 hover:from-gold/30 hover:via-gold/15"
         >
-          <HelpCircle className="h-5 w-5" />
+          <div className="relative z-10 w-8 h-8 sm:w-9 sm:h-9 md:w-12 md:h-12 rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-200 bg-gradient-to-br from-gold to-amber-400 text-white shadow-md shadow-gold/40">
+            <HelpCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+          </div>
+          <span className="relative z-10 text-[9px] sm:text-[10px] md:text-xs font-bold text-gold truncate max-w-full">
+            {guide.tabLabel}
+          </span>
         </button>
       </DialogTrigger>
       <DialogContent dir={dir} className="max-w-lg max-h-[85vh] overflow-y-auto bg-card border-gold/20">
