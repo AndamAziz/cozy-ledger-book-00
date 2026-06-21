@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, MapPin, Moon, Sunrise, Sun, Sunset, CloudMoon, C
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Language } from '@/lib/translations';
 import { usePrayerTimes, PRAYER_ORDER, PrayerKey, CALC_METHODS } from '@/hooks/usePrayerTimes';
-import { qiblaBearing, qiblaDistanceKm } from '@/lib/qibla';
+import { qiblaBearing, qiblaDistanceKm, magneticDeclination } from '@/lib/qibla';
 import { QiblaCompass } from '@/components/prayer/QiblaCompass';
 
 const PRAYER_ICONS: Record<PrayerKey, typeof Moon> = {
