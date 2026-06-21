@@ -394,7 +394,8 @@ export default function Movies() {
 
   const fetchMovies = useCallback(
     async (p: number, media: "movie" | "tv", g: string) => {
-      setLoading(true);
+      if (p === 1) setLoading(true);
+      else setLoadingMore(true);
       try {
         let r: Response;
         if (g && g !== "all") {
@@ -415,13 +416,22 @@ export default function Movies() {
         const items: Movie[] = (Array.isArray(data.results) ? data.results : [])
           .filter((x: TmdbSearchResult) => x.poster_path)
           .map((x: TmdbSearchResult) => mapTmdbResult({ ...x, media_type: media }));
-        setMovies(items);
         setTotalPages(Math.min(data.total_pages || 1, 200));
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (p === 1) {
+          setMovies(items);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+          /* append, de-duplicating by tmdb_id */
+          setMovies((prev) => {
+            const seen = new Set(prev.map((m) => m.tmdb_id));
+            return [...prev, ...items.filter((m) => !seen.has(m.tmdb_id))];
+          });
+        }
       } catch {
-        setMovies([]);
+        if (p === 1) setMovies([]);
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     },
     [],
@@ -435,6 +445,28 @@ export default function Movies() {
   useEffect(() => {
     setPage(1);
   }, [mediaTab, genre]);
+
+  /* infinite scroll — load next page when sentinel scrolls into view */
+  useEffect(() => {
+    if (view === "search") return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          !loading &&
+          !loadingMore &&
+          page < totalPages
+        ) {
+          setPage((p) => p + 1);
+        }
+      },
+      { rootMargin: "600px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [view, loading, loadingMore, page, totalPages]);
 
 
 
