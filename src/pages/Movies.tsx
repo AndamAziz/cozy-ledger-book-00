@@ -1616,61 +1616,6 @@ function MovieCard({ movie, onClick }: { movie: Movie; onClick: () => void }) {
 }
 
 
-function Pagination({
-  page,
-  totalPages,
-  onChange,
-  t,
-}: {
-  page: number;
-  totalPages: number;
-  onChange: (p: number) => void;
-  t: (typeof T)["ku"];
-}) {
-  const btn = (label: string, p: number, disabled: boolean, active = false) => (
-    <button
-      onClick={() => !disabled && onChange(p)}
-      disabled={disabled}
-      style={{
-        background: active ? C.gold : C.panel,
-        color: active ? "#0A0A0F" : disabled ? "#55556a" : C.text,
-        border: `1px solid ${active ? C.gold : C.border}`,
-        borderRadius: 10,
-        padding: "8px 14px",
-        minWidth: 42,
-        cursor: disabled ? "not-allowed" : "pointer",
-        fontWeight: 700,
-        fontSize: 14,
-      }}
-    >
-      {label}
-    </button>
-  );
-
-  const pages: number[] = [];
-  const start = Math.max(1, page - 2);
-  const end = Math.min(totalPages, start + 4);
-  for (let i = start; i <= end; i++) pages.push(i);
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: 8,
-        justifyContent: "center",
-        alignItems: "center",
-        marginTop: 30,
-        flexWrap: "wrap",
-      }}
-    >
-      {btn(t.first, 1, page === 1)}
-      {btn("‹", page - 1, page === 1)}
-      {pages.map((p) => btn(String(p), p, false, p === page))}
-      {btn("›", page + 1, page === totalPages)}
-      {btn(t.last, totalPages, page === totalPages)}
-    </div>
-  );
-}
 
 // ====== Modal ======
 type Tab = "info" | "cast" | "ai" | "subs";
