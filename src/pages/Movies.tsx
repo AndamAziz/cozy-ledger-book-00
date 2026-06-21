@@ -394,18 +394,21 @@ export default function Movies() {
     async (p: number, media: "movie" | "tv", g: string) => {
       setLoading(true);
       try {
-        let url: string;
+        let r: Response;
         if (g && g !== "all") {
           const gid =
             media === "tv" ? TV_GENRE_IDS[g] : MOVIE_GENRE_IDS[g];
-          url =
-            `https://api.themoviedb.org/3/discover/${media}?api_key=${TMDB_KEY}` +
-            `&language=en-US&sort_by=popularity.desc&include_adult=false` +
-            `&vote_count.gte=40${gid ? `&with_genres=${gid}` : ""}&page=${p}`;
+          r = await tmdbFetch(`discover/${media}`, {
+            language: "en-US",
+            sort_by: "popularity.desc",
+            include_adult: false,
+            "vote_count.gte": 40,
+            with_genres: gid ? gid : undefined,
+            page: p,
+          });
         } else {
-          url = `https://api.themoviedb.org/3/${media}/popular?api_key=${TMDB_KEY}&language=en-US&page=${p}`;
+          r = await tmdbFetch(`${media}/popular`, { language: "en-US", page: p });
         }
-        const r = await fetch(url);
         const data = await r.json();
         const items: Movie[] = (Array.isArray(data.results) ? data.results : [])
           .filter((x: TmdbSearchResult) => x.poster_path)
