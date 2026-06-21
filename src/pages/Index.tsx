@@ -169,7 +169,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary to-gold flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0">
                 <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs whitespace-normal">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
             </button>
             <button
               onClick={() => navigate('/quran')}
@@ -178,7 +178,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-primary flex items-center justify-center shadow-md shadow-gold/30 flex-shrink-0">
                 <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">📖 {QURAN_LABEL[language] || QURAN_LABEL.en}</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs whitespace-normal">📖 {QURAN_LABEL[language] || QURAN_LABEL.en}</span>
             </button>
           </div>
 
