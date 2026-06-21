@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Compass, Navigation, Smartphone } from 'lucide-react';
 import { compassPoint } from '@/lib/qibla';
 
 interface QiblaCompassProps {
-  bearing: number; // degrees from true North to Qibla
+  bearing: number; // degrees from TRUE North to Qibla (0–360)
   distanceKm: number;
+  declination: number; // magnetic declination (deg, +E) at the user's location
   dir: 'rtl' | 'ltr';
   i18n: {
     qiblaTitle: string;
@@ -21,60 +22,105 @@ interface QiblaCompassProps {
 
 type OrientationEvt = DeviceOrientationEvent & { webkitCompassHeading?: number };
 
-export function QiblaCompass({ bearing, distanceKm, dir, i18n }: QiblaCompassProps) {
-  const [heading, setHeading] = useState<number | null>(null);
+/** Shortest signed angular difference a→b in degrees, range (-180, 180]. */
+function angleDiff(a: number, b: number): number {
+  return ((b - a + 540) % 360) - 180;
+}
+
+export function QiblaCompass({ bearing, distanceKm, declination, dir, i18n }: QiblaCompassProps) {
+  const [heading, setHeading] = useState<number | null>(null); // smoothed TRUE-north heading
   const [supported, setSupported] = useState(false);
   const [enabled, setEnabled] = useState(false);
-  const headingRef = useRef<number | null>(null);
+  const [noReadings, setNoReadings] = useState(false);
+
+  const smoothedRef = useRef<number | null>(null);
+  const gotReadingRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setSupported(typeof window !== 'undefined' && 'DeviceOrientationEvent' in window);
   }, []);
 
-  const handleOrientation = (e: OrientationEvt) => {
-    let h: number | null = null;
-    if (typeof e.webkitCompassHeading === 'number') {
-      // iOS: already compass heading (clockwise from North)
-      h = e.webkitCompassHeading;
-    } else if (typeof e.alpha === 'number') {
-      // Most Android browsers: alpha is counter-clockwise from North
-      h = 360 - e.alpha;
-    }
-    if (h !== null) {
-      headingRef.current = h;
-      setHeading(h);
-    }
-  };
+  const handleOrientation = useCallback(
+    (e: OrientationEvt) => {
+      let trueHeading: number | null = null;
 
-  const enableCompass = async () => {
+      if (typeof e.webkitCompassHeading === 'number' && isFinite(e.webkitCompassHeading)) {
+        // iOS Safari: already a TRUE-north compass heading (Apple applies declination).
+        trueHeading = e.webkitCompassHeading;
+      } else if (typeof e.alpha === 'number' && isFinite(e.alpha)) {
+        // Android/Chrome: alpha is counter-clockwise from MAGNETIC north.
+        const magneticHeading = (360 - e.alpha) % 360;
+        // Convert magnetic → true north using the local declination.
+        trueHeading = (magneticHeading + declination + 360) % 360;
+      }
+
+      if (trueHeading === null) return;
+
+      gotReadingRef.current = true;
+      if (noReadings) setNoReadings(false);
+
+      // Low-pass filter (exponential moving average) with wrap-around handling.
+      const prev = smoothedRef.current;
+      let next: number;
+      if (prev === null) {
+        next = trueHeading;
+      } else {
+        const ALPHA = 0.15; // smaller = smoother / slower
+        next = (prev + ALPHA * angleDiff(prev, trueHeading) + 360) % 360;
+      }
+      smoothedRef.current = next;
+      setHeading(next);
+    },
+    [declination, noReadings]
+  );
+
+  const enableCompass = useCallback(async () => {
     const DOE = window.DeviceOrientationEvent as unknown as {
       requestPermission?: () => Promise<'granted' | 'denied'>;
     };
+    // iOS 13+ requires an explicit permission request triggered by a user gesture.
     try {
       if (DOE && typeof DOE.requestPermission === 'function') {
         const res = await DOE.requestPermission();
-        if (res !== 'granted') return;
+        if (res !== 'granted') {
+          setNoReadings(true);
+          setEnabled(true);
+          return;
+        }
       }
-    } catch { /* ignore */ }
-    window.addEventListener('deviceorientationabsolute', handleOrientation as EventListener, true);
-    window.addEventListener('deviceorientation', handleOrientation as EventListener, true);
+    } catch {
+      setNoReadings(true);
+      setEnabled(true);
+      return;
+    }
+
+    // Prefer the absolute (true Earth-frame) event when available, fall back to relative.
+    const eventName =
+      'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation';
+    window.addEventListener(eventName, handleOrientation as EventListener, true);
     setEnabled(true);
-  };
+
+    // If no sensor data arrives shortly, fall back to the static bearing display.
+    timeoutRef.current = setTimeout(() => {
+      if (!gotReadingRef.current) setNoReadings(true);
+    }, 2500);
+  }, [handleOrientation]);
 
   useEffect(() => {
     return () => {
       window.removeEventListener('deviceorientationabsolute', handleOrientation as EventListener, true);
       window.removeEventListener('deviceorientation', handleOrientation as EventListener, true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, []);
+  }, [handleOrientation]);
 
-  // When compass is live: rotate the whole dial by -heading so North marker
-  // tracks real North, and the Qibla needle sits at `bearing` on the dial.
-  const live = enabled && heading !== null;
+  const live = enabled && !noReadings && heading !== null;
+  // Rotate the dial so its North marker tracks real (true) North.
   const dialRotation = live ? -(heading as number) : 0;
-  // Relative angle of Qibla from where the phone currently points.
+  // Relative angle of Qibla from where the phone currently points = bearing − heading.
   const relative = live ? ((bearing - (heading as number) + 360) % 360) : bearing;
-  const aligned = live && (relative < 8 || relative > 352);
+  const aligned = live && (relative < 6 || relative > 354);
 
   return (
     <div className="rounded-2xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 p-4 sm:p-6 shadow-xl">
@@ -91,7 +137,7 @@ export function QiblaCompass({ bearing, distanceKm, dir, i18n }: QiblaCompassPro
 
           {/* Rotating dial (cardinal markers) */}
           <div
-            className="absolute inset-0 transition-transform duration-200 ease-out"
+            className="absolute inset-0 transition-transform duration-150 ease-out"
             style={{ transform: `rotate(${dialRotation}deg)` }}
           >
             {[
@@ -161,7 +207,7 @@ export function QiblaCompass({ bearing, distanceKm, dir, i18n }: QiblaCompassPro
 
         {/* Compass control / fallback note */}
         <div className="mt-4 w-full">
-          {!supported ? (
+          {!supported || noReadings ? (
             <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
               <Smartphone className="h-3.5 w-3.5" /> {i18n.compassNotSupported}
             </p>

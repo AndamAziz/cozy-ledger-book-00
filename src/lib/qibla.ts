@@ -1,4 +1,5 @@
 // Qibla direction utilities — great-circle (initial) bearing to the Kaaba.
+import geomagnetism from 'geomagnetism';
 
 // Kaaba coordinates (Masjid al-Haram, Mecca)
 export const KAABA_LAT = 21.4225;
@@ -52,3 +53,24 @@ export function compassPoint(bearing: number): string {
   const idx = Math.round(bearing / 22.5) % 16;
   return points[idx];
 }
+
+/**
+ * Magnetic declination (in degrees) at a location for the current date,
+ * computed from the World Magnetic Model (WMM).
+ *
+ * Declination is the angle between true North and magnetic North. A positive
+ * value means magnetic North is east of true North. To convert a *magnetic*
+ * compass heading to a *true* heading: trueHeading = magneticHeading + declination.
+ *
+ * Returns 0 if the model cannot be evaluated (then assume readings are already
+ * true-north referenced, e.g. iOS webkitCompassHeading).
+ */
+export function magneticDeclination(lat: number, lng: number): number {
+  try {
+    const info = geomagnetism.model().point([lat, lng]);
+    return typeof info.decl === 'number' && isFinite(info.decl) ? info.decl : 0;
+  } catch {
+    return 0;
+  }
+}
+

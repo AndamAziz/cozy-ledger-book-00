@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, MapPin, Moon, Sunrise, Sun, Sunset, CloudMoon, C
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Language } from '@/lib/translations';
 import { usePrayerTimes, PRAYER_ORDER, PrayerKey, CALC_METHODS } from '@/hooks/usePrayerTimes';
-import { qiblaBearing, qiblaDistanceKm } from '@/lib/qibla';
+import { qiblaBearing, qiblaDistanceKm, magneticDeclination } from '@/lib/qibla';
 import { QiblaCompass } from '@/components/prayer/QiblaCompass';
 
 const PRAYER_ICONS: Record<PrayerKey, typeof Moon> = {
@@ -234,6 +234,15 @@ function toMinutes(hhmm: string): number {
   return h * 60 + m;
 }
 
+/** Format a 24h "HH:MM" string as 12-hour time with AM/PM (e.g. "9:46 PM"). */
+function formatTime12(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  if (!isFinite(h) || !isFinite(m)) return hhmm;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
 export default function PrayerTimes() {
   const navigate = useNavigate();
   const { language, dir } = useLanguage();
@@ -285,6 +294,10 @@ export default function PrayerTimes() {
 
   const qibla = location ? qiblaBearing(location.latitude, location.longitude) : 0;
   const distance = location ? qiblaDistanceKm(location.latitude, location.longitude) : 0;
+  const declination = useMemo(
+    () => (location ? magneticDeclination(location.latitude, location.longitude) : 0),
+    [location]
+  );
 
   const handleCity = (e: React.FormEvent) => {
     e.preventDefault();
@@ -368,7 +381,7 @@ export default function PrayerTimes() {
                     <div>
                       <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {s.next}</p>
                       <p className="text-2xl sm:text-3xl font-extrabold text-foreground mt-0.5">{s.prayers[nextKey]}</p>
-                      <p className="text-sm text-primary font-semibold mt-0.5">{data.timings[nextKey]}</p>
+                      <p className="text-sm text-primary font-semibold mt-0.5">{formatTime12(data.timings[nextKey])}</p>
                     </div>
                     <div className="text-end">
                       <p className="text-3xl sm:text-4xl font-extrabold text-gold tabular-nums">{countdown}</p>
@@ -420,7 +433,7 @@ export default function PrayerTimes() {
                             </span>
                             <span className={`font-semibold ${isNext ? 'text-gold' : 'text-foreground'}`}>{s.prayers[k]}</span>
                           </span>
-                          <span className={`tabular-nums font-bold ${isNext ? 'text-gold' : 'text-foreground'}`}>{data.timings[k]}</span>
+                          <span className={`tabular-nums font-bold ${isNext ? 'text-gold' : 'text-foreground'}`}>{formatTime12(data.timings[k])}</span>
                         </div>
                       );
                     })}
@@ -450,6 +463,7 @@ export default function PrayerTimes() {
               <QiblaCompass
                 bearing={qibla}
                 distanceKm={distance}
+                declination={declination}
                 dir={dir}
                 i18n={{
                   qiblaTitle: s.qiblaTitle,
