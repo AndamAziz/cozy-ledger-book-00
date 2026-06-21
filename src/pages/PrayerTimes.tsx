@@ -97,6 +97,13 @@ const STR: Record<Language, PageStrings> = {
     pointPhone: 'Turn your phone until the arrow points up',
     distance: (km) => `${km} km to Mecca`,
     aligned: 'Facing Qibla',
+    accuracyLabel: 'Compass accuracy',
+    accuracyGood: 'Good',
+    accuracyLow: 'Low accuracy',
+    accuracyUnstable: 'Needs calibration',
+    calibrationTip: 'Heading is unstable. Move your phone in a figure-8 motion a few times, away from metal, magnets and electronics, to calibrate the compass.',
+    tzLabel: 'Time zone',
+    tzAuto: (z) => `Auto-detected (${z})`,
   },
   ku: {
     title: 'کاتەکانی نوێژ و قیبلە',
