@@ -961,8 +961,33 @@ export default function Movies() {
             </Grid>
           ))}
 
-        {/* Pagination (catalog views only) */}
-        {view !== "search" && <Pagination page={page} totalPages={totalPages} onChange={setPage} t={t} />}
+        {/* Infinite scroll sentinel + loader (catalog views only) */}
+        {view !== "search" && !loading && filtered.length > 0 && (
+          <>
+            {loadingMore && (
+              <Grid>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={`more-${i}`}>
+                    <div
+                      className="mv-skel"
+                      style={{ width: "100%", aspectRatio: "2/3", borderRadius: 14 }}
+                    />
+                    <div
+                      className="mv-skel"
+                      style={{ height: 12, borderRadius: 6, marginTop: 8, width: "80%" }}
+                    />
+                  </div>
+                ))}
+              </Grid>
+            )}
+            <div ref={sentinelRef} style={{ height: 1 }} aria-hidden />
+            {page >= totalPages && (
+              <div style={{ textAlign: "center", padding: "24px 0", color: C.muted, fontSize: 13 }}>
+                ✦
+              </div>
+            )}
+          </>
+        )}
       </main>
 
       {/* ===== Bottom Navigation Bar ===== */}
