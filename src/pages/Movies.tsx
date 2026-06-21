@@ -17,9 +17,33 @@ const C = {
   border: "rgba(255,255,255,0.08)",
 };
 
-const TMDB_KEY = "4e44d9029b1270a757cddc766a1bcb63";
+// Image hosts are public CDN paths (no API key needed).
 const TMDB_BACKDROP = "https://image.tmdb.org/t/p/w1280";
 const TMDB_PROFILE = "https://image.tmdb.org/t/p/w185";
+
+// All TMDB API calls go through our server-side proxy so the API key is never
+// exposed in the browser. The proxy injects the key and allow-lists endpoints.
+const TMDB_PROXY = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tmdb`;
+const TMDB_PROXY_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+async function tmdbFetch(
+  path: string,
+  params: Record<string, string | number | boolean | undefined> = {},
+): Promise<Response> {
+  const url = new URL(TMDB_PROXY);
+  url.searchParams.set("path", path);
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") {
+      url.searchParams.set(k, String(v));
+    }
+  }
+  return fetch(url.toString(), {
+    headers: {
+      apikey: TMDB_PROXY_KEY,
+      Authorization: `Bearer ${TMDB_PROXY_KEY}`,
+    },
+  });
+}
 
 // Official IMDb streaming domains (source for all movies & series).
 // playimdb.com is primary; the rest are mirrors used if it is blocked.
@@ -370,18 +394,21 @@ export default function Movies() {
     async (p: number, media: "movie" | "tv", g: string) => {
       setLoading(true);
       try {
-        let url: string;
+        let r: Response;
         if (g && g !== "all") {
           const gid =
             media === "tv" ? TV_GENRE_IDS[g] : MOVIE_GENRE_IDS[g];
-          url =
-            `https://api.themoviedb.org/3/discover/${media}?api_key=${TMDB_KEY}` +
-            `&language=en-US&sort_by=popularity.desc&include_adult=false` +
-            `&vote_count.gte=40${gid ? `&with_genres=${gid}` : ""}&page=${p}`;
+          r = await tmdbFetch(`discover/${media}`, {
+            language: "en-US",
+            sort_by: "popularity.desc",
+            include_adult: false,
+            "vote_count.gte": 40,
+            with_genres: gid ? gid : undefined,
+            page: p,
+          });
         } else {
-          url = `https://api.themoviedb.org/3/${media}/popular?api_key=${TMDB_KEY}&language=en-US&page=${p}`;
+          r = await tmdbFetch(`${media}/popular`, { language: "en-US", page: p });
         }
-        const r = await fetch(url);
         const data = await r.json();
         const items: Movie[] = (Array.isArray(data.results) ? data.results : [])
           .filter((x: TmdbSearchResult) => x.poster_path)
@@ -411,9 +438,9 @@ export default function Movies() {
 
   const searchByImdbId = useCallback(async (imdbId: string) => {
     try {
-      const r = await fetch(
-        `https://api.themoviedb.org/3/find/${imdbId}?api_key=${TMDB_KEY}&external_source=imdb_id`,
-      );
+      const r = await tmdbFetch(`find/${imdbId}`, {
+        external_source: "imdb_id",
+      });
       const d = await r.json();
       const tv = d?.tv_results?.[0];
       const mv = d?.movie_results?.[0];
@@ -449,10 +476,12 @@ export default function Movies() {
 
   const searchTmdb = useCallback(async (q: string): Promise<Movie[]> => {
     try {
-      const r = await fetch(
-        `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}` +
-          `&query=${encodeURIComponent(q)}&include_adult=false&language=en-US&page=1`,
-      );
+      const r = await tmdbFetch("search/multi", {
+        query: q,
+        include_adult: false,
+        language: "en-US",
+        page: 1,
+      });
       const d = await r.json();
       const list: TmdbSearchResult[] = Array.isArray(d.results) ? d.results : [];
       return list
@@ -1015,9 +1044,7 @@ function TrendingRow({
     let alive = true;
     (async () => {
       try {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/trending/all/day?api_key=${TMDB_KEY}&language=en-US`,
-        );
+        const r = await tmdbFetch("trending/all/day", { language: "en-US" });
         const d = await r.json();
         if (!alive) return;
         const list: Movie[] = (Array.isArray(d.results) ? d.results : [])
@@ -1168,9 +1195,7 @@ function Hero({
     let alive = true;
     (async () => {
       try {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/trending/all/week?api_key=${TMDB_KEY}&language=en-US`,
-        );
+        const r = await tmdbFetch("trending/all/week", { language: "en-US" });
         const d = await r.json();
         if (!alive) return;
         const list: HeroItem[] = (Array.isArray(d.results) ? d.results : [])
@@ -1663,9 +1688,9 @@ function MovieModal({
     let alive = true;
     (async () => {
       try {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/${mediaPath}/${movie.tmdb_id}?api_key=${TMDB_KEY}&append_to_response=credits,external_ids`,
-        );
+        const r = await tmdbFetch(`${mediaPath}/${movie.tmdb_id}`, {
+          append_to_response: "credits,external_ids",
+        });
         const d = await r.json();
         if (!alive) return;
         if (d.backdrop_path) setBackdrop(TMDB_BACKDROP + d.backdrop_path);
@@ -1697,9 +1722,7 @@ function MovieModal({
     let alive = true;
     (async () => {
       try {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/tv/${movie.tmdb_id}/aggregate_credits?api_key=${TMDB_KEY}`,
-        );
+        const r = await tmdbFetch(`tv/${movie.tmdb_id}/aggregate_credits`);
         const d = await r.json();
         if (!alive) return;
         if (Array.isArray(d.cast)) {
@@ -1728,9 +1751,7 @@ function MovieModal({
     }
     setTrailerLoading(true);
     try {
-      const r = await fetch(
-        `https://api.themoviedb.org/3/${mediaPath}/${movie.tmdb_id}/videos?api_key=${TMDB_KEY}`,
-      );
+      const r = await tmdbFetch(`${mediaPath}/${movie.tmdb_id}/videos`);
       const d = await r.json();
       const yt = (d.results || []).find(
         (v: { site: string; type: string }) =>
