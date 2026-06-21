@@ -29,7 +29,7 @@ const Reviews = () => {
     const load = async () => {
       const { data, error } = await supabase
         .from('reviews')
-        .select('id, user_id, reviewer_name, rating, comment, is_approved, created_at')
+        .select('id, reviewer_name, rating, comment, is_approved, created_at')
         .eq('is_approved', true)
         .order('created_at', { ascending: false });
       if (!active) return;
