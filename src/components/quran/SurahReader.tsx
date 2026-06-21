@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { SurahDetail } from '@/lib/quran';
-import { RECITERS, ayahAudioUrl, getReciterName } from '@/lib/quran';
+import { RECITERS, ayahAudioUrl, bismillahAudioUrl, surahNeedsBismillah, getReciterName } from '@/lib/quran';
 import type { QuranStrings } from '@/lib/quranI18n';
 
 const BISMILLAH = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ';
