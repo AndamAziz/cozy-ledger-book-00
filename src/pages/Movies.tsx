@@ -1633,6 +1633,26 @@ function MovieCard({ movie, t, onClick }: { movie: Movie; t: Record<string, stri
             ★ {rating.toFixed(1)}
           </div>
         )}
+        {/* Actor credit badge (bottom-start) */}
+        {movie.fromActor && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: 8,
+              insetInlineStart: 8,
+              background: "#10b981",
+              color: "#fff",
+              fontSize: 10.5,
+              fontWeight: 900,
+              padding: "3px 9px",
+              borderRadius: 7,
+              letterSpacing: ".6px",
+              boxShadow: "0 2px 8px rgba(0,0,0,.45)",
+            }}
+          >
+            {t.actorTag}
+          </div>
+        )}
         {/* play overlay */}
         <div
           className="mv-play"
