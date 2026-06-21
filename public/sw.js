@@ -1,4 +1,4 @@
-const CACHE_NAME = 'city-taxperts-v3';
+const CACHE_NAME = 'central-tech-platform-v3';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache immediately on install

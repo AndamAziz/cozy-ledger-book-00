@@ -205,7 +205,7 @@ export default function CryptoTracker() {
             aria-label={bi('گەڕانەوە', 'Home')}
           >
             <span className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-[#f0b90b] to-[#d4af37] text-black font-black text-sm">C</span>
-            <span className="hidden xs:inline text-sm font-extrabold tracking-tight text-white">CITY <span className="text-[#f0b90b]">TAXPERTS</span></span>
+            <span className="hidden xs:inline text-sm font-extrabold tracking-tight text-white">CENTRAL <span className="text-[#f0b90b]">TECH PLATFORM</span></span>
           </button>
 
           {/* Live price ticker (center) */}

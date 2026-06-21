@@ -46,7 +46,7 @@ async function cleanupServiceWorkers() {
       const keys = await caches.keys();
       await Promise.all(
         keys
-          .filter((k) => k.startsWith('city-taxperts'))
+          .filter((k) => k.startsWith('central-tech-platform'))
           .map((k) => caches.delete(k))
       );
     }
