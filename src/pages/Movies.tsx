@@ -1035,7 +1035,7 @@ export default function Movies() {
           ) : (
             <Grid>
               {filtered.map((m, i) => (
-                <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} onClick={() => setSelected(m)} />
+                <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} t={t} onClick={() => setSelected(m)} />
               ))}
             </Grid>
           ))}
