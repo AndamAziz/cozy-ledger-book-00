@@ -59,7 +59,11 @@ export const QURAN_I18N: Record<Language, QuranStrings> = {
     surah: 'سورەت',
     ayah: 'ئایەت',
     bismillah: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-    translationNote: 'وەرگێڕانی کوردی دواتر زیاد دەکرێت.',
+    translationNote: 'وەرگێڕانی کوردی: تەفسیری ئاسان — بورهان محمد ئەمین.',
+    showTranslation: 'پیشاندانی وەرگێڕان',
+    hideTranslation: 'شاردنەوەی وەرگێڕان',
+    translationLabel: 'وەرگێڕانی کوردی',
+    translationError: 'وەرگێڕان بار نەکرا',
   },
   en: {
     title: 'The Holy Quran',
