@@ -433,7 +433,7 @@ export default function PrayerTimes() {
                             </span>
                             <span className={`font-semibold ${isNext ? 'text-gold' : 'text-foreground'}`}>{s.prayers[k]}</span>
                           </span>
-                          <span className={`tabular-nums font-bold ${isNext ? 'text-gold' : 'text-foreground'}`}>{data.timings[k]}</span>
+                          <span className={`tabular-nums font-bold ${isNext ? 'text-gold' : 'text-foreground'}`}>{formatTime12(data.timings[k])}</span>
                         </div>
                       );
                     })}
