@@ -164,6 +164,34 @@ export async function fetchSurahDetail(
   };
 }
 
+// Strip any HTML markup (e.g. footnote <sup> tags) the translation API may
+// embed, leaving clean reading text.
+function cleanTranslation(html: string): string {
+  return html
+    .replace(/<sup[^>]*>.*?<\/sup>/gis, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Fetch the Kurdish (Tafsîrî Asan) translation for a surah. The returned array
+// is indexed by ayah position (index 0 = ayah 1), matching SurahDetail.ayahs.
+export async function fetchSurahTranslation(
+  surahNumber: number,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const res = await fetch(
+    `${QURAN_COM_API}/quran/translations/${KURDISH_TRANSLATION_ID}?chapter_number=${surahNumber}`,
+    { signal },
+  );
+  if (!res.ok) {
+    throw new Error(`Translation API error (${res.status})`);
+  }
+  const json = (await res.json()) as { translations: Array<{ text: string }> };
+  return (json.translations ?? []).map((t) => cleanTranslation(t.text));
+}
+
+
 // ---- Local persistence (bookmarks, last read, font size) ----
 
 const FONT_SIZE_KEY = 'quran-arabic-font-size';
