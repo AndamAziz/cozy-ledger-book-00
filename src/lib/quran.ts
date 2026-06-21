@@ -117,7 +117,7 @@ export async function fetchSurahDetail(
       page: number;
       sajda: boolean | { id: number };
     }>;
-  }>(`/surah/${surahNumber}/${RECITER_EDITION}`, signal);
+  }>(`/surah/${surahNumber}/${TEXT_EDITION}`, signal);
 
   return {
     number: data.number,
@@ -130,7 +130,8 @@ export async function fetchSurahDetail(
       number: a.number,
       numberInSurah: a.numberInSurah,
       text: a.text,
-      audio: a.audio,
+      // Default audio (Alafasy); the reader derives the URL per selected reciter.
+      audio: ayahAudioUrl(DEFAULT_RECITER, a.number),
       juz: a.juz,
       page: a.page,
       sajda: typeof a.sajda === 'object' ? true : Boolean(a.sajda),
