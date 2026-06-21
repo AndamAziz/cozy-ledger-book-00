@@ -7,6 +7,16 @@ import { Language } from '@/lib/translations';
 import { usePrayerTimes, PRAYER_ORDER, PrayerKey, CALC_METHODS } from '@/hooks/usePrayerTimes';
 import { qiblaBearing, qiblaDistanceKm, magneticDeclination } from '@/lib/qibla';
 import { QiblaCompass } from '@/components/prayer/QiblaCompass';
+import {
+  getStoredPrayerTz,
+  setStoredPrayerTz,
+  resolveTimezone,
+  detectTimezone,
+  listTimezones,
+  nowMinutesInTz,
+  tzShortLabel,
+  AUTO_TZ,
+} from '@/lib/prayerTz';
 
 const PRAYER_ICONS: Record<PrayerKey, typeof Moon> = {
   Fajr: Moon,
@@ -52,6 +62,15 @@ interface PageStrings {
   pointPhone: string;
   distance: (km: string) => string;
   aligned: string;
+  // compass accuracy / calibration
+  accuracyLabel: string;
+  accuracyGood: string;
+  accuracyLow: string;
+  accuracyUnstable: string;
+  calibrationTip: string;
+  // timezone
+  tzLabel: string;
+  tzAuto: (zone: string) => string;
 }
 
 const STR: Record<Language, PageStrings> = {
@@ -88,6 +107,13 @@ const STR: Record<Language, PageStrings> = {
     pointPhone: 'Turn your phone until the arrow points up',
     distance: (km) => `${km} km to Mecca`,
     aligned: 'Facing Qibla',
+    accuracyLabel: 'Compass accuracy',
+    accuracyGood: 'Good',
+    accuracyLow: 'Low accuracy',
+    accuracyUnstable: 'Needs calibration',
+    calibrationTip: 'Heading is unstable. Move your phone in a figure-8 motion a few times, away from metal, magnets and electronics, to calibrate the compass.',
+    tzLabel: 'Time zone',
+    tzAuto: (z) => `Auto-detected (${z})`,
   },
   ku: {
     title: 'کاتەکانی نوێژ و قیبلە',
@@ -122,6 +148,13 @@ const STR: Record<Language, PageStrings> = {
     pointPhone: 'مۆبایلەکەت بسووڕێنە تا تیرەکە بەرەو سەرەوە ئاماژە بکات',
     distance: (km) => `${km} کم بۆ مەککە`,
     aligned: 'ڕووەو قیبلە',
+    accuracyLabel: 'وردی قیبلەنما',
+    accuracyGood: 'باش',
+    accuracyLow: 'وردی کەم',
+    accuracyUnstable: 'پێویستی بە کالیبرەکردنە',
+    calibrationTip: 'ئاراستەکە جێگیر نییە. مۆبایلەکەت چەند جارێک بە شێوەی ژمارەی ٨ بجووڵێنە، دوور لە ئاسن و موگناتیس و ئامێری ئەلیکترۆنی، بۆ کالیبرەکردنی قیبلەنما.',
+    tzLabel: 'ناوچەی کات',
+    tzAuto: (z) => `خۆکارانە دۆزرایەوە (${z})`,
   },
   ar: {
     title: 'أوقات الصلاة والقبلة',
@@ -156,6 +189,13 @@ const STR: Record<Language, PageStrings> = {
     pointPhone: 'أدر هاتفك حتى يشير السهم للأعلى',
     distance: (km) => `${km} كم إلى مكة`,
     aligned: 'باتجاه القبلة',
+    accuracyLabel: 'دقة البوصلة',
+    accuracyGood: 'جيدة',
+    accuracyLow: 'دقة منخفضة',
+    accuracyUnstable: 'تحتاج إلى معايرة',
+    calibrationTip: 'الاتجاه غير مستقر. حرّك هاتفك على شكل الرقم ٨ عدة مرات، بعيداً عن المعادن والمغناطيس والأجهزة الإلكترونية، لمعايرة البوصلة.',
+    tzLabel: 'المنطقة الزمنية',
+    tzAuto: (z) => `تم اكتشافها تلقائياً (${z})`,
   },
   fa: {
     title: 'اوقات نماز و قبله',
@@ -190,6 +230,13 @@ const STR: Record<Language, PageStrings> = {
     pointPhone: 'گوشی را بچرخانید تا فلش رو به بالا قرار گیرد',
     distance: (km) => `${km} کیلومتر تا مکه`,
     aligned: 'رو به قبله',
+    accuracyLabel: 'دقت قطب‌نما',
+    accuracyGood: 'خوب',
+    accuracyLow: 'دقت پایین',
+    accuracyUnstable: 'نیاز به کالیبراسیون',
+    calibrationTip: 'جهت ناپایدار است. گوشی را چند بار به شکل عدد ۸ حرکت دهید، دور از فلز، آهنربا و وسایل الکترونیکی، تا قطب‌نما کالیبره شود.',
+    tzLabel: 'منطقه زمانی',
+    tzAuto: (z) => `به‌طور خودکار شناسایی شد (${z})`,
   },
   tr: {
     title: 'Namaz Vakitleri ve Kıble',
@@ -224,6 +271,13 @@ const STR: Record<Language, PageStrings> = {
     pointPhone: 'Ok yukarıyı gösterene kadar telefonu çevirin',
     distance: (km) => `Mekke\'ye ${km} km`,
     aligned: 'Kıbleye dönük',
+    accuracyLabel: 'Pusula doğruluğu',
+    accuracyGood: 'İyi',
+    accuracyLow: 'Düşük doğruluk',
+    accuracyUnstable: 'Kalibrasyon gerekli',
+    calibrationTip: 'Yön kararsız. Pusulayı kalibre etmek için telefonunuzu metal, mıknatıs ve elektronik cihazlardan uzakta birkaç kez 8 şeklinde hareket ettirin.',
+    tzLabel: 'Saat dilimi',
+    tzAuto: (z) => `Otomatik algılandı (${z})`,
   },
 };
 
@@ -255,7 +309,14 @@ export default function PrayerTimes() {
   });
   useEffect(() => { localStorage.setItem(METHOD_STORAGE_KEY, String(method)); }, [method]);
 
-  const { location, data, loading, permissionDenied, error, requestGps, setManualCity } = usePrayerTimes(method);
+  // Time zone: stored preference ('auto' or an IANA id) → resolved concrete zone.
+  const [tzPref, setTzPref] = useState<string>(() => getStoredPrayerTz());
+  useEffect(() => { setStoredPrayerTz(tzPref); }, [tzPref]);
+  const resolvedTz = useMemo(() => resolveTimezone(tzPref), [tzPref]);
+  const detectedTz = useMemo(() => detectTimezone(), []);
+  const tzList = useMemo(() => listTimezones(), []);
+
+  const { location, data, loading, permissionDenied, error, requestGps, setManualCity } = usePrayerTimes(method, resolvedTz);
 
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
@@ -275,7 +336,7 @@ export default function PrayerTimes() {
   // Determine next prayer + countdown
   const { nextKey, countdown } = useMemo(() => {
     if (!data) return { nextKey: null as PrayerKey | null, countdown: '' };
-    const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+    const nowMin = nowMinutesInTz(resolvedTz, now);
     // Only the 5 obligatory prayers count for "next" (skip Sunrise as a prayer but keep it for highlight logic order)
     const order: PrayerKey[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
     let next: PrayerKey | null = null;
@@ -290,7 +351,7 @@ export default function PrayerTimes() {
     const sec = Math.floor((diff * 60) % 60);
     const cd = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
     return { nextKey: next, countdown: cd };
-  }, [data, now]);
+  }, [data, now, resolvedTz]);
 
   const qibla = location ? qiblaBearing(location.latitude, location.longitude) : 0;
   const distance = location ? qiblaDistanceKm(location.latitude, location.longitude) : 0;
@@ -452,9 +513,24 @@ export default function PrayerTimes() {
                       <option key={m.id} value={m.id}>{s.methods[m.key]}</option>
                     ))}
                   </select>
+
+                  {/* Time zone selector (auto-detect fallback) */}
+                  <label className="text-xs text-muted-foreground block mb-1.5 mt-3">{s.tzLabel}</label>
+                  <select
+                    value={tzPref}
+                    onChange={(e) => setTzPref(e.target.value)}
+                    dir="ltr"
+                    className="w-full rounded-xl bg-background/60 border border-white/10 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+                  >
+                    <option value={AUTO_TZ}>{s.tzAuto(detectedTz)}</option>
+                    {tzList.map((z) => (
+                      <option key={z} value={z}>{tzShortLabel(z)} · {z}</option>
+                    ))}
+                  </select>
+
                   <p className="text-[11px] text-muted-foreground mt-2 flex items-start gap-1.5">
                     <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                    {s.source(methodName)}
+                    {s.source(methodName)} · {resolvedTz}
                   </p>
                 </div>
               </div>
@@ -475,6 +551,11 @@ export default function PrayerTimes() {
                   pointPhone: s.pointPhone,
                   distance: s.distance,
                   aligned: s.aligned,
+                  accuracyLabel: s.accuracyLabel,
+                  accuracyGood: s.accuracyGood,
+                  accuracyLow: s.accuracyLow,
+                  accuracyUnstable: s.accuracyUnstable,
+                  calibrationTip: s.calibrationTip,
                 }}
               />
             </div>

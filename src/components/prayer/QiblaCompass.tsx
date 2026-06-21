@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Compass, Navigation, Smartphone } from 'lucide-react';
-import { compassPoint } from '@/lib/qibla';
+import { Compass, Navigation, Smartphone, RefreshCcw, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import {
+  compassPoint,
+  magneticToTrue,
+  angleDifference,
+  relativeQiblaAngle,
+  isAlignedToQibla,
+} from '@/lib/qibla';
+
+type Quality = 'good' | 'low' | 'unstable';
 
 interface QiblaCompassProps {
   bearing: number; // degrees from TRUE North to Qibla (0–360)
@@ -17,14 +25,31 @@ interface QiblaCompassProps {
     pointPhone: string;
     distance: (km: string) => string;
     aligned: string;
+    // accuracy / calibration
+    accuracyLabel: string;
+    accuracyGood: string;
+    accuracyLow: string;
+    accuracyUnstable: string;
+    calibrationTip: string;
   };
 }
 
-type OrientationEvt = DeviceOrientationEvent & { webkitCompassHeading?: number };
+type OrientationEvt = DeviceOrientationEvent & {
+  webkitCompassHeading?: number;
+  webkitCompassAccuracy?: number;
+};
 
-/** Shortest signed angular difference a→b in degrees, range (-180, 180]. */
-function angleDiff(a: number, b: number): number {
-  return ((b - a + 540) % 360) - 180;
+/** Derive a heading-quality grade from iOS accuracy and/or sample jitter. */
+function computeQuality(iosAccuracy: number | null, jitter: number): Quality {
+  if (iosAccuracy !== null) {
+    // Apple: negative = unreliable; the value is the +/- error in degrees.
+    if (iosAccuracy < 0 || iosAccuracy > 35) return 'unstable';
+    if (iosAccuracy > 15) return 'low';
+    return 'good';
+  }
+  if (jitter > 12) return 'unstable';
+  if (jitter > 5) return 'low';
+  return 'good';
 }
 
 export function QiblaCompass({ bearing, distanceKm, declination, dir, i18n }: QiblaCompassProps) {
@@ -32,10 +57,12 @@ export function QiblaCompass({ bearing, distanceKm, declination, dir, i18n }: Qi
   const [supported, setSupported] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [noReadings, setNoReadings] = useState(false);
+  const [quality, setQuality] = useState<Quality>('good');
 
   const smoothedRef = useRef<number | null>(null);
   const gotReadingRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const samplesRef = useRef<number[]>([]); // recent raw headings for jitter estimation
 
   useEffect(() => {
     setSupported(typeof window !== 'undefined' && 'DeviceOrientationEvent' in window);
@@ -44,21 +71,39 @@ export function QiblaCompass({ bearing, distanceKm, declination, dir, i18n }: Qi
   const handleOrientation = useCallback(
     (e: OrientationEvt) => {
       let trueHeading: number | null = null;
+      let iosAccuracy: number | null = null;
 
       if (typeof e.webkitCompassHeading === 'number' && isFinite(e.webkitCompassHeading)) {
         // iOS Safari: already a TRUE-north compass heading (Apple applies declination).
         trueHeading = e.webkitCompassHeading;
+        if (typeof e.webkitCompassAccuracy === 'number') iosAccuracy = e.webkitCompassAccuracy;
       } else if (typeof e.alpha === 'number' && isFinite(e.alpha)) {
         // Android/Chrome: alpha is counter-clockwise from MAGNETIC north.
         const magneticHeading = (360 - e.alpha) % 360;
         // Convert magnetic → true north using the local declination.
-        trueHeading = (magneticHeading + declination + 360) % 360;
+        trueHeading = magneticToTrue(magneticHeading, declination);
+        // A non-absolute event means the heading isn't Earth-frame referenced.
+        if (e.absolute === false) iosAccuracy = null;
       }
 
       if (trueHeading === null) return;
 
       gotReadingRef.current = true;
       if (noReadings) setNoReadings(false);
+
+      // Maintain a short window of raw headings to estimate jitter (instability).
+      const samples = samplesRef.current;
+      samples.push(trueHeading);
+      if (samples.length > 12) samples.shift();
+      let jitter = 0;
+      if (samples.length >= 4) {
+        let sum = 0;
+        for (let i = 1; i < samples.length; i++) {
+          sum += Math.abs(angleDifference(samples[i - 1], samples[i]));
+        }
+        jitter = sum / (samples.length - 1);
+      }
+      setQuality(computeQuality(iosAccuracy, jitter));
 
       // Low-pass filter (exponential moving average) with wrap-around handling.
       const prev = smoothedRef.current;
@@ -67,7 +112,7 @@ export function QiblaCompass({ bearing, distanceKm, declination, dir, i18n }: Qi
         next = trueHeading;
       } else {
         const ALPHA = 0.15; // smaller = smoother / slower
-        next = (prev + ALPHA * angleDiff(prev, trueHeading) + 360) % 360;
+        next = (prev + ALPHA * angleDifference(prev, trueHeading) + 360) % 360;
       }
       smoothedRef.current = next;
       setHeading(next);
@@ -118,15 +163,32 @@ export function QiblaCompass({ bearing, distanceKm, declination, dir, i18n }: Qi
   const live = enabled && !noReadings && heading !== null;
   // Rotate the dial so its North marker tracks real (true) North.
   const dialRotation = live ? -(heading as number) : 0;
-  // Relative angle of Qibla from where the phone currently points = bearing − heading.
-  const relative = live ? ((bearing - (heading as number) + 360) % 360) : bearing;
-  const aligned = live && (relative < 6 || relative > 354);
+  // Relative angle of Qibla from where the phone currently points.
+  const relative = live ? relativeQiblaAngle(bearing, heading as number) : bearing;
+  const aligned = live && isAlignedToQibla(relative);
+  const showCalibration = live && quality !== 'good';
+
+  const qualityMeta =
+    quality === 'good'
+      ? { label: i18n.accuracyGood, dot: 'bg-primary', text: 'text-primary', Icon: CheckCircle2 }
+      : quality === 'low'
+        ? { label: i18n.accuracyLow, dot: 'bg-gold', text: 'text-gold', Icon: AlertTriangle }
+        : { label: i18n.accuracyUnstable, dot: 'bg-destructive', text: 'text-destructive', Icon: AlertTriangle };
 
   return (
     <div className="rounded-2xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 p-4 sm:p-6 shadow-xl">
-      <div className="flex items-center gap-2 mb-1">
-        <Compass className="h-5 w-5 text-gold" />
-        <h2 className="text-base sm:text-lg font-bold text-foreground">{i18n.qiblaTitle}</h2>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex items-center gap-2">
+          <Compass className="h-5 w-5 text-gold" />
+          <h2 className="text-base sm:text-lg font-bold text-foreground">{i18n.qiblaTitle}</h2>
+        </div>
+        {/* Heading quality status indicator */}
+        {live && (
+          <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${qualityMeta.text}`}>
+            <span className={`w-2 h-2 rounded-full ${qualityMeta.dot} ${quality === 'unstable' ? 'animate-pulse' : ''}`} />
+            {qualityMeta.label}
+          </span>
+        )}
       </div>
       <p className="text-xs sm:text-sm text-muted-foreground mb-4">{i18n.qiblaDesc}</p>
 
@@ -204,6 +266,14 @@ export function QiblaCompass({ bearing, distanceKm, declination, dir, i18n }: Qi
             <p className="mt-2 text-sm font-bold text-primary">✓ {i18n.aligned}</p>
           )}
         </div>
+
+        {/* On-screen calibration tip when heading quality is low/unstable */}
+        {showCalibration && (
+          <div className="mt-4 w-full rounded-xl bg-gold/10 border border-gold/30 px-3 py-2.5 flex items-start gap-2">
+            <RefreshCcw className="h-4 w-4 text-gold mt-0.5 flex-shrink-0 animate-pulse" />
+            <p className="text-xs text-foreground/90 leading-snug">{i18n.calibrationTip}</p>
+          </div>
+        )}
 
         {/* Compass control / fallback note */}
         <div className="mt-4 w-full">

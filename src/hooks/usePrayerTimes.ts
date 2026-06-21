@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { dateStrInTz, detectTimezone } from '@/lib/prayerTz';
 
 // Aladhan calculation methods. 3 = Muslim World League (default for Kurdistan/Iraq).
 export const CALC_METHODS = [
@@ -27,10 +28,6 @@ export interface PrayerTimesData {
 }
 
 const LOCATION_CACHE_KEY = 'prayer:location:v2';
-const todayStr = () => {
-  const d = new Date();
-  return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-};
 
 function loadCachedLocation(): PrayerLocation | null {
   try {
@@ -50,19 +47,23 @@ function saveCachedLocation(loc: PrayerLocation) {
   } catch { /* noop */ }
 }
 
-export function usePrayerTimes(method: number) {
+export function usePrayerTimes(method: number, timezone?: string) {
   const [location, setLocation] = useState<PrayerLocation | null>(() => loadCachedLocation());
   const [data, setData] = useState<PrayerTimesData | null>(null);
   const [loading, setLoading] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchByCoords = useCallback(async (loc: PrayerLocation, m: number) => {
+  const tz = timezone || detectTimezone();
+
+  const fetchByCoords = useCallback(async (loc: PrayerLocation, m: number, zone: string) => {
     setLoading(true);
     setError(null);
     try {
+      // Pin both the request date and the returned timings to the chosen zone so
+      // the schedule is correct even when the device clock is in another zone.
       const res = await fetch(
-        `https://api.aladhan.com/v1/timings/${todayStr()}?latitude=${loc.latitude}&longitude=${loc.longitude}&method=${m}`
+        `https://api.aladhan.com/v1/timings/${dateStrInTz(zone)}?latitude=${loc.latitude}&longitude=${loc.longitude}&method=${m}&timezonestring=${encodeURIComponent(zone)}`
       );
       if (!res.ok) throw new Error('network');
       const json = await res.json();
@@ -151,10 +152,10 @@ export function usePrayerTimes(method: number) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch timings whenever location or method changes.
+  // Fetch timings whenever location, method, or timezone changes.
   useEffect(() => {
-    if (location) fetchByCoords(location, method);
-  }, [location, method, fetchByCoords]);
+    if (location) fetchByCoords(location, method, tz);
+  }, [location, method, tz, fetchByCoords]);
 
   // Refresh at midnight (new day -> new times).
   useEffect(() => {
@@ -163,10 +164,10 @@ export function usePrayerTimes(method: number) {
     midnight.setHours(24, 0, 30, 0);
     const ms = midnight.getTime() - now.getTime();
     const timer = setTimeout(() => {
-      if (location) fetchByCoords(location, method);
+      if (location) fetchByCoords(location, method, tz);
     }, ms);
     return () => clearTimeout(timer);
-  }, [location, method, fetchByCoords]);
+  }, [location, method, tz, fetchByCoords]);
 
   return {
     location,
