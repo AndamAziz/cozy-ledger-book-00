@@ -166,7 +166,7 @@ export function SurahReader(props: SurahReaderProps) {
       <div className="flex items-center gap-2">
         <Mic className="h-4 w-4 text-gold flex-shrink-0" />
         <Select value={reciter} onValueChange={setReciter}>
-          <SelectTrigger className="h-9 flex-1 border-gold/40 bg-card text-sm whitespace-nowrap" aria-label={s.reciter}>
+          <SelectTrigger className="h-9 flex-1 border-gold/40 bg-card text-sm whitespace-nowrap truncate" aria-label={s.reciter}>
             <SelectValue placeholder={s.reciter}>
               {RECITERS.find((r) => r.id === reciter)?.shortName ?? getReciterName(reciter)}
             </SelectValue>
