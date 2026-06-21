@@ -1044,9 +1044,7 @@ function TrendingRow({
     let alive = true;
     (async () => {
       try {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/trending/all/day?api_key=${TMDB_KEY}&language=en-US`,
-        );
+        const r = await tmdbFetch("trending/all/day", { language: "en-US" });
         const d = await r.json();
         if (!alive) return;
         const list: Movie[] = (Array.isArray(d.results) ? d.results : [])
@@ -1197,9 +1195,7 @@ function Hero({
     let alive = true;
     (async () => {
       try {
-        const r = await fetch(
-          `https://api.themoviedb.org/3/trending/all/week?api_key=${TMDB_KEY}&language=en-US`,
-        );
+        const r = await tmdbFetch("trending/all/week", { language: "en-US" });
         const d = await r.json();
         if (!alive) return;
         const list: HeroItem[] = (Array.isArray(d.results) ? d.results : [])
