@@ -327,3 +327,36 @@
     display: none !important;
   }
 }
+
+/* Live price ticker (marquee) */
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes ticker-scroll-rtl {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+.ticker-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: ticker-scroll 40s linear infinite;
+}
+.ticker-track-rtl {
+  animation-name: ticker-scroll-rtl;
+}
+/* Pause on hover/touch so users can read while interacting */
+.ticker-mask:hover .ticker-track,
+.ticker-mask:active .ticker-track {
+  animation-play-state: paused;
+}
+/* Subtle fade on both edges */
+.ticker-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
+}
+
