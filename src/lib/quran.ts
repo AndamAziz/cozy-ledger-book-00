@@ -9,12 +9,18 @@
 //  - The Quran's Arabic text is in the public domain (sourced via
 //    Tanzil / GlobalQuran). Audio is served from the Islamic Network CDN.
 //
-// NOTE: Kurdish translation intentionally NOT bundled yet — the
-// Tanzil "Tafsiri Asan" translation is licensed for non-commercial
-// use only and is pending an explicit licensing decision.
+// Kurdish translation: "Tafsîrî Asan" by Burhan Muhammad-Amin, served via
+// the quran.com API (resource id 81). Sorani Kurdish, intended for free
+// distribution (dawah). Shown alongside the Arabic text as an optional layer.
 
 const API_BASE = 'https://api.alquran.cloud/v1';
 const AUDIO_CDN = 'https://cdn.islamic.network/quran/audio';
+const QURAN_COM_API = 'https://api.quran.com/api/v4';
+
+// Kurdish translation resource on quran.com.
+export const KURDISH_TRANSLATION_ID = 81;
+export const KURDISH_TRANSLATION_NAME = 'Tafsîrî Asan';
+export const KURDISH_TRANSLATION_AUTHOR = 'Burhan Muhammad-Amin';
 
 // Available audio reciters (alquran.cloud audio editions, served from the
 // Islamic Network CDN). Audio URLs are derived per-ayah from the global ayah
