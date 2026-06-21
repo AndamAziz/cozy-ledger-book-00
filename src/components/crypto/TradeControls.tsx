@@ -114,6 +114,7 @@ export function TradeControls({
   otherPositionLabel,
   marketClosed = false,
   marketClosedLabel,
+  reopenAt,
   timeframeMinutes,
   balance,
   realizedPnl = 0,
