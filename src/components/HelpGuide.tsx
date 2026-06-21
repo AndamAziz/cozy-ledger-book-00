@@ -43,6 +43,7 @@ const GUIDE: Record<Language, GuideContent> = {
   en: {
     title: 'Help & Guide',
     subtitle: 'How to use each section of the app',
+    tabLabel: 'Help',
     sections: [
       {
         id: 'income',
@@ -86,6 +87,7 @@ const GUIDE: Record<Language, GuideContent> = {
   ku: {
     title: 'یارمەتی و ڕێنمایی',
     subtitle: 'چۆنیەتی بەکارهێنانی هەر بەشێک',
+    tabLabel: 'یارمەتی',
     sections: [
       {
         id: 'income',
@@ -129,6 +131,7 @@ const GUIDE: Record<Language, GuideContent> = {
   ar: {
     title: 'المساعدة والدليل',
     subtitle: 'كيفية استخدام كل قسم من التطبيق',
+    tabLabel: 'مساعدة',
     sections: [
       {
         id: 'income',
@@ -172,6 +175,7 @@ const GUIDE: Record<Language, GuideContent> = {
   fa: {
     title: 'راهنما و کمک',
     subtitle: 'نحوه استفاده از هر بخش برنامه',
+    tabLabel: 'راهنما',
     sections: [
       {
         id: 'income',
@@ -215,6 +219,7 @@ const GUIDE: Record<Language, GuideContent> = {
   tr: {
     title: 'Yardım ve Kılavuz',
     subtitle: 'Uygulamanın her bölümünün nasıl kullanılacağı',
+    tabLabel: 'Yardım',
     sections: [
       {
         id: 'income',
