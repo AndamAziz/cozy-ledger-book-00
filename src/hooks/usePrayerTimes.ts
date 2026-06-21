@@ -1,31 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { dateStrInTz, detectTimezone } from '@/lib/prayerTz';
+import type { PrayerLocation, PrayerTimesData } from '@/lib/prayer';
 
-// Aladhan calculation methods. 3 = Muslim World League (default for Kurdistan/Iraq).
-export const CALC_METHODS = [
-  { id: 3, key: 'mwl' },
-  { id: 4, key: 'ummAlQura' },
-  { id: 2, key: 'isna' },
-  { id: 5, key: 'egypt' },
-  { id: 1, key: 'karachi' },
-] as const;
-
-export type PrayerKey = 'Fajr' | 'Sunrise' | 'Dhuhr' | 'Asr' | 'Maghrib' | 'Isha';
-export const PRAYER_ORDER: PrayerKey[] = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-
-export interface PrayerLocation {
-  latitude: number;
-  longitude: number;
-  label?: string;
-  source: 'gps' | 'city' | 'cache';
-}
-
-export interface PrayerTimesData {
-  timings: Record<PrayerKey, string>; // "HH:MM" 24h
-  dateReadable: string;
-  hijri: string;
-  method: number;
-}
+// Type-only re-exports are erased at compile time, so they don't affect the
+// Fast Refresh boundary. Value constants (CALC_METHODS, PRAYER_ORDER) are NOT
+// re-exported here — importers get them from the pure module @/lib/prayer so
+// this file stays a clean hook-only refresh boundary. See src/lib/prayer.ts.
+export type { PrayerKey, PrayerLocation, PrayerTimesData } from '@/lib/prayer';
 
 const LOCATION_CACHE_KEY = 'prayer:location:v2';
 

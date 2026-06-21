@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, MapPin, Moon, Sunrise, Sun, Sunset, CloudMoon, Clock, RefreshCw, Loader2, Info } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Language } from '@/lib/translations';
-import { usePrayerTimes, PRAYER_ORDER, PrayerKey, CALC_METHODS } from '@/hooks/usePrayerTimes';
+import { usePrayerTimes } from '@/hooks/usePrayerTimes';
+import { PRAYER_ORDER, PrayerKey, CALC_METHODS } from '@/lib/prayer';
 import { qiblaBearing, qiblaDistanceKm, magneticDeclination } from '@/lib/qibla';
 import { QiblaCompass } from '@/components/prayer/QiblaCompass';
 import {
