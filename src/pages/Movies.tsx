@@ -1903,14 +1903,39 @@ function MovieModal({
               position: "absolute",
               top: 12,
               insetInlineStart: 12,
-              width: 38,
-              height: 38,
+              width: 42,
+              height: 42,
               borderRadius: "50%",
-              background: "rgba(0,0,0,.6)",
-              color: C.text,
-              border: "none",
+              background: "rgba(0,0,0,.55)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              color: "#fff",
+              border: "1.5px solid rgba(255,255,255,0.18)",
               cursor: "pointer",
-              fontSize: 18,
+              fontSize: 20,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 14px rgba(0,0,0,.45)",
+              transition: "transform .18s, background .18s, box-shadow .18s",
+              lineHeight: 1,
+              padding: 0,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(0,0,0,.8)";
+              e.currentTarget.style.transform = "scale(1.08)";
+              e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,.6)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(0,0,0,.55)";
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,.45)";
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.transform = "scale(0.92)";
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = "scale(1.08)";
             }}
           >
             ✕
