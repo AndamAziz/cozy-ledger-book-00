@@ -120,6 +120,8 @@ const Quran = () => {
             maxFont={MAX_FONT}
             isBookmarked={isBookmarked}
             toggleBookmark={toggleBookmark}
+            reciter={reciter}
+            setReciter={setReciter}
             isRTL={isRTL}
             s={s}
           />
