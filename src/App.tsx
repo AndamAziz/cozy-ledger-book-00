@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import CryptoTracker from "./pages/CryptoTracker";
 import Movies from "./pages/Movies";
 import PrayerTimes from "./pages/PrayerTimes";
+import Quran from "./pages/Quran";
 import GestureQA from "./pages/GestureQA";
 import Bots from "./pages/Bots";
 import BotDetail from "./pages/BotDetail";
@@ -36,6 +37,7 @@ const App = () => (
                 <Route path="/crypto" element={<CryptoTracker />} />
                 <Route path="/movies" element={<Movies />} />
                 <Route path="/prayer" element={<PrayerTimes />} />
+                <Route path="/quran" element={<Quran />} />
                 <Route path="/gesture-qa" element={<GestureQA />} />
                 <Route path="/bots" element={<Bots />} />
                 <Route path="/bots/:id" element={<BotDetail />} />
