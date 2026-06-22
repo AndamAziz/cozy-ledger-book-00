@@ -681,7 +681,8 @@ async function handleHistory(code: string, range: string): Promise<Response> {
     }
 
 
-    const responseData = { code, range, candles, count: candles.length };
+    const cleaned = despikeCandles(candles);
+    const responseData = { code, range, candles: cleaned, count: cleaned.length };
     historyCache.set(cacheKey, { data: responseData, ts: Date.now() });
 
     return new Response(JSON.stringify(responseData), {
