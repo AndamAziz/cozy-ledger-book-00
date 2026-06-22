@@ -340,6 +340,20 @@ const engineCache: Record<string, { ts: number; sig: EngineSignal | null }> = {}
 
 const GOLD_CURRENCIES = ["USD", "EUR", "CHF", "GBP", "JPY"];
 
+// Per-symbol engine config for the multi-timeframe assets (gold/silver/forex/crypto).
+// `kind` selects the candle source; `key` feeds the shared engine's macro model.
+const FOREX_ENGINE: Record<string, { key: "eurusd" | "gbpusd" | "usdjpy"; code: string; invert: boolean; decimals: number; currencies: string[] }> = {
+  "EUR/USD": { key: "eurusd", code: "EUR", invert: true, decimals: 4, currencies: ["EUR", "USD"] },
+  "GBP/USD": { key: "gbpusd", code: "GBP", invert: true, decimals: 4, currencies: ["GBP", "USD"] },
+  "USD/JPY": { key: "usdjpy", code: "JPY", invert: false, decimals: 2, currencies: ["USD", "JPY"] },
+};
+const CRYPTO_ENGINE: Record<string, { key: "eth" | "sol" | "xrp" | "bnb"; binanceSym: string; decimals: number }> = {
+  "ETH/USD": { key: "eth", binanceSym: "ETHUSDT", decimals: 2 },
+  "SOL/USD": { key: "sol", binanceSym: "SOLUSDT", decimals: 2 },
+  "XRP/USD": { key: "xrp", binanceSym: "XRPUSDT", decimals: 4 },
+  "BNB/USD": { key: "bnb", binanceSym: "BNBUSDT", decimals: 2 },
+};
+
 async function computeEngine(symbol: string, livePrice: number): Promise<EngineSignal | null> {
   try {
     if (symbol === "XAU/USD") {
@@ -352,6 +366,16 @@ async function computeEngine(symbol: string, livePrice: number): Promise<EngineS
         price, candles: base, candlesByTF: byTF, macro, events,
       });
     }
+    if (symbol === "XAG/USD") {
+      const [byTF, macro, events] = await Promise.all([fetchSilverAllTF(), fetchEngineMacro(), fetchEngineEvents()]);
+      const base = byTF.M15 ?? [];
+      const price = base.length ? base[base.length - 1].close : livePrice;
+      if (!base.length) return null;
+      return buildAssetSignal({
+        asset: "silver", decimals: 3, currencies: GOLD_CURRENCIES, timeframe: "M15",
+        price, candles: base, candlesByTF: byTF, macro, events,
+      });
+    }
     if (symbol === "BTC/USD") {
       const [byTF, macro, events] = await Promise.all([fetchBtcAllTF(), fetchEngineMacro(), fetchEngineEvents()]);
       const base = byTF.M15 ?? [];
@@ -359,6 +383,28 @@ async function computeEngine(symbol: string, livePrice: number): Promise<EngineS
       if (!base.length) return null;
       return buildAssetSignal({
         asset: "btc", decimals: 0, currencies: ["USD"], timeframe: "M15",
+        price, candles: base, candlesByTF: byTF, macro, events,
+      });
+    }
+    const fx = FOREX_ENGINE[symbol];
+    if (fx) {
+      const [byTF, macro, events] = await Promise.all([fetchForexAllTF(fx.code, fx.invert), fetchEngineMacro(), fetchEngineEvents()]);
+      const base = byTF.M15 ?? [];
+      const price = base.length ? base[base.length - 1].close : livePrice;
+      if (!base.length) return null;
+      return buildAssetSignal({
+        asset: fx.key, decimals: fx.decimals, currencies: fx.currencies, timeframe: "M15",
+        price, candles: base, candlesByTF: byTF, macro, events,
+      });
+    }
+    const cr = CRYPTO_ENGINE[symbol];
+    if (cr) {
+      const [byTF, macro, events] = await Promise.all([fetchCryptoAllTF(cr.binanceSym), fetchEngineMacro(), fetchEngineEvents()]);
+      const base = byTF.M15 ?? [];
+      const price = base.length ? base[base.length - 1].close : livePrice;
+      if (!base.length) return null;
+      return buildAssetSignal({
+        asset: cr.key, decimals: cr.decimals, currencies: ["USD"], timeframe: "M15",
         price, candles: base, candlesByTF: byTF, macro, events,
       });
     }
