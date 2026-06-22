@@ -843,13 +843,14 @@ function outcomeLine(
   entry: number, close: number, pips: number, tf?: string,
 ): string {
   const m = ASSET_META[symbol];
+  const dp = dpOf(symbol);
   const tfTag = tf ? ` · ⏱ ${tf}` : "";
   if (hit === "tp") {
     return [
       `🟢✅ <b>TARGET HIT / تارگێت تەواوبوو</b> 🎉`,
       `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}${tfTag}`,
       `📈🟢 Result / ئەنجام: <b>+${pips} pips</b>`,
-      `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+      `Entry <code>$${fmtN(entry, dp)}</code> → <code>$${fmtN(close, dp)}</code>`,
       `سیگنالەکە سەرکەوتوو بوو 🟢✅`,
     ].join("\n");
   }
@@ -857,7 +858,7 @@ function outcomeLine(
     `🔴❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
     `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}${tfTag}`,
     `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
-    `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+    `Entry <code>$${fmtN(entry, dp)}</code> → <code>$${fmtN(close, dp)}</code>`,
     `🟠⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
     `🚪 تکایە پۆزیشنەکە دابخە / Please close your position`,
   ].join("\n");
