@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import type { SurahMeta } from '@/lib/quran';
 import type { QuranStrings } from '@/lib/quranI18n';
+import { SURAH_ALIASES } from '@/lib/surahNames';
 
 interface SurahListProps {
   surahs: SurahMeta[] | undefined;
