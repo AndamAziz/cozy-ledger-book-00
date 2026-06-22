@@ -535,10 +535,10 @@ function shiftCandlesToSpot(candles: Candle[], spotPrice: number): Candle[] {
 // stale/erroneous `low` (or `high`) that is tens of dollars away from the bar's
 // real body — e.g. dozens of consecutive Gold bars all sharing an identical
 // low of 4155.89 while their open/close sit near 4210. That renders as a long
-// fake wick under every candle. We compute the robust MEDIAN candle range
-// (immune to these outliers) and clamp any wick that exceeds a generous
-// multiple of it back to a sane distance from the body. Real volatility spikes
-// are preserved; only gross glitches are trimmed.
+// fake wick under every candle. We use the robust MEDIAN candle range (immune
+// to these outliers) to detect glitch bars, then rebuild the offending wick at
+// the TYPICAL wick size for the series so the bar matches its neighbours
+// instead of spiking to a phantom level. Genuine volatility is left untouched.
 function despikeCandles(candles: Candle[]): Candle[] {
   if (candles.length < 8) return candles;
   const ranges = candles
@@ -548,21 +548,41 @@ function despikeCandles(candles: Candle[]): Candle[] {
   if (ranges.length < 8) return candles;
   const medianRange = ranges[Math.floor(ranges.length / 2)];
   if (!(medianRange > 0)) return candles;
-  // Generous cap: only catches wicks an order of magnitude beyond typical.
-  const maxWick = medianRange * 8;
+  // A wick beyond 4× the median candle range is treated as a data glitch.
+  const maxWick = medianRange * 4;
+
+  const median = (arr: number[]): number => {
+    if (arr.length === 0) return 0;
+    const s = [...arr].sort((a, b) => a - b);
+    return s[Math.floor(s.length / 2)];
+  };
+  // Typical (non-glitch) wick sizes, used to rebuild corrupted wicks.
+  const lowerWicks: number[] = [];
+  const upperWicks: number[] = [];
+  for (const c of candles) {
+    const lw = Math.min(c.open, c.close) - c.low;
+    const uw = c.high - Math.max(c.open, c.close);
+    if (lw >= 0 && lw <= maxWick) lowerWicks.push(lw);
+    if (uw >= 0 && uw <= maxWick) upperWicks.push(uw);
+  }
+  const typLower = median(lowerWicks);
+  const typUpper = median(upperWicks);
+
   return candles.map((c) => {
     const bodyLow = Math.min(c.open, c.close);
     const bodyHigh = Math.max(c.open, c.close);
     let low = c.low;
     let high = c.high;
-    if (bodyLow - low > maxWick) low = +(bodyLow - maxWick).toFixed(4);
-    if (high - bodyHigh > maxWick) high = +(bodyHigh + maxWick).toFixed(4);
-    // Keep OHLC internally consistent after clamping.
+    // Replace clearly corrupted wicks with the series-typical wick size.
+    if (bodyLow - low > maxWick) low = +(bodyLow - typLower).toFixed(4);
+    if (high - bodyHigh > maxWick) high = +(bodyHigh + typUpper).toFixed(4);
+    // Keep OHLC internally consistent.
     low = Math.min(low, bodyLow);
     high = Math.max(high, bodyHigh);
     return { ...c, low, high };
   });
 }
+
 
 function buildFlatSpotCandles(price: number, range: string): Candle[] {
   const now = Math.floor(Date.now() / 1000);
