@@ -817,13 +817,14 @@ function newSignalLine(
     reasonLines.push(isBuy ? "Bullish setup · دۆخی بەرزبوونەوە" : "Bearish setup · دۆخی دابەزین");
   }
 
+  const dp = dpOf(q.symbol);
   return [
     `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
     tf ? `⏱ <b>Timeframe: ${tf}</b> · چوارچێوەی کات` : "",
     "",
-    `💰 <code>$${fmt(entry)}</code> :نرخی چوونەژوورەوە`,
-    `🎯 <code>$${fmt(tp)}</code> :تارگێت (+$${fmt(tpDelta)})`,
-    `🛑 <code>$${fmt(sl)}</code> :ستۆپ لۆس (-$${fmt(slDelta)})`,
+    `💰 <code>$${fmtN(entry, dp)}</code> :نرخی چوونەژوورەوە`,
+    `🎯 <code>$${fmtN(tp, dp)}</code> :تارگێت (+$${fmtN(tpDelta, dp)})`,
+    `🛑 <code>$${fmtN(sl, dp)}</code> :ستۆپ لۆس (-$${fmtN(slDelta, dp)})`,
     "",
     `⚡ Confidence: ${confidence}% · متمانە`,
     `📍 ${esc(session)}`,
