@@ -530,6 +530,40 @@ function shiftCandlesToSpot(candles: Candle[], spotPrice: number): Candle[] {
   }));
 }
 
+// Despike bad OHLC bars before serving them to the chart.
+// Some upstream feeds (notably Yahoo GC=F/SI=F intraday) occasionally return a
+// stale/erroneous `low` (or `high`) that is tens of dollars away from the bar's
+// real body — e.g. dozens of consecutive Gold bars all sharing an identical
+// low of 4155.89 while their open/close sit near 4210. That renders as a long
+// fake wick under every candle. We compute the robust MEDIAN candle range
+// (immune to these outliers) and clamp any wick that exceeds a generous
+// multiple of it back to a sane distance from the body. Real volatility spikes
+// are preserved; only gross glitches are trimmed.
+function despikeCandles(candles: Candle[]): Candle[] {
+  if (candles.length < 8) return candles;
+  const ranges = candles
+    .map((c) => c.high - c.low)
+    .filter((r) => Number.isFinite(r) && r > 0)
+    .sort((a, b) => a - b);
+  if (ranges.length < 8) return candles;
+  const medianRange = ranges[Math.floor(ranges.length / 2)];
+  if (!(medianRange > 0)) return candles;
+  // Generous cap: only catches wicks an order of magnitude beyond typical.
+  const maxWick = medianRange * 8;
+  return candles.map((c) => {
+    const bodyLow = Math.min(c.open, c.close);
+    const bodyHigh = Math.max(c.open, c.close);
+    let low = c.low;
+    let high = c.high;
+    if (bodyLow - low > maxWick) low = +(bodyLow - maxWick).toFixed(4);
+    if (high - bodyHigh > maxWick) high = +(bodyHigh + maxWick).toFixed(4);
+    // Keep OHLC internally consistent after clamping.
+    low = Math.min(low, bodyLow);
+    high = Math.max(high, bodyHigh);
+    return { ...c, low, high };
+  });
+}
+
 function buildFlatSpotCandles(price: number, range: string): Candle[] {
   const now = Math.floor(Date.now() / 1000);
   const intraday = new Set(["1min", "5min", "15min", "1d", "5d"]);
