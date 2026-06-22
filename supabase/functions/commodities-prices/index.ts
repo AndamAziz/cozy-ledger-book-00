@@ -597,8 +597,9 @@ async function handleHistory(code: string, range: string): Promise<Response> {
 
   if (GOLDAPI_METALS.includes(code)) {
     // 1) Prefer true spot history from Twelve Data.
-    const spotCandles = await fetchTwelveDataHistory(code, range);
-    if (spotCandles) {
+    const spotCandlesRaw = await fetchTwelveDataHistory(code, range);
+    if (spotCandlesRaw) {
+      const spotCandles = despikeCandles(spotCandlesRaw);
       const responseData = { code, range, candles: spotCandles, count: spotCandles.length, source: "twelvedata-spot" };
       historyCache.set(cacheKey, { data: responseData, ts: Date.now() });
       return new Response(JSON.stringify(responseData), {
@@ -615,7 +616,7 @@ async function handleHistory(code: string, range: string): Promise<Response> {
     ]);
     const spotPrice = spot.prices[code];
     if (futuresCandles && spotPrice && spotPrice > 0) {
-      const candles = shiftCandlesToSpot(futuresCandles, spotPrice);
+      const candles = despikeCandles(shiftCandlesToSpot(futuresCandles, spotPrice));
       const responseData = { code, range, candles, count: candles.length, source: "yahoo-futures-spot-adjusted" };
       historyCache.set(cacheKey, { data: responseData, ts: Date.now() });
       return new Response(JSON.stringify(responseData), {
