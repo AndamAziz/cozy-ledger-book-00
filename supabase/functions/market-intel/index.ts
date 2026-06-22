@@ -725,6 +725,12 @@ function sessionLabel(d = new Date(), enabled?: Region[]): string {
   return `${REGION_EMOJI[region]} ${region} (${REGION_KU[region]})`;
 }
 
+// Decimal places to display for an asset's price (forex/crypto need more than 2).
+const dpOf = (symbol: string): number => ASSET_META[symbol]?.decimals ?? 2;
+// Format a number with a fixed number of decimals (asset-aware).
+const fmtN = (n: number, dp: number) =>
+  n.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp });
+
 function priceLine(q: Quote, sig: Signal): string {
   const m = ASSET_META[q.symbol];
   const up = q.changePct >= 0;
@@ -732,7 +738,7 @@ function priceLine(q: Quote, sig: Signal): string {
   const pct = `${up ? "+" : ""}${q.changePct.toFixed(2)}%`;
   return [
     `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
-    `Price: <code>$${q.price.toLocaleString("en-US")}</code> ${arrow} ${pct}`,
+    `Price: <code>$${fmtN(q.price, dpOf(q.symbol))}</code> ${arrow} ${pct}`,
     `Signal: ${sigBadge(sig)} <b>${sig}</b> · کاریگەری: ${sigKu(sig)}`,
   ].join("\n");
 }
