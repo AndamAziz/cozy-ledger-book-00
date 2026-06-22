@@ -19,7 +19,22 @@ export interface OHLCCandle {
 
 export type TrendDir = "up" | "down" | "neutral";
 export type SignalAction = "buy" | "sell" | "wait" | "neutral";
-export type AssetKey = "gold" | "btc" | "eurusd" | "gbpusd" | "usdjpy";
+export type AssetKey =
+  | "gold"
+  | "silver"
+  | "btc"
+  | "eth"
+  | "sol"
+  | "xrp"
+  | "bnb"
+  | "eurusd"
+  | "gbpusd"
+  | "usdjpy";
+
+// Metals share gold's macro model (DXY + safe-haven). Crypto coins share BTC's
+// macro model (Fear&Greed + S&P correlation). Forex pairs use the USD/DXY model.
+const METAL_ASSETS: AssetKey[] = ["gold", "silver"];
+const CRYPTO_ASSETS: AssetKey[] = ["btc", "eth", "sol", "xrp", "bnb"];
 
 export const SIGNAL_TIMEFRAMES = ["M5", "M15", "M30", "H1", "H4", "D1"] as const;
 export type SignalTF = (typeof SIGNAL_TIMEFRAMES)[number];
