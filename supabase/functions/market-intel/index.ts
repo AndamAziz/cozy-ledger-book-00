@@ -435,8 +435,16 @@ async function getPrices(): Promise<Quote[]> {
   // cold starts (see applyChange). Without this gold's changePct is always 0.
   await hydrateDayOpen();
   const before = JSON.stringify(dayOpen);
-  const [gold, oil, btc] = await Promise.all([fetchGold(), fetchOil(), fetchBtc()]);
-  const quotes = [gold, oil, btc].filter((q): q is Quote => !!q).map(applyChange);
+  const [gold, oil, btc, silver, eth, sol, xrp, bnb, fx] = await Promise.all([
+    fetchGold(), fetchOil(), fetchBtc(), fetchSilver(),
+    fetchCrypto("ETH/USD", "ETHUSDT", 2),
+    fetchCrypto("SOL/USD", "SOLUSDT", 2),
+    fetchCrypto("XRP/USD", "XRPUSDT", 4),
+    fetchCrypto("BNB/USD", "BNBUSDT", 2),
+    fetchForexLive(),
+  ]);
+  const raw: (Quote | null)[] = [gold, oil, btc, silver, eth, sol, xrp, bnb, ...fx];
+  const quotes = raw.filter((q): q is Quote => !!q).map(applyChange);
   // Persist the anchor back whenever it changed (new day / newly seen symbol) so the
   // next (cold-booted) invocation measures gold's move from the same open price.
   if (JSON.stringify(dayOpen) !== before) {
