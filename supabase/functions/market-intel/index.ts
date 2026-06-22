@@ -326,8 +326,17 @@ async function getEngine(symbol: string, livePrice: number): Promise<EngineSigna
 }
 
 async function getPrices(): Promise<Quote[]> {
+  // Hydrate the persisted intraday-open map so gold's synthetic % change survives
+  // cold starts (see applyChange). Without this gold's changePct is always 0.
+  await hydrateDayOpen();
+  const before = JSON.stringify(dayOpen);
   const [gold, oil, btc] = await Promise.all([fetchGold(), fetchOil(), fetchBtc()]);
   const quotes = [gold, oil, btc].filter((q): q is Quote => !!q).map(applyChange);
+  // Persist the anchor back whenever it changed (new day / newly seen symbol) so the
+  // next (cold-booted) invocation measures gold's move from the same open price.
+  if (JSON.stringify(dayOpen) !== before) {
+    try { await setState("day_open", dayOpen); } catch (_e) { /* best-effort */ }
+  }
   // Attach the engine analysis (cached) so every consumer uses identical, real numbers.
   await Promise.all(
     quotes.map(async (q) => {
