@@ -23,6 +23,7 @@ export interface OHLCCandle {
 }
 
 // Map of crypto symbols to friendly names and logos (emoji fallback)
+// Metadata for the pairs we actually track (kept in sync with TRACKED_PAIRS below).
 const COIN_META: Record<string, { name: string; logo: string }> = {
   XBT: { name: 'Bitcoin', logo: '₿' },
   ETH: { name: 'Ethereum', logo: 'Ξ' },
@@ -33,35 +34,17 @@ const COIN_META: Record<string, { name: string; logo: string }> = {
   LTC: { name: 'Litecoin', logo: 'Ł' },
   LINK: { name: 'Chainlink', logo: '⬡' },
   AVAX: { name: 'Avalanche', logo: '▲' },
-  MATIC: { name: 'Polygon', logo: '⬠' },
   DOGE: { name: 'Dogecoin', logo: 'Ð' },
   ATOM: { name: 'Cosmos', logo: '⚛' },
   UNI: { name: 'Uniswap', logo: '🦄' },
   AAVE: { name: 'Aave', logo: '👻' },
   SHIB: { name: 'Shiba Inu', logo: '🐕' },
-  FIL: { name: 'Filecoin', logo: '⨎' },
   TRX: { name: 'Tron', logo: '⟁' },
   NEAR: { name: 'NEAR Protocol', logo: 'Ⓝ' },
-  APE: { name: 'ApeCoin', logo: '🦍' },
   GRT: { name: 'The Graph', logo: '◆' },
-  SAND: { name: 'The Sandbox', logo: '🏖' },
-  MANA: { name: 'Decentraland', logo: '🌐' },
-  CRV: { name: 'Curve DAO', logo: '↻' },
   XLM: { name: 'Stellar', logo: '✦' },
-  EOS: { name: 'EOS', logo: '◇' },
   XTZ: { name: 'Tezos', logo: 'ꜩ' },
   ALGO: { name: 'Algorand', logo: 'Å' },
-  COMP: { name: 'Compound', logo: '◈' },
-  SNX: { name: 'Synthetix', logo: '⨀' },
-  YFI: { name: 'yearn.finance', logo: '🔷' },
-  SUSHI: { name: 'SushiSwap', logo: '🍣' },
-  ENJ: { name: 'Enjin Coin', logo: '⬢' },
-  BAT: { name: 'Basic Attention', logo: '🦁' },
-  ZEC: { name: 'Zcash', logo: 'ⓩ' },
-  DASH: { name: 'Dash', logo: 'Đ' },
-  PEPE: { name: 'Pepe', logo: '🐸' },
-  ARB: { name: 'Arbitrum', logo: '🔵' },
-  OP: { name: 'Optimism', logo: '🔴' },
 };
 
 // Pairs we want to track (Kraken uses XBT instead of BTC)

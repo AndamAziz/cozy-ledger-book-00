@@ -70,7 +70,7 @@ export function calculateRisk(input: RiskInput): RiskResult {
     input.entry > 0 &&
     (input.side === 'buy' ? input.stopLoss < input.entry : input.stopLoss > input.entry);
 
-  const lots = valid && slDistance > 0 ? riskAmount / (slDistance * contractSize) : 0;
+  const lots = valid ? riskAmount / (slDistance * contractSize) : 0;
   const units = lots * contractSize;
 
   const tpDistance = slDistance * Math.max(0, input.rr);
