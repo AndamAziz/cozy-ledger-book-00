@@ -20,6 +20,9 @@ import {
   fetchGoldAllTF,
   fetchBtcAllTF,
   fetchOilAllTF,
+  fetchSilverAllTF,
+  fetchForexAllTF,
+  fetchCryptoAllTF,
   fetchMacro as fetchEngineMacro,
   fetchEvents as fetchEngineEvents,
 } from "./signal-data.ts";
@@ -93,8 +96,11 @@ const NEWS_MIN_GAP_MS = 60 * 60_000;
 
 const CALENDAR_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+
 const admin = createClient(
-  Deno.env.get("SUPABASE_URL")!,
+  SUPABASE_URL,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
@@ -232,6 +238,59 @@ async function fetchOil(): Promise<Quote | null> {
   } catch { return null; }
 }
 
+// ── Silver spot (XAG/USD) via free gold-api.com — like gold, only spot (no %),
+// so applyChange() derives its intraday % from the persisted day-open anchor. ──
+async function fetchSilver(): Promise<Quote | null> {
+  try {
+    const res = await fetch("https://api.gold-api.com/price/XAG", {
+      headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) { await res.text(); return null; }
+    const d = await res.json();
+    const price = Number(d?.price);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    return { symbol: "XAG/USD", price: +price.toFixed(3), changePct: 0 };
+  } catch { return null; }
+}
+
+// ── Crypto (ETH/SOL/XRP/BNB) live price + 24h % via Binance ──
+async function fetchCrypto(symbol: string, binanceSym: string, decimals: number): Promise<Quote | null> {
+  try {
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSym}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) { await res.text(); return null; }
+    const d = await res.json();
+    const price = Number(d?.lastPrice);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    return { symbol, price: +price.toFixed(decimals), changePct: Number(d?.priceChangePercent) || 0 };
+  } catch { return null; }
+}
+
+// ── Forex (EUR/USD, GBP/USD, USD/JPY) live via forex-prices edge function.
+// forex-prices returns rates[code] = USD/CODE; EUR/USD & GBP/USD are inverted
+// (1/price, sign-flipped %), USD/JPY is already USD-base (used as-is). ──
+interface FxLiveRate { price: number; prev: number; change: number; }
+async function fetchForexLive(): Promise<Quote[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/forex-prices`, {
+      headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}`, apikey: SUPABASE_ANON_KEY },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) { await res.text(); return []; }
+    const data = await res.json().catch(() => null);
+    const rates: Record<string, FxLiveRate> = data?.rates ?? {};
+    const out: Quote[] = [];
+    const eur = rates["EUR"];
+    if (eur?.price > 0) out.push({ symbol: "EUR/USD", price: +(1 / eur.price).toFixed(4), changePct: +(-eur.change).toFixed(2) });
+    const gbp = rates["GBP"];
+    if (gbp?.price > 0) out.push({ symbol: "GBP/USD", price: +(1 / gbp.price).toFixed(4), changePct: +(-gbp.change).toFixed(2) });
+    const jpy = rates["JPY"];
+    if (jpy?.price > 0) out.push({ symbol: "USD/JPY", price: +jpy.price.toFixed(2), changePct: +jpy.change.toFixed(2) });
+    return out;
+  } catch { return []; }
+}
+
 // Track an intraday open so gold gets a real % change (gold-api gives only spot).
 //
 // CRITICAL: this MUST be persisted in durable state. The edge function cold-boots
@@ -281,6 +340,20 @@ const engineCache: Record<string, { ts: number; sig: EngineSignal | null }> = {}
 
 const GOLD_CURRENCIES = ["USD", "EUR", "CHF", "GBP", "JPY"];
 
+// Per-symbol engine config for the multi-timeframe assets (gold/silver/forex/crypto).
+// `kind` selects the candle source; `key` feeds the shared engine's macro model.
+const FOREX_ENGINE: Record<string, { key: "eurusd" | "gbpusd" | "usdjpy"; code: string; invert: boolean; decimals: number; currencies: string[] }> = {
+  "EUR/USD": { key: "eurusd", code: "EUR", invert: true, decimals: 4, currencies: ["EUR", "USD"] },
+  "GBP/USD": { key: "gbpusd", code: "GBP", invert: true, decimals: 4, currencies: ["GBP", "USD"] },
+  "USD/JPY": { key: "usdjpy", code: "JPY", invert: false, decimals: 2, currencies: ["USD", "JPY"] },
+};
+const CRYPTO_ENGINE: Record<string, { key: "eth" | "sol" | "xrp" | "bnb"; binanceSym: string; decimals: number }> = {
+  "ETH/USD": { key: "eth", binanceSym: "ETHUSDT", decimals: 2 },
+  "SOL/USD": { key: "sol", binanceSym: "SOLUSDT", decimals: 2 },
+  "XRP/USD": { key: "xrp", binanceSym: "XRPUSDT", decimals: 4 },
+  "BNB/USD": { key: "bnb", binanceSym: "BNBUSDT", decimals: 2 },
+};
+
 async function computeEngine(symbol: string, livePrice: number): Promise<EngineSignal | null> {
   try {
     if (symbol === "XAU/USD") {
@@ -293,6 +366,16 @@ async function computeEngine(symbol: string, livePrice: number): Promise<EngineS
         price, candles: base, candlesByTF: byTF, macro, events,
       });
     }
+    if (symbol === "XAG/USD") {
+      const [byTF, macro, events] = await Promise.all([fetchSilverAllTF(), fetchEngineMacro(), fetchEngineEvents()]);
+      const base = byTF.M15 ?? [];
+      const price = base.length ? base[base.length - 1].close : livePrice;
+      if (!base.length) return null;
+      return buildAssetSignal({
+        asset: "silver", decimals: 3, currencies: GOLD_CURRENCIES, timeframe: "M15",
+        price, candles: base, candlesByTF: byTF, macro, events,
+      });
+    }
     if (symbol === "BTC/USD") {
       const [byTF, macro, events] = await Promise.all([fetchBtcAllTF(), fetchEngineMacro(), fetchEngineEvents()]);
       const base = byTF.M15 ?? [];
@@ -300,6 +383,28 @@ async function computeEngine(symbol: string, livePrice: number): Promise<EngineS
       if (!base.length) return null;
       return buildAssetSignal({
         asset: "btc", decimals: 0, currencies: ["USD"], timeframe: "M15",
+        price, candles: base, candlesByTF: byTF, macro, events,
+      });
+    }
+    const fx = FOREX_ENGINE[symbol];
+    if (fx) {
+      const [byTF, macro, events] = await Promise.all([fetchForexAllTF(fx.code, fx.invert), fetchEngineMacro(), fetchEngineEvents()]);
+      const base = byTF.M15 ?? [];
+      const price = base.length ? base[base.length - 1].close : livePrice;
+      if (!base.length) return null;
+      return buildAssetSignal({
+        asset: fx.key, decimals: fx.decimals, currencies: fx.currencies, timeframe: "M15",
+        price, candles: base, candlesByTF: byTF, macro, events,
+      });
+    }
+    const cr = CRYPTO_ENGINE[symbol];
+    if (cr) {
+      const [byTF, macro, events] = await Promise.all([fetchCryptoAllTF(cr.binanceSym), fetchEngineMacro(), fetchEngineEvents()]);
+      const base = byTF.M15 ?? [];
+      const price = base.length ? base[base.length - 1].close : livePrice;
+      if (!base.length) return null;
+      return buildAssetSignal({
+        asset: cr.key, decimals: cr.decimals, currencies: ["USD"], timeframe: "M15",
         price, candles: base, candlesByTF: byTF, macro, events,
       });
     }
@@ -330,8 +435,16 @@ async function getPrices(): Promise<Quote[]> {
   // cold starts (see applyChange). Without this gold's changePct is always 0.
   await hydrateDayOpen();
   const before = JSON.stringify(dayOpen);
-  const [gold, oil, btc] = await Promise.all([fetchGold(), fetchOil(), fetchBtc()]);
-  const quotes = [gold, oil, btc].filter((q): q is Quote => !!q).map(applyChange);
+  const [gold, oil, btc, silver, eth, sol, xrp, bnb, fx] = await Promise.all([
+    fetchGold(), fetchOil(), fetchBtc(), fetchSilver(),
+    fetchCrypto("ETH/USD", "ETHUSDT", 2),
+    fetchCrypto("SOL/USD", "SOLUSDT", 2),
+    fetchCrypto("XRP/USD", "XRPUSDT", 4),
+    fetchCrypto("BNB/USD", "BNBUSDT", 2),
+    fetchForexLive(),
+  ]);
+  const raw: (Quote | null)[] = [gold, oil, btc, silver, eth, sol, xrp, bnb, ...fx];
+  const quotes = raw.filter((q): q is Quote => !!q).map(applyChange);
   // Persist the anchor back whenever it changed (new day / newly seen symbol) so the
   // next (cold-booted) invocation measures gold's move from the same open price.
   if (JSON.stringify(dayOpen) !== before) {
@@ -638,11 +751,19 @@ async function setChannelDescription(text: string): Promise<boolean> {
 // requireSession = only open new signals while a major FX session is live (BTC = 24/7)
 const ASSET_META: Record<
   string,
-  { emoji: string; name: string; threshold: number; pip: number; tpPct: number; slPct: number; requireSession: boolean }
+  { emoji: string; name: string; threshold: number; pip: number; decimals: number; tpPct: number; slPct: number; requireSession: boolean }
 > = {
-  "XAU/USD": { emoji: "🥇", name: "GOLD", threshold: GOLD_THRESHOLD, pip: 0.1, tpPct: 0.6, slPct: 0.4, requireSession: true },
-  "WTI/USD": { emoji: "🛢", name: "OIL", threshold: OIL_THRESHOLD, pip: 0.01, tpPct: 0.8, slPct: 0.5, requireSession: true },
-  "BTC/USD": { emoji: "₿", name: "BITCOIN", threshold: BTC_THRESHOLD, pip: 1, tpPct: 1.2, slPct: 0.8, requireSession: false },
+  "XAU/USD": { emoji: "🥇", name: "GOLD", threshold: GOLD_THRESHOLD, pip: 0.1, decimals: 2, tpPct: 0.6, slPct: 0.4, requireSession: true },
+  "XAG/USD": { emoji: "🥈", name: "SILVER", threshold: 0.2, pip: 0.01, decimals: 3, tpPct: 0.8, slPct: 0.5, requireSession: true },
+  "WTI/USD": { emoji: "🛢", name: "OIL", threshold: OIL_THRESHOLD, pip: 0.01, decimals: 2, tpPct: 0.8, slPct: 0.5, requireSession: true },
+  "BTC/USD": { emoji: "₿", name: "BITCOIN", threshold: BTC_THRESHOLD, pip: 1, decimals: 2, tpPct: 1.2, slPct: 0.8, requireSession: false },
+  "ETH/USD": { emoji: "Ξ", name: "ETHEREUM", threshold: 15, pip: 0.1, decimals: 2, tpPct: 1.5, slPct: 1.0, requireSession: false },
+  "SOL/USD": { emoji: "◎", name: "SOLANA", threshold: 1, pip: 0.01, decimals: 2, tpPct: 1.8, slPct: 1.2, requireSession: false },
+  "XRP/USD": { emoji: "✕", name: "XRP", threshold: 0.02, pip: 0.0001, decimals: 4, tpPct: 1.8, slPct: 1.2, requireSession: false },
+  "BNB/USD": { emoji: "🟡", name: "BNB", threshold: 5, pip: 0.1, decimals: 2, tpPct: 1.2, slPct: 0.8, requireSession: false },
+  "EUR/USD": { emoji: "💶", name: "EUR/USD", threshold: 0.002, pip: 0.0001, decimals: 4, tpPct: 0.4, slPct: 0.25, requireSession: true },
+  "GBP/USD": { emoji: "💷", name: "GBP/USD", threshold: 0.002, pip: 0.0001, decimals: 4, tpPct: 0.4, slPct: 0.25, requireSession: true },
+  "USD/JPY": { emoji: "💴", name: "USD/JPY", threshold: 0.2, pip: 0.01, decimals: 2, tpPct: 0.4, slPct: 0.25, requireSession: true },
 };
 
 // Round pips to whole numbers for clean messaging.
@@ -714,6 +835,12 @@ function sessionLabel(d = new Date(), enabled?: Region[]): string {
   return `${REGION_EMOJI[region]} ${region} (${REGION_KU[region]})`;
 }
 
+// Decimal places to display for an asset's price (forex/crypto need more than 2).
+const dpOf = (symbol: string): number => ASSET_META[symbol]?.decimals ?? 2;
+// Format a number with a fixed number of decimals (asset-aware).
+const fmtN = (n: number, dp: number) =>
+  n.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp });
+
 function priceLine(q: Quote, sig: Signal): string {
   const m = ASSET_META[q.symbol];
   const up = q.changePct >= 0;
@@ -721,7 +848,7 @@ function priceLine(q: Quote, sig: Signal): string {
   const pct = `${up ? "+" : ""}${q.changePct.toFixed(2)}%`;
   return [
     `${m.emoji} <b>${m.name} (${esc(q.symbol)})</b>`,
-    `Price: <code>$${q.price.toLocaleString("en-US")}</code> ${arrow} ${pct}`,
+    `Price: <code>$${fmtN(q.price, dpOf(q.symbol))}</code> ${arrow} ${pct}`,
     `Signal: ${sigBadge(sig)} <b>${sig}</b> · کاریگەری: ${sigKu(sig)}`,
   ].join("\n");
 }
@@ -800,13 +927,14 @@ function newSignalLine(
     reasonLines.push(isBuy ? "Bullish setup · دۆخی بەرزبوونەوە" : "Bearish setup · دۆخی دابەزین");
   }
 
+  const dp = dpOf(q.symbol);
   return [
     `${m.emoji} <b>${m.name} · ${sig}</b> ${sigEmoji(sig)} ${sigKuW}`,
     tf ? `⏱ <b>Timeframe: ${tf}</b> · چوارچێوەی کات` : "",
     "",
-    `💰 <code>$${fmt(entry)}</code> :نرخی چوونەژوورەوە`,
-    `🎯 <code>$${fmt(tp)}</code> :تارگێت (+$${fmt(tpDelta)})`,
-    `🛑 <code>$${fmt(sl)}</code> :ستۆپ لۆس (-$${fmt(slDelta)})`,
+    `💰 <code>$${fmtN(entry, dp)}</code> :نرخی چوونەژوورەوە`,
+    `🎯 <code>$${fmtN(tp, dp)}</code> :تارگێت (+$${fmtN(tpDelta, dp)})`,
+    `🛑 <code>$${fmtN(sl, dp)}</code> :ستۆپ لۆس (-$${fmtN(slDelta, dp)})`,
     "",
     `⚡ Confidence: ${confidence}% · متمانە`,
     `📍 ${esc(session)}`,
@@ -825,13 +953,14 @@ function outcomeLine(
   entry: number, close: number, pips: number, tf?: string,
 ): string {
   const m = ASSET_META[symbol];
+  const dp = dpOf(symbol);
   const tfTag = tf ? ` · ⏱ ${tf}` : "";
   if (hit === "tp") {
     return [
       `🟢✅ <b>TARGET HIT / تارگێت تەواوبوو</b> 🎉`,
       `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}${tfTag}`,
       `📈🟢 Result / ئەنجام: <b>+${pips} pips</b>`,
-      `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+      `Entry <code>$${fmtN(entry, dp)}</code> → <code>$${fmtN(close, dp)}</code>`,
       `سیگنالەکە سەرکەوتوو بوو 🟢✅`,
     ].join("\n");
   }
@@ -839,7 +968,7 @@ function outcomeLine(
     `🔴❌ <b>STOP LOSS / لۆست ستۆپ</b>`,
     `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig}${tfTag}`,
     `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
-    `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+    `Entry <code>$${fmtN(entry, dp)}</code> → <code>$${fmtN(close, dp)}</code>`,
     `🟠⚠️ پێشبینییەکە هەڵە بوو — ئەم نۆتە چیتر ئەکتیڤ نییە`,
     `🚪 تکایە پۆزیشنەکە دابخە / Please close your position`,
   ].join("\n");
@@ -853,12 +982,13 @@ function periodCloseLine(
   entry: number, close: number, pips: number, win: boolean,
 ): string {
   const m = ASSET_META[symbol];
+  const dp = dpOf(symbol);
   if (win) {
     return [
       `🟢 <b>${tf} CANDLE CLOSED · IN PROFIT</b> 🎯`,
       `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig} · ⏱ ${tf}`,
       `📈🟢 Result / ئەنجام: <b>+${pips} pips</b>`,
-      `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+      `Entry <code>$${fmtN(entry, dp)}</code> → <code>$${fmtN(close, dp)}</code>`,
       `کاتی ${tf} تەواوبوو لە قازاندا 🟢 · ${tf} period closed in profit`,
     ].join("\n");
   }
@@ -866,7 +996,7 @@ function periodCloseLine(
     `🔴 <b>${tf} CANDLE CLOSED · IN LOSS</b>`,
     `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig} · ⏱ ${tf}`,
     `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
-    `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+    `Entry <code>$${fmtN(entry, dp)}</code> → <code>$${fmtN(close, dp)}</code>`,
     `کاتی ${tf} تەواوبوو لە زیاندا 🔴 · ${tf} period closed in loss`,
 
   ].join("\n");
