@@ -96,8 +96,11 @@ const NEWS_MIN_GAP_MS = 60 * 60_000;
 
 const CALENDAR_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+
 const admin = createClient(
-  Deno.env.get("SUPABASE_URL")!,
+  SUPABASE_URL,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
