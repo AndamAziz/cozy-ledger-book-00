@@ -233,7 +233,31 @@ async function fetchOil(): Promise<Quote | null> {
 }
 
 // Track an intraday open so gold gets a real % change (gold-api gives only spot).
+//
+// CRITICAL: this MUST be persisted in durable state. The edge function cold-boots
+// on nearly every cron invocation, so a purely in-memory map resets each run — the
+// open would be re-anchored to the current price every time and gold's changePct
+// would stay 0 forever (→ every organic gold signal fails the `strongMove` gate and
+// is dropped as "weak_move", while oil/btc — which get a real changePct straight
+// from their data source — sail through). We hydrate the map from the DB once per
+// invocation and persist it back whenever the anchor changes.
 const dayOpen: Record<string, { day: string; open: number }> = {};
+let dayOpenHydrated = false;
+
+async function hydrateDayOpen(): Promise<void> {
+  if (dayOpenHydrated) return;
+  try {
+    const s = await getState("day_open");
+    for (const [sym, v] of Object.entries(s)) {
+      const rec = v as { day?: string; open?: number };
+      if (rec && typeof rec.open === "number" && typeof rec.day === "string") {
+        dayOpen[sym] = { day: rec.day, open: rec.open };
+      }
+    }
+  } catch (_e) { /* best-effort: fall back to in-memory */ }
+  dayOpenHydrated = true;
+}
+
 function applyChange(q: Quote): Quote {
   const day = new Date().toISOString().slice(0, 10);
   const s = dayOpen[q.symbol];
