@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { BotNotificationsProvider } from "@/contexts/BotNotificationsContext";
 import Index from "./pages/Index";
@@ -25,6 +26,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <HelmetProvider>
+    <ErrorBoundary>
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
@@ -53,6 +55,7 @@ const App = () => (
         </TooltipProvider>
       </QueryClientProvider>
     </LanguageProvider>
+    </ErrorBoundary>
   </HelmetProvider>
 );
 
