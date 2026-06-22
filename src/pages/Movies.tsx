@@ -45,40 +45,14 @@ async function tmdbFetch(
   });
 }
 
-// Streaming embed providers (sources for all movies & series).
-// The old playimdb.com / *imdb.com domains were retired and now 301-redirect
-// to a dead page, so they are replaced with current iframe-embeddable players.
-// Each builds a proper /embed URL from the TMDB id (always available) and the
-// IMDB id (used by providers that prefer it). The player auto-falls back to the
-// next one if a server is blocked or fails to load.
-interface StreamServer {
-  label: string;
-  movie: (tmdbId: number, imdbId: string) => string;
-  tv: (tmdbId: number, imdbId: string, season: number, episode: number) => string;
-}
-
-const STREAM_SERVERS: StreamServer[] = [
-  {
-    label: "VidSrc ⚡",
-    movie: (tmdb, imdb) => `https://vidsrc.to/embed/movie/${imdb || tmdb}`,
-    tv: (tmdb, imdb, s, e) => `https://vidsrc.to/embed/tv/${imdb || tmdb}/${s}/${e}`,
-  },
-  {
-    label: "VidSrc 2",
-    movie: (tmdb) => `https://vidsrcme.ru/embed/movie?tmdb=${tmdb}`,
-    tv: (tmdb, _imdb, s, e) =>
-      `https://vidsrcme.ru/embed/tv?tmdb=${tmdb}&season=${s}&episode=${e}`,
-  },
-  {
-    label: "VidPlay",
-    movie: (tmdb) => `https://vaplayer.ru/embed/movie/${tmdb}`,
-    tv: (tmdb, _imdb, s, e) => `https://vaplayer.ru/embed/tv/${tmdb}/${s}/${e}`,
-  },
-  {
-    label: "2Embed",
-    movie: (tmdb) => `https://www.2embed.cc/embed/${tmdb}`,
-    tv: (tmdb, _imdb, s, e) => `https://www.2embed.cc/embedtv/${tmdb}&s=${s}&e=${e}`,
-  },
+// Official IMDb streaming domains (source for all movies & series).
+// playimdb.com is primary; the rest are mirrors used if it is blocked.
+const IMDB_DOMAINS: { host: string; label: string }[] = [
+  { host: "playimdb.com", label: "PlayIMDb ⚡" },
+  { host: "runimdb.com", label: "RunIMDb" },
+  { host: "streamimdb.com", label: "StreamIMDb" },
+  { host: "directimdb.com", label: "DirectIMDb" },
+  { host: "fastimdb.com", label: "FastIMDb" },
 ];
 
 const selectStyle: React.CSSProperties = {
@@ -2178,33 +2152,28 @@ function MovieModal({
           </div>
         )}
 
-        {/* External player link (uses the primary working streaming server) */}
-        {(() => {
-          const primary = STREAM_SERVERS[0];
-          const extUrl = isTv
-            ? primary.tv(movie.tmdb_id, imdbId, season, episode)
-            : primary.movie(movie.tmdb_id, imdbId);
-          return (
-            <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
-              <ActionBtn
-                cyan
-                label={t.openPlayIMDb}
-                onClick={() => window.open(extUrl, "_blank")}
-              />
-              <ActionBtn
-                label={t.copyPlayIMDb}
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(extUrl);
-                    toast.success(t.linkCopied);
-                  } catch {
-                    toast.error(lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed");
-                  }
-                }}
-              />
-            </div>
-          );
-        })()}
+        {/* PlayIMDb buttons */}
+        {imdbId && (
+          <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
+            <ActionBtn
+              cyan
+              label={t.openPlayIMDb}
+              onClick={() => window.open(`https://www.playimdb.com/title/${imdbId}/`, "_blank")}
+            />
+            <ActionBtn
+              label={t.copyPlayIMDb}
+              onClick={async () => {
+                const url = `https://www.playimdb.com/title/${imdbId}/`;
+                try {
+                  await navigator.clipboard.writeText(url);
+                  toast.success(t.linkCopied);
+                } catch {
+                  toast.error(lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed");
+                }
+              }}
+            />
+          </div>
+        )}
         {trailer === "none" && (
           <div style={{ padding: "8px 16px 0", fontSize: 12.5, color: C.muted }}>
             {t.noTrailer}
@@ -2438,12 +2407,21 @@ function MovieModal({
       {/* Watch player */}
       {watch && (
         <PlayerOverlay
-          servers={STREAM_SERVERS.map((s) => ({
-            name: s.label,
-            url: isTv
-              ? s.tv(movie.tmdb_id, imdbId, season, episode)
-              : s.movie(movie.tmdb_id, imdbId),
-          }))}
+          servers={
+            imdbId
+              ? IMDB_DOMAINS.map((d) => ({
+                  name: d.label,
+                  url: `https://www.${d.host}/title/${imdbId}/`,
+                }))
+              : [
+                  {
+                    name: "VidAPI ⚡",
+                    url: isTv
+                      ? `https://vidapi.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
+                      : `https://vidapi.ru/embed/movie/${movie.tmdb_id}`,
+                  },
+                ]
+          }
           onClose={() => setWatch(false)}
           closeLabel={t.close}
           hint={t.serverHint}
