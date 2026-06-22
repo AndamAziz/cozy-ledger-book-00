@@ -15,18 +15,35 @@ interface SurahListProps {
   s: QuranStrings;
 }
 
+// Normalize Arabic/Kurdish text so search matches regardless of diacritics
+// (harakat), tatweel, or letter-shape variants (alef/hamza/ya/ta-marbuta).
+function normalizeArabic(input: string): string {
+  return input
+    .normalize('NFKD')
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, '') // harakat, superscript alef, tatweel
+    .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627') // أ إ آ ٱ -> ا
+    .replace(/\u0649/g, '\u064A') // ى -> ي
+    .replace(/\u0629/g, '\u0647') // ة -> ه
+    .replace(/\u06CC/g, '\u064A') // Kurdish/Persian ی -> ي
+    .replace(/\u06A9/g, '\u0643') // Kurdish/Persian ک -> ك
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function SurahList({ surahs, isLoading, isError, onRetry, onSelect, s }: SurahListProps) {
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
     if (!surahs) return [];
-    const q = query.trim().toLowerCase();
-    if (!q) return surahs;
+    const raw = query.trim();
+    if (!raw) return surahs;
+    const q = raw.toLowerCase();
+    const qArabic = normalizeArabic(raw);
     return surahs.filter(
       (su) =>
         su.englishName.toLowerCase().includes(q) ||
         su.englishNameTranslation.toLowerCase().includes(q) ||
-        su.name.includes(query.trim()) ||
+        normalizeArabic(su.name).includes(qArabic) ||
         String(su.number) === q,
     );
   }, [surahs, query]);
