@@ -20,6 +20,9 @@ import {
   fetchGoldAllTF,
   fetchBtcAllTF,
   fetchOilAllTF,
+  fetchSilverAllTF,
+  fetchForexAllTF,
+  fetchCryptoAllTF,
   fetchMacro as fetchEngineMacro,
   fetchEvents as fetchEngineEvents,
 } from "./signal-data.ts";
