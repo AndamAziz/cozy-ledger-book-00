@@ -45,14 +45,40 @@ async function tmdbFetch(
   });
 }
 
-// Official IMDb streaming domains (source for all movies & series).
-// playimdb.com is primary; the rest are mirrors used if it is blocked.
-const IMDB_DOMAINS: { host: string; label: string }[] = [
-  { host: "playimdb.com", label: "PlayIMDb ⚡" },
-  { host: "runimdb.com", label: "RunIMDb" },
-  { host: "streamimdb.com", label: "StreamIMDb" },
-  { host: "directimdb.com", label: "DirectIMDb" },
-  { host: "fastimdb.com", label: "FastIMDb" },
+// Streaming embed providers (sources for all movies & series).
+// The old playimdb.com / *imdb.com domains were retired and now 301-redirect
+// to a dead page, so they are replaced with current iframe-embeddable players.
+// Each builds a proper /embed URL from the TMDB id (always available) and the
+// IMDB id (used by providers that prefer it). The player auto-falls back to the
+// next one if a server is blocked or fails to load.
+interface StreamServer {
+  label: string;
+  movie: (tmdbId: number, imdbId: string) => string;
+  tv: (tmdbId: number, imdbId: string, season: number, episode: number) => string;
+}
+
+const STREAM_SERVERS: StreamServer[] = [
+  {
+    label: "VidSrc ⚡",
+    movie: (tmdb, imdb) => `https://vidsrc.to/embed/movie/${imdb || tmdb}`,
+    tv: (tmdb, imdb, s, e) => `https://vidsrc.to/embed/tv/${imdb || tmdb}/${s}/${e}`,
+  },
+  {
+    label: "VidSrc 2",
+    movie: (tmdb) => `https://vidsrcme.ru/embed/movie?tmdb=${tmdb}`,
+    tv: (tmdb, _imdb, s, e) =>
+      `https://vidsrcme.ru/embed/tv?tmdb=${tmdb}&season=${s}&episode=${e}`,
+  },
+  {
+    label: "VidPlay",
+    movie: (tmdb) => `https://vaplayer.ru/embed/movie/${tmdb}`,
+    tv: (tmdb, _imdb, s, e) => `https://vaplayer.ru/embed/tv/${tmdb}/${s}/${e}`,
+  },
+  {
+    label: "2Embed",
+    movie: (tmdb) => `https://www.2embed.cc/embed/${tmdb}`,
+    tv: (tmdb, _imdb, s, e) => `https://www.2embed.cc/embedtv/${tmdb}&s=${s}&e=${e}`,
+  },
 ];
 
 const selectStyle: React.CSSProperties = {
