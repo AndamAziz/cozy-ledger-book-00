@@ -641,11 +641,19 @@ async function setChannelDescription(text: string): Promise<boolean> {
 // requireSession = only open new signals while a major FX session is live (BTC = 24/7)
 const ASSET_META: Record<
   string,
-  { emoji: string; name: string; threshold: number; pip: number; tpPct: number; slPct: number; requireSession: boolean }
+  { emoji: string; name: string; threshold: number; pip: number; decimals: number; tpPct: number; slPct: number; requireSession: boolean }
 > = {
-  "XAU/USD": { emoji: "🥇", name: "GOLD", threshold: GOLD_THRESHOLD, pip: 0.1, tpPct: 0.6, slPct: 0.4, requireSession: true },
-  "WTI/USD": { emoji: "🛢", name: "OIL", threshold: OIL_THRESHOLD, pip: 0.01, tpPct: 0.8, slPct: 0.5, requireSession: true },
-  "BTC/USD": { emoji: "₿", name: "BITCOIN", threshold: BTC_THRESHOLD, pip: 1, tpPct: 1.2, slPct: 0.8, requireSession: false },
+  "XAU/USD": { emoji: "🥇", name: "GOLD", threshold: GOLD_THRESHOLD, pip: 0.1, decimals: 2, tpPct: 0.6, slPct: 0.4, requireSession: true },
+  "XAG/USD": { emoji: "🥈", name: "SILVER", threshold: 0.2, pip: 0.01, decimals: 3, tpPct: 0.8, slPct: 0.5, requireSession: true },
+  "WTI/USD": { emoji: "🛢", name: "OIL", threshold: OIL_THRESHOLD, pip: 0.01, decimals: 2, tpPct: 0.8, slPct: 0.5, requireSession: true },
+  "BTC/USD": { emoji: "₿", name: "BITCOIN", threshold: BTC_THRESHOLD, pip: 1, decimals: 2, tpPct: 1.2, slPct: 0.8, requireSession: false },
+  "ETH/USD": { emoji: "Ξ", name: "ETHEREUM", threshold: 15, pip: 0.1, decimals: 2, tpPct: 1.5, slPct: 1.0, requireSession: false },
+  "SOL/USD": { emoji: "◎", name: "SOLANA", threshold: 1, pip: 0.01, decimals: 2, tpPct: 1.8, slPct: 1.2, requireSession: false },
+  "XRP/USD": { emoji: "✕", name: "XRP", threshold: 0.02, pip: 0.0001, decimals: 4, tpPct: 1.8, slPct: 1.2, requireSession: false },
+  "BNB/USD": { emoji: "🟡", name: "BNB", threshold: 5, pip: 0.1, decimals: 2, tpPct: 1.2, slPct: 0.8, requireSession: false },
+  "EUR/USD": { emoji: "💶", name: "EUR/USD", threshold: 0.002, pip: 0.0001, decimals: 4, tpPct: 0.4, slPct: 0.25, requireSession: true },
+  "GBP/USD": { emoji: "💷", name: "GBP/USD", threshold: 0.002, pip: 0.0001, decimals: 4, tpPct: 0.4, slPct: 0.25, requireSession: true },
+  "USD/JPY": { emoji: "💴", name: "USD/JPY", threshold: 0.2, pip: 0.01, decimals: 2, tpPct: 0.4, slPct: 0.25, requireSession: true },
 };
 
 // Round pips to whole numbers for clean messaging.
