@@ -26,6 +26,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <HelmetProvider>
+    <ErrorBoundary>
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
