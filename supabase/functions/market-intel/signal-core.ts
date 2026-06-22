@@ -511,7 +511,8 @@ export function buildAssetSignal(p: {
     return { label: tf, dir: t.dir, rsi: t.rsi, macd: t.macd };
   });
 
-  const macroWeight = p.asset === "gold" || p.asset === "btc" ? 0.4 : 0.25;
+  const macroWeight =
+    METAL_ASSETS.includes(p.asset) || CRYPTO_ASSETS.includes(p.asset) ? 0.4 : 0.25;
   const d = decideFromScores(tech.score, macro.score, macroWeight, perTF, news.blocking);
 
   const atr = calculateATR(p.candles);
