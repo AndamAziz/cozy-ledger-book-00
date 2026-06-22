@@ -235,6 +235,59 @@ async function fetchOil(): Promise<Quote | null> {
   } catch { return null; }
 }
 
+// ── Silver spot (XAG/USD) via free gold-api.com — like gold, only spot (no %),
+// so applyChange() derives its intraday % from the persisted day-open anchor. ──
+async function fetchSilver(): Promise<Quote | null> {
+  try {
+    const res = await fetch("https://api.gold-api.com/price/XAG", {
+      headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) { await res.text(); return null; }
+    const d = await res.json();
+    const price = Number(d?.price);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    return { symbol: "XAG/USD", price: +price.toFixed(3), changePct: 0 };
+  } catch { return null; }
+}
+
+// ── Crypto (ETH/SOL/XRP/BNB) live price + 24h % via Binance ──
+async function fetchCrypto(symbol: string, binanceSym: string, decimals: number): Promise<Quote | null> {
+  try {
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSym}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) { await res.text(); return null; }
+    const d = await res.json();
+    const price = Number(d?.lastPrice);
+    if (!Number.isFinite(price) || price <= 0) return null;
+    return { symbol, price: +price.toFixed(decimals), changePct: Number(d?.priceChangePercent) || 0 };
+  } catch { return null; }
+}
+
+// ── Forex (EUR/USD, GBP/USD, USD/JPY) live via forex-prices edge function.
+// forex-prices returns rates[code] = USD/CODE; EUR/USD & GBP/USD are inverted
+// (1/price, sign-flipped %), USD/JPY is already USD-base (used as-is). ──
+interface FxLiveRate { price: number; prev: number; change: number; }
+async function fetchForexLive(): Promise<Quote[]> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/forex-prices`, {
+      headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}`, apikey: SUPABASE_ANON_KEY },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) { await res.text(); return []; }
+    const data = await res.json().catch(() => null);
+    const rates: Record<string, FxLiveRate> = data?.rates ?? {};
+    const out: Quote[] = [];
+    const eur = rates["EUR"];
+    if (eur?.price > 0) out.push({ symbol: "EUR/USD", price: +(1 / eur.price).toFixed(4), changePct: +(-eur.change).toFixed(2) });
+    const gbp = rates["GBP"];
+    if (gbp?.price > 0) out.push({ symbol: "GBP/USD", price: +(1 / gbp.price).toFixed(4), changePct: +(-gbp.change).toFixed(2) });
+    const jpy = rates["JPY"];
+    if (jpy?.price > 0) out.push({ symbol: "USD/JPY", price: +jpy.price.toFixed(2), changePct: +jpy.change.toFixed(2) });
+    return out;
+  } catch { return []; }
+}
+
 // Track an intraday open so gold gets a real % change (gold-api gives only spot).
 //
 // CRITICAL: this MUST be persisted in durable state. The edge function cold-boots
