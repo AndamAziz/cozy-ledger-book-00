@@ -872,12 +872,13 @@ function periodCloseLine(
   entry: number, close: number, pips: number, win: boolean,
 ): string {
   const m = ASSET_META[symbol];
+  const dp = dpOf(symbol);
   if (win) {
     return [
       `🟢 <b>${tf} CANDLE CLOSED · IN PROFIT</b> 🎯`,
       `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig} · ⏱ ${tf}`,
       `📈🟢 Result / ئەنجام: <b>+${pips} pips</b>`,
-      `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+      `Entry <code>$${fmtN(entry, dp)}</code> → <code>$${fmtN(close, dp)}</code>`,
       `کاتی ${tf} تەواوبوو لە قازاندا 🟢 · ${tf} period closed in profit`,
     ].join("\n");
   }
@@ -885,7 +886,7 @@ function periodCloseLine(
     `🔴 <b>${tf} CANDLE CLOSED · IN LOSS</b>`,
     `${m.emoji} <b>${m.name} (${esc(symbol)})</b> · ${sigEmoji(sig)} ${sig} · ⏱ ${tf}`,
     `📉🔴 Result / ئەنجام: <b>-${pips} pips</b>`,
-    `Entry <code>$${fmt(entry)}</code> → <code>$${fmt(close)}</code>`,
+    `Entry <code>$${fmtN(entry, dp)}</code> → <code>$${fmtN(close, dp)}</code>`,
     `کاتی ${tf} تەواوبوو لە زیاندا 🔴 · ${tf} period closed in loss`,
 
   ].join("\n");
