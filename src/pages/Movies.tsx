@@ -2178,28 +2178,33 @@ function MovieModal({
           </div>
         )}
 
-        {/* PlayIMDb buttons */}
-        {imdbId && (
-          <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
-            <ActionBtn
-              cyan
-              label={t.openPlayIMDb}
-              onClick={() => window.open(`https://www.playimdb.com/title/${imdbId}/`, "_blank")}
-            />
-            <ActionBtn
-              label={t.copyPlayIMDb}
-              onClick={async () => {
-                const url = `https://www.playimdb.com/title/${imdbId}/`;
-                try {
-                  await navigator.clipboard.writeText(url);
-                  toast.success(t.linkCopied);
-                } catch {
-                  toast.error(lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed");
-                }
-              }}
-            />
-          </div>
-        )}
+        {/* External player link (uses the primary working streaming server) */}
+        {(() => {
+          const primary = STREAM_SERVERS[0];
+          const extUrl = isTv
+            ? primary.tv(movie.tmdb_id, imdbId, season, episode)
+            : primary.movie(movie.tmdb_id, imdbId);
+          return (
+            <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
+              <ActionBtn
+                cyan
+                label={t.openPlayIMDb}
+                onClick={() => window.open(extUrl, "_blank")}
+              />
+              <ActionBtn
+                label={t.copyPlayIMDb}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(extUrl);
+                    toast.success(t.linkCopied);
+                  } catch {
+                    toast.error(lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed");
+                  }
+                }}
+              />
+            </div>
+          );
+        })()}
         {trailer === "none" && (
           <div style={{ padding: "8px 16px 0", fontSize: 12.5, color: C.muted }}>
             {t.noTrailer}
