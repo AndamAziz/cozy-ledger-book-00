@@ -805,8 +805,8 @@ async function processBot(bot: Record<string, unknown>) {
     if (ema9 < ema21) { sellScore++; sellReasons.push("EMA9<EMA21 downtrend"); }
   }
   if (rsi != null) {
-    if (rsi < 55) { buyScore++; buyReasons.push(`RSI ${rsi.toFixed(0)} (room to rise)`); }
-    if (rsi > 45) { sellScore++; sellReasons.push(`RSI ${rsi.toFixed(0)} (room to fall)`); }
+    if (rsi < 45) { buyScore++; buyReasons.push(`RSI ${rsi.toFixed(0)} (oversold)`); }
+    if (rsi > 55) { sellScore++; sellReasons.push(`RSI ${rsi.toFixed(0)} (overbought)`); }
   }
   if (hist > 0) { buyScore++; buyReasons.push("MACD bullish"); }
   if (hist < 0) { sellScore++; sellReasons.push("MACD bearish"); }
