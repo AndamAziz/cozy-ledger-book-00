@@ -2433,21 +2433,12 @@ function MovieModal({
       {/* Watch player */}
       {watch && (
         <PlayerOverlay
-          servers={
-            imdbId
-              ? IMDB_DOMAINS.map((d) => ({
-                  name: d.label,
-                  url: `https://www.${d.host}/title/${imdbId}/`,
-                }))
-              : [
-                  {
-                    name: "VidAPI ⚡",
-                    url: isTv
-                      ? `https://vidapi.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
-                      : `https://vidapi.ru/embed/movie/${movie.tmdb_id}`,
-                  },
-                ]
-          }
+          servers={STREAM_SERVERS.map((s) => ({
+            name: s.label,
+            url: isTv
+              ? s.tv(movie.tmdb_id, imdbId, season, episode)
+              : s.movie(movie.tmdb_id, imdbId),
+          }))}
           onClose={() => setWatch(false)}
           closeLabel={t.close}
           hint={t.serverHint}
