@@ -315,32 +315,32 @@ export function macroScore(
   const notesEn: string[] = [];
   let score = 0;
 
-  if (asset === "gold") {
+  if (METAL_ASSETS.includes(asset)) {
     if (macro.dxyChangePct != null) {
       const s = clamp(-macro.dxyChangePct * 50, -60, 60);
       score += s;
       if (Math.abs(macro.dxyChangePct) >= 0.1) {
         if (macro.dxyChangePct > 0) {
-          notesKu.push("دۆلار بەرزبووە (زێڕ دادەبەزێت)");
-          notesEn.push("DXY up (gold bearish)");
+          notesKu.push("دۆلار بەرزبووە (کانزا دادەبەزێت)");
+          notesEn.push("DXY up (metals bearish)");
         } else {
-          notesKu.push("دۆلار داشکاوە (زێڕ بەرزدەبێتەوە)");
-          notesEn.push("DXY down (gold bullish)");
+          notesKu.push("دۆلار داشکاوە (کانزا بەرزدەبێتەوە)");
+          notesEn.push("DXY down (metals bullish)");
         }
       }
     }
     if (macro.fearGreed != null) {
       if (macro.fearGreed <= 30) {
         score += 25;
-        notesKu.push("ترس لە بازاڕ (زێڕ پەناگەی پارێزراو)");
-        notesEn.push("Market fear (gold safe-haven bid)");
+        notesKu.push("ترس لە بازاڕ (کانزا پەناگەی پارێزراو)");
+        notesEn.push("Market fear (metals safe-haven bid)");
       } else if (macro.fearGreed >= 75) {
         score -= 10;
         notesKu.push("چاوبڕکێ لە بازاڕ (پەناگە کەمتر)");
         notesEn.push("Market greed (less haven demand)");
       }
     }
-  } else if (asset === "btc") {
+  } else if (CRYPTO_ASSETS.includes(asset)) {
     if (macro.fearGreed != null) {
       const s = clamp((macro.fearGreed - 50) * 1.2, -50, 50);
       score += s;
