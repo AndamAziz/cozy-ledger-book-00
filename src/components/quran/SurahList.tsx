@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import type { SurahMeta } from '@/lib/quran';
 import type { QuranStrings } from '@/lib/quranI18n';
+import { SURAH_ALIASES } from '@/lib/surahNames';
 
 interface SurahListProps {
   surahs: SurahMeta[] | undefined;
@@ -16,7 +17,8 @@ interface SurahListProps {
 }
 
 // Normalize Arabic/Kurdish text so search matches regardless of diacritics
-// (harakat), tatweel, or letter-shape variants (alef/hamza/ya/ta-marbuta).
+// (harakat), tatweel, or letter-shape variants (alef/hamza/ya/ta-marbuta) and
+// Kurdish/Persian letter forms.
 function normalizeArabic(input: string): string {
   return input
     .normalize('NFKD')
@@ -24,8 +26,15 @@ function normalizeArabic(input: string): string {
     .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627') // أ إ آ ٱ -> ا
     .replace(/\u0649/g, '\u064A') // ى -> ي
     .replace(/\u0629/g, '\u0647') // ة -> ه
+    .replace(/\u06D5/g, '\u0647') // Kurdish ە -> ه
     .replace(/\u06CC/g, '\u064A') // Kurdish/Persian ی -> ي
+    .replace(/\u06CE/g, '\u064A') // Kurdish ێ -> ي
+    .replace(/\u0626/g, '\u064A') // ئ -> ي
+    .replace(/\u0624/g, '\u0648') // ؤ -> و
+    .replace(/\u06C6/g, '\u0648') // Kurdish ۆ -> و
     .replace(/\u06A9/g, '\u0643') // Kurdish/Persian ک -> ك
+    .replace(/\u06AF/g, '\u0643') // Kurdish گ -> ك (rare in names)
+    .replace(/\u0695/g, '\u0631') // Kurdish ڕ -> ر
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -39,14 +48,22 @@ export function SurahList({ surahs, isLoading, isError, onRetry, onSelect, s }: 
     if (!raw) return surahs;
     const q = raw.toLowerCase();
     const qArabic = normalizeArabic(raw);
-    return surahs.filter(
-      (su) =>
+    return surahs.filter((su) => {
+      const extra = SURAH_ALIASES[su.number];
+      // English aliases (lowercased) plus the API English fields.
+      const enMatch =
         su.englishName.toLowerCase().includes(q) ||
         su.englishNameTranslation.toLowerCase().includes(q) ||
+        (extra?.en.some((name) => name.includes(q)) ?? false);
+      // Arabic + Kurdish aliases plus the API Arabic name, all normalized.
+      const arMatch =
         normalizeArabic(su.name).includes(qArabic) ||
-        String(su.number) === q,
-    );
+        (extra ? normalizeArabic(extra.ar).includes(qArabic) : false) ||
+        (extra ? normalizeArabic(extra.ku).includes(qArabic) : false);
+      return enMatch || arMatch || String(su.number) === q;
+    });
   }, [surahs, query]);
+
 
   if (isError) {
     return (
