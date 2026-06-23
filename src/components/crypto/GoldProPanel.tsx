@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { OHLCCandle } from '@/lib/krakenApi';
-import { computeIndicators, summarizeSignals } from '@/lib/indicators';
-import { computeSR } from '@/lib/supportResistance';
 import { DxyWidget, DxyData } from '@/components/crypto/DxyWidget';
 import { SentimentGauge, SentimentData } from '@/components/crypto/SentimentGauge';
 import { TechnicalSignals } from '@/components/crypto/TechnicalSignals';
@@ -12,6 +10,7 @@ import { GoldSignalPanel } from '@/components/crypto/GoldSignalPanel';
 import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { SignalHistory } from '@/components/crypto/SignalHistory';
 import { Crown, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
+import { useSignalEngine } from '@/hooks/useSignalEngine';
 
 
 interface Props {
@@ -96,40 +95,27 @@ export function GoldProPanel({ candles, price }: Props) {
 
 
   // ---- Combined Gold Signal ----
+  // SINGLE SOURCE OF TRUTH: the same `buildAssetSignal` engine that powers the
+  // Signals tab, the Send-to-Telegram message and the Telegram bot (gold @ M15).
+  // The Gold Pro card no longer computes its own BUY/SELL — direction, confidence
+  // and Entry/SL/TP all come from the canonical engine so they can never diverge.
+  const { signal: goldEng } = useSignalEngine('gold', 'M15');
+
   const signal = useMemo(() => {
-    const ind = computeIndicators(candles);
-    const tech = summarizeSignals(ind, price); // score -100..100
+    const action: Action =
+      goldEng?.action === 'buy' ? 'buy' : goldEng?.action === 'sell' ? 'sell' : 'wait';
+    const confidence = goldEng?.confidence ?? 0;
+    const combined = goldEng?.score ?? 0;
+    const entry = goldEng?.entry && goldEng.entry > 0 ? goldEng.entry : price;
+    const sl = action !== 'wait' ? goldEng?.stopLoss ?? null : null;
+    const tp = action !== 'wait' ? goldEng?.takeProfit1 ?? null : null;
+    // Supporting context scores (display only — they do NOT decide the action).
     const dxyScore = dxy.changePct != null ? clamp(-dxy.changePct * 40, -100, 100) : 0;
-    // Light sentiment tilt: extreme fear is mildly bullish for gold (safe haven).
-    let sentScore = 0;
-    if (sentiment.value != null) {
-      if (sentiment.value <= 25) sentScore = 20;
-      else if (sentiment.value >= 75) sentScore = -10;
-    }
-    const combined = Math.round(tech.score * 0.55 + dxyScore * 0.35 + sentScore * 0.1);
+    const techScore = goldEng?.confluenceDebug?.confScore ?? 0;
+    return { action, combined, confidence, entry, sl, tp, techScore, dxyScore: Math.round(dxyScore) };
+  }, [goldEng, price, dxy.changePct]);
 
-    let action: Action = 'wait';
-    if (combined >= 20) action = 'buy';
-    else if (combined <= -20) action = 'sell';
 
-    const confidence = clamp(Math.round(Math.abs(combined) + 45), 45, 95);
-
-    const sr = computeSR(candles);
-    let entry = price;
-    let sl: number | null = null;
-    let tp: number | null = null;
-    if (sr && price > 0) {
-      if (action === 'buy') {
-        sl = Math.min(sr.s1, price * 0.997);
-        tp = price + (price - sl) * 2;
-      } else if (action === 'sell') {
-        sl = Math.max(sr.r1, price * 1.003);
-        tp = price - (sl - price) * 2;
-      }
-    }
-
-    return { action, combined, confidence, entry, sl, tp, techScore: tech.score, dxyScore: Math.round(dxyScore) };
-  }, [candles, price, dxy.changePct, sentiment.value]);
 
   const actColor = signal.action === 'buy' ? C_BUY : signal.action === 'sell' ? C_SELL : C_WAIT;
   const actLabel =

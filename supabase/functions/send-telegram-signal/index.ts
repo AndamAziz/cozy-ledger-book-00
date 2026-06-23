@@ -61,10 +61,20 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Verify BOTH gateway credentials load from the environment; name the one that failed.
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
     const TELEGRAM_API_KEY = Deno.env.get('TELEGRAM_API_KEY');
-    if (!TELEGRAM_API_KEY) throw new Error('TELEGRAM_API_KEY is not configured');
+    const missing = [
+      !LOVABLE_API_KEY && 'LOVABLE_API_KEY',
+      !TELEGRAM_API_KEY && 'TELEGRAM_API_KEY',
+    ].filter(Boolean);
+    if (missing.length) {
+      const msg = `Missing Telegram credential(s): ${missing.join(', ')}`;
+      console.error(`[send-telegram-signal] ${msg}`);
+      return new Response(JSON.stringify({ error: msg }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -114,6 +124,22 @@ Deno.serve(async (req) => {
     const tgData = await tgResp.json();
     const ok = tgResp.ok && tgData.ok;
 
+    // Human-readable hint explaining WHY the send failed (helps debug [403] {}).
+    let hint = '';
+    if (!ok) {
+      if (tgResp.status === 403) {
+        hint = chatId.startsWith('@')
+          ? ' — bot is not an admin of this channel'
+          : ' — user has not started the bot / blocked it';
+      } else if (tgResp.status === 400) {
+        hint = ' — bad request (chat_id invalid or message malformed)';
+      } else if (tgResp.status === 401) {
+        hint = ' — gateway rejected credentials (check Telegram connection)';
+      }
+      console.error(`[send-telegram-signal] failed [${tgResp.status}] chat=${chatId}${hint}`, JSON.stringify(tgData));
+    }
+    const errMsg = `Telegram error [${tgResp.status}] chat=${chatId}${hint}: ${JSON.stringify(tgData)}`;
+
     // Log the signal regardless of outcome
     const logRow = {
       symbol: body.symbol ?? null,
@@ -130,14 +156,14 @@ Deno.serve(async (req) => {
       chat_id: chatId,
       telegram_message_id: ok ? (tgData.result?.message_id ?? null) : null,
       status: ok ? 'sent' : 'failed',
-      error: ok ? null : `Telegram error [${tgResp.status}]: ${JSON.stringify(tgData)}`,
+      error: ok ? null : errMsg,
       sent_by: userData.user.id,
     };
     await supabase.from('telegram_signals').insert(logRow);
 
     if (!ok) {
       return new Response(
-        JSON.stringify({ error: `Telegram error [${tgResp.status}]: ${JSON.stringify(tgData)}` }),
+        JSON.stringify({ error: errMsg }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }

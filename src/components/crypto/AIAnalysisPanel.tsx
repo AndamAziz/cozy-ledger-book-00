@@ -7,8 +7,47 @@ import {
   SessionStatus,
   TFTrend,
   TradeSetup,
+  TrendDir,
 } from '@/lib/aiAnalysis';
+import { useSignalEngine } from '@/hooks/useSignalEngine';
+import { AssetSignal } from '@/lib/signalEngine';
 import { RefreshCw, TrendingUp, TrendingDown, Minus, Target, Clock, Layers, Gauge, Bug } from 'lucide-react';
+
+/**
+ * Reconcile the Confluence card with the canonical `buildAssetSignal` engine so
+ * its headline DIRECTION + trade setup are identical to the Signals tab, the
+ * Telegram bot and the Send-Signal button. The per-timeframe table below keeps
+ * showing the raw evidence; only the decided direction/label/setup are unified.
+ */
+function reconcileWithEngine(
+  analysis: AssetAnalysis | null,
+  sig: AssetSignal | null,
+): AssetAnalysis | null {
+  if (!analysis || !sig) return analysis;
+  const dir: TrendDir = sig.action === 'buy' ? 'up' : sig.action === 'sell' ? 'down' : 'neutral';
+  let label: string;
+  if (dir === 'neutral') {
+    label = 'Mixed / No Clear Bias';
+  } else {
+    const side = dir === 'up' ? 'Buy' : 'Sell';
+    if (sig.confidence >= 75) label = `Strong ${side} Signal`;
+    else if (sig.confidence >= 60) label = `${side} Signal`;
+    else label = `Weak ${side} Bias`;
+  }
+  const setup: TradeSetup =
+    dir === 'neutral'
+      ? { side: 'none', entry: sig.price, stopLoss: 0, takeProfit1: 0, takeProfit2: 0, riskReward: 0 }
+      : {
+          side: sig.action as 'buy' | 'sell',
+          entry: sig.entry,
+          stopLoss: sig.stopLoss,
+          takeProfit1: sig.takeProfit1,
+          takeProfit2: sig.takeProfit2,
+          riskReward: sig.riskReward,
+        };
+  return { ...analysis, confluence: { ...analysis.confluence, dir, label }, setup };
+}
+
 
 
 interface Props {
@@ -368,6 +407,14 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [debug, setDebug] = useState(false);
 
+  // Canonical engine (buildAssetSignal) — the single source of truth for the
+  // decided direction. Reconciled into each card below so the Confluence label
+  // matches the Signals tab / Telegram / Send-Signal exactly.
+  const { signal: goldEng } = useSignalEngine('gold', 'M15');
+  const { signal: btcEng } = useSignalEngine('btc', 'M15');
+  const goldView = reconcileWithEngine(gold, goldEng);
+  const btcView = reconcileWithEngine(btc, btcEng);
+
   const runAnalysis = useCallback(async () => {
     setLoading(true);
     const [b, g] = await Promise.all([analyzeAsset('btc', btcPrice), analyzeAsset('gold', goldPrice)]);
@@ -429,8 +476,8 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
       <SessionsBlock sessions={sessions} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={gold} bi={bi} debug={debug} />
-        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btc} bi={bi} debug={debug} />
+        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={goldView} bi={bi} debug={debug} />
+        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btcView} bi={bi} debug={debug} />
       </div>
     </div>
   );

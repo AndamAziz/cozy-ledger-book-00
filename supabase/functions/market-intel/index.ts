@@ -646,8 +646,14 @@ async function sendToChat(chatId: string, kind: string, text: string, asset?: st
     .select("id").maybeSingle();
   const logId = logRow?.id as string | undefined;
 
-  if (!LOVABLE_API_KEY || !TELEGRAM_API_KEY) {
-    if (logId) await admin.from("telegram_logs").update({ status: "failed", error: "Missing Telegram credentials" }).eq("id", logId);
+  // Verify BOTH credentials load from the environment; name the exact one that failed.
+  const missing: string[] = [];
+  if (!LOVABLE_API_KEY) missing.push("LOVABLE_API_KEY");
+  if (!TELEGRAM_API_KEY) missing.push("TELEGRAM_API_KEY");
+  if (missing.length) {
+    const err = `Missing Telegram credential(s): ${missing.join(", ")}`;
+    console.error(`[telegram] ${err} (chat=${chatId})`);
+    if (logId) await admin.from("telegram_logs").update({ status: "failed", error: err }).eq("id", logId);
     return false;
   }
 
@@ -669,9 +675,21 @@ async function sendToChat(chatId: string, kind: string, text: string, asset?: st
         if (logId) await admin.from("telegram_logs").update({ status: "sent", attempts: attempt }).eq("id", logId);
         return true;
       }
-      lastErr = `[${res.status}] ${JSON.stringify(d)}`;
+      // Annotate the failure with the target chat + a human hint so logs say WHY.
+      let hint = "";
+      if (res.status === 403) {
+        hint = chatId.startsWith("@")
+          ? " — bot is not an admin of this channel (add the bot as admin)"
+          : " — user has not started the bot / blocked it (open the bot and press Start)";
+      } else if (res.status === 400) {
+        hint = " — bad request (chat_id invalid or message malformed)";
+      } else if (res.status === 401) {
+        hint = " — gateway rejected credentials (check LOVABLE_API_KEY / TELEGRAM_API_KEY connection)";
+      }
+      lastErr = `[${res.status}] chat=${chatId}${hint} ${JSON.stringify(d)}`;
+      console.error(`[telegram] send failed ${lastErr}`);
     } catch (e) {
-      lastErr = String(e);
+      lastErr = `chat=${chatId} ${String(e)}`;
     }
     if (attempt < 3) await sleep(backoff[attempt - 1]);
   }
