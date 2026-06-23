@@ -226,7 +226,7 @@ export function TelegramHealthCard() {
       const [logsRes, signalsRes] = await Promise.all([
         supabase
           .from('telegram_logs')
-          .select('status, error, created_at')
+          .select('status, error, created_at, asset')
           .gte('created_at', since)
           .order('created_at', { ascending: false }),
         supabase
@@ -256,9 +256,46 @@ export function TelegramHealthCard() {
         return stat;
       };
 
+      // Per-asset breakdown (rows are already newest-first).
+      const logRows = (logsRes.data ?? []) as {
+        status: string | null;
+        error: string | null;
+        created_at: string;
+        asset: string | null;
+      }[];
+      const byAsset: AssetStat[] = ASSET_META.map(({ key }) => {
+        const a: AssetStat = {
+          asset: key,
+          sent: 0,
+          failed: 0,
+          pending: 0,
+          lastSentAt: null,
+          lastFailedAt: null,
+          lastError: null,
+        };
+        logRows
+          .filter((r) => (r.asset ?? '').toUpperCase() === key.toUpperCase())
+          .forEach((r) => {
+            if (r.status === 'sent') {
+              a.sent += 1;
+              if (!a.lastSentAt) a.lastSentAt = r.created_at;
+            } else if (r.status === 'failed') {
+              a.failed += 1;
+              if (!a.lastFailedAt) {
+                a.lastFailedAt = r.created_at;
+                a.lastError = r.error;
+              }
+            } else {
+              a.pending += 1;
+            }
+          });
+        return a;
+      }).filter((a) => a.sent + a.failed + a.pending > 0);
+
       setData({
         reports: build(logsRes.data as never),
         signals: build(signalsRes.data as never),
+        byAsset,
       });
     } catch (e) {
       console.error('Error fetching telegram health:', e);
