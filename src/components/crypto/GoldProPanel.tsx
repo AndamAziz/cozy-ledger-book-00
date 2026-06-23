@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { OHLCCandle } from '@/lib/krakenApi';
-import { computeIndicators, summarizeSignals } from '@/lib/indicators';
-import { computeSR } from '@/lib/supportResistance';
 import { DxyWidget, DxyData } from '@/components/crypto/DxyWidget';
 import { SentimentGauge, SentimentData } from '@/components/crypto/SentimentGauge';
 import { TechnicalSignals } from '@/components/crypto/TechnicalSignals';
