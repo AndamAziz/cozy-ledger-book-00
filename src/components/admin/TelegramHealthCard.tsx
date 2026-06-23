@@ -123,6 +123,8 @@ const L = {
     overall: 'الحالة العامة',
     perAsset: 'الإرسال حسب الأصل',
     noAsset: 'لا إرسال خلال آخر ٢٤ ساعة',
+    gatewayError: '⚠️ خطأ البوابة',
+    telegramBlocked: '❌ محظور من تيليجرام',
   },
   fa: {
     title: 'سلامت ربات تلگرام',
