@@ -7,9 +7,10 @@ import {
   SessionStatus,
   TFTrend,
   TradeSetup,
+  TrendDir,
 } from '@/lib/aiAnalysis';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
-import { AssetSignal, TrendDir } from '@/lib/signalEngine';
+import { AssetSignal } from '@/lib/signalEngine';
 import { RefreshCw, TrendingUp, TrendingDown, Minus, Target, Clock, Layers, Gauge, Bug } from 'lucide-react';
 
 /**
