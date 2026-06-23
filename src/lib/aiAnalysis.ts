@@ -1,6 +1,14 @@
 import { OHLCCandle, fetchOHLC } from './krakenApi';
 import { calculateRSI, calculateMACD, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from './indicators';
 import { calculateATR, atrLevels } from './risk';
+// Single source of truth for Forex session windows / open-closed checks — shared
+// with the canonical signal engine and the Telegram session label.
+import {
+  FX_SESSIONS,
+  isSessionOpen,
+  type FxSession,
+  type SessionName,
+} from '../../supabase/functions/market-intel/session-label';
 
 export type TrendDir = 'up' | 'down' | 'neutral';
 
