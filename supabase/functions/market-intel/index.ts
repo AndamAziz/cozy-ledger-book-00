@@ -3290,7 +3290,7 @@ Deno.serve(async (req) => {
 
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
           const text = newSignalLine(q, sig, entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
-          if (tfDef.delayMs === 0) forcedAlerts.push({ text, important: true, reason: tfReason });
+          if (tfDef.delayMs === 0) forcedAlerts.push({ text, important: true, reason: tfReason, asset: m.name });
           else tfQueue.push({ dueAt: activeFrom, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
           newLegs.push({
             id: ins?.id as string | undefined,
@@ -3313,7 +3313,7 @@ Deno.serve(async (req) => {
 
       let forcedSent = 0;
       for (const sig of forcedAlerts) {
-        if (await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason))) forcedSent++;
+        if (await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason), sig.asset)) forcedSent++;
       }
 
       return new Response(JSON.stringify({ ok: true, mode: "force", assets: forcedSymbols, sent: forcedSent, scheduled: tfQueue.length }),
@@ -3376,7 +3376,7 @@ Deno.serve(async (req) => {
     // has arrived are added now (important ⇒ bypass throttle so they always post).
     const dueTfSignals = await drainDueTimeframeSignals();
     for (const item of dueTfSignals) {
-      signalAlerts.push({ text: item.text, important: true, reason: item.reason });
+      signalAlerts.push({ text: item.text, important: true, reason: item.reason, asset: item.symbol });
     }
 
     let sent = false;
@@ -3449,7 +3449,7 @@ Deno.serve(async (req) => {
         if (!sig.important && !gapOk) continue;
         const h = contentHash(sig.text);
         if (await wasRecentlySent(h, SIGNAL_DEDUPE_MS)) continue;
-        const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason));
+        const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason), sig.asset);
         sent = ok || sent;
         if (ok) { targetsSent++; lastTargetAt = Date.now(); await recordSent(h, sig.text.slice(0, 120), "signal"); }
       }
