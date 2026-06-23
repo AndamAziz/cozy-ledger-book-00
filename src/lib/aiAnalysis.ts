@@ -356,16 +356,10 @@ export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promis
 }
 
 // ─── Forex sessions ───
-// Single source of truth lives in the edge function's session-label.ts so the
-// on-screen "Forex Sessions" cards, the canonical signal engine and the Telegram
-// session label all agree (same isSessionOpen() + UTC windows). The UI here just
-// adds the live open/close countdowns on top of that shared open/closed check.
-import {
-  FX_SESSIONS,
-  isSessionOpen,
-  type FxSession,
-  type SessionName,
-} from '../../supabase/functions/market-intel/session-label';
+// Session windows / open-closed checks come from the shared session-label.ts
+// (imported at the top). The UI here just adds live open/close countdowns on top
+// of that shared check, so the cards, the signal engine and the Telegram label
+// can never drift apart.
 
 export interface SessionStatus {
   name: string;
