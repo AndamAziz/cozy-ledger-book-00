@@ -638,11 +638,11 @@ function extractEvent(text: string): string {
 const URGENCY_RANK: Record<string, number> = { BREAKING: 3, IMPORTANT: 2, INFO: 1 };
 
 // ───────────────────── Telegram (retry + backoff) ─────────────────────
-async function sendToChat(chatId: string, kind: string, text: string): Promise<boolean> {
+async function sendToChat(chatId: string, kind: string, text: string, asset?: string | null): Promise<boolean> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_API_KEY");
   const { data: logRow } = await admin.from("telegram_logs")
-    .insert({ kind, chat_id: chatId, payload: { text }, status: "pending", attempts: 0 })
+    .insert({ kind, chat_id: chatId, asset: asset ?? null, payload: { text }, status: "pending", attempts: 0 })
     .select("id").maybeSingle();
   const logId = logRow?.id as string | undefined;
 
@@ -679,10 +679,11 @@ async function sendToChat(chatId: string, kind: string, text: string): Promise<b
   return false;
 }
 
+
 // Broadcast to admin DM + public channel. Succeeds if any target accepts it.
-async function sendTelegram(kind: string, text: string): Promise<boolean> {
+async function sendTelegram(kind: string, text: string, asset?: string | null): Promise<boolean> {
   const results = await Promise.all(
-    TARGET_CHAT_IDS.map((id) => sendToChat(id, kind, text)),
+    TARGET_CHAT_IDS.map((id) => sendToChat(id, kind, text, asset)),
   );
   return results.some(Boolean);
 }
@@ -1087,7 +1088,7 @@ interface OpenLeg {
 }
 // A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
 // `reason` tells the user why this specific target was sent (very important, cooldown, news, etc.).
-interface SignalMsg { text: string; important: boolean; reason: string; }
+interface SignalMsg { text: string; important: boolean; reason: string; asset?: string; }
 // A queued higher-timeframe signal waiting for its scheduled send time.
 interface TfQueueItem { dueAt: number; text: string; reason: string; symbol: string; tf: string; }
 
@@ -1284,7 +1285,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           const text = newSignalLine(q, sig as "BUY" | "SELL", entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
           if (tfDef.delayMs === 0) {
             // First message fires immediately as a high-priority signal so it always reaches the channel.
-            signalAlerts.push({ text, important: true, reason: tfReason });
+            signalAlerts.push({ text, important: true, reason: tfReason, asset: m.name });
           } else {
             tfQueue.push({ dueAt: activeFrom, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
           }
@@ -1453,6 +1454,7 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
             const slPips = toPips(sl - entry, m.pip);
             signalAlerts.push({
               important: true,
+              asset: "GOLD",
               reason: "📰 High-impact news / هەواڵی کاریگەری بەرز",
               text: [
                 `📰 News-driven / بەهۆی هەواڵ: <b>${esc(ev.title)}</b>`,
@@ -3288,7 +3290,7 @@ Deno.serve(async (req) => {
 
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
           const text = newSignalLine(q, sig, entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
-          if (tfDef.delayMs === 0) forcedAlerts.push({ text, important: true, reason: tfReason });
+          if (tfDef.delayMs === 0) forcedAlerts.push({ text, important: true, reason: tfReason, asset: m.name });
           else tfQueue.push({ dueAt: activeFrom, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
           newLegs.push({
             id: ins?.id as string | undefined,
@@ -3311,7 +3313,7 @@ Deno.serve(async (req) => {
 
       let forcedSent = 0;
       for (const sig of forcedAlerts) {
-        if (await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason))) forcedSent++;
+        if (await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason), sig.asset)) forcedSent++;
       }
 
       return new Response(JSON.stringify({ ok: true, mode: "force", assets: forcedSymbols, sent: forcedSent, scheduled: tfQueue.length }),
@@ -3374,7 +3376,7 @@ Deno.serve(async (req) => {
     // has arrived are added now (important ⇒ bypass throttle so they always post).
     const dueTfSignals = await drainDueTimeframeSignals();
     for (const item of dueTfSignals) {
-      signalAlerts.push({ text: item.text, important: true, reason: item.reason });
+      signalAlerts.push({ text: item.text, important: true, reason: item.reason, asset: item.symbol });
     }
 
     let sent = false;
@@ -3447,7 +3449,7 @@ Deno.serve(async (req) => {
         if (!sig.important && !gapOk) continue;
         const h = contentHash(sig.text);
         if (await wasRecentlySent(h, SIGNAL_DEDUPE_MS)) continue;
-        const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason));
+        const ok = await sendTelegram("ctp_signal", oneSignalMessage("New Trade Target · تارگێتی نوێ", sig.text, sig.reason), sig.asset);
         sent = ok || sent;
         if (ok) { targetsSent++; lastTargetAt = Date.now(); await recordSent(h, sig.text.slice(0, 120), "signal"); }
       }

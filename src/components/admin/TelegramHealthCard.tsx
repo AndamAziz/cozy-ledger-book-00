@@ -17,9 +17,20 @@ interface ChannelStat {
   lastError: string | null;
 }
 
+interface AssetStat {
+  asset: string;
+  sent: number;
+  failed: number;
+  pending: number;
+  lastSentAt: string | null;
+  lastFailedAt: string | null;
+  lastError: string | null;
+}
+
 interface HealthData {
   reports: ChannelStat;
   signals: ChannelStat;
+  byAsset: AssetStat[];
 }
 
 const emptyStat = (): ChannelStat => ({
@@ -31,6 +42,18 @@ const emptyStat = (): ChannelStat => ({
   lastFailedAt: null,
   lastError: null,
 });
+
+// Assets we surface per-asset delivery diagnostics for.
+const ASSET_META: { key: string; label: string; emoji: string }[] = [
+  { key: 'GOLD', label: 'Gold', emoji: '🥇' },
+  { key: 'SILVER', label: 'Silver', emoji: '🥈' },
+  { key: 'OIL', label: 'Oil', emoji: '🛢️' },
+  { key: 'BITCOIN', label: 'Bitcoin', emoji: '₿' },
+  { key: 'ETHEREUM', label: 'Ethereum', emoji: 'Ξ' },
+  { key: 'EUR/USD', label: 'EUR/USD', emoji: '💶' },
+  { key: 'GBP/USD', label: 'GBP/USD', emoji: '💷' },
+  { key: 'USD/JPY', label: 'USD/JPY', emoji: '💴' },
+];
 
 // Local bilingual labels (component is self-contained, not in global translations)
 const L = {
@@ -52,6 +75,8 @@ const L = {
     idle: 'چالاک نییە',
     unknown: 'نەزانراو',
     overall: 'دۆخی گشتی',
+    perAsset: 'ناردن بەپێی ئەسێت',
+    noAsset: 'هیچ ناردنێک لە ٢٤ کاتژمێری ڕابردوو',
   },
   en: {
     title: 'Telegram Bot Health',
@@ -71,6 +96,8 @@ const L = {
     idle: 'Idle',
     unknown: 'Unknown',
     overall: 'Overall status',
+    perAsset: 'Per-asset delivery',
+    noAsset: 'No deliveries in last 24h',
   },
   ar: {
     title: 'صحة بوت تيليجرام',
@@ -90,6 +117,8 @@ const L = {
     idle: 'خامل',
     unknown: 'غير معروف',
     overall: 'الحالة العامة',
+    perAsset: 'الإرسال حسب الأصل',
+    noAsset: 'لا إرسال خلال آخر ٢٤ ساعة',
   },
   fa: {
     title: 'سلامت ربات تلگرام',
@@ -109,6 +138,8 @@ const L = {
     idle: 'غیرفعال',
     unknown: 'نامشخص',
     overall: 'وضعیت کلی',
+    perAsset: 'ارسال بر اساس دارایی',
+    noAsset: 'ارسالی در ۲۴ ساعت اخیر نبود',
   },
   tr: {
     title: 'Telegram Bot Durumu',
@@ -128,6 +159,8 @@ const L = {
     idle: 'Boşta',
     unknown: 'Bilinmiyor',
     overall: 'Genel durum',
+    perAsset: 'Varlık bazında gönderim',
+    noAsset: 'Son 24 saatte gönderim yok',
   },
 } as const;
 
@@ -203,7 +236,7 @@ export function TelegramHealthCard() {
       const [logsRes, signalsRes] = await Promise.all([
         supabase
           .from('telegram_logs')
-          .select('status, error, created_at')
+          .select('status, error, created_at, asset')
           .gte('created_at', since)
           .order('created_at', { ascending: false }),
         supabase
@@ -233,9 +266,46 @@ export function TelegramHealthCard() {
         return stat;
       };
 
+      // Per-asset breakdown (rows are already newest-first).
+      const logRows = (logsRes.data ?? []) as {
+        status: string | null;
+        error: string | null;
+        created_at: string;
+        asset: string | null;
+      }[];
+      const byAsset: AssetStat[] = ASSET_META.map(({ key }) => {
+        const a: AssetStat = {
+          asset: key,
+          sent: 0,
+          failed: 0,
+          pending: 0,
+          lastSentAt: null,
+          lastFailedAt: null,
+          lastError: null,
+        };
+        logRows
+          .filter((r) => (r.asset ?? '').toUpperCase() === key.toUpperCase())
+          .forEach((r) => {
+            if (r.status === 'sent') {
+              a.sent += 1;
+              if (!a.lastSentAt) a.lastSentAt = r.created_at;
+            } else if (r.status === 'failed') {
+              a.failed += 1;
+              if (!a.lastFailedAt) {
+                a.lastFailedAt = r.created_at;
+                a.lastError = r.error;
+              }
+            } else {
+              a.pending += 1;
+            }
+          });
+        return a;
+      }).filter((a) => a.sent + a.failed + a.pending > 0);
+
       setData({
         reports: build(logsRes.data as never),
         signals: build(signalsRes.data as never),
+        byAsset,
       });
     } catch (e) {
       console.error('Error fetching telegram health:', e);
@@ -339,6 +409,60 @@ export function TelegramHealthCard() {
         <StatBlock label={tl.reports} stat={data?.reports ?? emptyStat()} health={reportsHealth} />
         <StatBlock label={tl.signals} stat={data?.signals ?? emptyStat()} health={signalsHealth} />
       </div>
+
+      <div className="mt-3 pt-3 border-t border-border/40">
+        <p className="text-[11px] font-medium text-muted-foreground mb-2">{tl.perAsset}</p>
+        {data && data.byAsset.length > 0 ? (
+          <div className="space-y-1.5">
+            {data.byAsset.map((a) => {
+              const meta = ASSET_META.find((m) => m.key === a.asset);
+              const stuck = a.failed > 0 && a.sent === 0;
+              return (
+                <div
+                  key={a.asset}
+                  className="rounded-lg bg-secondary/30 border border-border/40 px-2.5 py-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5 min-w-0">
+                      <span>{meta?.emoji}</span>
+                      <span className="truncate">{meta?.label ?? a.asset}</span>
+                    </span>
+                    <span className="flex items-center gap-2 text-[10px] flex-shrink-0">
+                      <span className="inline-flex items-center gap-0.5 text-success">
+                        <CheckCircle2 className="h-3 w-3" />
+                        {a.sent}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-0.5 ${
+                          a.failed > 0 ? 'text-destructive' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <XCircle className="h-3 w-3" />
+                        {a.failed}
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 text-muted-foreground">
+                        <AlertTriangle className="h-3 w-3" />
+                        {a.pending}
+                      </span>
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground truncate mt-1">
+                    <span className="text-foreground/70">{tl.lastSent}:</span> {fmtTime(a.lastSentAt)}
+                  </p>
+                  {(stuck || a.lastError) && a.lastError && (
+                    <p className="text-[10px] text-destructive/80 truncate mt-0.5" title={a.lastError}>
+                      <span className="text-foreground/70">{tl.lastError}:</span> {a.lastError}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">{tl.noAsset}</p>
+        )}
+      </div>
+
 
       <div className="mt-3 pt-3 border-t border-border/40">
         <p className="text-[11px] font-medium text-muted-foreground mb-2">{rl.title}</p>

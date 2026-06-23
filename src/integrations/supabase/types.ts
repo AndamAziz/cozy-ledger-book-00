@@ -922,6 +922,7 @@ export type Database = {
       }
       telegram_logs: {
         Row: {
+          asset: string | null
           attempts: number
           chat_id: string | null
           created_at: string
@@ -932,6 +933,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          asset?: string | null
           attempts?: number
           chat_id?: string | null
           created_at?: string
@@ -942,6 +944,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          asset?: string | null
           attempts?: number
           chat_id?: string | null
           created_at?: string
