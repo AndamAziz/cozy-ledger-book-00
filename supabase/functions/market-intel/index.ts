@@ -638,11 +638,11 @@ function extractEvent(text: string): string {
 const URGENCY_RANK: Record<string, number> = { BREAKING: 3, IMPORTANT: 2, INFO: 1 };
 
 // ───────────────────── Telegram (retry + backoff) ─────────────────────
-async function sendToChat(chatId: string, kind: string, text: string): Promise<boolean> {
+async function sendToChat(chatId: string, kind: string, text: string, asset?: string | null): Promise<boolean> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_API_KEY");
   const { data: logRow } = await admin.from("telegram_logs")
-    .insert({ kind, chat_id: chatId, payload: { text }, status: "pending", attempts: 0 })
+    .insert({ kind, chat_id: chatId, asset: asset ?? null, payload: { text }, status: "pending", attempts: 0 })
     .select("id").maybeSingle();
   const logId = logRow?.id as string | undefined;
 
@@ -679,10 +679,11 @@ async function sendToChat(chatId: string, kind: string, text: string): Promise<b
   return false;
 }
 
+
 // Broadcast to admin DM + public channel. Succeeds if any target accepts it.
-async function sendTelegram(kind: string, text: string): Promise<boolean> {
+async function sendTelegram(kind: string, text: string, asset?: string | null): Promise<boolean> {
   const results = await Promise.all(
-    TARGET_CHAT_IDS.map((id) => sendToChat(id, kind, text)),
+    TARGET_CHAT_IDS.map((id) => sendToChat(id, kind, text, asset)),
   );
   return results.some(Boolean);
 }
