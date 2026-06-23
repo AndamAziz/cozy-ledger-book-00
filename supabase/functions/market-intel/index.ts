@@ -1295,6 +1295,8 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
         const tp2Pips = toPips(tp2 - entry, m.pip);
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
+        // Message label mirrors the app's Confluence "Forex Sessions" panel.
+        const sessionMsg = sessionDisplayLabel(new Date());
 
         const highConf = confidence >= TARGET_IMPORTANT_CONFIDENCE;
         const strongMoveImp = Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
