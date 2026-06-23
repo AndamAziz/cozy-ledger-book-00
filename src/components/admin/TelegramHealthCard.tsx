@@ -100,6 +100,8 @@ const L = {
     overall: 'Overall status',
     perAsset: 'Per-asset delivery',
     noAsset: 'No deliveries in last 24h',
+    gatewayError: '⚠️ Gateway error',
+    telegramBlocked: '❌ Telegram blocked',
   },
   ar: {
     title: 'صحة بوت تيليجرام',
