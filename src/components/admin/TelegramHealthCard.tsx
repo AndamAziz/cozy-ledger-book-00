@@ -77,6 +77,8 @@ const L = {
     overall: 'دۆخی گشتی',
     perAsset: 'ناردن بەپێی ئەسێت',
     noAsset: 'هیچ ناردنێک لە ٢٤ کاتژمێری ڕابردوو',
+    gatewayError: '⚠️ هەڵەی گەیتوەی',
+    telegramBlocked: '❌ تەلەگرام بلۆککراوە',
   },
   en: {
     title: 'Telegram Bot Health',
