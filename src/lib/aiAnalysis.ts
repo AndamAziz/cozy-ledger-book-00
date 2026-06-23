@@ -348,20 +348,16 @@ export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promis
 }
 
 // ─── Forex sessions ───
-export interface TradingSession {
-  name: string;
-  emoji: string;
-  /** Open hour (UTC). */
-  openUtc: number;
-  /** Close hour (UTC). */
-  closeUtc: number;
-}
-
-export const TRADING_SESSIONS: TradingSession[] = [
-  { name: 'Asian', emoji: '🌏', openUtc: 0, closeUtc: 9 },
-  { name: 'London', emoji: '🌍', openUtc: 8, closeUtc: 17 },
-  { name: 'New York', emoji: '🌎', openUtc: 13, closeUtc: 22 },
-];
+// Single source of truth lives in the edge function's session-label.ts so the
+// on-screen "Forex Sessions" cards, the canonical signal engine and the Telegram
+// session label all agree (same isSessionOpen() + UTC windows). The UI here just
+// adds the live open/close countdowns on top of that shared open/closed check.
+import {
+  FX_SESSIONS,
+  isSessionOpen,
+  type FxSession,
+  type SessionName,
+} from '../../supabase/functions/market-intel/session-label';
 
 export interface SessionStatus {
   name: string;
@@ -373,6 +369,12 @@ export interface SessionStatus {
   untilOpen: boolean;
 }
 
+// Familiar chronological display order (Asian → London → New York).
+const SESSION_DISPLAY_ORDER: SessionName[] = ['Asian', 'London', 'New York'];
+const SESSIONS_FOR_DISPLAY: FxSession[] = SESSION_DISPLAY_ORDER.map(
+  (n) => FX_SESSIONS.find((s) => s.name === n)!,
+);
+
 function fmtCountdown(ms: number): string {
   if (ms <= 0) return '0m';
   const h = Math.floor(ms / 3600000);
@@ -381,24 +383,25 @@ function fmtCountdown(ms: number): string {
   return `${m}m`;
 }
 
+/** Next future UTC time whose hour equals `hour` (today or tomorrow). */
+function nextUtcHour(now: Date, hour: number): Date {
+  const d = new Date(now);
+  d.setUTCHours(hour, 0, 0, 0);
+  if (d.getTime() <= now.getTime()) d.setUTCDate(d.getUTCDate() + 1);
+  return d;
+}
+
 export function getSessionStatuses(now = new Date()): SessionStatus[] {
-  const weekend = now.getUTCDay() === 6 || (now.getUTCDay() === 0 && now.getUTCHours() < 22);
-  return TRADING_SESSIONS.map((s) => {
-    const hour = now.getUTCHours() + now.getUTCMinutes() / 60;
-    const active = !weekend && hour >= s.openUtc && hour < s.closeUtc;
-
-    // Build the next open and next close timestamps.
-    const open = new Date(now);
-    open.setUTCHours(s.openUtc, 0, 0, 0);
-    if (open.getTime() <= now.getTime() && hour >= s.openUtc) open.setUTCDate(open.getUTCDate() + 1);
-
-    const close = new Date(now);
-    close.setUTCHours(s.closeUtc, 0, 0, 0);
-    if (close.getTime() <= now.getTime()) close.setUTCDate(close.getUTCDate() + 1);
-
-    if (active) {
-      return { name: s.name, emoji: s.emoji, active: true, countdown: fmtCountdown(close.getTime() - now.getTime()), untilOpen: false };
-    }
-    return { name: s.name, emoji: s.emoji, active: false, countdown: fmtCountdown(open.getTime() - now.getTime()), untilOpen: true };
+  return SESSIONS_FOR_DISPLAY.map((s) => {
+    const active = isSessionOpen(s, now);
+    const flipAt = active ? nextUtcHour(now, s.close) : nextUtcHour(now, s.open);
+    return {
+      name: s.name,
+      emoji: s.emoji,
+      active,
+      countdown: fmtCountdown(flipAt.getTime() - now.getTime()),
+      untilOpen: !active,
+    };
   });
 }
+
