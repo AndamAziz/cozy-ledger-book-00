@@ -187,6 +187,18 @@ function worst(a: Health, b: Health): Health {
   return order.indexOf(a) <= order.indexOf(b) ? a : b;
 }
 
+// Classify a 403 failure. A real Telegram 403 returns a JSON body with an
+// `error_code` (e.g. bot blocked / not admin). A Lovable connector-gateway 403
+// rejects the request before it reaches Telegram, so its body is empty (`{}`).
+type ErrKind = 'gateway' | 'telegram' | null;
+function classifyError(error: string | null): ErrKind {
+  if (!error) return null;
+  if (!/\b403\b/.test(error)) return null;
+  // Real Telegram error bodies always include an error_code field.
+  return /error_code/.test(error) ? 'telegram' : 'gateway';
+}
+
+
 const healthStyles: Record<Health, string> = {
   healthy: 'bg-success/15 text-success border-success/30',
   degraded: 'bg-warning/15 text-warning border-warning/30',
