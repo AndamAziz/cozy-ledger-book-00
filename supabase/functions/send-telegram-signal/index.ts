@@ -124,6 +124,22 @@ Deno.serve(async (req) => {
     const tgData = await tgResp.json();
     const ok = tgResp.ok && tgData.ok;
 
+    // Human-readable hint explaining WHY the send failed (helps debug [403] {}).
+    let hint = '';
+    if (!ok) {
+      if (tgResp.status === 403) {
+        hint = chatId.startsWith('@')
+          ? ' — bot is not an admin of this channel'
+          : ' — user has not started the bot / blocked it';
+      } else if (tgResp.status === 400) {
+        hint = ' — bad request (chat_id invalid or message malformed)';
+      } else if (tgResp.status === 401) {
+        hint = ' — gateway rejected credentials (check Telegram connection)';
+      }
+      console.error(`[send-telegram-signal] failed [${tgResp.status}] chat=${chatId}${hint}`, JSON.stringify(tgData));
+    }
+    const errMsg = `Telegram error [${tgResp.status}] chat=${chatId}${hint}: ${JSON.stringify(tgData)}`;
+
     // Log the signal regardless of outcome
     const logRow = {
       symbol: body.symbol ?? null,
