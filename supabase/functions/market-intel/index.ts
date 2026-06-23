@@ -860,6 +860,27 @@ function sessionLabel(d = new Date(), enabled?: Region[]): string {
   return `${REGION_EMOJI[region]} ${region} (${REGION_KU[region]})`;
 }
 
+// Forex session label for the Telegram signal MESSAGE. Mirrors the app's
+// Confluence "Forex Sessions" panel (src/lib/aiAnalysis.ts → getSessionStatuses):
+// UTC windows Asian 0–9, London 8–17, New York 13–22, closed on the weekend.
+// Picks the highest-liquidity session currently open (NY → London → Asian) and
+// returns "Markets Quiet" when none is open (the 📍 prefix is added by the caller).
+const CONFLUENCE_SESSIONS = [
+  { name: "New York", ku: "نیویۆرک", emoji: "🌎", open: 13, close: 22 },
+  { name: "London", ku: "لەندەن", emoji: "🌍", open: 8, close: 17 },
+  { name: "Asian", ku: "ئاسیا", emoji: "🌏", open: 0, close: 9 },
+];
+function sessionDisplayLabel(d = new Date()): string {
+  const weekend = d.getUTCDay() === 6 || (d.getUTCDay() === 0 && d.getUTCHours() < 22);
+  if (!weekend) {
+    const hour = d.getUTCHours() + d.getUTCMinutes() / 60;
+    for (const s of CONFLUENCE_SESSIONS) {
+      if (hour >= s.open && hour < s.close) return `${s.emoji} ${s.name} (${s.ku})`;
+    }
+  }
+  return "Markets Quiet / بازاڕ کپە";
+}
+
 // Decimal places to display for an asset's price (forex/crypto need more than 2).
 const dpOf = (symbol: string): number => ASSET_META[symbol]?.decimals ?? 2;
 // Format a number with a fixed number of decimals (asset-aware).
@@ -1274,6 +1295,8 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
         const tp2Pips = toPips(tp2 - entry, m.pip);
         const confidence = quoteConfidence(q);
         const session = sessionLabel(new Date(), enabledRegions);
+        // Message label mirrors the app's Confluence "Forex Sessions" panel.
+        const sessionMsg = sessionDisplayLabel(new Date());
 
         const highConf = confidence >= TARGET_IMPORTANT_CONFIDENCE;
         const strongMoveImp = Math.abs(q.changePct) >= TARGET_IMPORTANT_MOVE_PCT;
@@ -1300,7 +1323,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           }).select("id").maybeSingle();
 
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
-          const text = newSignalLine(q, sig as "BUY" | "SELL", entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
+          const text = newSignalLine(q, sig as "BUY" | "SELL", entry, tp, sl, tpPips, slPips, confidence, sessionMsg, tfDef.tf);
           if (tfDef.delayMs === 0) {
             // First message fires immediately as a high-priority signal so it always reaches the channel.
             signalAlerts.push({ text, important: true, reason: tfReason, asset: m.name });
