@@ -12,6 +12,7 @@ import { GoldSignalPanel } from '@/components/crypto/GoldSignalPanel';
 import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { SignalHistory } from '@/components/crypto/SignalHistory';
 import { Crown, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
+import { useSignalEngine } from '@/hooks/useSignalEngine';
 
 
 interface Props {
