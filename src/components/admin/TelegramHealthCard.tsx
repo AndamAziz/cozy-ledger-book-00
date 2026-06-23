@@ -411,6 +411,60 @@ export function TelegramHealthCard() {
       </div>
 
       <div className="mt-3 pt-3 border-t border-border/40">
+        <p className="text-[11px] font-medium text-muted-foreground mb-2">{tl.perAsset}</p>
+        {data && data.byAsset.length > 0 ? (
+          <div className="space-y-1.5">
+            {data.byAsset.map((a) => {
+              const meta = ASSET_META.find((m) => m.key === a.asset);
+              const stuck = a.failed > 0 && a.sent === 0;
+              return (
+                <div
+                  key={a.asset}
+                  className="rounded-lg bg-secondary/30 border border-border/40 px-2.5 py-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5 min-w-0">
+                      <span>{meta?.emoji}</span>
+                      <span className="truncate">{meta?.label ?? a.asset}</span>
+                    </span>
+                    <span className="flex items-center gap-2 text-[10px] flex-shrink-0">
+                      <span className="inline-flex items-center gap-0.5 text-success">
+                        <CheckCircle2 className="h-3 w-3" />
+                        {a.sent}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-0.5 ${
+                          a.failed > 0 ? 'text-destructive' : 'text-muted-foreground'
+                        }`}
+                      >
+                        <XCircle className="h-3 w-3" />
+                        {a.failed}
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 text-muted-foreground">
+                        <AlertTriangle className="h-3 w-3" />
+                        {a.pending}
+                      </span>
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground truncate mt-1">
+                    <span className="text-foreground/70">{tl.lastSent}:</span> {fmtTime(a.lastSentAt)}
+                  </p>
+                  {(stuck || a.lastError) && a.lastError && (
+                    <p className="text-[10px] text-destructive/80 truncate mt-0.5" title={a.lastError}>
+                      <span className="text-foreground/70">{tl.lastError}:</span> {a.lastError}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">{tl.noAsset}</p>
+        )}
+      </div>
+
+
+      <div className="mt-3 pt-3 border-t border-border/40">
         <p className="text-[11px] font-medium text-muted-foreground mb-2">{rl.title}</p>
         <div className="flex flex-wrap gap-2">
           {[
