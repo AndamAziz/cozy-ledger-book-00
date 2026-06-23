@@ -169,6 +169,8 @@ const L = {
     overall: 'Genel durum',
     perAsset: 'Varlık bazında gönderim',
     noAsset: 'Son 24 saatte gönderim yok',
+    gatewayError: '⚠️ Ağ geçidi hatası',
+    telegramBlocked: '❌ Telegram engelledi',
   },
 } as const;
 
