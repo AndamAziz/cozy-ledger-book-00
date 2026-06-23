@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       chat_id: chatId,
       telegram_message_id: ok ? (tgData.result?.message_id ?? null) : null,
       status: ok ? 'sent' : 'failed',
-      error: ok ? null : `Telegram error [${tgResp.status}]: ${JSON.stringify(tgData)}`,
+      error: ok ? null : errMsg,
       sent_by: userData.user.id,
     };
     await supabase.from('telegram_signals').insert(logRow);
