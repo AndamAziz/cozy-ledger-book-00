@@ -17,9 +17,20 @@ interface ChannelStat {
   lastError: string | null;
 }
 
+interface AssetStat {
+  asset: string;
+  sent: number;
+  failed: number;
+  pending: number;
+  lastSentAt: string | null;
+  lastFailedAt: string | null;
+  lastError: string | null;
+}
+
 interface HealthData {
   reports: ChannelStat;
   signals: ChannelStat;
+  byAsset: AssetStat[];
 }
 
 const emptyStat = (): ChannelStat => ({
@@ -31,6 +42,18 @@ const emptyStat = (): ChannelStat => ({
   lastFailedAt: null,
   lastError: null,
 });
+
+// Assets we surface per-asset delivery diagnostics for.
+const ASSET_META: { key: string; label: string; emoji: string }[] = [
+  { key: 'GOLD', label: 'Gold', emoji: '🥇' },
+  { key: 'SILVER', label: 'Silver', emoji: '🥈' },
+  { key: 'OIL', label: 'Oil', emoji: '🛢️' },
+  { key: 'BITCOIN', label: 'Bitcoin', emoji: '₿' },
+  { key: 'ETHEREUM', label: 'Ethereum', emoji: 'Ξ' },
+  { key: 'EUR/USD', label: 'EUR/USD', emoji: '💶' },
+  { key: 'GBP/USD', label: 'GBP/USD', emoji: '💷' },
+  { key: 'USD/JPY', label: 'USD/JPY', emoji: '💴' },
+];
 
 // Local bilingual labels (component is self-contained, not in global translations)
 const L = {
