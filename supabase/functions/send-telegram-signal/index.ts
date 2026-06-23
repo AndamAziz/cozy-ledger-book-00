@@ -61,10 +61,20 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Verify BOTH gateway credentials load from the environment; name the one that failed.
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
     const TELEGRAM_API_KEY = Deno.env.get('TELEGRAM_API_KEY');
-    if (!TELEGRAM_API_KEY) throw new Error('TELEGRAM_API_KEY is not configured');
+    const missing = [
+      !LOVABLE_API_KEY && 'LOVABLE_API_KEY',
+      !TELEGRAM_API_KEY && 'TELEGRAM_API_KEY',
+    ].filter(Boolean);
+    if (missing.length) {
+      const msg = `Missing Telegram credential(s): ${missing.join(', ')}`;
+      console.error(`[send-telegram-signal] ${msg}`);
+      return new Response(JSON.stringify({ error: msg }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
