@@ -77,6 +77,8 @@ const L = {
     overall: 'دۆخی گشتی',
     perAsset: 'ناردن بەپێی ئەسێت',
     noAsset: 'هیچ ناردنێک لە ٢٤ کاتژمێری ڕابردوو',
+    gatewayError: '⚠️ هەڵەی گەیتوەی',
+    telegramBlocked: '❌ تەلەگرام بلۆککراوە',
   },
   en: {
     title: 'Telegram Bot Health',
@@ -98,6 +100,8 @@ const L = {
     overall: 'Overall status',
     perAsset: 'Per-asset delivery',
     noAsset: 'No deliveries in last 24h',
+    gatewayError: '⚠️ Gateway error',
+    telegramBlocked: '❌ Telegram blocked',
   },
   ar: {
     title: 'صحة بوت تيليجرام',
@@ -119,6 +123,8 @@ const L = {
     overall: 'الحالة العامة',
     perAsset: 'الإرسال حسب الأصل',
     noAsset: 'لا إرسال خلال آخر ٢٤ ساعة',
+    gatewayError: '⚠️ خطأ البوابة',
+    telegramBlocked: '❌ محظور من تيليجرام',
   },
   fa: {
     title: 'سلامت ربات تلگرام',
@@ -140,6 +146,8 @@ const L = {
     overall: 'وضعیت کلی',
     perAsset: 'ارسال بر اساس دارایی',
     noAsset: 'ارسالی در ۲۴ ساعت اخیر نبود',
+    gatewayError: '⚠️ خطای دروازه',
+    telegramBlocked: '❌ مسدود در تلگرام',
   },
   tr: {
     title: 'Telegram Bot Durumu',
@@ -161,6 +169,8 @@ const L = {
     overall: 'Genel durum',
     perAsset: 'Varlık bazında gönderim',
     noAsset: 'Son 24 saatte gönderim yok',
+    gatewayError: '⚠️ Ağ geçidi hatası',
+    telegramBlocked: '❌ Telegram engelledi',
   },
 } as const;
 
@@ -176,6 +186,18 @@ function worst(a: Health, b: Health): Health {
   const order: Health[] = ['down', 'degraded', 'unknown', 'idle', 'healthy'];
   return order.indexOf(a) <= order.indexOf(b) ? a : b;
 }
+
+// Classify a 403 failure. A real Telegram 403 returns a JSON body with an
+// `error_code` (e.g. bot blocked / not admin). A Lovable connector-gateway 403
+// rejects the request before it reaches Telegram, so its body is empty (`{}`).
+type ErrKind = 'gateway' | 'telegram' | null;
+function classifyError(error: string | null): ErrKind {
+  if (!error) return null;
+  if (!/\b403\b/.test(error)) return null;
+  // Real Telegram error bodies always include an error_code field.
+  return /error_code/.test(error) ? 'telegram' : 'gateway';
+}
+
 
 const healthStyles: Record<Health, string> = {
   healthy: 'bg-success/15 text-success border-success/30',
@@ -373,7 +395,13 @@ export function TelegramHealthCard() {
         </p>
         {stat.lastError && (
           <p className="truncate text-destructive/80" title={stat.lastError}>
-            <span className="text-foreground/70">{tl.lastError}:</span> {stat.lastError}
+            <span className="text-foreground/70">{tl.lastError}:</span>{' '}
+            {classifyError(stat.lastError) === 'gateway' ? (
+              <span className="text-warning font-medium">{tl.gatewayError}</span>
+            ) : classifyError(stat.lastError) === 'telegram' ? (
+              <span className="text-destructive font-medium">{tl.telegramBlocked}</span>
+            ) : null}{' '}
+            {stat.lastError}
           </p>
         )}
       </div>
@@ -451,7 +479,13 @@ export function TelegramHealthCard() {
                   </p>
                   {(stuck || a.lastError) && a.lastError && (
                     <p className="text-[10px] text-destructive/80 truncate mt-0.5" title={a.lastError}>
-                      <span className="text-foreground/70">{tl.lastError}:</span> {a.lastError}
+                      <span className="text-foreground/70">{tl.lastError}:</span>{' '}
+                      {classifyError(a.lastError) === 'gateway' ? (
+                        <span className="text-warning font-medium">{tl.gatewayError}</span>
+                      ) : classifyError(a.lastError) === 'telegram' ? (
+                        <span className="text-destructive font-medium">{tl.telegramBlocked}</span>
+                      ) : null}{' '}
+                      {a.lastError}
                     </p>
                   )}
                 </div>
