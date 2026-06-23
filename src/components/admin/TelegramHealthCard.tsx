@@ -75,6 +75,8 @@ const L = {
     idle: 'چالاک نییە',
     unknown: 'نەزانراو',
     overall: 'دۆخی گشتی',
+    perAsset: 'ناردن بەپێی ئەسێت',
+    noAsset: 'هیچ ناردنێک لە ٢٤ کاتژمێری ڕابردوو',
   },
   en: {
     title: 'Telegram Bot Health',
@@ -94,6 +96,8 @@ const L = {
     idle: 'Idle',
     unknown: 'Unknown',
     overall: 'Overall status',
+    perAsset: 'Per-asset delivery',
+    noAsset: 'No deliveries in last 24h',
   },
   ar: {
     title: 'صحة بوت تيليجرام',
@@ -113,6 +117,8 @@ const L = {
     idle: 'خامل',
     unknown: 'غير معروف',
     overall: 'الحالة العامة',
+    perAsset: 'الإرسال حسب الأصل',
+    noAsset: 'لا إرسال خلال آخر ٢٤ ساعة',
   },
   fa: {
     title: 'سلامت ربات تلگرام',
@@ -132,6 +138,8 @@ const L = {
     idle: 'غیرفعال',
     unknown: 'نامشخص',
     overall: 'وضعیت کلی',
+    perAsset: 'ارسال بر اساس دارایی',
+    noAsset: 'ارسالی در ۲۴ ساعت اخیر نبود',
   },
   tr: {
     title: 'Telegram Bot Durumu',
@@ -151,6 +159,8 @@ const L = {
     idle: 'Boşta',
     unknown: 'Bilinmiyor',
     overall: 'Genel durum',
+    perAsset: 'Varlık bazında gönderim',
+    noAsset: 'Son 24 saatte gönderim yok',
   },
 } as const;
 
