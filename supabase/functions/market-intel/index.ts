@@ -1323,7 +1323,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           }).select("id").maybeSingle();
 
           const tfReason = `${reason} · ⏱ ${tfDef.tf}`;
-          const text = newSignalLine(q, sig as "BUY" | "SELL", entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
+          const text = newSignalLine(q, sig as "BUY" | "SELL", entry, tp, sl, tpPips, slPips, confidence, sessionMsg, tfDef.tf);
           if (tfDef.delayMs === 0) {
             // First message fires immediately as a high-priority signal so it always reaches the channel.
             signalAlerts.push({ text, important: true, reason: tfReason, asset: m.name });
