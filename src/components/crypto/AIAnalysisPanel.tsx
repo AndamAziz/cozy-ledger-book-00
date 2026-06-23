@@ -476,8 +476,8 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
       <SessionsBlock sessions={sessions} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={gold} bi={bi} debug={debug} />
-        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btc} bi={bi} debug={debug} />
+        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={goldView} bi={bi} debug={debug} />
+        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btcView} bi={bi} debug={debug} />
       </div>
     </div>
   );
