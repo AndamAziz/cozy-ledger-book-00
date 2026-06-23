@@ -407,6 +407,14 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [debug, setDebug] = useState(false);
 
+  // Canonical engine (buildAssetSignal) — the single source of truth for the
+  // decided direction. Reconciled into each card below so the Confluence label
+  // matches the Signals tab / Telegram / Send-Signal exactly.
+  const { signal: goldEng } = useSignalEngine('gold', 'M15');
+  const { signal: btcEng } = useSignalEngine('btc', 'M15');
+  const goldView = reconcileWithEngine(gold, goldEng);
+  const btcView = reconcileWithEngine(btc, btcEng);
+
   const runAnalysis = useCallback(async () => {
     setLoading(true);
     const [b, g] = await Promise.all([analyzeAsset('btc', btcPrice), analyzeAsset('gold', goldPrice)]);
