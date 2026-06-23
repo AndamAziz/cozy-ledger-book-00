@@ -1222,7 +1222,11 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
     // lastSignalDir (only updated when a signal is actually broadcast) — NOT the per-tick
     // observed signal — otherwise a direction that was merely observed while the market was
     // closed / in cooldown would permanently block that direction from ever firing.
-    const fresh = prev?.lastSignalDir !== sig;
+    // Exception: after SIGNAL_REARM_MS we re-allow the same direction so a CONTINUING
+    // trend (gold/forex stay one-directional for hours/days) keeps being broadcast
+    // instead of going silent forever after its first signal.
+    const rearmed = !!prev?.lastSignalAt && Date.now() - prev.lastSignalAt >= SIGNAL_REARM_MS;
+    const fresh = prev?.lastSignalDir !== sig || rearmed;
     // Quiet-market guard: skip weak moves and respect a per-symbol cooldown so we
     // don't spam repeated signals when the market is barely moving.
     const strongMove = Math.abs(q.changePct) >= SIGNAL_MIN_MOVE_PCT;
