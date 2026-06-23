@@ -395,7 +395,13 @@ export function TelegramHealthCard() {
         </p>
         {stat.lastError && (
           <p className="truncate text-destructive/80" title={stat.lastError}>
-            <span className="text-foreground/70">{tl.lastError}:</span> {stat.lastError}
+            <span className="text-foreground/70">{tl.lastError}:</span>{' '}
+            {classifyError(stat.lastError) === 'gateway' ? (
+              <span className="text-warning font-medium">{tl.gatewayError}</span>
+            ) : classifyError(stat.lastError) === 'telegram' ? (
+              <span className="text-destructive font-medium">{tl.telegramBlocked}</span>
+            ) : null}{' '}
+            {stat.lastError}
           </p>
         )}
       </div>
