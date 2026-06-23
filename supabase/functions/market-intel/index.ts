@@ -51,6 +51,12 @@ const EVENT_REMINDER_MIN = 5;
 // for that symbol. Quiet markets → no repeated signals.
 const SIGNAL_MIN_MOVE_PCT = 0.25;        // ignore weak/flat moves
 const SIGNAL_COOLDOWN_MS = 20 * 60_000;  // 20 min between signals per symbol
+// Re-arm window: a trending asset (e.g. gold/forex) often keeps the SAME direction
+// for hours/days. Without a re-arm, the "fresh" gate (direction != last sent) blocks
+// it forever after the first signal — so gold/silver stop sending while choppy assets
+// like oil (which flip direction constantly) keep firing. After this window we allow
+// the SAME direction to fire again, so a continuing trend is re-broadcast periodically.
+const SIGNAL_REARM_MS = 4 * 60 * 60_000; // 4h: re-allow the same direction to re-fire
 
 // Target broadcast pacing: a "very important" target (high confidence / strong
 // move / news-driven) is sent immediately. Otherwise targets are throttled so we
