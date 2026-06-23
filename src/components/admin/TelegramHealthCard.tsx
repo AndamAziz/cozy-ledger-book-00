@@ -146,6 +146,8 @@ const L = {
     overall: 'وضعیت کلی',
     perAsset: 'ارسال بر اساس دارایی',
     noAsset: 'ارسالی در ۲۴ ساعت اخیر نبود',
+    gatewayError: '⚠️ خطای دروازه',
+    telegramBlocked: '❌ مسدود در تلگرام',
   },
   tr: {
     title: 'Telegram Bot Durumu',
