@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
 
     if (!ok) {
       return new Response(
-        JSON.stringify({ error: `Telegram error [${tgResp.status}]: ${JSON.stringify(tgData)}` }),
+        JSON.stringify({ error: errMsg }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
