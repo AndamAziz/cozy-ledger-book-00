@@ -1088,7 +1088,7 @@ interface OpenLeg {
 }
 // A single trade target message. `important` ⇒ broadcast immediately (bypass throttle).
 // `reason` tells the user why this specific target was sent (very important, cooldown, news, etc.).
-interface SignalMsg { text: string; important: boolean; reason: string; }
+interface SignalMsg { text: string; important: boolean; reason: string; asset?: string; }
 // A queued higher-timeframe signal waiting for its scheduled send time.
 interface TfQueueItem { dueAt: number; text: string; reason: string; symbol: string; tf: string; }
 
@@ -1285,7 +1285,7 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
           const text = newSignalLine(q, sig as "BUY" | "SELL", entry, tp, sl, tpPips, slPips, confidence, session, tfDef.tf);
           if (tfDef.delayMs === 0) {
             // First message fires immediately as a high-priority signal so it always reaches the channel.
-            signalAlerts.push({ text, important: true, reason: tfReason });
+            signalAlerts.push({ text, important: true, reason: tfReason, asset: m.name });
           } else {
             tfQueue.push({ dueAt: activeFrom, text, reason: tfReason, symbol: m.name, tf: tfDef.tf });
           }
@@ -1454,6 +1454,7 @@ async function evaluateCalendar(): Promise<{ calendarAlerts: string[]; signalAle
             const slPips = toPips(sl - entry, m.pip);
             signalAlerts.push({
               important: true,
+              asset: "GOLD",
               reason: "📰 High-impact news / هەواڵی کاریگەری بەرز",
               text: [
                 `📰 News-driven / بەهۆی هەواڵ: <b>${esc(ev.title)}</b>`,
