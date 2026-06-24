@@ -22,8 +22,8 @@ function dirColor(dir: 'up' | 'down' | 'neutral'): string {
 
 const LAST_TF_KEY = 'signals:lastTF';
 
-/** Small ⓘ icon with a tooltip that opens on hover and tap (mobile-friendly). */
-function InfoTip({ text }: { text: string }) {
+/** Small ⓘ icon with a tooltip that opens on hover, tap and keyboard (mobile-friendly). */
+function InfoTip({ text, label }: { text: string; label: string }) {
   const [open, setOpen] = useState(false);
   return (
     <TooltipProvider delayDuration={100}>
@@ -31,14 +31,18 @@ function InfoTip({ text }: { text: string }) {
         <TooltipTrigger asChild>
           <button
             type="button"
+            aria-label={label}
+            aria-expanded={open}
             onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-            className="inline-flex items-center justify-center text-[#5b6472] hover:text-[#848e9c]"
+            onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
+            className="inline-flex items-center justify-center text-[#5b6472] hover:text-[#848e9c] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#848e9c] rounded"
           >
             <Info className="h-3 w-3" />
           </button>
         </TooltipTrigger>
         <TooltipContent
           side="top"
+          role="tooltip"
           className="max-w-[220px] border-[#1a1e2e] bg-[#0a0e17] text-[11px] leading-snug text-[#c7ccd6]"
         >
           {text}
@@ -47,6 +51,7 @@ function InfoTip({ text }: { text: string }) {
     </TooltipProvider>
   );
 }
+
 
 
 interface SignalsPanelProps {
@@ -104,9 +109,35 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const u10yStale = macro.us10y == null && lastU10yRef.current != null;
   const u10yChg = macro.us10yChangePct ?? lastU10yChgRef.current;
 
-  const StaleBadge = () => (
-    <span className="text-[9px] leading-none" title={bi('بەهای کۆن', 'Stale value')}>⚠️</span>
-  );
+  const StaleBadge = ({ label }: { label: string }) => {
+    const [open, setOpen] = useState(false);
+    const msg = bi('بەهای کۆن', 'Stale value');
+    return (
+      <TooltipProvider delayDuration={100}>
+        <Tooltip open={open} onOpenChange={setOpen}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={`${label}: ${msg}`}
+              aria-expanded={open}
+              onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+              onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
+              className="inline-flex items-center justify-center text-[9px] leading-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#848e9c] rounded"
+            >
+              ⚠️
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="top"
+            role="tooltip"
+            className="max-w-[220px] border-[#1a1e2e] bg-[#0a0e17] text-[11px] leading-snug text-[#c7ccd6]"
+          >
+            {msg}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
   const macroChip = (
     label: string,
@@ -120,10 +151,11 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
       <Icon className="h-3.5 w-3.5" style={{ color }} />
       <span className="text-[10px] text-[#848e9c]">{label}</span>
       <span className="text-[11px] font-bold tabular-nums" style={{ color }}>{value}</span>
-      {stale && <StaleBadge />}
-      <InfoTip text={tip} />
+      {stale && <StaleBadge label={label} />}
+      <InfoTip text={tip} label={bi(`زانیاری ${label}`, `${label} info`)} />
     </div>
   );
+
 
   const dxyTxt = dxyVal == null ? '—' : `${dxyVal > 0 ? '+' : ''}${dxyVal.toFixed(2)}%`;
   // DXY ↑ strengthens the dollar = bad for gold → red; ↓ = good for gold → green.
@@ -216,8 +248,9 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           <span className="text-[10px] text-[#848e9c]">{bi('ترس/چاوبڕکێ', 'Fear/Greed')}</span>
           <span className="text-[11px] font-bold tabular-nums" style={{ color: fgColor }}>{fgTxt}</span>
           <span className="text-[9px] font-semibold text-[#5b6472] bg-[#1a1e2e] rounded px-1 py-0.5 leading-none">{fgSource}</span>
-          {fgStale && <StaleBadge />}
-          <InfoTip text={fgTip} />
+          {fgStale && <StaleBadge label={bi('ترس/چاوبڕکێ', 'Fear/Greed')} />}
+          <InfoTip text={fgTip} label={bi('زانیاری ترس/چاوبڕکێ', 'Fear/Greed info')} />
+
         </div>
         {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale)}
         {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale)}
