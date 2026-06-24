@@ -191,4 +191,39 @@ describe('computeResult — threshold behaviour end-to-end', () => {
       expect(r.resultDir).toBe('neutral');
     }
   });
+
+  describe('high-confidence override (>75%)', () => {
+    it('SELL >75% confidence → down on H4/D1 regardless of bullish macro', () => {
+      const bullishMacro = { fgVal: 20, vixVal: 30, spxVal: -1 }; // macro = +3 (bullish)
+      const sell82 = { action: 'sell', confidence: 82 };
+      expect(computeResult('H4', bullishMacro, sell82).resultDir).toBe('down');
+      expect(computeResult('D1', bullishMacro, sell82).resultDir).toBe('down');
+    });
+
+    it('BUY >75% confidence → up regardless of bearish macro', () => {
+      const bearishMacro = { dxyVal: 1, u10yChg: 1 }; // macro = -2 (bearish)
+      const buy80 = { action: 'buy', confidence: 80 };
+      expect(computeResult('H4', bearishMacro, buy80).resultDir).toBe('up');
+      expect(computeResult('D1', bearishMacro, buy80).resultDir).toBe('up');
+      expect(computeResult('M5', bearishMacro, buy80).resultDir).toBe('up');
+    });
+
+    it('exactly 75% confidence does NOT override (uses weighted formula)', () => {
+      const bullishMacro = { fgVal: 20, vixVal: 30, spxVal: -1 }; // macro = +3
+      const sell75 = { action: 'sell', confidence: 75 };
+      // D1: macro 3*0.6 + tech -0.75*0.4 = 1.8 - 0.3 = 1.5 → up (no override)
+      expect(computeResult('D1', bullishMacro, sell75).resultDir).toBe('up');
+    });
+
+    it('60-75% confidence uses the weighted formula', () => {
+      const neutralMacro = {};
+      // D1 SELL at 67%: tech -0.67 * 0.4 = -0.268 → within ±0.3 → neutral
+      expect(computeResult('D1', neutralMacro, { action: 'sell', confidence: 67 }).resultDir).toBe('neutral');
+    });
+
+    it('does not override NEUTRAL even at high confidence', () => {
+      const r = computeResult('D1', {}, { action: 'neutral', confidence: 90 });
+      expect(r.resultDir).toBe('neutral');
+    });
+  });
 });
