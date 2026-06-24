@@ -178,9 +178,12 @@ export async function fetchMacro(asset?: AssetKey): Promise<MacroContext> {
       dxyChangePct: data?.dxy?.changePct ?? null,
       fearGreed: isCrypto ? cryptoFg : (cnnFg ?? cryptoFg),
       spxChangePct: data?.spx?.changePct ?? null,
+      vix: data?.vix?.price ?? null,
+      us10y: data?.us10y?.price ?? null,
+      us10yChangePct: data?.us10y?.changePct ?? null,
     };
   } catch {
-    return { dxyChangePct: null, fearGreed: null, spxChangePct: null };
+    return { dxyChangePct: null, fearGreed: null, spxChangePct: null, vix: null, us10y: null, us10yChangePct: null };
   }
 }
 
