@@ -8,6 +8,7 @@ import { SignalCard } from '@/components/crypto/SignalCard';
 import { SignalParityCheck } from '@/components/crypto/SignalParityCheck';
 import { LegOutcomeTimeline } from '@/components/crypto/LegOutcomeTimeline';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { computeResult, type Timeframe } from '@/lib/resultIndicator';
 
 const C_BULL = '#0ecb81';
 const C_BEAR = '#f6465d';
@@ -182,31 +183,9 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const u10yTip = bi('قازانجی بۆندی خەزانە — هەڵکشانی قازانج = زێڕ دادەبەزێت (بۆند ڕکابەری زێڕ دەکات)', 'Treasury yield — rising yield = gold down (bonds compete with gold)');
 
   // ---- Result indicator -------------------------------------------------
-  // Macro score (existing +1/-1 system; positive = bullish for gold / BUY).
-  let macroScore = 0;
-  if (fgVal != null && fgVal < 40) macroScore += 1;          // Fear → safe-haven demand
-  if (vixVal != null) {                                       // Volatility / panic
-    if (vixVal > 20) macroScore += 1;
-    else if (vixVal >= 15) macroScore += 0.5;
-  }
-  if (spxVal != null && spxVal < 0) macroScore += 1;         // Stocks falling = risk-off
-  if (dxyVal != null && dxyVal > 0) macroScore -= 1;         // Dollar rising = bad for gold
-  if (u10yChg != null && u10yChg > 0) macroScore -= 1;       // Yields rising = bad for gold
-
-  // Technical score from the current signal: directional confidence (-1..1).
-  // SELL → negative, BUY → positive, NEUTRAL/WAIT → 0.
-  const techSign = signal?.action === 'sell' ? -1 : signal?.action === 'buy' ? 1 : 0;
-  const techScore = signal ? techSign * (signal.confidence / 100) : 0;
-
-  // Timeframe weighting: short TFs lean on technical, long TFs on macro.
-  // M5/M15 → macro 0.2 / tech 0.8; M30/H1 → 0.4 / 0.6; H4/D1 → 0.6 / 0.4.
-  let macroWeight: number;
-  if (tf === 'M5' || tf === 'M15') macroWeight = 0.2;
-  else if (tf === 'M30' || tf === 'H1') macroWeight = 0.4;
-  else macroWeight = 0.6; // H4, D1
-  const techWeight = 1 - macroWeight;
-
-  const resultScore = macroScore * macroWeight + techScore * techWeight;
+  // Pure logic lives in src/lib/resultIndicator.ts (unit-tested).
+  const { macroScore, techScore, macroWeight, techWeight, resultScore, resultDir } =
+    computeResult(tf as Timeframe, { fgVal, vixVal, spxVal, dxyVal, u10yChg }, signal);
 
   // High-impact USD event within 15 minutes → caution flag on the badge.
   const nr = signal?.newsRisk;
@@ -217,8 +196,7 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
     /high/i.test(nr.nearest.impact) &&
     /us|usd|united states|dollar/i.test(nr.nearest.country);
 
-  const resultDir: 'up' | 'down' | 'neutral' =
-    resultScore > 0.3 ? 'up' : resultScore < -0.3 ? 'down' : 'neutral';
+
   const resultColor = resultDir === 'up' ? C_BULL : resultDir === 'down' ? C_BEAR : '#f0b90b';
   const resultEmoji = resultDir === 'up' ? '🟢 ⬆️' : resultDir === 'down' ? '🔴 ⬇️' : '🟡 ➡️';
   const resultLabel =
