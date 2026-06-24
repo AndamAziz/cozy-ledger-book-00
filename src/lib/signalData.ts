@@ -136,7 +136,10 @@ async function fetchForexTF(code: string, range: string, agg: number, invert: bo
 export async function fetchAssetTF(meta: AssetMeta, tf: SignalTF): Promise<OHLCCandle[]> {
   try {
     if (meta.source === 'btc') return await fetchOHLC('XBT/USD', BTC_INTERVAL[tf]);
-    if (meta.source === 'gold') { const c = GOLD_TF[tf]; return await fetchGoldCandles(c.range, c.agg); }
+    if (meta.source === 'gold' || meta.source === 'commodity') {
+      const c = GOLD_TF[tf];
+      return await fetchCommodityCandles(meta.commodityCode ?? 'XAU', c.range, c.agg);
+    }
     const c = FOREX_TF[tf];
     return await fetchForexTF(meta.forexCode!, c.range, c.agg, !!meta.invert);
   } catch {
