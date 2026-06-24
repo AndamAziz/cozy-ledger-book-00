@@ -86,11 +86,11 @@ function fmtAgo(ts: number | null): string {
   return `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
-function fmtPrice(n: number, asset: 'btc' | 'gold'): string {
+function fmtPrice(n: number, decimals: number): string {
   if (!Number.isFinite(n) || n <= 0) return '—';
   return n.toLocaleString(undefined, {
-    minimumFractionDigits: asset === 'gold' ? 2 : 0,
-    maximumFractionDigits: asset === 'gold' ? 2 : 0,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   });
 }
 
