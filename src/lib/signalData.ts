@@ -36,6 +36,34 @@ export function getAssetMeta(key: AssetKey): AssetMeta {
   return SIGNAL_ASSETS.find((a) => a.key === key) ?? SIGNAL_ASSETS[0];
 }
 
+/**
+ * Asset-selector dropdown options (UI only). Shared by the Signals and
+ * Confluence tabs so both dropdowns stay identical. A key may be listed here
+ * before the analysis engine supports it (e.g. USOIL) — selecting an
+ * unsupported asset shows a friendly fallback instead of breaking analysis.
+ */
+export type DropdownAssetKey = AssetKey | 'usoil';
+
+export interface DropdownAsset {
+  key: DropdownAssetKey;
+  emoji: string;
+  label: string;
+}
+
+export const DROPDOWN_ASSETS: DropdownAsset[] = [
+  { key: 'gold', emoji: '🥇', label: 'XAU/USD' },
+  { key: 'btc', emoji: '₿', label: 'BTC/USD' },
+  { key: 'usoil', emoji: '🛢️', label: 'USOIL' },
+  { key: 'eurusd', emoji: '🇪🇺', label: 'EUR/USD' },
+  { key: 'gbpusd', emoji: '🇬🇧', label: 'GBP/USD' },
+  { key: 'usdjpy', emoji: '🇯🇵', label: 'USD/JPY' },
+];
+
+/** True when the analysis engine supports the given dropdown asset key. */
+export function isSupportedAsset(key: string): key is AssetKey {
+  return SIGNAL_ASSETS.some((a) => a.key === key);
+}
+
 /** Kraken interval (minutes) per timeframe for BTC. */
 const BTC_INTERVAL: Record<SignalTF, number> = {
   M5: 5, M15: 15, M30: 30, H1: 60, H4: 240, D1: 1440,
