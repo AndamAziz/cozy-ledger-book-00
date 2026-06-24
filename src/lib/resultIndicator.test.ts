@@ -139,9 +139,12 @@ describe('computeResult — timeframe weighting', () => {
   });
 
   it('same inputs produce different directions across timeframes', () => {
-    // Short TF leans technical (BUY) → up; long TF leans macro (bearish) → down.
-    expect(computeResult('M5', macroBearish, buy).resultDir).toBe('up');
-    expect(computeResult('D1', macroBearish, buy).resultDir).toBe('down');
+    // Short TF leans technical (strong BUY) → up; long TF leans macro (bearish) → down.
+    const strongBuy = { action: 'buy' as const, confidence: 95 }; // techScore = 0.95
+    // M5: -2*0.2 + 0.95*0.8 = -0.4 + 0.76 = 0.36 → up
+    expect(computeResult('M5', macroBearish, strongBuy).resultDir).toBe('up');
+    // D1: -2*0.6 + 0.95*0.4 = -1.2 + 0.38 = -0.82 → down
+    expect(computeResult('D1', macroBearish, strongBuy).resultDir).toBe('down');
   });
 
   it('M30/H1 produce mid-weighted results', () => {
