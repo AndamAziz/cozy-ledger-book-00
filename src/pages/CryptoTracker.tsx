@@ -299,7 +299,7 @@ export default function CryptoTracker() {
           {/* Main content */}
           {activeTab === 'ai' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
                 <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
                   <button
                     onClick={() => setAiView('signals')}
@@ -314,6 +314,24 @@ export default function CryptoTracker() {
                     {bi('هاوئاهەنگی', 'Confluence')}
                   </button>
                 </div>
+                {/* Single-asset selector for the Confluence view */}
+                {aiView === 'confluence' && (
+                  <div className="relative">
+                    <select
+                      value={confluenceAsset}
+                      onChange={(e) => setConfluenceAsset(e.target.value as AssetKey)}
+                      aria-label={bi('هەڵبژاردنی ئامراز', 'Select asset')}
+                      className="appearance-none bg-[#1a1e2e] text-white text-xs font-bold rounded-lg pl-3 pr-8 py-1.5 border border-[#252a3a] focus:outline-none focus:border-[#f0b90b] cursor-pointer"
+                    >
+                      {SIGNAL_ASSETS.map((a) => (
+                        <option key={a.key} value={a.key} className="bg-[#1a1e2e] text-white">
+                          {a.emoji} {a.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#848e9c] pointer-events-none" />
+                  </div>
+                )}
               </div>
               {aiView === 'signals' ? (
                 <SignalsPanel />
@@ -321,6 +339,7 @@ export default function CryptoTracker() {
                 <AIAnalysisPanel
                   btcPrice={coinsMap.get('XBT/USD')?.price ?? 0}
                   goldPrice={metals.find((m) => m.code === 'XAU')?.price ?? 0}
+                  asset={confluenceAsset}
                 />
               )}
             </div>
