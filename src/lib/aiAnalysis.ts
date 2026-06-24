@@ -330,8 +330,16 @@ async function fetchGoldTF(tf: TFConfig): Promise<OHLCCandle[]> {
 }
 
 /** Run the full multi-timeframe analysis for one asset. */
-export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promise<AssetAnalysis> {
-  const fetcher = asset === 'btc' ? fetchBtcTF : fetchGoldTF;
+export async function analyzeAsset(asset: AssetKey, price: number): Promise<AssetAnalysis> {
+  // Keep the existing dedicated BTC / Gold fetchers untouched; for every other
+  // asset reuse the shared signal-engine fetcher (same candle sources as the
+  // Signals tab). The analysis math below is identical for all assets.
+  const fetcher =
+    asset === 'btc'
+      ? fetchBtcTF
+      : asset === 'gold'
+      ? fetchGoldTF
+      : (tf: TFConfig) => fetchAssetTF(getAssetMeta(asset), tf.label as SignalTF);
   const series = await Promise.all(AI_TIMEFRAMES.map((tf) => fetcher(tf)));
 
   const trends: TFTrend[] = AI_TIMEFRAMES.map((tf, i) => {
