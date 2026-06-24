@@ -22,8 +22,8 @@ function dirColor(dir: 'up' | 'down' | 'neutral'): string {
 
 const LAST_TF_KEY = 'signals:lastTF';
 
-/** Small ⓘ icon with a tooltip that opens on hover and tap (mobile-friendly). */
-function InfoTip({ text }: { text: string }) {
+/** Small ⓘ icon with a tooltip that opens on hover, tap and keyboard (mobile-friendly). */
+function InfoTip({ text, label }: { text: string; label: string }) {
   const [open, setOpen] = useState(false);
   return (
     <TooltipProvider delayDuration={100}>
@@ -31,14 +31,18 @@ function InfoTip({ text }: { text: string }) {
         <TooltipTrigger asChild>
           <button
             type="button"
+            aria-label={label}
+            aria-expanded={open}
             onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-            className="inline-flex items-center justify-center text-[#5b6472] hover:text-[#848e9c]"
+            onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
+            className="inline-flex items-center justify-center text-[#5b6472] hover:text-[#848e9c] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#848e9c] rounded"
           >
             <Info className="h-3 w-3" />
           </button>
         </TooltipTrigger>
         <TooltipContent
           side="top"
+          role="tooltip"
           className="max-w-[220px] border-[#1a1e2e] bg-[#0a0e17] text-[11px] leading-snug text-[#c7ccd6]"
         >
           {text}
@@ -47,6 +51,7 @@ function InfoTip({ text }: { text: string }) {
     </TooltipProvider>
   );
 }
+
 
 
 interface SignalsPanelProps {
