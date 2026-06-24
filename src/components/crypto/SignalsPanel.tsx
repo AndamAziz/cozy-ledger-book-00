@@ -22,6 +22,33 @@ function dirColor(dir: 'up' | 'down' | 'neutral'): string {
 
 const LAST_TF_KEY = 'signals:lastTF';
 
+/** Small ⓘ icon with a tooltip that opens on hover and tap (mobile-friendly). */
+function InfoTip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip open={open} onOpenChange={setOpen}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+            className="inline-flex items-center justify-center text-[#5b6472] hover:text-[#848e9c]"
+          >
+            <Info className="h-3 w-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          className="max-w-[220px] border-[#1a1e2e] bg-[#0a0e17] text-[11px] leading-snug text-[#c7ccd6]"
+        >
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+
 interface SignalsPanelProps {
   /** Asset selected by the dropdown in the tab header. */
   asset: DropdownAssetKey;
