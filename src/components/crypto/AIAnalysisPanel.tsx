@@ -183,7 +183,7 @@ function LevelsBlock({ a, decimals }: { a: AssetAnalysis; decimals: number }) {
           {a.levels.resistances.length ? (
             a.levels.resistances.map((r, i) => (
               <div key={i} className="text-xs text-[#f6465d]/90 tabular-nums">
-                ${fmtPrice(r, asset)}
+                ${fmtPrice(r, decimals)}
               </div>
             ))
           ) : (
@@ -195,7 +195,7 @@ function LevelsBlock({ a, decimals }: { a: AssetAnalysis; decimals: number }) {
           {a.levels.supports.length ? (
             a.levels.supports.map((s, i) => (
               <div key={i} className="text-xs text-[#0ecb81]/90 tabular-nums">
-                ${fmtPrice(s, asset)}
+                ${fmtPrice(s, decimals)}
               </div>
             ))
           ) : (
@@ -204,7 +204,7 @@ function LevelsBlock({ a, decimals }: { a: AssetAnalysis; decimals: number }) {
         </div>
       </div>
       <div className="mt-2 pt-2 border-t border-[#1a1e2e] text-[11px] text-[#848e9c]">
-        Current: <span className="text-white font-bold tabular-nums">${fmtPrice(a.price, asset)}</span>
+        Current: <span className="text-white font-bold tabular-nums">${fmtPrice(a.price, decimals)}</span>
       </div>
     </div>
   );
