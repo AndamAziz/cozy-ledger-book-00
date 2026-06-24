@@ -210,7 +210,7 @@ function LevelsBlock({ a, decimals }: { a: AssetAnalysis; decimals: number }) {
   );
 }
 
-function SetupBlock({ setup, asset }: { setup: TradeSetup; asset: 'btc' | 'gold' }) {
+function SetupBlock({ setup, decimals }: { setup: TradeSetup; decimals: number }) {
   if (setup.side === 'none') {
     return (
       <div className="rounded-lg bg-[#0a0e17] border border-[#1a1e2e] p-3 text-xs text-[#848e9c]">
@@ -232,13 +232,13 @@ function SetupBlock({ setup, asset }: { setup: TradeSetup; asset: 'btc' | 'gold'
       </div>
       <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-xs">
         <span className="text-[#848e9c]">Entry</span>
-        <span className="text-white font-bold tabular-nums text-end">${fmtPrice(setup.entry, asset)}</span>
+        <span className="text-white font-bold tabular-nums text-end">${fmtPrice(setup.entry, decimals)}</span>
         <span className="text-[#848e9c]">Stop Loss</span>
-        <span className="text-[#f6465d] font-bold tabular-nums text-end">${fmtPrice(setup.stopLoss, asset)}</span>
+        <span className="text-[#f6465d] font-bold tabular-nums text-end">${fmtPrice(setup.stopLoss, decimals)}</span>
         <span className="text-[#848e9c]">Take Profit 1</span>
-        <span className="text-[#0ecb81] font-bold tabular-nums text-end">${fmtPrice(setup.takeProfit1, asset)}</span>
+        <span className="text-[#0ecb81] font-bold tabular-nums text-end">${fmtPrice(setup.takeProfit1, decimals)}</span>
         <span className="text-[#848e9c]">Take Profit 2</span>
-        <span className="text-[#0ecb81] font-bold tabular-nums text-end">${fmtPrice(setup.takeProfit2, asset)}</span>
+        <span className="text-[#0ecb81] font-bold tabular-nums text-end">${fmtPrice(setup.takeProfit2, decimals)}</span>
         <span className="text-[#848e9c]">Risk / Reward</span>
         <span className="font-bold tabular-nums text-end" style={{ color: setup.riskReward >= 1.5 ? C_BULL : C_NEUTRAL }}>
           1 : {setup.riskReward}
