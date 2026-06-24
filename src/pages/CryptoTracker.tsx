@@ -27,6 +27,8 @@ import { Menu, CandlestickChart, Activity, ChevronDown, LayoutGrid, Crown, Bell 
 import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
 import { AIAnalysisPanel } from '@/components/crypto/AIAnalysisPanel';
 import { SignalsPanel } from '@/components/crypto/SignalsPanel';
+import { SIGNAL_ASSETS } from '@/lib/signalData';
+import type { AssetKey } from '@/lib/signalEngine';
 import { IndicatorVerify } from '@/components/crypto/IndicatorVerify';
 import { BottomNav } from '@/components/crypto/BottomNav';
 
