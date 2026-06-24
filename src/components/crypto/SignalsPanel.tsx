@@ -297,7 +297,23 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
         {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale)}
         {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale)}
         {macroChip('US10Y', u10yTxt, u10yColor, Percent, u10yTip, u10yStale)}
-      </div>
+
+        {/* Combined Result — auto-updates with macro/momentum/news */}
+        <div
+          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 ${resultFlash ? 'animate-pulse' : ''}`}
+          style={{ backgroundColor: `${resultColor}1a`, borderColor: `${resultColor}66` }}
+          role="status"
+          aria-live="polite"
+          aria-label={`${bi('ئەنجام', 'Result')}: ${resultLabel}${newsSoon ? ` ${bi('ئاگاداری هەواڵ', 'news alert')}` : ''}`}
+        >
+          <span className="text-[10px] font-bold text-[#848e9c]">{bi('ئەنجام', 'Result')}</span>
+          <span className="text-[11px] leading-none">{resultEmoji}</span>
+          <span className="text-[11px] font-extrabold" style={{ color: resultColor }}>{resultLabel}</span>
+          {newsSoon && (
+            <span title={bi('ڕووداوی گرنگی دۆلار لە ١٥ خولەکدا', 'High-impact USD event within 15 min')}>⚠️</span>
+          )}
+        </div>
+
 
 
 
