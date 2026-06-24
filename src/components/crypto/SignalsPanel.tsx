@@ -8,7 +8,7 @@ import { SignalCard } from '@/components/crypto/SignalCard';
 import { SignalParityCheck } from '@/components/crypto/SignalParityCheck';
 import { LegOutcomeTimeline } from '@/components/crypto/LegOutcomeTimeline';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
-import { computeResult, type Timeframe } from '@/lib/resultIndicator';
+import { computeResult, isHighImpactUsdEventSoon, type Timeframe } from '@/lib/resultIndicator';
 
 const C_BULL = '#0ecb81';
 const C_BEAR = '#f6465d';
@@ -188,13 +188,7 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
     computeResult(tf as Timeframe, { fgVal, vixVal, spxVal, dxyVal, u10yChg }, signal);
 
   // High-impact USD event within 15 minutes → caution flag on the badge.
-  const nr = signal?.newsRisk;
-  const newsSoon =
-    !!nr?.nearest &&
-    nr.minutesAway != null &&
-    nr.minutesAway <= 15 &&
-    /high/i.test(nr.nearest.impact) &&
-    /us|usd|united states|dollar/i.test(nr.nearest.country);
+  const newsSoon = isHighImpactUsdEventSoon(signal?.newsRisk);
 
 
   const resultColor = resultDir === 'up' ? C_BULL : resultDir === 'down' ? C_BEAR : '#f0b90b';

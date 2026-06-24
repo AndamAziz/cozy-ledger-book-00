@@ -5,6 +5,8 @@ import {
   macroWeightForTimeframe,
   resultDirForScore,
   computeResult,
+  isHighImpactUsdEventSoon,
+  NEWS_ALERT_WINDOW_MIN,
   type Timeframe,
 } from './resultIndicator';
 
@@ -226,5 +228,48 @@ describe('computeResult — threshold behaviour end-to-end', () => {
       const r = computeResult('D1', {}, { action: 'neutral', confidence: 90 });
       expect(r.resultDir).toBe('neutral');
     });
+  });
+});
+
+describe('isHighImpactUsdEventSoon — ⚠️ caution flag', () => {
+  const highUsd = { country: 'USD', impact: 'High' };
+
+  it('flags a high-impact USD event within 15 minutes', () => {
+    expect(isHighImpactUsdEventSoon({ nearest: highUsd, minutesAway: 10 })).toBe(true);
+    expect(isHighImpactUsdEventSoon({ nearest: highUsd, minutesAway: 0 })).toBe(true);
+    expect(isHighImpactUsdEventSoon({ nearest: highUsd, minutesAway: NEWS_ALERT_WINDOW_MIN })).toBe(true); // boundary inclusive
+  });
+
+  it('does NOT flag an event more than 15 minutes away', () => {
+    expect(isHighImpactUsdEventSoon({ nearest: highUsd, minutesAway: 16 })).toBe(false);
+    expect(isHighImpactUsdEventSoon({ nearest: highUsd, minutesAway: 60 })).toBe(false);
+  });
+
+  it('does NOT flag past events (negative minutes)', () => {
+    expect(isHighImpactUsdEventSoon({ nearest: highUsd, minutesAway: -5 })).toBe(false);
+  });
+
+  it('does NOT flag non-high-impact events', () => {
+    expect(isHighImpactUsdEventSoon({ nearest: { country: 'USD', impact: 'Medium' }, minutesAway: 5 })).toBe(false);
+    expect(isHighImpactUsdEventSoon({ nearest: { country: 'USD', impact: 'Low' }, minutesAway: 5 })).toBe(false);
+  });
+
+  it('does NOT flag high-impact non-USD events', () => {
+    expect(isHighImpactUsdEventSoon({ nearest: { country: 'EUR', impact: 'High' }, minutesAway: 5 })).toBe(false);
+    expect(isHighImpactUsdEventSoon({ nearest: { country: 'JPY', impact: 'High' }, minutesAway: 5 })).toBe(false);
+  });
+
+  it('matches various USD country labels', () => {
+    for (const country of ['US', 'USD', 'United States', 'US Dollar']) {
+      expect(isHighImpactUsdEventSoon({ nearest: { country, impact: 'High' }, minutesAway: 5 })).toBe(true);
+    }
+  });
+
+  it('handles missing / null inputs gracefully', () => {
+    expect(isHighImpactUsdEventSoon(null)).toBe(false);
+    expect(isHighImpactUsdEventSoon(undefined)).toBe(false);
+    expect(isHighImpactUsdEventSoon({ nearest: null, minutesAway: 5 })).toBe(false);
+    expect(isHighImpactUsdEventSoon({ nearest: highUsd, minutesAway: null })).toBe(false);
+    expect(isHighImpactUsdEventSoon({ nearest: { impact: 'High' }, minutesAway: 5 })).toBe(false); // no country
   });
 });
