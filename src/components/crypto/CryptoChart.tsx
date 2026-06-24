@@ -367,16 +367,24 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     }
   }, [candles, chartType, activeMAs, maType, pair, interval]);
 
-  // Update price line
+  // Update price line. Re-anchors after every timeframe / chart-type switch
+  // (the series is recreated, bumping seriesVersion) so the live-price line
+  // never disappears. Falls back to the latest candle close before the first
+  // live tick arrives.
   useEffect(() => {
-    if (!seriesRef.current || currentPrice <= 0) return;
+    if (!seriesRef.current) return;
+    const anchorPrice = currentPrice > 0
+      ? currentPrice
+      : (candles.length ? candles[candles.length - 1].close : 0);
+    if (anchorPrice <= 0) return;
 
     if (priceLineRef.current) {
       try { seriesRef.current.removePriceLine(priceLineRef.current); } catch {}
+      priceLineRef.current = null;
     }
 
     priceLineRef.current = seriesRef.current.createPriceLine({
-      price: currentPrice,
+      price: anchorPrice,
       color: '#f0b90b',
       lineWidth: 1,
       lineStyle: 2,
@@ -385,7 +393,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
       // symbol in the title so the value isn't duplicated.
       title: `${symbol}`,
     });
-  }, [currentPrice, symbol]);
+  }, [currentPrice, candles, symbol, interval, chartType, seriesVersion]);
 
   // Push the live price into the shared position so P/L updates and TP/SL
   // can auto-close even while this asset is on screen.

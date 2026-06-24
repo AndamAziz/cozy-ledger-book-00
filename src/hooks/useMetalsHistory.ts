@@ -94,30 +94,48 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
     return () => { cancelled = true; };
   }, [code, range, reloadKey]);
 
-  // Append live price as the latest point for real-time feel
+  // Append live price as the latest point for real-time feel.
+  // Candle boundaries are aligned to UTC clock intervals (TradingView / MT5
+  // standard) — NOT relative to when data was fetched. The live tick either
+  // updates the current UTC bucket's candle or opens a new one at the next
+  // aligned boundary.
   useEffect(() => {
     if (!livePrice || livePrice <= 0 || baseCandlesRef.current.length === 0) return;
 
     const base = baseCandlesRef.current;
-    const now = Math.floor(Date.now() / 1000);
-    const lastBase = base[base.length - 1];
-    const liveCandle: MetalCandle = {
-      time: now,
-      open: lastBase?.close ?? livePrice,
-      close: livePrice,
-      high: livePrice,
-      low: livePrice,
+    // Seconds per candle for each timeframe (matches the server interval).
+    const STEP_SECONDS: Record<string, number> = {
+      '1min': 60, '5min': 300, '15min': 900, '1d': 300, '5d': 900,
+      '1mo': 3600, '3mo': 86_400, '6mo': 86_400, '1y': 86_400, '5y': 604_800,
     };
+    const step = STEP_SECONDS[range] ?? 60;
+    // Align to the UTC clock: epoch 0 is 1970-01-01 00:00 UTC, so flooring by
+    // the step lands exactly on :00 / :05 / :15 / hour / day boundaries.
+    const bucket = Math.floor(Date.now() / 1000 / step) * step;
+    const lastBase = base[base.length - 1];
 
-    // Replace or append live point
-    if (lastBase && now - lastBase.time < 60) {
-      // Update the last candle (keep its original open)
-      setCandles([...base.slice(0, -1), { ...lastBase, close: livePrice, high: Math.max(lastBase.high, livePrice), low: Math.min(lastBase.low, livePrice) }]);
-    } else {
+    if (lastBase && bucket > lastBase.time) {
+      // New UTC interval started -> open a fresh candle at the aligned boundary.
+      const liveCandle: MetalCandle = {
+        time: bucket,
+        open: lastBase.close,
+        close: livePrice,
+        high: livePrice,
+        low: livePrice,
+      };
       setCandles([...base, liveCandle]);
+    } else if (lastBase) {
+      // Still inside the current bucket -> update the live candle in place.
+      setCandles([...base.slice(0, -1), {
+        ...lastBase,
+        close: livePrice,
+        high: Math.max(lastBase.high, livePrice),
+        low: Math.min(lastBase.low, livePrice),
+      }]);
     }
 
-  }, [livePrice]);
+  }, [livePrice, range]);
+
 
   const refetch = () => setReloadKey((k) => k + 1);
 

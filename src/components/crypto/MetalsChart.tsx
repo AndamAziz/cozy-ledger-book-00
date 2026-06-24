@@ -539,16 +539,23 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
     }
   }, [candles, activeMAs, maType, chartType, name, range]);
 
-  // Update price line
+  // Update price line. Re-anchors after every timeframe switch (the chart &
+  // series are recreated, bumping seriesVersion) so the live-price line never
+  // disappears. Falls back to the latest candle close when no live tick yet.
   useEffect(() => {
-    if (!seriesRef.current || !currentPrice || currentPrice <= 0) return;
+    if (!seriesRef.current) return;
+    const anchorPrice = currentPrice && currentPrice > 0
+      ? currentPrice
+      : (candles.length ? candles[candles.length - 1].close : 0);
+    if (!anchorPrice || anchorPrice <= 0) return;
 
     if (priceLineRef.current) {
       try { seriesRef.current.removePriceLine(priceLineRef.current); } catch {}
+      priceLineRef.current = null;
     }
 
     priceLineRef.current = seriesRef.current.createPriceLine({
-      price: currentPrice,
+      price: anchorPrice,
       color: accentColor,
       lineWidth: 1,
       lineStyle: 2,
@@ -557,7 +564,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       // metal name in the title so the value isn't duplicated.
       title: `${name || ''}`,
     });
-  }, [currentPrice, name, accentColor]);
+  }, [currentPrice, candles, name, accentColor, range, chartType, seriesVersion]);
 
   // Push the live price into the shared position so P/L updates and TP/SL
   // can auto-close while this metal is on screen.
