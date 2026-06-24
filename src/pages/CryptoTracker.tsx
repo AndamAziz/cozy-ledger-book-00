@@ -51,10 +51,18 @@ export default function CryptoTracker() {
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [aiView, setAiView] = useState<'signals' | 'confluence'>('signals');
   // The single asset shown in the Confluence view; remembered for the session.
-  const [confluenceAsset, setConfluenceAsset] = useState<AssetKey>(() => {
+  const [confluenceAsset, setConfluenceAsset] = useState<DropdownAssetKey>(() => {
     try {
-      const saved = sessionStorage.getItem('tracker:confluenceAsset') as AssetKey | null;
-      if (saved && SIGNAL_ASSETS.some((a) => a.key === saved)) return saved;
+      const saved = sessionStorage.getItem('tracker:confluenceAsset') as DropdownAssetKey | null;
+      if (saved && DROPDOWN_ASSETS.some((a) => a.key === saved)) return saved;
+    } catch { /* noop */ }
+    return 'gold';
+  });
+  // The single asset shown in the Signals view; independent from Confluence.
+  const [signalsAsset, setSignalsAsset] = useState<DropdownAssetKey>(() => {
+    try {
+      const saved = sessionStorage.getItem('tracker:signalsAsset') as DropdownAssetKey | null;
+      if (saved && DROPDOWN_ASSETS.some((a) => a.key === saved)) return saved;
     } catch { /* noop */ }
     return 'gold';
   });
