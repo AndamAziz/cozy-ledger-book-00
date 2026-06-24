@@ -318,6 +318,8 @@ Deno.serve(async (req) => {
         sentimentCrypto: { value: null, classification: "", available: false },
         sentimentCnn: { value: null, classification: "", available: false },
         spx: { price: null, changePct: null, available: false },
+        vix: { price: null, changePct: null, available: false },
+        us10y: { price: null, changePct: null, available: false },
         goldBias: "neutral",
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
