@@ -143,6 +143,81 @@ async function fetchSpx(): Promise<DxySnapshot> {
   return fetchSpxTwelve();
 }
 
+// Generic Yahoo Finance chart fetch (level + daily % change) for any symbol.
+async function fetchYahooQuote(symbol: string): Promise<DxySnapshot> {
+  try {
+    const r = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`,
+      { headers: { "User-Agent": "Mozilla/5.0" } },
+    );
+    if (!r.ok) return { price: null, changePct: null, available: false };
+    const j = await r.json();
+    const meta = j?.chart?.result?.[0]?.meta;
+    if (!meta) return { price: null, changePct: null, available: false };
+    const price = typeof meta.regularMarketPrice === "number" ? meta.regularMarketPrice : null;
+    const prev =
+      typeof meta.chartPreviousClose === "number"
+        ? meta.chartPreviousClose
+        : typeof meta.previousClose === "number"
+          ? meta.previousClose
+          : null;
+    let changePct: number | null = null;
+    if (price !== null && prev) changePct = ((price - prev) / prev) * 100;
+    return {
+      price,
+      changePct: Number.isFinite(changePct as number) ? changePct : null,
+      available: price !== null,
+    };
+  } catch {
+    return { price: null, changePct: null, available: false };
+  }
+}
+
+// Generic Twelve Data quote fetch (level + daily % change) for any symbol.
+async function fetchTwelveQuote(symbol: string): Promise<DxySnapshot> {
+  const key = Deno.env.get("TWELVE_DATA_API_KEY");
+  if (!key) return { price: null, changePct: null, available: false };
+  try {
+    const r = await fetch(
+      `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbol)}&apikey=${key}`,
+      { headers: { "User-Agent": "Mozilla/5.0" } },
+    );
+    const j = await r.json();
+    if (!r.ok || j?.status === "error" || j?.code) {
+      return { price: null, changePct: null, available: false };
+    }
+    const price = j.close ? parseFloat(j.close) : null;
+    let changePct: number | null = j.percent_change ? parseFloat(j.percent_change) : null;
+    if (changePct === null && j.close && j.previous_close) {
+      const c = parseFloat(j.close);
+      const p = parseFloat(j.previous_close);
+      if (p) changePct = ((c - p) / p) * 100;
+    }
+    return {
+      price: Number.isFinite(price as number) ? price : null,
+      changePct: Number.isFinite(changePct as number) ? changePct : null,
+      available: price !== null,
+    };
+  } catch {
+    return { price: null, changePct: null, available: false };
+  }
+}
+
+// VIX (CBOE volatility index) — Yahoo ^VIX with Twelve Data backup.
+async function fetchVix(): Promise<DxySnapshot> {
+  const yahoo = await fetchYahooQuote("^VIX");
+  if (yahoo.available) return yahoo;
+  return fetchTwelveQuote("VIX");
+}
+
+// US 10-Year Treasury yield — Yahoo ^TNX with Twelve Data backup.
+async function fetchUs10y(): Promise<DxySnapshot> {
+  const yahoo = await fetchYahooQuote("^TNX");
+  if (yahoo.available) return yahoo;
+  return fetchTwelveQuote("TNX");
+}
+
+
 // Crypto Fear & Greed (alternative.me) — use for BTC/crypto assets.
 async function fetchFearGreedCrypto(): Promise<SentimentSnapshot> {
   try {
@@ -196,11 +271,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const [dxy, sentimentCrypto, sentimentCnn, spx] = await Promise.all([
+    const [dxy, sentimentCrypto, sentimentCnn, spx, vix, us10y] = await Promise.all([
       fetchDxy(),
       fetchFearGreedCrypto(),
       fetchFearGreedCnn(),
       fetchSpx(),
+      fetchVix(),
+      fetchUs10y(),
     ]);
 
     // Gold moves inverse to the dollar.
@@ -218,6 +295,8 @@ Deno.serve(async (req) => {
         sentimentCrypto, // alternative.me — for BTC/crypto
         sentimentCnn,    // CNN Fear & Greed — for gold/forex/SPX
         spx,
+        vix,
+        us10y,
         goldBias,
         generatedAt: new Date().toISOString(),
       }),
@@ -239,6 +318,8 @@ Deno.serve(async (req) => {
         sentimentCrypto: { value: null, classification: "", available: false },
         sentimentCnn: { value: null, classification: "", available: false },
         spx: { price: null, changePct: null, available: false },
+        vix: { price: null, changePct: null, available: false },
+        us10y: { price: null, changePct: null, available: false },
         goldBias: "neutral",
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

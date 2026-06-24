@@ -43,7 +43,7 @@ export function useSignalEngine(assetKey: AssetKey, tf: SignalTF, opts?: { enabl
   const enabled = opts?.enabled ?? true;
   const meta = useMemo(() => getAssetMeta(assetKey), [assetKey]);
 
-  const [macro, setMacro] = useState<MacroContext>({ dxyChangePct: null, fearGreed: null, spxChangePct: null });
+  const [macro, setMacro] = useState<MacroContext>({ dxyChangePct: null, fearGreed: null, spxChangePct: null, vix: null, us10y: null, us10yChangePct: null });
   const [events, setEvents] = useState<NewsEvent[]>([]);
   const [candlesByTF, setCandlesByTF] = useState<Partial<Record<SignalTF, OHLCCandle[]>>>({});
   const [loading, setLoading] = useState(true);

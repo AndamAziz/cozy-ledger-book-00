@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart, Info } from 'lucide-react';
+import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart, Info, Flame, Percent } from 'lucide-react';
 import { DROPDOWN_ASSETS, DropdownAssetKey, isSupportedAsset } from '@/lib/signalData';
 import { SIGNAL_TIMEFRAMES, SignalTF } from '@/lib/signalEngine';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
@@ -82,9 +82,15 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const lastDxyRef = useRef<number | null>(null);
   const lastFgRef = useRef<number | null>(null);
   const lastSpxRef = useRef<number | null>(null);
+  const lastVixRef = useRef<number | null>(null);
+  const lastU10yRef = useRef<number | null>(null);
+  const lastU10yChgRef = useRef<number | null>(null);
   useEffect(() => { if (macro.dxyChangePct != null) lastDxyRef.current = macro.dxyChangePct; }, [macro.dxyChangePct]);
   useEffect(() => { if (macro.fearGreed != null) lastFgRef.current = macro.fearGreed; }, [macro.fearGreed]);
   useEffect(() => { if (macro.spxChangePct != null) lastSpxRef.current = macro.spxChangePct; }, [macro.spxChangePct]);
+  useEffect(() => { if (macro.vix != null) lastVixRef.current = macro.vix; }, [macro.vix]);
+  useEffect(() => { if (macro.us10y != null) lastU10yRef.current = macro.us10y; }, [macro.us10y]);
+  useEffect(() => { if (macro.us10yChangePct != null) lastU10yChgRef.current = macro.us10yChangePct; }, [macro.us10yChangePct]);
 
   const dxyVal = macro.dxyChangePct ?? lastDxyRef.current;
   const dxyStale = macro.dxyChangePct == null && lastDxyRef.current != null;
@@ -92,6 +98,11 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const fgStale = macro.fearGreed == null && lastFgRef.current != null;
   const spxVal = macro.spxChangePct ?? lastSpxRef.current;
   const spxStale = macro.spxChangePct == null && lastSpxRef.current != null;
+  const vixVal = macro.vix ?? lastVixRef.current;
+  const vixStale = macro.vix == null && lastVixRef.current != null;
+  const u10yVal = macro.us10y ?? lastU10yRef.current;
+  const u10yStale = macro.us10y == null && lastU10yRef.current != null;
+  const u10yChg = macro.us10yChangePct ?? lastU10yChgRef.current;
 
   const StaleBadge = () => (
     <span className="text-[9px] leading-none" title={bi('بەهای کۆن', 'Stale value')}>⚠️</span>
@@ -125,10 +136,18 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const spxTxt = spxVal == null ? '—' : `${spxVal > 0 ? '+' : ''}${spxVal.toFixed(2)}%`;
   // S&P ↓ = risk-off, supportive for gold → green; ↑ = risk-on → red.
   const spxColor = spxVal == null ? C_MUTED : spxVal < 0 ? C_BULL : C_BEAR;
+  const vixTxt = vixVal == null ? '—' : vixVal.toFixed(2);
+  // VIX >20 high fear (risk-off) = good for gold → green; <15 low fear = bad → red; 15-20 neutral yellow.
+  const vixColor = vixVal == null ? C_MUTED : vixVal > 20 ? C_BULL : vixVal < 15 ? C_BEAR : '#f0b90b';
+  const u10yTxt = u10yVal == null ? '—' : `${u10yVal.toFixed(2)}%`;
+  // 10Y yield rising = bad for gold → red; falling = good → green.
+  const u10yColor = u10yVal == null || u10yChg == null ? C_MUTED : u10yChg > 0 ? C_BEAR : u10yChg < 0 ? C_BULL : C_MUTED;
 
   const dxyTip = bi('پێوەری دۆلار — هەڵکشانی دۆلار زێڕ دادەبەزێنێت', 'Dollar index — rising dollar pushes gold down');
   const spxTip = bi('بازاڕی پشک — دابەزینی پشک = ڕیسک-ئۆف = زێڕ بەرز', 'Stock market — falling stocks = risk-off = gold up');
   const fgTip = bi('هەستی CNN — ترس (<٤٠) زۆرجار پشتگیری زێڕ دەکات وەک پەناگەی پارێزراو', 'CNN sentiment — fear (<40) often supports gold as safe haven');
+  const vixTip = bi('پێوەری ترس — VIXـی بەرز = پەشۆکانی بازاڕ = زێڕ بەرز', 'Fear gauge — high VIX = market panic = gold up');
+  const u10yTip = bi('قازانجی بۆندی خەزانە — هەڵکشانی قازانج = زێڕ دادەبەزێت (بۆند ڕکابەری زێڕ دەکات)', 'Treasury yield — rising yield = gold down (bonds compete with gold)');
 
 
 
@@ -201,6 +220,8 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           <InfoTip text={fgTip} />
         </div>
         {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale)}
+        {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale)}
+        {macroChip('US10Y', u10yTxt, u10yColor, Percent, u10yTip, u10yStale)}
       </div>
 
 
