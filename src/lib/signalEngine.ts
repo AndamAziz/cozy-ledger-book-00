@@ -6,7 +6,7 @@ import { calculateATR, atrLevels } from './risk';
 export { calculateATR };
 
 export type SignalAction = 'buy' | 'sell' | 'wait' | 'neutral';
-export type AssetKey = 'gold' | 'btc' | 'eurusd' | 'gbpusd' | 'usdjpy';
+export type AssetKey = 'gold' | 'btc' | 'eurusd' | 'gbpusd' | 'usdjpy' | 'usoil';
 
 /** The six tradable timeframes exposed to the user. */
 export const SIGNAL_TIMEFRAMES = ['M5', 'M15', 'M30', 'H1', 'H4', 'D1'] as const;
