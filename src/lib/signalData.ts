@@ -72,7 +72,7 @@ const BTC_INTERVAL: Record<SignalTF, number> = {
   M5: 5, M15: 15, M30: 30, H1: 60, H4: 240, D1: 1440,
 };
 
-/** commodities-prices history range + aggregation per timeframe for gold. */
+/** commodities-prices history range + aggregation per timeframe (gold + oil). */
 const GOLD_TF: Record<SignalTF, { range: string; agg: number }> = {
   M5: { range: '5min', agg: 1 },
   M15: { range: '15min', agg: 1 },
@@ -92,12 +92,13 @@ const FOREX_TF: Record<SignalTF, { range: string; agg: number }> = {
   D1: { range: '3mo', agg: 1 },
 };
 
-async function fetchGoldCandles(range: string, agg: number): Promise<OHLCCandle[]> {
+/** Fetch OHLC candles from the commodities-prices function (gold XAU, oil USOIL, …). */
+async function fetchCommodityCandles(code: string, range: string, agg: number): Promise<OHLCCandle[]> {
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const res = await fetch(
-      `${supabaseUrl}/functions/v1/commodities-prices?mode=history&code=XAU&range=${range}`,
+      `${supabaseUrl}/functions/v1/commodities-prices?mode=history&code=${encodeURIComponent(code)}&range=${range}`,
       { headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey } },
     );
     const data = await res.json().catch(() => null);
