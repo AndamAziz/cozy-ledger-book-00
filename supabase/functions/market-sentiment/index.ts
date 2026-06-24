@@ -196,7 +196,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const [dxy, sentiment, spx] = await Promise.all([fetchDxy(), fetchFearGreed(), fetchSpx()]);
+    const [dxy, sentimentCrypto, sentimentCnn, spx] = await Promise.all([
+      fetchDxy(),
+      fetchFearGreedCrypto(),
+      fetchFearGreedCnn(),
+      fetchSpx(),
+    ]);
 
     // Gold moves inverse to the dollar.
     let goldBias: "bullish" | "bearish" | "neutral" = "neutral";
@@ -208,7 +213,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         dxy,
-        sentiment,
+        // `sentiment` kept as the crypto index for backward compatibility.
+        sentiment: sentimentCrypto,
+        sentimentCrypto, // alternative.me — for BTC/crypto
+        sentimentCnn,    // CNN Fear & Greed — for gold/forex/SPX
         spx,
         goldBias,
         generatedAt: new Date().toISOString(),
