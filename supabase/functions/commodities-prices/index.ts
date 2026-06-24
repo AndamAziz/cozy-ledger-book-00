@@ -584,19 +584,43 @@ function despikeCandles(candles: Candle[]): Candle[] {
 }
 
 
+// Seconds per candle for each timeframe (matches the provider interval).
+const STEP_SECONDS: Record<string, number> = {
+  "1min": 60, "5min": 300, "15min": 900, "1d": 300, "5d": 900,
+  "1mo": 3600, "3mo": 86_400, "6mo": 86_400, "1y": 86_400, "5y": 604_800,
+};
+
+// Align a unix timestamp to the start of its UTC clock interval (TradingView /
+// MT5 standard). Epoch 0 is 1970-01-01 00:00 UTC, so flooring lands exactly on
+// :00 / :05 / :15 / hour / day boundaries. Weekly aligns to Monday 00:00 UTC.
+function alignToUTCInterval(ts: number, step: number): number {
+  if (step === 604_800) {
+    const dayStart = Math.floor(ts / 86_400) * 86_400;
+    // Epoch day 0 (1970-01-01) was a Thursday; shift back to Monday.
+    const dow = (Math.floor(ts / 86_400) + 4) % 7; // 0 = Sunday
+    const daysSinceMonday = (dow + 6) % 7;
+    return dayStart - daysSinceMonday * 86_400;
+  }
+  return Math.floor(ts / step) * step;
+}
+
 function buildFlatSpotCandles(price: number, range: string): Candle[] {
   const now = Math.floor(Date.now() / 1000);
   const intraday = new Set(["1min", "5min", "15min", "1d", "5d"]);
-  const step = intraday.has(range) ? 300 : 86_400;
+  const step = STEP_SECONDS[range] ?? 86_400;
   const count = intraday.has(range) ? 96 : range === "1y" ? 180 : range === "3mo" ? 90 : 60;
+  // Anchor the most recent candle to its UTC clock boundary so the chart matches
+  // MT5 / TradingView instead of drifting from the fetch time.
+  const lastTime = alignToUTCInterval(now, step);
   return Array.from({ length: count }, (_, i) => ({
-    time: now - (count - 1 - i) * step,
+    time: lastTime - (count - 1 - i) * step,
     open: +price.toFixed(4),
     high: +price.toFixed(4),
     low: +price.toFixed(4),
     close: +price.toFixed(4),
   }));
 }
+
 
 
 async function handleHistory(code: string, range: string): Promise<Response> {
