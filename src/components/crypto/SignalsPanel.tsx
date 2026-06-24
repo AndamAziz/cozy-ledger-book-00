@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart } from 'lucide-react';
+import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart, Info } from 'lucide-react';
 import { DROPDOWN_ASSETS, DropdownAssetKey, isSupportedAsset } from '@/lib/signalData';
 import { SIGNAL_TIMEFRAMES, SignalTF } from '@/lib/signalEngine';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
 import { SignalCard } from '@/components/crypto/SignalCard';
 import { SignalParityCheck } from '@/components/crypto/SignalParityCheck';
 import { LegOutcomeTimeline } from '@/components/crypto/LegOutcomeTimeline';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 const C_BULL = '#0ecb81';
 const C_BEAR = '#f6465d';
