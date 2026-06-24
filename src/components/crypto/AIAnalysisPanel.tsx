@@ -357,8 +357,8 @@ function AssetCard({
             <TFRow trends={analysis.trends} />
           </div>
           <ConfluenceBar a={analysis} bi={bi} />
-          <LevelsBlock a={analysis} asset={asset} />
-          <SetupBlock setup={analysis.setup} asset={asset} />
+          <LevelsBlock a={analysis} decimals={decimals} />
+          <SetupBlock setup={analysis.setup} decimals={decimals} />
           {debug && <DebugBlock trends={analysis.trends} bi={bi} />}
         </>
       )}
