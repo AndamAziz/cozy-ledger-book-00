@@ -6,7 +6,7 @@ import { calculateATR, atrLevels } from './risk';
 export { calculateATR };
 
 export type SignalAction = 'buy' | 'sell' | 'wait' | 'neutral';
-export type AssetKey = 'gold' | 'btc' | 'eurusd' | 'gbpusd' | 'usdjpy';
+export type AssetKey = 'gold' | 'btc' | 'eurusd' | 'gbpusd' | 'usdjpy' | 'usoil';
 
 /** The six tradable timeframes exposed to the user. */
 export const SIGNAL_TIMEFRAMES = ['M5', 'M15', 'M30', 'H1', 'H4', 'D1'] as const;
@@ -200,6 +200,21 @@ export function macroScore(asset: AssetKey, macro: MacroContext): { score: numbe
       score += s;
       if (macro.spxChangePct < 0) { notesKu.push('بۆرسەی ئەمریکا داشکاوە (BTC هاوڕێیە)'); notesEn.push('Stocks falling (BTC correlated)'); }
       else { notesKu.push('بۆرسەی ئەمریکا بەرزبووە'); notesEn.push('Stocks rising (risk-on)'); }
+    }
+  } else if (asset === 'usoil') {
+    // WTI crude — priced in USD: a stronger dollar is a mild headwind, and
+    // risk-on equities (rising S&P) support demand/price.
+    if (macro.dxyChangePct != null && Math.abs(macro.dxyChangePct) >= 0.1) {
+      const s = clamp(-macro.dxyChangePct * 25, -35, 35);
+      score += s;
+      if (macro.dxyChangePct > 0) { notesKu.push('دۆلار بەرزبووە (نەوت لاوازتر)'); notesEn.push('DXY up (oil headwind)'); }
+      else { notesKu.push('دۆلار داشکاوە (نەوت بەهێزتر)'); notesEn.push('DXY down (oil tailwind)'); }
+    }
+    if (macro.spxChangePct != null && Math.abs(macro.spxChangePct) >= 0.2) {
+      const s = clamp(macro.spxChangePct * 25, -35, 35);
+      score += s;
+      if (macro.spxChangePct < 0) { notesKu.push('بۆرسە داشکاوە (داواکاری نەوت کەمتر)'); notesEn.push('Stocks falling (weaker oil demand)'); }
+      else { notesKu.push('بۆرسە بەرزبووە (داواکاری نەوت زیاتر)'); notesEn.push('Stocks rising (risk-on demand)'); }
     }
   } else {
     // Forex pairs: DXY tilts USD-base pairs.

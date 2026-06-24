@@ -17,16 +17,19 @@ export interface AssetMeta {
   decimals: number;
   /** News currencies relevant to this asset. */
   currencies: string[];
-  source: 'btc' | 'gold' | 'forex';
+  source: 'btc' | 'gold' | 'forex' | 'commodity';
   /** Forex code (for forex source). */
   forexCode?: string;
   /** Invert forex candles (e.g. EUR/USD = 1 / USDEUR). */
   invert?: boolean;
+  /** commodities-prices code (for gold/commodity source, e.g. XAU, USOIL). */
+  commodityCode?: string;
 }
 
 export const SIGNAL_ASSETS: AssetMeta[] = [
-  { key: 'gold', label: 'XAU/USD', short: 'Gold', emoji: '🥇', decimals: 2, currencies: ['USD', 'EUR', 'CHF', 'GBP', 'JPY'], source: 'gold' },
+  { key: 'gold', label: 'XAU/USD', short: 'Gold', emoji: '🥇', decimals: 2, currencies: ['USD', 'EUR', 'CHF', 'GBP', 'JPY'], source: 'gold', commodityCode: 'XAU' },
   { key: 'btc', label: 'BTC/USD', short: 'Bitcoin', emoji: '₿', decimals: 0, currencies: ['USD'], source: 'btc' },
+  { key: 'usoil', label: 'USOIL', short: 'USOIL', emoji: '🛢️', decimals: 2, currencies: ['USD'], source: 'commodity', commodityCode: 'USOIL' },
   { key: 'eurusd', label: 'EUR/USD', short: 'EUR/USD', emoji: '🇪🇺', decimals: 4, currencies: ['EUR', 'USD'], source: 'forex', forexCode: 'EUR', invert: true },
   { key: 'gbpusd', label: 'GBP/USD', short: 'GBP/USD', emoji: '🇬🇧', decimals: 4, currencies: ['GBP', 'USD'], source: 'forex', forexCode: 'GBP', invert: true },
   { key: 'usdjpy', label: 'USD/JPY', short: 'USD/JPY', emoji: '🇯🇵', decimals: 2, currencies: ['USD', 'JPY'], source: 'forex', forexCode: 'JPY', invert: false },
@@ -69,7 +72,7 @@ const BTC_INTERVAL: Record<SignalTF, number> = {
   M5: 5, M15: 15, M30: 30, H1: 60, H4: 240, D1: 1440,
 };
 
-/** commodities-prices history range + aggregation per timeframe for gold. */
+/** commodities-prices history range + aggregation per timeframe (gold + oil). */
 const GOLD_TF: Record<SignalTF, { range: string; agg: number }> = {
   M5: { range: '5min', agg: 1 },
   M15: { range: '15min', agg: 1 },
@@ -89,12 +92,13 @@ const FOREX_TF: Record<SignalTF, { range: string; agg: number }> = {
   D1: { range: '3mo', agg: 1 },
 };
 
-async function fetchGoldCandles(range: string, agg: number): Promise<OHLCCandle[]> {
+/** Fetch OHLC candles from the commodities-prices function (gold XAU, oil USOIL, …). */
+async function fetchCommodityCandles(code: string, range: string, agg: number): Promise<OHLCCandle[]> {
   try {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const res = await fetch(
-      `${supabaseUrl}/functions/v1/commodities-prices?mode=history&code=XAU&range=${range}`,
+      `${supabaseUrl}/functions/v1/commodities-prices?mode=history&code=${encodeURIComponent(code)}&range=${range}`,
       { headers: { Authorization: `Bearer ${supabaseKey}`, apikey: supabaseKey } },
     );
     const data = await res.json().catch(() => null);
@@ -132,7 +136,10 @@ async function fetchForexTF(code: string, range: string, agg: number, invert: bo
 export async function fetchAssetTF(meta: AssetMeta, tf: SignalTF): Promise<OHLCCandle[]> {
   try {
     if (meta.source === 'btc') return await fetchOHLC('XBT/USD', BTC_INTERVAL[tf]);
-    if (meta.source === 'gold') { const c = GOLD_TF[tf]; return await fetchGoldCandles(c.range, c.agg); }
+    if (meta.source === 'gold' || meta.source === 'commodity') {
+      const c = GOLD_TF[tf];
+      return await fetchCommodityCandles(meta.commodityCode ?? 'XAU', c.range, c.agg);
+    }
     const c = FOREX_TF[tf];
     return await fetchForexTF(meta.forexCode!, c.range, c.agg, !!meta.invert);
   } catch {
