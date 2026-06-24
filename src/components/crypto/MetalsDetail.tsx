@@ -3,6 +3,7 @@ import { Metal, METALS_META } from '@/lib/metalsApi';
 import { useMetalsHistory } from '@/hooks/useMetalsHistory';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalsChart } from '@/components/crypto/MetalsChart';
+import { MarketStatusBadge } from '@/components/crypto/MarketStatusBadge';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { GoldProPanel } from '@/components/crypto/GoldProPanel';
 import type { OHLCCandle } from '@/lib/krakenApi';
