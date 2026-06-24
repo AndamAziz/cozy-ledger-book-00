@@ -109,9 +109,35 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const u10yStale = macro.us10y == null && lastU10yRef.current != null;
   const u10yChg = macro.us10yChangePct ?? lastU10yChgRef.current;
 
-  const StaleBadge = () => (
-    <span className="text-[9px] leading-none" title={bi('بەهای کۆن', 'Stale value')}>⚠️</span>
-  );
+  const StaleBadge = ({ label }: { label: string }) => {
+    const [open, setOpen] = useState(false);
+    const msg = bi('بەهای کۆن', 'Stale value');
+    return (
+      <TooltipProvider delayDuration={100}>
+        <Tooltip open={open} onOpenChange={setOpen}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={`${label}: ${msg}`}
+              aria-expanded={open}
+              onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+              onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
+              className="inline-flex items-center justify-center text-[9px] leading-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#848e9c] rounded"
+            >
+              ⚠️
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="top"
+            role="tooltip"
+            className="max-w-[220px] border-[#1a1e2e] bg-[#0a0e17] text-[11px] leading-snug text-[#c7ccd6]"
+          >
+            {msg}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
   const macroChip = (
     label: string,
@@ -125,10 +151,11 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
       <Icon className="h-3.5 w-3.5" style={{ color }} />
       <span className="text-[10px] text-[#848e9c]">{label}</span>
       <span className="text-[11px] font-bold tabular-nums" style={{ color }}>{value}</span>
-      {stale && <StaleBadge />}
-      <InfoTip text={tip} />
+      {stale && <StaleBadge label={label} />}
+      <InfoTip text={tip} label={bi(`زانیاری ${label}`, `${label} info`)} />
     </div>
   );
+
 
   const dxyTxt = dxyVal == null ? '—' : `${dxyVal > 0 ? '+' : ''}${dxyVal.toFixed(2)}%`;
   // DXY ↑ strengthens the dollar = bad for gold → red; ↓ = good for gold → green.
