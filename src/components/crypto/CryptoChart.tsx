@@ -9,6 +9,7 @@ import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/compon
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
 import { LivePriceBadge } from '@/components/crypto/LivePriceBadge';
+import { MarketStatusBadge } from '@/components/crypto/MarketStatusBadge';
 
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import { useLanguage } from '@/contexts/LanguageContext';
