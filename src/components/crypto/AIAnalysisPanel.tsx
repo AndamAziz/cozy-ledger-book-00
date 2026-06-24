@@ -397,40 +397,42 @@ function SessionsBlock({ sessions }: { sessions: SessionStatus[] }) {
   );
 }
 
-export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
+export function AIAnalysisPanel({ btcPrice, goldPrice, asset }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
-  const [btc, setBtc] = useState<AssetAnalysis | null>(null);
-  const [gold, setGold] = useState<AssetAnalysis | null>(null);
+  const meta = getAssetMeta(asset);
+  const [analysis, setAnalysis] = useState<AssetAnalysis | null>(null);
   const [sessions, setSessions] = useState<SessionStatus[]>(getSessionStatuses());
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [debug, setDebug] = useState(false);
 
   // Canonical engine (buildAssetSignal) — the single source of truth for the
-  // decided direction. Reconciled into each card below so the Confluence label
-  // matches the Signals tab / Telegram / Send-Signal exactly.
-  const { signal: goldEng } = useSignalEngine('gold', 'M15');
-  const { signal: btcEng } = useSignalEngine('btc', 'M15');
-  const goldView = reconcileWithEngine(gold, goldEng);
-  const btcView = reconcileWithEngine(btc, btcEng);
+  // decided direction. Reconciled into the card so the Confluence label matches
+  // the Signals tab / Telegram / Send-Signal exactly.
+  const { signal: eng } = useSignalEngine(asset, 'M15');
+  const view = reconcileWithEngine(analysis, eng);
+
+  // Live price for the selected asset (falls back to last candle close inside
+  // analyzeAsset when 0).
+  const livePrice = asset === 'btc' ? btcPrice : asset === 'gold' ? goldPrice : 0;
 
   const runAnalysis = useCallback(async () => {
     setLoading(true);
-    const [b, g] = await Promise.all([analyzeAsset('btc', btcPrice), analyzeAsset('gold', goldPrice)]);
-    setBtc(b);
-    setGold(g);
+    const a = await analyzeAsset(asset, livePrice);
+    setAnalysis(a);
     setLastUpdated(Date.now());
     setLoading(false);
-  }, [btcPrice, goldPrice]);
+  }, [asset, livePrice]);
 
-  // Run on mount + every 60s.
+  // Run on mount, whenever the selected asset changes + every 60s.
   useEffect(() => {
+    setAnalysis(null);
     runAnalysis();
     const id = window.setInterval(runAnalysis, 60_000);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [asset]);
 
   // Session countdowns tick every 30s.
   useEffect(() => {
@@ -446,7 +448,7 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
             🤖 {bi('شیکاری زیرەک', 'AI Analysis')}
           </h1>
           <p className="text-[11px] text-[#848e9c]">
-            {bi('شیکاری فرە-کاتی بۆ زێڕ و بیتکۆین', 'Multi-timeframe confluence for Gold & Bitcoin')}
+            {bi('شیکاری فرە-کاتی بۆ', 'Multi-timeframe confluence for')} {meta.label}
             {lastUpdated && ` · ${bi('نوێکرایەوە', 'updated')} ${Math.max(0, Math.round((Date.now() - lastUpdated) / 1000))}s`}
           </p>
         </div>
@@ -475,10 +477,14 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
 
       <SessionsBlock sessions={sessions} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={goldView} bi={bi} debug={debug} />
-        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btcView} bi={bi} debug={debug} />
-      </div>
+      <AssetCard
+        title={meta.label}
+        logo={meta.emoji}
+        decimals={meta.decimals}
+        analysis={view}
+        bi={bi}
+        debug={debug}
+      />
     </div>
   );
 }
