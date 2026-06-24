@@ -82,9 +82,15 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const lastDxyRef = useRef<number | null>(null);
   const lastFgRef = useRef<number | null>(null);
   const lastSpxRef = useRef<number | null>(null);
+  const lastVixRef = useRef<number | null>(null);
+  const lastU10yRef = useRef<number | null>(null);
+  const lastU10yChgRef = useRef<number | null>(null);
   useEffect(() => { if (macro.dxyChangePct != null) lastDxyRef.current = macro.dxyChangePct; }, [macro.dxyChangePct]);
   useEffect(() => { if (macro.fearGreed != null) lastFgRef.current = macro.fearGreed; }, [macro.fearGreed]);
   useEffect(() => { if (macro.spxChangePct != null) lastSpxRef.current = macro.spxChangePct; }, [macro.spxChangePct]);
+  useEffect(() => { if (macro.vix != null) lastVixRef.current = macro.vix; }, [macro.vix]);
+  useEffect(() => { if (macro.us10y != null) lastU10yRef.current = macro.us10y; }, [macro.us10y]);
+  useEffect(() => { if (macro.us10yChangePct != null) lastU10yChgRef.current = macro.us10yChangePct; }, [macro.us10yChangePct]);
 
   const dxyVal = macro.dxyChangePct ?? lastDxyRef.current;
   const dxyStale = macro.dxyChangePct == null && lastDxyRef.current != null;
@@ -92,6 +98,11 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const fgStale = macro.fearGreed == null && lastFgRef.current != null;
   const spxVal = macro.spxChangePct ?? lastSpxRef.current;
   const spxStale = macro.spxChangePct == null && lastSpxRef.current != null;
+  const vixVal = macro.vix ?? lastVixRef.current;
+  const vixStale = macro.vix == null && lastVixRef.current != null;
+  const u10yVal = macro.us10y ?? lastU10yRef.current;
+  const u10yStale = macro.us10y == null && lastU10yRef.current != null;
+  const u10yChg = macro.us10yChangePct ?? lastU10yChgRef.current;
 
   const StaleBadge = () => (
     <span className="text-[9px] leading-none" title={bi('بەهای کۆن', 'Stale value')}>⚠️</span>
