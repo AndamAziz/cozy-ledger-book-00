@@ -54,6 +54,8 @@ function reconcileWithEngine(
 interface Props {
   btcPrice: number;
   goldPrice: number;
+  /** The single asset currently selected in the Confluence dropdown. */
+  asset: AssetKey;
 }
 
 const C_BULL = '#0ecb81';
