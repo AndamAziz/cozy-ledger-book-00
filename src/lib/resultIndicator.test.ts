@@ -121,36 +121,37 @@ describe('resultDirForScore (±0.3 threshold)', () => {
 });
 
 describe('computeResult — timeframe weighting', () => {
-  const buy = { action: 'buy' as const, confidence: 80 }; // techScore = 0.8
+  const buy = { action: 'buy' as const, confidence: 70 }; // techScore = 0.7 (≤75, no override)
   const macroBearish = { dxyVal: 0.5, u10yChg: 0.1 }; // macroScore = -2
 
   it('applies correct macro/tech weights per timeframe', () => {
     const m5 = computeResult('M5', macroBearish, buy);
     expect(m5.macroWeight).toBe(0.2);
     expect(m5.techWeight).toBeCloseTo(0.8);
-    // -2*0.2 + 0.8*0.8 = -0.4 + 0.64 = 0.24
-    expect(m5.resultScore).toBeCloseTo(0.24);
+    // -2*0.2 + 0.7*0.8 = -0.4 + 0.56 = 0.16
+    expect(m5.resultScore).toBeCloseTo(0.16);
 
     const d1 = computeResult('D1', macroBearish, buy);
     expect(d1.macroWeight).toBe(0.6);
     expect(d1.techWeight).toBeCloseTo(0.4);
-    // -2*0.6 + 0.8*0.4 = -1.2 + 0.32 = -0.88
-    expect(d1.resultScore).toBeCloseTo(-0.88);
+    // -2*0.6 + 0.7*0.4 = -1.2 + 0.28 = -0.92
+    expect(d1.resultScore).toBeCloseTo(-0.92);
   });
 
-  it('same inputs produce different directions across timeframes', () => {
-    // Short TF leans technical (strong BUY) → up; long TF leans macro (bearish) → down.
-    const strongBuy = { action: 'buy' as const, confidence: 95 }; // techScore = 0.95
-    // M5: -2*0.2 + 0.95*0.8 = -0.4 + 0.76 = 0.36 → up
-    expect(computeResult('M5', macroBearish, strongBuy).resultDir).toBe('up');
-    // D1: -2*0.6 + 0.95*0.4 = -1.2 + 0.38 = -0.82 → down
-    expect(computeResult('D1', macroBearish, strongBuy).resultDir).toBe('down');
+  it('same inputs produce different directions across timeframes (formula range)', () => {
+    // Short TF leans technical (BUY) → up; long TF leans macro (bearish) → down.
+    const macro1 = { dxyVal: 0.5 }; // macroScore = -1
+    const buy70 = { action: 'buy' as const, confidence: 70 }; // techScore = 0.7
+    // M5: -1*0.2 + 0.7*0.8 = -0.2 + 0.56 = 0.36 → up
+    expect(computeResult('M5', macro1, buy70).resultDir).toBe('up');
+    // D1: -1*0.6 + 0.7*0.4 = -0.6 + 0.28 = -0.32 → down
+    expect(computeResult('D1', macro1, buy70).resultDir).toBe('down');
   });
 
   it('M30/H1 produce mid-weighted results', () => {
     const h1 = computeResult('H1', macroBearish, buy);
-    // -2*0.4 + 0.8*0.6 = -0.8 + 0.48 = -0.32 → < -0.3 → down
-    expect(h1.resultScore).toBeCloseTo(-0.32);
+    // -2*0.4 + 0.7*0.6 = -0.8 + 0.42 = -0.38 → < -0.3 → down
+    expect(h1.resultScore).toBeCloseTo(-0.38);
     expect(h1.resultDir).toBe('down');
   });
 });
