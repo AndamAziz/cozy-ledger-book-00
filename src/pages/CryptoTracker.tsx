@@ -91,6 +91,12 @@ export default function CryptoTracker() {
     try { sessionStorage.setItem('tracker:confluenceAsset', confluenceAsset); } catch { /* noop */ }
   }, [confluenceAsset]);
 
+  // Remember the selected Signals asset for the session (independent).
+  useEffect(() => {
+    try { sessionStorage.setItem('tracker:signalsAsset', signalsAsset); } catch { /* noop */ }
+  }, [signalsAsset]);
+
+
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading, marketOpen: forexMarketOpen } = useForexData();
   const { metals, isLoading: metalsLoading, marketOpen: metalsMarketOpen } = useMetalsData();
