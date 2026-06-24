@@ -121,36 +121,37 @@ describe('resultDirForScore (±0.3 threshold)', () => {
 });
 
 describe('computeResult — timeframe weighting', () => {
-  const buy = { action: 'buy' as const, confidence: 80 }; // techScore = 0.8
+  const buy = { action: 'buy' as const, confidence: 70 }; // techScore = 0.7 (≤75, no override)
   const macroBearish = { dxyVal: 0.5, u10yChg: 0.1 }; // macroScore = -2
 
   it('applies correct macro/tech weights per timeframe', () => {
     const m5 = computeResult('M5', macroBearish, buy);
     expect(m5.macroWeight).toBe(0.2);
     expect(m5.techWeight).toBeCloseTo(0.8);
-    // -2*0.2 + 0.8*0.8 = -0.4 + 0.64 = 0.24
-    expect(m5.resultScore).toBeCloseTo(0.24);
+    // -2*0.2 + 0.7*0.8 = -0.4 + 0.56 = 0.16
+    expect(m5.resultScore).toBeCloseTo(0.16);
 
     const d1 = computeResult('D1', macroBearish, buy);
     expect(d1.macroWeight).toBe(0.6);
     expect(d1.techWeight).toBeCloseTo(0.4);
-    // -2*0.6 + 0.8*0.4 = -1.2 + 0.32 = -0.88
-    expect(d1.resultScore).toBeCloseTo(-0.88);
+    // -2*0.6 + 0.7*0.4 = -1.2 + 0.28 = -0.92
+    expect(d1.resultScore).toBeCloseTo(-0.92);
   });
 
-  it('same inputs produce different directions across timeframes', () => {
-    // Short TF leans technical (strong BUY) → up; long TF leans macro (bearish) → down.
-    const strongBuy = { action: 'buy' as const, confidence: 95 }; // techScore = 0.95
-    // M5: -2*0.2 + 0.95*0.8 = -0.4 + 0.76 = 0.36 → up
-    expect(computeResult('M5', macroBearish, strongBuy).resultDir).toBe('up');
-    // D1: -2*0.6 + 0.95*0.4 = -1.2 + 0.38 = -0.82 → down
-    expect(computeResult('D1', macroBearish, strongBuy).resultDir).toBe('down');
+  it('same inputs produce different directions across timeframes (formula range)', () => {
+    // Short TF leans technical (BUY) → up; long TF leans macro (bearish) → down.
+    const macro1 = { dxyVal: 0.5 }; // macroScore = -1
+    const buy70 = { action: 'buy' as const, confidence: 70 }; // techScore = 0.7
+    // M5: -1*0.2 + 0.7*0.8 = -0.2 + 0.56 = 0.36 → up
+    expect(computeResult('M5', macro1, buy70).resultDir).toBe('up');
+    // D1: -1*0.6 + 0.7*0.4 = -0.6 + 0.28 = -0.32 → down
+    expect(computeResult('D1', macro1, buy70).resultDir).toBe('down');
   });
 
   it('M30/H1 produce mid-weighted results', () => {
     const h1 = computeResult('H1', macroBearish, buy);
-    // -2*0.4 + 0.8*0.6 = -0.8 + 0.48 = -0.32 → < -0.3 → down
-    expect(h1.resultScore).toBeCloseTo(-0.32);
+    // -2*0.4 + 0.7*0.6 = -0.8 + 0.42 = -0.38 → < -0.3 → down
+    expect(h1.resultScore).toBeCloseTo(-0.38);
     expect(h1.resultDir).toBe('down');
   });
 });
@@ -190,5 +191,40 @@ describe('computeResult — threshold behaviour end-to-end', () => {
       expect(r.resultScore).toBe(0);
       expect(r.resultDir).toBe('neutral');
     }
+  });
+
+  describe('high-confidence override (>75%)', () => {
+    it('SELL >75% confidence → down on H4/D1 regardless of bullish macro', () => {
+      const bullishMacro = { fgVal: 20, vixVal: 30, spxVal: -1 }; // macro = +3 (bullish)
+      const sell82 = { action: 'sell', confidence: 82 };
+      expect(computeResult('H4', bullishMacro, sell82).resultDir).toBe('down');
+      expect(computeResult('D1', bullishMacro, sell82).resultDir).toBe('down');
+    });
+
+    it('BUY >75% confidence → up regardless of bearish macro', () => {
+      const bearishMacro = { dxyVal: 1, u10yChg: 1 }; // macro = -2 (bearish)
+      const buy80 = { action: 'buy', confidence: 80 };
+      expect(computeResult('H4', bearishMacro, buy80).resultDir).toBe('up');
+      expect(computeResult('D1', bearishMacro, buy80).resultDir).toBe('up');
+      expect(computeResult('M5', bearishMacro, buy80).resultDir).toBe('up');
+    });
+
+    it('exactly 75% confidence does NOT override (uses weighted formula)', () => {
+      const bullishMacro = { fgVal: 20, vixVal: 30, spxVal: -1 }; // macro = +3
+      const sell75 = { action: 'sell', confidence: 75 };
+      // D1: macro 3*0.6 + tech -0.75*0.4 = 1.8 - 0.3 = 1.5 → up (no override)
+      expect(computeResult('D1', bullishMacro, sell75).resultDir).toBe('up');
+    });
+
+    it('60-75% confidence uses the weighted formula', () => {
+      const neutralMacro = {};
+      // D1 SELL at 67%: tech -0.67 * 0.4 = -0.268 → within ±0.3 → neutral
+      expect(computeResult('D1', neutralMacro, { action: 'sell', confidence: 67 }).resultDir).toBe('neutral');
+    });
+
+    it('does not override NEUTRAL even at high confidence', () => {
+      const r = computeResult('D1', {}, { action: 'neutral', confidence: 90 });
+      expect(r.resultDir).toBe('neutral');
+    });
   });
 });

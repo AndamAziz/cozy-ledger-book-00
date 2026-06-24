@@ -81,7 +81,16 @@ export interface ResultComputation {
   resultDir: ResultDir;
 }
 
-/** Full Result computation: weighted combine of macro + technical, then threshold. */
+/** Confidence (%) above which a directional signal overrides the weighted threshold. */
+export const HIGH_CONFIDENCE_OVERRIDE = 75;
+
+/**
+ * Full Result computation: weighted combine of macro + technical, then threshold.
+ *
+ * High-confidence override: when a BUY/SELL signal has confidence > 75%, the
+ * direction is forced (BUY → up, SELL → down) regardless of macro. The weighted
+ * formula is only used when confidence is at or below 75%.
+ */
 export function computeResult(
   tf: Timeframe,
   macro: MacroInputs,
@@ -92,12 +101,23 @@ export function computeResult(
   const macroWeight = macroWeightForTimeframe(tf);
   const techWeight = 1 - macroWeight;
   const resultScore = macroScore * macroWeight + techScore * techWeight;
+
+  const confidence = signal?.confidence ?? 0;
+  const action = signal?.action;
+  const isDirectional = action === 'buy' || action === 'sell';
+  const overridden = isDirectional && confidence > HIGH_CONFIDENCE_OVERRIDE;
+  const resultDir: ResultDir = overridden
+    ? action === 'sell'
+      ? 'down'
+      : 'up'
+    : resultDirForScore(resultScore);
+
   return {
     macroScore,
     techScore,
     macroWeight,
     techWeight,
     resultScore,
-    resultDir: resultDirForScore(resultScore),
+    resultDir,
   };
 }
