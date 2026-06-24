@@ -220,6 +220,8 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           <InfoTip text={fgTip} />
         </div>
         {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale)}
+        {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale)}
+        {macroChip('US10Y', u10yTxt, u10yColor, Percent, u10yTip, u10yStale)}
       </div>
 
 
