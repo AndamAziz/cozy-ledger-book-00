@@ -97,6 +97,7 @@ export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetail
             {isNeutral ? '0.00%' : `${isPositive ? '+' : ''}${selected.change.toFixed(2)}%`}
           </span>
         </div>
+        <MarketStatusBadge assetClass="forex" variant="card" className="mt-3" />
       </div>
 
       {/* Conversion calculator */}
