@@ -72,6 +72,34 @@ export function resultDirForScore(score: number): ResultDir {
   return 'neutral';
 }
 
+/** Minimal shape of a nearest economic event used for the news caution flag. */
+export interface NearestEvent {
+  country?: string | null;
+  impact?: string | null;
+}
+
+export interface NewsRiskInputs {
+  nearest?: NearestEvent | null;
+  /** Minutes until the nearest relevant event (null if none). */
+  minutesAway?: number | null;
+}
+
+/** Window (minutes) within which a high-impact USD event raises the caution flag. */
+export const NEWS_ALERT_WINDOW_MIN = 15;
+
+/**
+ * True when a high-impact USD event lands within 15 minutes.
+ * Drives the ⚠️ caution flag appended to the Result badge.
+ */
+export function isHighImpactUsdEventSoon(newsRisk?: NewsRiskInputs | null): boolean {
+  const nr = newsRisk;
+  if (!nr || !nr.nearest) return false;
+  if (nr.minutesAway == null) return false;
+  if (nr.minutesAway < 0 || nr.minutesAway > NEWS_ALERT_WINDOW_MIN) return false;
+  if (!/high/i.test(nr.nearest.impact ?? '')) return false;
+  return /us|usd|united states|dollar/i.test(nr.nearest.country ?? '');
+}
+
 export interface ResultComputation {
   macroScore: number;
   techScore: number;
