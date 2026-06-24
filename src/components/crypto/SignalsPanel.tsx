@@ -181,6 +181,48 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const vixTip = bi('پێوەری ترس — VIXـی بەرز = پەشۆکانی بازاڕ = زێڕ بەرز', 'Fear gauge — high VIX = market panic = gold up');
   const u10yTip = bi('قازانجی بۆندی خەزانە — هەڵکشانی قازانج = زێڕ دادەبەزێت (بۆند ڕکابەری زێڕ دەکات)', 'Treasury yield — rising yield = gold down (bonds compete with gold)');
 
+  // ---- Result indicator -------------------------------------------------
+  // Base macro score (positive = bullish for gold / BUY, negative = SELL).
+  let macroScore = 0;
+  if (fgVal != null && fgVal < 40) macroScore += 1;          // Fear → safe-haven demand
+  if (vixVal != null) {                                       // Volatility / panic
+    if (vixVal > 20) macroScore += 1;
+    else if (vixVal >= 15) macroScore += 0.5;
+  }
+  if (spxVal != null && spxVal < 0) macroScore += 1;         // Stocks falling = risk-off
+  if (dxyVal != null && dxyVal > 0) macroScore -= 1;         // Dollar rising = bad for gold
+  if (u10yChg != null && u10yChg > 0) macroScore -= 1;       // Yields rising = bad for gold
+
+  // Timeframe weighting: short TFs lean on recent momentum, long TFs on macro.
+  const tfIdx = (SIGNAL_TIMEFRAMES as readonly string[]).indexOf(tf); // 0 (M5) .. 5 (D1)
+  const tfRatio = tfIdx / (SIGNAL_TIMEFRAMES.length - 1);
+  const macroWeight = 0.6 + tfRatio * 0.8;        // 0.6 (M5) → 1.4 (D1)
+  const momentumWeight = 1.4 - tfRatio * 0.9;     // 1.4 (M5) → 0.5 (D1)
+
+  // Recent momentum from the selected-TF technical engine (-1..1).
+  const momentum = signal ? Math.max(-1, Math.min(1, signal.score / 100)) : 0;
+  const resultScore = macroScore * macroWeight + momentum * momentumWeight;
+
+  // High-impact USD event within 15 minutes → caution flag on the badge.
+  const nr = signal?.newsRisk;
+  const newsSoon =
+    !!nr?.nearest &&
+    nr.minutesAway != null &&
+    nr.minutesAway <= 15 &&
+    /high/i.test(nr.nearest.impact) &&
+    /us|usd|united states|dollar/i.test(nr.nearest.country);
+
+  const resultDir: 'up' | 'down' | 'neutral' =
+    resultScore > 0.5 ? 'up' : resultScore < -0.5 ? 'down' : 'neutral';
+  const resultColor = resultDir === 'up' ? C_BULL : resultDir === 'down' ? C_BEAR : '#f0b90b';
+  const resultEmoji = resultDir === 'up' ? '🟢 ⬆️' : resultDir === 'down' ? '🔴 ⬇️' : '🟡 ➡️';
+  const resultLabel =
+    resultDir === 'up' ? bi('زێڕ بەرز', 'GOLD UP')
+      : resultDir === 'down' ? bi('زێڕ نزم', 'GOLD DOWN')
+      : bi('ناوەند', 'NEUTRAL');
+  const resultFlash = resultDir !== 'neutral';
+
+
 
 
   // Friendly fallback when the dropdown asset isn't supported by the engine.
@@ -255,7 +297,25 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
         {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale)}
         {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale)}
         {macroChip('US10Y', u10yTxt, u10yColor, Percent, u10yTip, u10yStale)}
+
+        {/* Combined Result — auto-updates with macro/momentum/news */}
+        <div
+          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 ${resultFlash ? 'animate-pulse' : ''}`}
+          style={{ backgroundColor: `${resultColor}1a`, borderColor: `${resultColor}66` }}
+          role="status"
+          aria-live="polite"
+          aria-label={`${bi('ئەنجام', 'Result')}: ${resultLabel}${newsSoon ? ` ${bi('ئاگاداری هەواڵ', 'news alert')}` : ''}`}
+        >
+          <span className="text-[10px] font-bold text-[#848e9c]">{bi('ئەنجام', 'Result')}</span>
+          <span className="text-[11px] leading-none">{resultEmoji}</span>
+          <span className="text-[11px] font-extrabold" style={{ color: resultColor }}>{resultLabel}</span>
+          {newsSoon && (
+            <span title={bi('ڕووداوی گرنگی دۆلار لە ١٥ خولەکدا', 'High-impact USD event within 15 min')}>⚠️</span>
+          )}
+        </div>
       </div>
+
+
 
 
 
