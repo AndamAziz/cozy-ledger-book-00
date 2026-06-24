@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart, Info } from 'lucide-react';
+import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart, Info, Flame, Percent } from 'lucide-react';
 import { DROPDOWN_ASSETS, DropdownAssetKey, isSupportedAsset } from '@/lib/signalData';
 import { SIGNAL_TIMEFRAMES, SignalTF } from '@/lib/signalEngine';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
