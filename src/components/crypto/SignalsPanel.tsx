@@ -61,6 +61,8 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const dxyColor = macro.dxyChangePct == null ? C_MUTED : macro.dxyChangePct > 0 ? C_BEAR : C_BULL;
   const fgTxt = macro.fearGreed == null ? '—' : String(macro.fearGreed);
   const fgColor = macro.fearGreed == null ? C_MUTED : macro.fearGreed <= 30 ? C_BEAR : macro.fearGreed >= 70 ? C_BULL : '#f0b90b';
+  // BTC uses the alternative.me crypto index; everything else uses CNN's index.
+  const fgSource = engineAsset === 'btc' ? 'alternative.me' : 'CNN';
   const spxTxt = macro.spxChangePct == null ? '—' : `${macro.spxChangePct > 0 ? '+' : ''}${macro.spxChangePct.toFixed(2)}%`;
   const spxColor = macro.spxChangePct == null ? C_MUTED : macro.spxChangePct >= 0 ? C_BULL : C_BEAR;
 
@@ -124,7 +126,12 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
       {/* Macro context chips */}
       <div className="flex flex-wrap gap-2">
         {macroChip('DXY', dxyTxt, dxyColor, DollarSign)}
-        {macroChip(bi('ترس/چاوبڕکێ', 'Fear/Greed'), fgTxt, fgColor, Gauge)}
+        <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
+          <Gauge className="h-3.5 w-3.5" style={{ color: fgColor }} />
+          <span className="text-[10px] text-[#848e9c]">{bi('ترس/چاوبڕکێ', 'Fear/Greed')}</span>
+          <span className="text-[11px] font-bold tabular-nums" style={{ color: fgColor }}>{fgTxt}</span>
+          <span className="text-[9px] font-semibold text-[#5b6472] bg-[#1a1e2e] rounded px-1 py-0.5 leading-none">{fgSource}</span>
+        </div>
         {macroChip('S&P 500', spxTxt, spxColor, LineChart)}
       </div>
 
