@@ -188,13 +188,7 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
     computeResult(tf as Timeframe, { fgVal, vixVal, spxVal, dxyVal, u10yChg }, signal);
 
   // High-impact USD event within 15 minutes → caution flag on the badge.
-  const nr = signal?.newsRisk;
-  const newsSoon =
-    !!nr?.nearest &&
-    nr.minutesAway != null &&
-    nr.minutesAway <= 15 &&
-    /high/i.test(nr.nearest.impact) &&
-    /us|usd|united states|dollar/i.test(nr.nearest.country);
+  const newsSoon = isHighImpactUsdEventSoon(signal?.newsRisk);
 
 
   const resultColor = resultDir === 'up' ? C_BULL : resultDir === 'down' ? C_BEAR : '#f0b90b';
