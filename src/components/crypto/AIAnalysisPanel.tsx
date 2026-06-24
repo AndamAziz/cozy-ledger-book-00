@@ -403,7 +403,12 @@ function SessionsBlock({ sessions }: { sessions: SessionStatus[] }) {
 export function AIAnalysisPanel({ btcPrice, goldPrice, asset }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
-  const meta = getAssetMeta(asset);
+  // Validate the dropdown key against the analysis engine; use a safe asset for
+  // hooks and show a friendly fallback when the selected asset is unsupported.
+  const supported = isSupportedAsset(asset);
+  const engineAsset = supported ? asset : 'gold';
+  const dropdownMeta = DROPDOWN_ASSETS.find((a) => a.key === asset);
+  const meta = getAssetMeta(engineAsset);
   const [analysis, setAnalysis] = useState<AssetAnalysis | null>(null);
   const [sessions, setSessions] = useState<SessionStatus[]>(getSessionStatuses());
   const [loading, setLoading] = useState(false);
@@ -413,29 +418,31 @@ export function AIAnalysisPanel({ btcPrice, goldPrice, asset }: Props) {
   // Canonical engine (buildAssetSignal) — the single source of truth for the
   // decided direction. Reconciled into the card so the Confluence label matches
   // the Signals tab / Telegram / Send-Signal exactly.
-  const { signal: eng } = useSignalEngine(asset, 'M15');
+  const { signal: eng } = useSignalEngine(engineAsset, 'M15');
   const view = reconcileWithEngine(analysis, eng);
 
   // Live price for the selected asset (falls back to last candle close inside
   // analyzeAsset when 0).
-  const livePrice = asset === 'btc' ? btcPrice : asset === 'gold' ? goldPrice : 0;
+  const livePrice = engineAsset === 'btc' ? btcPrice : engineAsset === 'gold' ? goldPrice : 0;
 
   const runAnalysis = useCallback(async () => {
+    if (!supported) return;
     setLoading(true);
-    const a = await analyzeAsset(asset, livePrice);
+    const a = await analyzeAsset(engineAsset, livePrice);
     setAnalysis(a);
     setLastUpdated(Date.now());
     setLoading(false);
-  }, [asset, livePrice]);
+  }, [supported, engineAsset, livePrice]);
 
   // Run on mount, whenever the selected asset changes + every 60s.
   useEffect(() => {
+    if (!supported) { setAnalysis(null); return; }
     setAnalysis(null);
     runAnalysis();
     const id = window.setInterval(runAnalysis, 60_000);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asset]);
+  }, [asset, supported]);
 
   // Session countdowns tick every 30s.
   useEffect(() => {
