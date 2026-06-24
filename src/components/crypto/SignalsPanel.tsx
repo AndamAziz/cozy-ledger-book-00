@@ -313,6 +313,8 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
             <span title={bi('ڕووداوی گرنگی دۆلار لە ١٥ خولەکدا', 'High-impact USD event within 15 min')}>⚠️</span>
           )}
         </div>
+      </div>
+
 
 
 
