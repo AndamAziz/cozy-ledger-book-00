@@ -171,7 +171,7 @@ function ConfluenceBar({ a, bi }: { a: AssetAnalysis; bi: (ku: string, en: strin
   );
 }
 
-function LevelsBlock({ a, asset }: { a: AssetAnalysis; asset: 'btc' | 'gold' }) {
+function LevelsBlock({ a, decimals }: { a: AssetAnalysis; decimals: number }) {
   return (
     <div className="rounded-lg bg-[#0a0e17] border border-[#1a1e2e] p-3">
       <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#848e9c] mb-2">
