@@ -10,8 +10,8 @@ import {
   TrendDir,
 } from '@/lib/aiAnalysis';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
-import { AssetSignal, AssetKey } from '@/lib/signalEngine';
-import { getAssetMeta } from '@/lib/signalData';
+import { AssetSignal } from '@/lib/signalEngine';
+import { getAssetMeta, DROPDOWN_ASSETS, DropdownAssetKey, isSupportedAsset } from '@/lib/signalData';
 import { RefreshCw, TrendingUp, TrendingDown, Minus, Target, Clock, Layers, Gauge, Bug } from 'lucide-react';
 
 /**
