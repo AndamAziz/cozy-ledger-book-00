@@ -358,7 +358,7 @@ export async function analyzeAsset(asset: AssetKey, price: number): Promise<Asse
   // Signals@M15 and Telegram all produce identical ATR-based Entry/SL/TP.
   // AI_TIMEFRAMES order: [D1, H4, H1, M30, M15, M5] → index 4 = M15.
   const atrSeries = series[4]?.length ? series[4] : series[5]?.length ? series[5] : levelSeries;
-  const decimals = asset === 'btc' ? 0 : 2;
+  const decimals = getAssetMeta(asset).decimals;
   const setup = buildTradeSetup(confluence.dir, effectivePrice, atrSeries, decimals);
   const signalChangedAt = recordDirection(asset, confluence.dir);
 
