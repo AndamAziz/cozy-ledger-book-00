@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart } from 'lucide-react';
+import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart, Info } from 'lucide-react';
 import { DROPDOWN_ASSETS, DropdownAssetKey, isSupportedAsset } from '@/lib/signalData';
 import { SIGNAL_TIMEFRAMES, SignalTF } from '@/lib/signalEngine';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
 import { SignalCard } from '@/components/crypto/SignalCard';
 import { SignalParityCheck } from '@/components/crypto/SignalParityCheck';
 import { LegOutcomeTimeline } from '@/components/crypto/LegOutcomeTimeline';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
 const C_BULL = '#0ecb81';
 const C_BEAR = '#f6465d';
@@ -20,6 +21,33 @@ function dirColor(dir: 'up' | 'down' | 'neutral'): string {
 }
 
 const LAST_TF_KEY = 'signals:lastTF';
+
+/** Small ⓘ icon with a tooltip that opens on hover and tap (mobile-friendly). */
+function InfoTip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip open={open} onOpenChange={setOpen}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+            className="inline-flex items-center justify-center text-[#5b6472] hover:text-[#848e9c]"
+          >
+            <Info className="h-3 w-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          className="max-w-[220px] border-[#1a1e2e] bg-[#0a0e17] text-[11px] leading-snug text-[#c7ccd6]"
+        >
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 
 interface SignalsPanelProps {
   /** Asset selected by the dropdown in the tab header. */
@@ -49,25 +77,59 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
 
   const { meta, signal, macro, loading, refreshedAt, refresh } = useSignalEngine(engineAsset, tf);
 
-  const macroChip = (label: string, value: string, color: string, Icon: typeof DollarSign) => (
+  // Remember the last successfully fetched macro values so a failed refresh can
+  // keep showing a meaningful number (with a ⚠️ stale badge) instead of "—".
+  const lastDxyRef = useRef<number | null>(null);
+  const lastFgRef = useRef<number | null>(null);
+  const lastSpxRef = useRef<number | null>(null);
+  useEffect(() => { if (macro.dxyChangePct != null) lastDxyRef.current = macro.dxyChangePct; }, [macro.dxyChangePct]);
+  useEffect(() => { if (macro.fearGreed != null) lastFgRef.current = macro.fearGreed; }, [macro.fearGreed]);
+  useEffect(() => { if (macro.spxChangePct != null) lastSpxRef.current = macro.spxChangePct; }, [macro.spxChangePct]);
+
+  const dxyVal = macro.dxyChangePct ?? lastDxyRef.current;
+  const dxyStale = macro.dxyChangePct == null && lastDxyRef.current != null;
+  const fgVal = macro.fearGreed ?? lastFgRef.current;
+  const fgStale = macro.fearGreed == null && lastFgRef.current != null;
+  const spxVal = macro.spxChangePct ?? lastSpxRef.current;
+  const spxStale = macro.spxChangePct == null && lastSpxRef.current != null;
+
+  const StaleBadge = () => (
+    <span className="text-[9px] leading-none" title={bi('بەهای کۆن', 'Stale value')}>⚠️</span>
+  );
+
+  const macroChip = (
+    label: string,
+    value: string,
+    color: string,
+    Icon: typeof DollarSign,
+    tip: string,
+    stale: boolean,
+  ) => (
     <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
       <Icon className="h-3.5 w-3.5" style={{ color }} />
       <span className="text-[10px] text-[#848e9c]">{label}</span>
       <span className="text-[11px] font-bold tabular-nums" style={{ color }}>{value}</span>
+      {stale && <StaleBadge />}
+      <InfoTip text={tip} />
     </div>
   );
 
-  const dxyTxt = macro.dxyChangePct == null ? '—' : `${macro.dxyChangePct > 0 ? '+' : ''}${macro.dxyChangePct.toFixed(2)}%`;
+  const dxyTxt = dxyVal == null ? '—' : `${dxyVal > 0 ? '+' : ''}${dxyVal.toFixed(2)}%`;
   // DXY ↑ strengthens the dollar = bad for gold → red; ↓ = good for gold → green.
-  const dxyColor = macro.dxyChangePct == null ? C_MUTED : macro.dxyChangePct > 0 ? C_BEAR : C_BULL;
-  const fgTxt = macro.fearGreed == null ? '—' : String(macro.fearGreed);
+  const dxyColor = dxyVal == null ? C_MUTED : dxyVal > 0 ? C_BEAR : C_BULL;
+  const fgTxt = fgVal == null ? '—' : String(fgVal);
   // Semantic for gold/risk: <40 fear (caution) red, 40-60 neutral yellow, >60 greed (risk-on) green.
-  const fgColor = macro.fearGreed == null ? C_MUTED : macro.fearGreed < 40 ? C_BEAR : macro.fearGreed > 60 ? C_BULL : '#f0b90b';
+  const fgColor = fgVal == null ? C_MUTED : fgVal < 40 ? C_BEAR : fgVal > 60 ? C_BULL : '#f0b90b';
   // BTC uses the alternative.me crypto index; everything else uses CNN's index.
   const fgSource = engineAsset === 'btc' ? 'alternative.me' : 'CNN';
-  const spxTxt = macro.spxChangePct == null ? '—' : `${macro.spxChangePct > 0 ? '+' : ''}${macro.spxChangePct.toFixed(2)}%`;
+  const spxTxt = spxVal == null ? '—' : `${spxVal > 0 ? '+' : ''}${spxVal.toFixed(2)}%`;
   // S&P ↓ = risk-off, supportive for gold → green; ↑ = risk-on → red.
-  const spxColor = macro.spxChangePct == null ? C_MUTED : macro.spxChangePct < 0 ? C_BULL : C_BEAR;
+  const spxColor = spxVal == null ? C_MUTED : spxVal < 0 ? C_BULL : C_BEAR;
+
+  const dxyTip = bi('پێوەری دۆلار — هەڵکشانی دۆلار زێڕ دادەبەزێنێت', 'Dollar index — rising dollar pushes gold down');
+  const spxTip = bi('بازاڕی پشک — دابەزینی پشک = ڕیسک-ئۆف = زێڕ بەرز', 'Stock market — falling stocks = risk-off = gold up');
+  const fgTip = bi('هەستی CNN — ترس (<٤٠) زۆرجار پشتگیری زێڕ دەکات وەک پەناگەی پارێزراو', 'CNN sentiment — fear (<40) often supports gold as safe haven');
+
 
 
   // Friendly fallback when the dropdown asset isn't supported by the engine.
@@ -129,15 +191,18 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
 
       {/* Macro context chips */}
       <div className="flex flex-wrap gap-2">
-        {macroChip('DXY', dxyTxt, dxyColor, DollarSign)}
+        {macroChip('DXY', dxyTxt, dxyColor, DollarSign, dxyTip, dxyStale)}
         <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
           <Gauge className="h-3.5 w-3.5" style={{ color: fgColor }} />
           <span className="text-[10px] text-[#848e9c]">{bi('ترس/چاوبڕکێ', 'Fear/Greed')}</span>
           <span className="text-[11px] font-bold tabular-nums" style={{ color: fgColor }}>{fgTxt}</span>
           <span className="text-[9px] font-semibold text-[#5b6472] bg-[#1a1e2e] rounded px-1 py-0.5 leading-none">{fgSource}</span>
+          {fgStale && <StaleBadge />}
+          <InfoTip text={fgTip} />
         </div>
-        {macroChip('S&P 500', spxTxt, spxColor, LineChart)}
+        {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale)}
       </div>
+
 
 
 
