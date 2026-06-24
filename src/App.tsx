@@ -7,6 +7,7 @@ import { HelmetProvider } from "react-helmet-async";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { BotNotificationsProvider } from "@/contexts/BotNotificationsContext";
+import InstallPrompt from "@/components/InstallPrompt";
 import Index from "./pages/Index";
 import CryptoTracker from "./pages/CryptoTracker";
 import Movies from "./pages/Movies";
