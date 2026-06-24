@@ -295,6 +295,8 @@ Deno.serve(async (req) => {
         sentimentCrypto, // alternative.me — for BTC/crypto
         sentimentCnn,    // CNN Fear & Greed — for gold/forex/SPX
         spx,
+        vix,
+        us10y,
         goldBias,
         generatedAt: new Date().toISOString(),
       }),
