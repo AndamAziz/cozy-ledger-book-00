@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart } from 'lucide-react';
-import { SIGNAL_ASSETS } from '@/lib/signalData';
-import { SIGNAL_TIMEFRAMES, SignalTF, AssetKey } from '@/lib/signalEngine';
+import { DROPDOWN_ASSETS, DropdownAssetKey, isSupportedAsset } from '@/lib/signalData';
+import { SIGNAL_TIMEFRAMES, SignalTF } from '@/lib/signalEngine';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
 import { SignalCard } from '@/components/crypto/SignalCard';
 import { SignalParityCheck } from '@/components/crypto/SignalParityCheck';
@@ -19,20 +19,17 @@ function dirColor(dir: 'up' | 'down' | 'neutral'): string {
   return dir === 'up' ? C_BULL : dir === 'down' ? C_BEAR : C_MUTED;
 }
 
-const LAST_ASSET_KEY = 'signals:lastAsset';
 const LAST_TF_KEY = 'signals:lastTF';
 
-export function SignalsPanel() {
+interface SignalsPanelProps {
+  /** Asset selected by the dropdown in the tab header. */
+  asset: DropdownAssetKey;
+}
+
+export function SignalsPanel({ asset }: SignalsPanelProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
-  const [asset, setAsset] = useState<AssetKey>(() => {
-    try {
-      const s = localStorage.getItem(LAST_ASSET_KEY) as AssetKey | null;
-      if (s && SIGNAL_ASSETS.some((a) => a.key === s)) return s;
-    } catch { /* noop */ }
-    return 'gold';
-  });
   const [tf, setTf] = useState<SignalTF>(() => {
     try {
       const s = localStorage.getItem(LAST_TF_KEY) as SignalTF | null;
@@ -42,10 +39,15 @@ export function SignalsPanel() {
   });
   const [debug, setDebug] = useState(false);
 
-  useEffect(() => { try { localStorage.setItem(LAST_ASSET_KEY, asset); } catch { /* noop */ } }, [asset]);
   useEffect(() => { try { localStorage.setItem(LAST_TF_KEY, tf); } catch { /* noop */ } }, [tf]);
 
-  const { meta, signal, macro, loading, refreshedAt, refresh } = useSignalEngine(asset, tf);
+  // Validate against the analysis engine's supported assets; fall back to a
+  // safe key for the hook and render a friendly notice for unsupported assets.
+  const supported = isSupportedAsset(asset);
+  const engineAsset = supported ? asset : 'gold';
+  const dropdownMeta = DROPDOWN_ASSETS.find((a) => a.key === asset);
+
+  const { meta, signal, macro, loading, refreshedAt, refresh } = useSignalEngine(engineAsset, tf);
 
   const macroChip = (label: string, value: string, color: string, Icon: typeof DollarSign) => (
     <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
