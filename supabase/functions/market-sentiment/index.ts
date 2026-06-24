@@ -271,11 +271,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const [dxy, sentimentCrypto, sentimentCnn, spx] = await Promise.all([
+    const [dxy, sentimentCrypto, sentimentCnn, spx, vix, us10y] = await Promise.all([
       fetchDxy(),
       fetchFearGreedCrypto(),
       fetchFearGreedCnn(),
       fetchSpx(),
+      fetchVix(),
+      fetchUs10y(),
     ]);
 
     // Gold moves inverse to the dollar.
