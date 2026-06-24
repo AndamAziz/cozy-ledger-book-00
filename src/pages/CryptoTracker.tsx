@@ -79,6 +79,11 @@ export default function CryptoTracker() {
     try { localStorage.setItem('tracker:lastTab', activeTab); } catch { /* noop */ }
   }, [activeTab]);
 
+  // Remember the selected Confluence asset for the session.
+  useEffect(() => {
+    try { sessionStorage.setItem('tracker:confluenceAsset', confluenceAsset); } catch { /* noop */ }
+  }, [confluenceAsset]);
+
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading, marketOpen: forexMarketOpen } = useForexData();
   const { metals, isLoading: metalsLoading, marketOpen: metalsMarketOpen } = useMetalsData();
