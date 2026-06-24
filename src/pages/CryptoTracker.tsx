@@ -27,8 +27,7 @@ import { Menu, CandlestickChart, Activity, ChevronDown, LayoutGrid, Crown, Bell 
 import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
 import { AIAnalysisPanel } from '@/components/crypto/AIAnalysisPanel';
 import { SignalsPanel } from '@/components/crypto/SignalsPanel';
-import { SIGNAL_ASSETS } from '@/lib/signalData';
-import type { AssetKey } from '@/lib/signalEngine';
+import { DROPDOWN_ASSETS, DropdownAssetKey } from '@/lib/signalData';
 import { IndicatorVerify } from '@/components/crypto/IndicatorVerify';
 import { BottomNav } from '@/components/crypto/BottomNav';
 
@@ -52,10 +51,18 @@ export default function CryptoTracker() {
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [aiView, setAiView] = useState<'signals' | 'confluence'>('signals');
   // The single asset shown in the Confluence view; remembered for the session.
-  const [confluenceAsset, setConfluenceAsset] = useState<AssetKey>(() => {
+  const [confluenceAsset, setConfluenceAsset] = useState<DropdownAssetKey>(() => {
     try {
-      const saved = sessionStorage.getItem('tracker:confluenceAsset') as AssetKey | null;
-      if (saved && SIGNAL_ASSETS.some((a) => a.key === saved)) return saved;
+      const saved = sessionStorage.getItem('tracker:confluenceAsset') as DropdownAssetKey | null;
+      if (saved && DROPDOWN_ASSETS.some((a) => a.key === saved)) return saved;
+    } catch { /* noop */ }
+    return 'gold';
+  });
+  // The single asset shown in the Signals view; independent from Confluence.
+  const [signalsAsset, setSignalsAsset] = useState<DropdownAssetKey>(() => {
+    try {
+      const saved = sessionStorage.getItem('tracker:signalsAsset') as DropdownAssetKey | null;
+      if (saved && DROPDOWN_ASSETS.some((a) => a.key === saved)) return saved;
     } catch { /* noop */ }
     return 'gold';
   });
@@ -83,6 +90,12 @@ export default function CryptoTracker() {
   useEffect(() => {
     try { sessionStorage.setItem('tracker:confluenceAsset', confluenceAsset); } catch { /* noop */ }
   }, [confluenceAsset]);
+
+  // Remember the selected Signals asset for the session (independent).
+  useEffect(() => {
+    try { sessionStorage.setItem('tracker:signalsAsset', signalsAsset); } catch { /* noop */ }
+  }, [signalsAsset]);
+
 
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading, marketOpen: forexMarketOpen } = useForexData();
@@ -319,27 +332,29 @@ export default function CryptoTracker() {
                     {bi('هاوئاهەنگی', 'Confluence')}
                   </button>
                 </div>
-                {/* Single-asset selector for the Confluence view */}
-                {aiView === 'confluence' && (
-                  <div className="relative">
-                    <select
-                      value={confluenceAsset}
-                      onChange={(e) => setConfluenceAsset(e.target.value as AssetKey)}
-                      aria-label={bi('هەڵبژاردنی ئامراز', 'Select asset')}
-                      className="appearance-none bg-[#1a1e2e] text-white text-xs font-bold rounded-lg pl-3 pr-8 py-1.5 border border-[#252a3a] focus:outline-none focus:border-[#f0b90b] cursor-pointer"
-                    >
-                      {SIGNAL_ASSETS.map((a) => (
-                        <option key={a.key} value={a.key} className="bg-[#1a1e2e] text-white">
-                          {a.emoji} {a.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#848e9c] pointer-events-none" />
-                  </div>
-                )}
+                {/* Single-asset selector — same dropdown for both views, independent state */}
+                <div className="relative">
+                  <select
+                    value={aiView === 'signals' ? signalsAsset : confluenceAsset}
+                    onChange={(e) => {
+                      const key = e.target.value as DropdownAssetKey;
+                      if (aiView === 'signals') setSignalsAsset(key);
+                      else setConfluenceAsset(key);
+                    }}
+                    aria-label={bi('هەڵبژاردنی ئامراز', 'Select asset')}
+                    className="appearance-none bg-[#1a1e2e] text-white text-xs font-bold rounded-lg pl-3 pr-8 py-1.5 border border-[#252a3a] focus:outline-none focus:border-[#f0b90b] cursor-pointer"
+                  >
+                    {DROPDOWN_ASSETS.map((a) => (
+                      <option key={a.key} value={a.key} className="bg-[#1a1e2e] text-white">
+                        {a.emoji} {a.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#848e9c] pointer-events-none" />
+                </div>
               </div>
               {aiView === 'signals' ? (
-                <SignalsPanel />
+                <SignalsPanel asset={signalsAsset} />
               ) : (
                 <AIAnalysisPanel
                   btcPrice={coinsMap.get('XBT/USD')?.price ?? 0}
@@ -347,6 +362,7 @@ export default function CryptoTracker() {
                   asset={confluenceAsset}
                 />
               )}
+
             </div>
           ) : activeTab === 'crypto' ? (
             <div className="flex-1 flex flex-col overflow-hidden">

@@ -10,8 +10,8 @@ import {
   TrendDir,
 } from '@/lib/aiAnalysis';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
-import { AssetSignal, AssetKey } from '@/lib/signalEngine';
-import { getAssetMeta } from '@/lib/signalData';
+import { AssetSignal } from '@/lib/signalEngine';
+import { getAssetMeta, DROPDOWN_ASSETS, DropdownAssetKey, isSupportedAsset } from '@/lib/signalData';
 import { RefreshCw, TrendingUp, TrendingDown, Minus, Target, Clock, Layers, Gauge, Bug } from 'lucide-react';
 
 /**
@@ -55,7 +55,7 @@ interface Props {
   btcPrice: number;
   goldPrice: number;
   /** The single asset currently selected in the Confluence dropdown. */
-  asset: AssetKey;
+  asset: DropdownAssetKey;
 }
 
 const C_BULL = '#0ecb81';
@@ -403,7 +403,12 @@ function SessionsBlock({ sessions }: { sessions: SessionStatus[] }) {
 export function AIAnalysisPanel({ btcPrice, goldPrice, asset }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
-  const meta = getAssetMeta(asset);
+  // Validate the dropdown key against the analysis engine; use a safe asset for
+  // hooks and show a friendly fallback when the selected asset is unsupported.
+  const supported = isSupportedAsset(asset);
+  const engineAsset = supported ? asset : 'gold';
+  const dropdownMeta = DROPDOWN_ASSETS.find((a) => a.key === asset);
+  const meta = getAssetMeta(engineAsset);
   const [analysis, setAnalysis] = useState<AssetAnalysis | null>(null);
   const [sessions, setSessions] = useState<SessionStatus[]>(getSessionStatuses());
   const [loading, setLoading] = useState(false);
@@ -413,35 +418,63 @@ export function AIAnalysisPanel({ btcPrice, goldPrice, asset }: Props) {
   // Canonical engine (buildAssetSignal) — the single source of truth for the
   // decided direction. Reconciled into the card so the Confluence label matches
   // the Signals tab / Telegram / Send-Signal exactly.
-  const { signal: eng } = useSignalEngine(asset, 'M15');
+  const { signal: eng } = useSignalEngine(engineAsset, 'M15');
   const view = reconcileWithEngine(analysis, eng);
 
   // Live price for the selected asset (falls back to last candle close inside
   // analyzeAsset when 0).
-  const livePrice = asset === 'btc' ? btcPrice : asset === 'gold' ? goldPrice : 0;
+  const livePrice = engineAsset === 'btc' ? btcPrice : engineAsset === 'gold' ? goldPrice : 0;
 
   const runAnalysis = useCallback(async () => {
+    if (!supported) return;
     setLoading(true);
-    const a = await analyzeAsset(asset, livePrice);
+    const a = await analyzeAsset(engineAsset, livePrice);
     setAnalysis(a);
     setLastUpdated(Date.now());
     setLoading(false);
-  }, [asset, livePrice]);
+  }, [supported, engineAsset, livePrice]);
 
   // Run on mount, whenever the selected asset changes + every 60s.
   useEffect(() => {
+    if (!supported) { setAnalysis(null); return; }
     setAnalysis(null);
     runAnalysis();
     const id = window.setInterval(runAnalysis, 60_000);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asset]);
+  }, [asset, supported]);
 
   // Session countdowns tick every 30s.
   useEffect(() => {
     const id = window.setInterval(() => setSessions(getSessionStatuses()), 30_000);
     return () => window.clearInterval(id);
   }, []);
+
+  // Friendly fallback when the dropdown asset isn't supported by the engine.
+  if (!supported) {
+    return (
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <h1 className="text-base font-extrabold text-white flex items-center gap-2">
+          🤖 {bi('شیکاری زیرەک', 'AI Analysis')}
+        </h1>
+        <div className="flex flex-col items-center justify-center text-center gap-2 rounded-xl border border-[#1a1e2e] bg-[#0d1117] px-4 py-10">
+          <span className="text-3xl leading-none">{dropdownMeta?.emoji ?? '🛢️'}</span>
+          <p className="text-sm font-bold text-white">
+            {bi(
+              `شیکاری بۆ ${dropdownMeta?.label ?? 'ئەم ئامرازە'} هێشتا بەردەست نییە`,
+              `${dropdownMeta?.label ?? 'This asset'} analysis isn't available yet`,
+            )}
+          </p>
+          <p className="text-[11px] text-[#848e9c] max-w-[260px]">
+            {bi(
+              'تکایە ئامرازێکی پشتگیریکراو هەڵبژێرە لە لیستەکە (وەک زێڕ یان بیتکۆین).',
+              'Please pick a supported asset from the dropdown (e.g. Gold or Bitcoin).',
+            )}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-3 space-y-3">

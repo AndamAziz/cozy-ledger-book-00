@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart } from 'lucide-react';
-import { SIGNAL_ASSETS } from '@/lib/signalData';
-import { SIGNAL_TIMEFRAMES, SignalTF, AssetKey } from '@/lib/signalEngine';
+import { DROPDOWN_ASSETS, DropdownAssetKey, isSupportedAsset } from '@/lib/signalData';
+import { SIGNAL_TIMEFRAMES, SignalTF } from '@/lib/signalEngine';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
 import { SignalCard } from '@/components/crypto/SignalCard';
 import { SignalParityCheck } from '@/components/crypto/SignalParityCheck';
@@ -19,20 +19,17 @@ function dirColor(dir: 'up' | 'down' | 'neutral'): string {
   return dir === 'up' ? C_BULL : dir === 'down' ? C_BEAR : C_MUTED;
 }
 
-const LAST_ASSET_KEY = 'signals:lastAsset';
 const LAST_TF_KEY = 'signals:lastTF';
 
-export function SignalsPanel() {
+interface SignalsPanelProps {
+  /** Asset selected by the dropdown in the tab header. */
+  asset: DropdownAssetKey;
+}
+
+export function SignalsPanel({ asset }: SignalsPanelProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
-  const [asset, setAsset] = useState<AssetKey>(() => {
-    try {
-      const s = localStorage.getItem(LAST_ASSET_KEY) as AssetKey | null;
-      if (s && SIGNAL_ASSETS.some((a) => a.key === s)) return s;
-    } catch { /* noop */ }
-    return 'gold';
-  });
   const [tf, setTf] = useState<SignalTF>(() => {
     try {
       const s = localStorage.getItem(LAST_TF_KEY) as SignalTF | null;
@@ -42,10 +39,15 @@ export function SignalsPanel() {
   });
   const [debug, setDebug] = useState(false);
 
-  useEffect(() => { try { localStorage.setItem(LAST_ASSET_KEY, asset); } catch { /* noop */ } }, [asset]);
   useEffect(() => { try { localStorage.setItem(LAST_TF_KEY, tf); } catch { /* noop */ } }, [tf]);
 
-  const { meta, signal, macro, loading, refreshedAt, refresh } = useSignalEngine(asset, tf);
+  // Validate against the analysis engine's supported assets; fall back to a
+  // safe key for the hook and render a friendly notice for unsupported assets.
+  const supported = isSupportedAsset(asset);
+  const engineAsset = supported ? asset : 'gold';
+  const dropdownMeta = DROPDOWN_ASSETS.find((a) => a.key === asset);
+
+  const { meta, signal, macro, loading, refreshedAt, refresh } = useSignalEngine(engineAsset, tf);
 
   const macroChip = (label: string, value: string, color: string, Icon: typeof DollarSign) => (
     <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
@@ -61,6 +63,32 @@ export function SignalsPanel() {
   const fgColor = macro.fearGreed == null ? C_MUTED : macro.fearGreed <= 30 ? C_BEAR : macro.fearGreed >= 70 ? C_BULL : '#f0b90b';
   const spxTxt = macro.spxChangePct == null ? '—' : `${macro.spxChangePct > 0 ? '+' : ''}${macro.spxChangePct.toFixed(2)}%`;
   const spxColor = macro.spxChangePct == null ? C_MUTED : macro.spxChangePct >= 0 ? C_BULL : C_BEAR;
+
+  // Friendly fallback when the dropdown asset isn't supported by the engine.
+  if (!supported) {
+    return (
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <h1 className="text-base font-extrabold text-white flex items-center gap-2">
+          <Activity className="h-4 w-4 text-[#f0b90b]" /> {bi('سیگناڵە زیندووەکان', 'Live Signals')}
+        </h1>
+        <div className="flex flex-col items-center justify-center text-center gap-2 rounded-xl border border-[#1a1e2e] bg-[#0d1117] px-4 py-10">
+          <span className="text-3xl leading-none">{dropdownMeta?.emoji ?? '🛢️'}</span>
+          <p className="text-sm font-bold text-white">
+            {bi(
+              `شیکاری بۆ ${dropdownMeta?.label ?? 'ئەم ئامرازە'} هێشتا بەردەست نییە`,
+              `${dropdownMeta?.label ?? 'This asset'} analysis isn't available yet`,
+            )}
+          </p>
+          <p className="text-[11px] text-[#848e9c] max-w-[260px]">
+            {bi(
+              'تکایە ئامرازێکی پشتگیریکراو هەڵبژێرە لە لیستەکە (وەک زێڕ یان بیتکۆین).',
+              'Please pick a supported asset from the dropdown (e.g. Gold or Bitcoin).',
+            )}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -100,19 +128,7 @@ export function SignalsPanel() {
         {macroChip('S&P 500', spxTxt, spxColor, LineChart)}
       </div>
 
-      {/* Asset selector */}
-      <div className="grid grid-cols-5 gap-1.5">
-        {SIGNAL_ASSETS.map((a) => (
-          <button
-            key={a.key}
-            onClick={() => setAsset(a.key)}
-            className={`flex flex-col items-center gap-0.5 rounded-lg border py-2 transition-colors ${asset === a.key ? 'border-[#f0b90b] bg-[#f0b90b14]' : 'border-[#1a1e2e] bg-[#0a0e17]'}`}
-          >
-            <span className="text-base leading-none">{a.emoji}</span>
-            <span className={`text-[9px] font-bold ${asset === a.key ? 'text-[#f0b90b]' : 'text-[#848e9c]'}`}>{a.short}</span>
-          </button>
-        ))}
-      </div>
+
 
       {/* Timeframe selector */}
       <div className="grid grid-cols-6 gap-1.5">
