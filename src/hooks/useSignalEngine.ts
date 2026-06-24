@@ -53,7 +53,7 @@ export function useSignalEngine(assetKey: AssetKey, tf: SignalTF, opts?: { enabl
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [m, ev, candles] = await Promise.all([fetchMacro(), fetchEvents(), fetchAssetAllTF(meta)]);
+    const [m, ev, candles] = await Promise.all([fetchMacro(meta.key), fetchEvents(), fetchAssetAllTF(meta)]);
     setMacro(m);
     setEvents(ev);
     setCandlesByTF(candles);

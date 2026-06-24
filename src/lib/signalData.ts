@@ -162,14 +162,21 @@ const headers = {
   Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
 };
 
-/** Fetch the shared macro snapshot (DXY, Fear & Greed, S&P 500). */
-export async function fetchMacro(): Promise<MacroContext> {
+/**
+ * Fetch the shared macro snapshot (DXY, Fear & Greed, S&P 500).
+ * Fear & Greed source depends on the asset: BTC/crypto uses the alternative.me
+ * crypto index; gold / forex / SPX use the CNN (US stock market) index.
+ */
+export async function fetchMacro(asset?: AssetKey): Promise<MacroContext> {
   try {
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-sentiment`, { headers });
     const data = await res.json();
+    const isCrypto = asset === 'btc';
+    const cnnFg = data?.sentimentCnn?.value ?? null;
+    const cryptoFg = data?.sentimentCrypto?.value ?? data?.sentiment?.value ?? null;
     return {
       dxyChangePct: data?.dxy?.changePct ?? null,
-      fearGreed: data?.sentiment?.value ?? null,
+      fearGreed: isCrypto ? cryptoFg : (cnnFg ?? cryptoFg),
       spxChangePct: data?.spx?.changePct ?? null,
     };
   } catch {

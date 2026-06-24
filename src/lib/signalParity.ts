@@ -92,7 +92,7 @@ export async function runSignalParity(assetKey: AssetKey): Promise<ParityResult>
   // ── Fetch app data once, shared by Signals + Confluence ──
   const [candlesByTF, macro, events] = await Promise.all([
     fetchAssetAllTF(meta),
-    fetchMacro(),
+    fetchMacro(assetKey),
     fetchEvents(),
   ]);
   const base = candlesByTF[PARITY_TF] ?? [];
