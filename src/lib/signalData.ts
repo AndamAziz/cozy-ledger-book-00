@@ -17,16 +17,19 @@ export interface AssetMeta {
   decimals: number;
   /** News currencies relevant to this asset. */
   currencies: string[];
-  source: 'btc' | 'gold' | 'forex';
+  source: 'btc' | 'gold' | 'forex' | 'commodity';
   /** Forex code (for forex source). */
   forexCode?: string;
   /** Invert forex candles (e.g. EUR/USD = 1 / USDEUR). */
   invert?: boolean;
+  /** commodities-prices code (for gold/commodity source, e.g. XAU, USOIL). */
+  commodityCode?: string;
 }
 
 export const SIGNAL_ASSETS: AssetMeta[] = [
-  { key: 'gold', label: 'XAU/USD', short: 'Gold', emoji: '🥇', decimals: 2, currencies: ['USD', 'EUR', 'CHF', 'GBP', 'JPY'], source: 'gold' },
+  { key: 'gold', label: 'XAU/USD', short: 'Gold', emoji: '🥇', decimals: 2, currencies: ['USD', 'EUR', 'CHF', 'GBP', 'JPY'], source: 'gold', commodityCode: 'XAU' },
   { key: 'btc', label: 'BTC/USD', short: 'Bitcoin', emoji: '₿', decimals: 0, currencies: ['USD'], source: 'btc' },
+  { key: 'usoil', label: 'USOIL', short: 'USOIL', emoji: '🛢️', decimals: 2, currencies: ['USD'], source: 'commodity', commodityCode: 'USOIL' },
   { key: 'eurusd', label: 'EUR/USD', short: 'EUR/USD', emoji: '🇪🇺', decimals: 4, currencies: ['EUR', 'USD'], source: 'forex', forexCode: 'EUR', invert: true },
   { key: 'gbpusd', label: 'GBP/USD', short: 'GBP/USD', emoji: '🇬🇧', decimals: 4, currencies: ['GBP', 'USD'], source: 'forex', forexCode: 'GBP', invert: true },
   { key: 'usdjpy', label: 'USD/JPY', short: 'USD/JPY', emoji: '🇯🇵', decimals: 2, currencies: ['USD', 'JPY'], source: 'forex', forexCode: 'JPY', invert: false },
