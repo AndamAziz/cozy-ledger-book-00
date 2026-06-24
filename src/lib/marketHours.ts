@@ -16,6 +16,38 @@ export interface MarketStatus {
 const OPEN_HOUR_UTC = 22; // Sunday open
 const CLOSE_HOUR_UTC = 22; // Friday close
 
+/**
+ * Hours each market is open per week.
+ *  • FX / Metals: Sunday 22:00 UTC → Friday 22:00 UTC = one continuous 120-hour block.
+ *  • Crypto: 24/7 = 168 hours.
+ */
+export const FX_WEEKLY_HOURS = 120;
+export const CRYPTO_WEEKLY_HOURS = 168;
+
+export interface MarketSchedule {
+  /** True for crypto (never closes). */
+  alwaysOpen: boolean;
+  /** Open hours per week. */
+  weeklyHours: number;
+  /** Weekly open instant, e.g. "Sun 22:00 UTC" (empty for 24/7 markets). */
+  opensLabel: string;
+  /** Weekly close instant, e.g. "Fri 22:00 UTC" (empty for 24/7 markets). */
+  closesLabel: string;
+}
+
+/** Static weekly schedule for a market (independent of the current time). */
+export function getMarketSchedule(assetClass: AssetClass): MarketSchedule {
+  if (assetClass === "crypto") {
+    return { alwaysOpen: true, weeklyHours: CRYPTO_WEEKLY_HOURS, opensLabel: "", closesLabel: "" };
+  }
+  return {
+    alwaysOpen: false,
+    weeklyHours: FX_WEEKLY_HOURS,
+    opensLabel: "Sun 22:00 UTC",
+    closesLabel: "Fri 22:00 UTC",
+  };
+}
+
 function nextWeekday(from: Date, targetDow: number, hourUtc: number): Date {
   const d = new Date(from);
   d.setUTCHours(hourUtc, 0, 0, 0);

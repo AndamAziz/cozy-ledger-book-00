@@ -9,6 +9,7 @@ import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/compon
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
 import { LivePriceBadge } from '@/components/crypto/LivePriceBadge';
+import { MarketStatusBadge } from '@/components/crypto/MarketStatusBadge';
 
 import { useDemoAccount } from '@/contexts/DemoAccountContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -640,6 +641,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
               ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: currentPrice < 1 ? 6 : 2 })}
             </span>
           )}
+          <MarketStatusBadge assetClass="crypto" className="ml-auto self-center" />
         </div>
 
         {/* Timeframes row (underline active) */}
