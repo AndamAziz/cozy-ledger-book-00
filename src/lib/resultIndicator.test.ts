@@ -5,6 +5,8 @@ import {
   macroWeightForTimeframe,
   resultDirForScore,
   computeResult,
+  isHighImpactUsdEventSoon,
+  NEWS_ALERT_WINDOW_MIN,
   type Timeframe,
 } from './resultIndicator';
 
