@@ -640,6 +640,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
               ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: currentPrice < 1 ? 6 : 2 })}
             </span>
           )}
+          <MarketStatusBadge assetClass="crypto" className="ml-auto self-center" />
         </div>
 
         {/* Timeframes row (underline active) */}
