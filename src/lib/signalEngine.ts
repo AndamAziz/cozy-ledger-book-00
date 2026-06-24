@@ -20,7 +20,14 @@ export interface MacroContext {
   fearGreed: number | null;
   /** S&P 500 daily % change (stock-market risk proxy). */
   spxChangePct: number | null;
+  /** VIX (CBOE volatility index) level. */
+  vix: number | null;
+  /** US 10-Year Treasury yield (percent, e.g. 4.32). */
+  us10y: number | null;
+  /** US 10-Year yield daily % change (for rising/falling direction). */
+  us10yChangePct: number | null;
 }
+
 
 export interface NewsEvent {
   title: string;
