@@ -55,7 +55,7 @@ interface Props {
   btcPrice: number;
   goldPrice: number;
   /** The single asset currently selected in the Confluence dropdown. */
-  asset: AssetKey;
+  asset: DropdownAssetKey;
 }
 
 const C_BULL = '#0ecb81';
