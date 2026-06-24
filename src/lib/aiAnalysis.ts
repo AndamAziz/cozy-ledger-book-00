@@ -251,7 +251,7 @@ export function buildKeyLevels(candles: OHLCCandle[], price: number): KeyLevels 
  * Persist the latest confluence direction per asset and return the timestamp at
  * which the direction last changed. Used to show "signal changed X ago".
  */
-export function recordDirection(asset: 'btc' | 'gold', dir: TrendDir): number {
+export function recordDirection(asset: AssetKey, dir: TrendDir): number {
   const key = `ai_signal_dir_${asset}`;
   try {
     const raw = localStorage.getItem(key);
