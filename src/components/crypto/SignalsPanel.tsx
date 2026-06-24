@@ -248,8 +248,9 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           <span className="text-[10px] text-[#848e9c]">{bi('ترس/چاوبڕکێ', 'Fear/Greed')}</span>
           <span className="text-[11px] font-bold tabular-nums" style={{ color: fgColor }}>{fgTxt}</span>
           <span className="text-[9px] font-semibold text-[#5b6472] bg-[#1a1e2e] rounded px-1 py-0.5 leading-none">{fgSource}</span>
-          {fgStale && <StaleBadge />}
-          <InfoTip text={fgTip} />
+          {fgStale && <StaleBadge label={bi('ترس/چاوبڕکێ', 'Fear/Greed')} />}
+          <InfoTip text={fgTip} label={bi('زانیاری ترس/چاوبڕکێ', 'Fear/Greed info')} />
+
         </div>
         {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale)}
         {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale)}
