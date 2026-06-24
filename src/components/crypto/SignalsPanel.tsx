@@ -128,19 +128,7 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
         {macroChip('S&P 500', spxTxt, spxColor, LineChart)}
       </div>
 
-      {/* Asset selector */}
-      <div className="grid grid-cols-5 gap-1.5">
-        {SIGNAL_ASSETS.map((a) => (
-          <button
-            key={a.key}
-            onClick={() => setAsset(a.key)}
-            className={`flex flex-col items-center gap-0.5 rounded-lg border py-2 transition-colors ${asset === a.key ? 'border-[#f0b90b] bg-[#f0b90b14]' : 'border-[#1a1e2e] bg-[#0a0e17]'}`}
-          >
-            <span className="text-base leading-none">{a.emoji}</span>
-            <span className={`text-[9px] font-bold ${asset === a.key ? 'text-[#f0b90b]' : 'text-[#848e9c]'}`}>{a.short}</span>
-          </button>
-        ))}
-      </div>
+
 
       {/* Timeframe selector */}
       <div className="grid grid-cols-6 gap-1.5">
