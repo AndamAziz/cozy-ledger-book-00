@@ -1,7 +1,6 @@
 import { ForexCurrency, CURRENCIES } from '@/lib/forexApi';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
-import { MarketStatusBadge } from '@/components/crypto/MarketStatusBadge';
 
 interface ForexDetailProps {
   currencies: ForexCurrency[];
@@ -33,7 +32,6 @@ export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetail
         <div className="p-4 border-b border-[#1a1e2e]">
           <h2 className="text-lg font-bold text-white mb-1">🇺🇸 {bi('USD — نرخی دراوی بیانی', 'USD — Foreign Exchange Rates')}</h2>
           <p className="text-xs text-[#848e9c]">{bi('دراوێک هەڵبژێرە بۆ وردەکاری • نرخی ڕاستەوخۆ', 'Select a currency to see details • Live real-time rates')}</p>
-          <MarketStatusBadge assetClass="forex" variant="card" className="mt-3" />
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -97,7 +95,6 @@ export function ForexDetail({ currencies, selectedCode, isLoading }: ForexDetail
             {isNeutral ? '0.00%' : `${isPositive ? '+' : ''}${selected.change.toFixed(2)}%`}
           </span>
         </div>
-        <MarketStatusBadge assetClass="forex" variant="card" className="mt-3" />
       </div>
 
       {/* Conversion calculator */}

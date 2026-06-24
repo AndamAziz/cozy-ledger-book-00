@@ -3,7 +3,6 @@ import { Metal, METALS_META } from '@/lib/metalsApi';
 import { useMetalsHistory } from '@/hooks/useMetalsHistory';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalsChart } from '@/components/crypto/MetalsChart';
-import { MarketStatusBadge } from '@/components/crypto/MarketStatusBadge';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { GoldProPanel } from '@/components/crypto/GoldProPanel';
 import type { OHLCCandle } from '@/lib/krakenApi';
@@ -96,7 +95,6 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
         <div className="p-4 border-b border-[#1a1e2e]">
           <h2 className="text-lg font-bold text-white mb-1">📊 {bi('کاڵاکان — نرخی سپۆتی ڕاستەوخۆ', 'Commodities — Live Spot Prices')}</h2>
           <p className="text-xs text-[#848e9c]">{bi('کاڵایەک هەڵبژێرە بۆ وردەکاری • نرخی ڕاستەوخۆ', 'Select a commodity for details • Live real-time prices')}</p>
-          <MarketStatusBadge assetClass="metal" variant="card" className="mt-3" />
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* Precious Metals */}
