@@ -64,6 +64,32 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const spxTxt = macro.spxChangePct == null ? '—' : `${macro.spxChangePct > 0 ? '+' : ''}${macro.spxChangePct.toFixed(2)}%`;
   const spxColor = macro.spxChangePct == null ? C_MUTED : macro.spxChangePct >= 0 ? C_BULL : C_BEAR;
 
+  // Friendly fallback when the dropdown asset isn't supported by the engine.
+  if (!supported) {
+    return (
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <h1 className="text-base font-extrabold text-white flex items-center gap-2">
+          <Activity className="h-4 w-4 text-[#f0b90b]" /> {bi('سیگناڵە زیندووەکان', 'Live Signals')}
+        </h1>
+        <div className="flex flex-col items-center justify-center text-center gap-2 rounded-xl border border-[#1a1e2e] bg-[#0d1117] px-4 py-10">
+          <span className="text-3xl leading-none">{dropdownMeta?.emoji ?? '🛢️'}</span>
+          <p className="text-sm font-bold text-white">
+            {bi(
+              `شیکاری بۆ ${dropdownMeta?.label ?? 'ئەم ئامرازە'} هێشتا بەردەست نییە`,
+              `${dropdownMeta?.label ?? 'This asset'} analysis isn't available yet`,
+            )}
+          </p>
+          <p className="text-[11px] text-[#848e9c] max-w-[260px]">
+            {bi(
+              'تکایە ئامرازێکی پشتگیریکراو هەڵبژێرە لە لیستەکە (وەک زێڕ یان بیتکۆین).',
+              'Please pick a supported asset from the dropdown (e.g. Gold or Bitcoin).',
+            )}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-y-auto p-3 space-y-3">
       {/* Header */}
