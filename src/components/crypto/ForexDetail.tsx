@@ -1,6 +1,7 @@
 import { ForexCurrency, CURRENCIES } from '@/lib/forexApi';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
+import { MarketStatusBadge } from '@/components/crypto/MarketStatusBadge';
 
 interface ForexDetailProps {
   currencies: ForexCurrency[];
