@@ -136,10 +136,18 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const spxTxt = spxVal == null ? '—' : `${spxVal > 0 ? '+' : ''}${spxVal.toFixed(2)}%`;
   // S&P ↓ = risk-off, supportive for gold → green; ↑ = risk-on → red.
   const spxColor = spxVal == null ? C_MUTED : spxVal < 0 ? C_BULL : C_BEAR;
+  const vixTxt = vixVal == null ? '—' : vixVal.toFixed(2);
+  // VIX >20 high fear (risk-off) = good for gold → green; <15 low fear = bad → red; 15-20 neutral yellow.
+  const vixColor = vixVal == null ? C_MUTED : vixVal > 20 ? C_BULL : vixVal < 15 ? C_BEAR : '#f0b90b';
+  const u10yTxt = u10yVal == null ? '—' : `${u10yVal.toFixed(2)}%`;
+  // 10Y yield rising = bad for gold → red; falling = good → green.
+  const u10yColor = u10yVal == null || u10yChg == null ? C_MUTED : u10yChg > 0 ? C_BEAR : u10yChg < 0 ? C_BULL : C_MUTED;
 
   const dxyTip = bi('پێوەری دۆلار — هەڵکشانی دۆلار زێڕ دادەبەزێنێت', 'Dollar index — rising dollar pushes gold down');
   const spxTip = bi('بازاڕی پشک — دابەزینی پشک = ڕیسک-ئۆف = زێڕ بەرز', 'Stock market — falling stocks = risk-off = gold up');
   const fgTip = bi('هەستی CNN — ترس (<٤٠) زۆرجار پشتگیری زێڕ دەکات وەک پەناگەی پارێزراو', 'CNN sentiment — fear (<40) often supports gold as safe haven');
+  const vixTip = bi('پێوەری ترس — VIXـی بەرز = پەشۆکانی بازاڕ = زێڕ بەرز', 'Fear gauge — high VIX = market panic = gold up');
+  const u10yTip = bi('قازانجی بۆندی خەزانە — هەڵکشانی قازانج = زێڕ دادەبەزێت (بۆند ڕکابەری زێڕ دەکات)', 'Treasury yield — rising yield = gold down (bonds compete with gold)');
 
 
 
