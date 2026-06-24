@@ -51,6 +51,14 @@ export default function CryptoTracker() {
   });
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [aiView, setAiView] = useState<'signals' | 'confluence'>('signals');
+  // The single asset shown in the Confluence view; remembered for the session.
+  const [confluenceAsset, setConfluenceAsset] = useState<AssetKey>(() => {
+    try {
+      const saved = sessionStorage.getItem('tracker:confluenceAsset') as AssetKey | null;
+      if (saved && SIGNAL_ASSETS.some((a) => a.key === saved)) return saved;
+    } catch { /* noop */ }
+    return 'gold';
+  });
   const [forexView, setForexView] = useState<ForexView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(15);
