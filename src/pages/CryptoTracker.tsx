@@ -27,6 +27,8 @@ import { Menu, CandlestickChart, Activity, ChevronDown, LayoutGrid, Crown, Bell 
 import { MarketNewsModal } from '@/components/crypto/MarketNewsModal';
 import { AIAnalysisPanel } from '@/components/crypto/AIAnalysisPanel';
 import { SignalsPanel } from '@/components/crypto/SignalsPanel';
+import { SIGNAL_ASSETS } from '@/lib/signalData';
+import type { AssetKey } from '@/lib/signalEngine';
 import { IndicatorVerify } from '@/components/crypto/IndicatorVerify';
 import { BottomNav } from '@/components/crypto/BottomNav';
 
@@ -49,6 +51,14 @@ export default function CryptoTracker() {
   });
   const [cryptoView, setCryptoView] = useState<CryptoView>('overview');
   const [aiView, setAiView] = useState<'signals' | 'confluence'>('signals');
+  // The single asset shown in the Confluence view; remembered for the session.
+  const [confluenceAsset, setConfluenceAsset] = useState<AssetKey>(() => {
+    try {
+      const saved = sessionStorage.getItem('tracker:confluenceAsset') as AssetKey | null;
+      if (saved && SIGNAL_ASSETS.some((a) => a.key === saved)) return saved;
+    } catch { /* noop */ }
+    return 'gold';
+  });
   const [forexView, setForexView] = useState<ForexView>('overview');
   const [selectedPair, setSelectedPair] = useState('XBT/USD');
   const [interval, setInterval] = useState(15);
@@ -68,6 +78,11 @@ export default function CryptoTracker() {
   useEffect(() => {
     try { localStorage.setItem('tracker:lastTab', activeTab); } catch { /* noop */ }
   }, [activeTab]);
+
+  // Remember the selected Confluence asset for the session.
+  useEffect(() => {
+    try { sessionStorage.setItem('tracker:confluenceAsset', confluenceAsset); } catch { /* noop */ }
+  }, [confluenceAsset]);
 
   const { candles, isLoading: chartLoading, updateLastCandle } = useKrakenOHLC(selectedPair, interval);
   const { currencies: forexCurrencies, isLoading: forexLoading, marketOpen: forexMarketOpen } = useForexData();
@@ -289,7 +304,7 @@ export default function CryptoTracker() {
           {/* Main content */}
           {activeTab === 'ai' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex items-center gap-1 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] shrink-0">
                 <div className="flex bg-[#1a1e2e] rounded-lg overflow-hidden">
                   <button
                     onClick={() => setAiView('signals')}
@@ -304,6 +319,24 @@ export default function CryptoTracker() {
                     {bi('هاوئاهەنگی', 'Confluence')}
                   </button>
                 </div>
+                {/* Single-asset selector for the Confluence view */}
+                {aiView === 'confluence' && (
+                  <div className="relative">
+                    <select
+                      value={confluenceAsset}
+                      onChange={(e) => setConfluenceAsset(e.target.value as AssetKey)}
+                      aria-label={bi('هەڵبژاردنی ئامراز', 'Select asset')}
+                      className="appearance-none bg-[#1a1e2e] text-white text-xs font-bold rounded-lg pl-3 pr-8 py-1.5 border border-[#252a3a] focus:outline-none focus:border-[#f0b90b] cursor-pointer"
+                    >
+                      {SIGNAL_ASSETS.map((a) => (
+                        <option key={a.key} value={a.key} className="bg-[#1a1e2e] text-white">
+                          {a.emoji} {a.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#848e9c] pointer-events-none" />
+                  </div>
+                )}
               </div>
               {aiView === 'signals' ? (
                 <SignalsPanel />
@@ -311,6 +344,7 @@ export default function CryptoTracker() {
                 <AIAnalysisPanel
                   btcPrice={coinsMap.get('XBT/USD')?.price ?? 0}
                   goldPrice={metals.find((m) => m.code === 'XAU')?.price ?? 0}
+                  asset={confluenceAsset}
                 />
               )}
             </div>

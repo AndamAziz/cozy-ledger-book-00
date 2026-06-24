@@ -1,6 +1,8 @@
 import { OHLCCandle, fetchOHLC } from './krakenApi';
 import { calculateRSI, calculateMACD, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from './indicators';
 import { calculateATR, atrLevels } from './risk';
+import type { AssetKey, SignalTF } from './signalEngine';
+import { getAssetMeta, fetchAssetTF } from './signalData';
 // Single source of truth for Forex session windows / open-closed checks — shared
 // with the canonical signal engine and the Telegram session label.
 import {
@@ -249,7 +251,7 @@ export function buildKeyLevels(candles: OHLCCandle[], price: number): KeyLevels 
  * Persist the latest confluence direction per asset and return the timestamp at
  * which the direction last changed. Used to show "signal changed X ago".
  */
-export function recordDirection(asset: 'btc' | 'gold', dir: TrendDir): number {
+export function recordDirection(asset: AssetKey, dir: TrendDir): number {
   const key = `ai_signal_dir_${asset}`;
   try {
     const raw = localStorage.getItem(key);
@@ -328,8 +330,16 @@ async function fetchGoldTF(tf: TFConfig): Promise<OHLCCandle[]> {
 }
 
 /** Run the full multi-timeframe analysis for one asset. */
-export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promise<AssetAnalysis> {
-  const fetcher = asset === 'btc' ? fetchBtcTF : fetchGoldTF;
+export async function analyzeAsset(asset: AssetKey, price: number): Promise<AssetAnalysis> {
+  // Keep the existing dedicated BTC / Gold fetchers untouched; for every other
+  // asset reuse the shared signal-engine fetcher (same candle sources as the
+  // Signals tab). The analysis math below is identical for all assets.
+  const fetcher =
+    asset === 'btc'
+      ? fetchBtcTF
+      : asset === 'gold'
+      ? fetchGoldTF
+      : (tf: TFConfig) => fetchAssetTF(getAssetMeta(asset), tf.label as SignalTF);
   const series = await Promise.all(AI_TIMEFRAMES.map((tf) => fetcher(tf)));
 
   const trends: TFTrend[] = AI_TIMEFRAMES.map((tf, i) => {
@@ -348,7 +358,7 @@ export async function analyzeAsset(asset: 'btc' | 'gold', price: number): Promis
   // Signals@M15 and Telegram all produce identical ATR-based Entry/SL/TP.
   // AI_TIMEFRAMES order: [D1, H4, H1, M30, M15, M5] → index 4 = M15.
   const atrSeries = series[4]?.length ? series[4] : series[5]?.length ? series[5] : levelSeries;
-  const decimals = asset === 'btc' ? 0 : 2;
+  const decimals = getAssetMeta(asset).decimals;
   const setup = buildTradeSetup(confluence.dir, effectivePrice, atrSeries, decimals);
   const signalChangedAt = recordDirection(asset, confluence.dir);
 

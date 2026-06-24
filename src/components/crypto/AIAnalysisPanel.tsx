@@ -10,7 +10,8 @@ import {
   TrendDir,
 } from '@/lib/aiAnalysis';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
-import { AssetSignal } from '@/lib/signalEngine';
+import { AssetSignal, AssetKey } from '@/lib/signalEngine';
+import { getAssetMeta } from '@/lib/signalData';
 import { RefreshCw, TrendingUp, TrendingDown, Minus, Target, Clock, Layers, Gauge, Bug } from 'lucide-react';
 
 /**
@@ -53,6 +54,8 @@ function reconcileWithEngine(
 interface Props {
   btcPrice: number;
   goldPrice: number;
+  /** The single asset currently selected in the Confluence dropdown. */
+  asset: AssetKey;
 }
 
 const C_BULL = '#0ecb81';
@@ -86,11 +89,11 @@ function fmtAgo(ts: number | null): string {
   return `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
-function fmtPrice(n: number, asset: 'btc' | 'gold'): string {
+function fmtPrice(n: number, decimals: number): string {
   if (!Number.isFinite(n) || n <= 0) return '—';
   return n.toLocaleString(undefined, {
-    minimumFractionDigits: asset === 'gold' ? 2 : 0,
-    maximumFractionDigits: asset === 'gold' ? 2 : 0,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   });
 }
 
@@ -171,7 +174,7 @@ function ConfluenceBar({ a, bi }: { a: AssetAnalysis; bi: (ku: string, en: strin
   );
 }
 
-function LevelsBlock({ a, asset }: { a: AssetAnalysis; asset: 'btc' | 'gold' }) {
+function LevelsBlock({ a, decimals }: { a: AssetAnalysis; decimals: number }) {
   return (
     <div className="rounded-lg bg-[#0a0e17] border border-[#1a1e2e] p-3">
       <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#848e9c] mb-2">
@@ -183,7 +186,7 @@ function LevelsBlock({ a, asset }: { a: AssetAnalysis; asset: 'btc' | 'gold' }) 
           {a.levels.resistances.length ? (
             a.levels.resistances.map((r, i) => (
               <div key={i} className="text-xs text-[#f6465d]/90 tabular-nums">
-                ${fmtPrice(r, asset)}
+                ${fmtPrice(r, decimals)}
               </div>
             ))
           ) : (
@@ -195,7 +198,7 @@ function LevelsBlock({ a, asset }: { a: AssetAnalysis; asset: 'btc' | 'gold' }) 
           {a.levels.supports.length ? (
             a.levels.supports.map((s, i) => (
               <div key={i} className="text-xs text-[#0ecb81]/90 tabular-nums">
-                ${fmtPrice(s, asset)}
+                ${fmtPrice(s, decimals)}
               </div>
             ))
           ) : (
@@ -204,13 +207,13 @@ function LevelsBlock({ a, asset }: { a: AssetAnalysis; asset: 'btc' | 'gold' }) 
         </div>
       </div>
       <div className="mt-2 pt-2 border-t border-[#1a1e2e] text-[11px] text-[#848e9c]">
-        Current: <span className="text-white font-bold tabular-nums">${fmtPrice(a.price, asset)}</span>
+        Current: <span className="text-white font-bold tabular-nums">${fmtPrice(a.price, decimals)}</span>
       </div>
     </div>
   );
 }
 
-function SetupBlock({ setup, asset }: { setup: TradeSetup; asset: 'btc' | 'gold' }) {
+function SetupBlock({ setup, decimals }: { setup: TradeSetup; decimals: number }) {
   if (setup.side === 'none') {
     return (
       <div className="rounded-lg bg-[#0a0e17] border border-[#1a1e2e] p-3 text-xs text-[#848e9c]">
@@ -232,13 +235,13 @@ function SetupBlock({ setup, asset }: { setup: TradeSetup; asset: 'btc' | 'gold'
       </div>
       <div className="grid grid-cols-2 gap-y-1.5 gap-x-3 text-xs">
         <span className="text-[#848e9c]">Entry</span>
-        <span className="text-white font-bold tabular-nums text-end">${fmtPrice(setup.entry, asset)}</span>
+        <span className="text-white font-bold tabular-nums text-end">${fmtPrice(setup.entry, decimals)}</span>
         <span className="text-[#848e9c]">Stop Loss</span>
-        <span className="text-[#f6465d] font-bold tabular-nums text-end">${fmtPrice(setup.stopLoss, asset)}</span>
+        <span className="text-[#f6465d] font-bold tabular-nums text-end">${fmtPrice(setup.stopLoss, decimals)}</span>
         <span className="text-[#848e9c]">Take Profit 1</span>
-        <span className="text-[#0ecb81] font-bold tabular-nums text-end">${fmtPrice(setup.takeProfit1, asset)}</span>
+        <span className="text-[#0ecb81] font-bold tabular-nums text-end">${fmtPrice(setup.takeProfit1, decimals)}</span>
         <span className="text-[#848e9c]">Take Profit 2</span>
-        <span className="text-[#0ecb81] font-bold tabular-nums text-end">${fmtPrice(setup.takeProfit2, asset)}</span>
+        <span className="text-[#0ecb81] font-bold tabular-nums text-end">${fmtPrice(setup.takeProfit2, decimals)}</span>
         <span className="text-[#848e9c]">Risk / Reward</span>
         <span className="font-bold tabular-nums text-end" style={{ color: setup.riskReward >= 1.5 ? C_BULL : C_NEUTRAL }}>
           1 : {setup.riskReward}
@@ -308,14 +311,14 @@ function DebugBlock({ trends, bi }: { trends: TFTrend[]; bi: (ku: string, en: st
 function AssetCard({
   title,
   logo,
-  asset,
+  decimals,
   analysis,
   bi,
   debug,
 }: {
   title: string;
   logo: string;
-  asset: 'btc' | 'gold';
+  decimals: number;
   analysis: AssetAnalysis | null;
   bi: (ku: string, en: string) => string;
   debug: boolean;
@@ -357,8 +360,8 @@ function AssetCard({
             <TFRow trends={analysis.trends} />
           </div>
           <ConfluenceBar a={analysis} bi={bi} />
-          <LevelsBlock a={analysis} asset={asset} />
-          <SetupBlock setup={analysis.setup} asset={asset} />
+          <LevelsBlock a={analysis} decimals={decimals} />
+          <SetupBlock setup={analysis.setup} decimals={decimals} />
           {debug && <DebugBlock trends={analysis.trends} bi={bi} />}
         </>
       )}
@@ -397,40 +400,42 @@ function SessionsBlock({ sessions }: { sessions: SessionStatus[] }) {
   );
 }
 
-export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
+export function AIAnalysisPanel({ btcPrice, goldPrice, asset }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
-  const [btc, setBtc] = useState<AssetAnalysis | null>(null);
-  const [gold, setGold] = useState<AssetAnalysis | null>(null);
+  const meta = getAssetMeta(asset);
+  const [analysis, setAnalysis] = useState<AssetAnalysis | null>(null);
   const [sessions, setSessions] = useState<SessionStatus[]>(getSessionStatuses());
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [debug, setDebug] = useState(false);
 
   // Canonical engine (buildAssetSignal) — the single source of truth for the
-  // decided direction. Reconciled into each card below so the Confluence label
-  // matches the Signals tab / Telegram / Send-Signal exactly.
-  const { signal: goldEng } = useSignalEngine('gold', 'M15');
-  const { signal: btcEng } = useSignalEngine('btc', 'M15');
-  const goldView = reconcileWithEngine(gold, goldEng);
-  const btcView = reconcileWithEngine(btc, btcEng);
+  // decided direction. Reconciled into the card so the Confluence label matches
+  // the Signals tab / Telegram / Send-Signal exactly.
+  const { signal: eng } = useSignalEngine(asset, 'M15');
+  const view = reconcileWithEngine(analysis, eng);
+
+  // Live price for the selected asset (falls back to last candle close inside
+  // analyzeAsset when 0).
+  const livePrice = asset === 'btc' ? btcPrice : asset === 'gold' ? goldPrice : 0;
 
   const runAnalysis = useCallback(async () => {
     setLoading(true);
-    const [b, g] = await Promise.all([analyzeAsset('btc', btcPrice), analyzeAsset('gold', goldPrice)]);
-    setBtc(b);
-    setGold(g);
+    const a = await analyzeAsset(asset, livePrice);
+    setAnalysis(a);
     setLastUpdated(Date.now());
     setLoading(false);
-  }, [btcPrice, goldPrice]);
+  }, [asset, livePrice]);
 
-  // Run on mount + every 60s.
+  // Run on mount, whenever the selected asset changes + every 60s.
   useEffect(() => {
+    setAnalysis(null);
     runAnalysis();
     const id = window.setInterval(runAnalysis, 60_000);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [asset]);
 
   // Session countdowns tick every 30s.
   useEffect(() => {
@@ -446,7 +451,7 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
             🤖 {bi('شیکاری زیرەک', 'AI Analysis')}
           </h1>
           <p className="text-[11px] text-[#848e9c]">
-            {bi('شیکاری فرە-کاتی بۆ زێڕ و بیتکۆین', 'Multi-timeframe confluence for Gold & Bitcoin')}
+            {bi('شیکاری فرە-کاتی بۆ', 'Multi-timeframe confluence for')} {meta.label}
             {lastUpdated && ` · ${bi('نوێکرایەوە', 'updated')} ${Math.max(0, Math.round((Date.now() - lastUpdated) / 1000))}s`}
           </p>
         </div>
@@ -475,10 +480,14 @@ export function AIAnalysisPanel({ btcPrice, goldPrice }: Props) {
 
       <SessionsBlock sessions={sessions} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <AssetCard title="XAU/USD" logo="🥇" asset="gold" analysis={goldView} bi={bi} debug={debug} />
-        <AssetCard title="BTC/USD" logo="₿" asset="btc" analysis={btcView} bi={bi} debug={debug} />
-      </div>
+      <AssetCard
+        title={meta.label}
+        logo={meta.emoji}
+        decimals={meta.decimals}
+        analysis={view}
+        bi={bi}
+        debug={debug}
+      />
     </div>
   );
 }
