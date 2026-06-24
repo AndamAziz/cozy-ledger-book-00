@@ -61,6 +61,8 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const dxyColor = macro.dxyChangePct == null ? C_MUTED : macro.dxyChangePct > 0 ? C_BEAR : C_BULL;
   const fgTxt = macro.fearGreed == null ? '—' : String(macro.fearGreed);
   const fgColor = macro.fearGreed == null ? C_MUTED : macro.fearGreed <= 30 ? C_BEAR : macro.fearGreed >= 70 ? C_BULL : '#f0b90b';
+  // BTC uses the alternative.me crypto index; everything else uses CNN's index.
+  const fgSource = engineAsset === 'btc' ? 'alternative.me' : 'CNN';
   const spxTxt = macro.spxChangePct == null ? '—' : `${macro.spxChangePct > 0 ? '+' : ''}${macro.spxChangePct.toFixed(2)}%`;
   const spxColor = macro.spxChangePct == null ? C_MUTED : macro.spxChangePct >= 0 ? C_BULL : C_BEAR;
 
