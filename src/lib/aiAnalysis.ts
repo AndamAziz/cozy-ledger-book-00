@@ -1,6 +1,8 @@
 import { OHLCCandle, fetchOHLC } from './krakenApi';
 import { calculateRSI, calculateMACD, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from './indicators';
 import { calculateATR, atrLevels } from './risk';
+import type { AssetKey, SignalTF } from './signalEngine';
+import { getAssetMeta, fetchAssetTF } from './signalData';
 // Single source of truth for Forex session windows / open-closed checks — shared
 // with the canonical signal engine and the Telegram session label.
 import {
