@@ -308,14 +308,14 @@ function DebugBlock({ trends, bi }: { trends: TFTrend[]; bi: (ku: string, en: st
 function AssetCard({
   title,
   logo,
-  asset,
+  decimals,
   analysis,
   bi,
   debug,
 }: {
   title: string;
   logo: string;
-  asset: 'btc' | 'gold';
+  decimals: number;
   analysis: AssetAnalysis | null;
   bi: (ku: string, en: string) => string;
   debug: boolean;
