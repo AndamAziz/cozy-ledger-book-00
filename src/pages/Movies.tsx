@@ -2813,6 +2813,7 @@ function PlayerOverlay({
                     key={s.name}
                     onClick={() => {
                       setAutoTrying(false);
+                      setManual(true);
                       setActive(i);
                     }}
                     style={{
