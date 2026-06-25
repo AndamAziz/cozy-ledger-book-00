@@ -47,12 +47,12 @@ async function tmdbFetch(
 
 // Official IMDb streaming domains (source for all movies & series).
 // playimdb.com is primary; the rest are mirrors used if it is blocked.
-const IMDB_DOMAINS: { host: string; label: string }[] = [
-  { host: "playimdb.com", label: "PlayIMDb ⚡" },
-  { host: "runimdb.com", label: "RunIMDb" },
-  { host: "streamimdb.com", label: "StreamIMDb" },
-  { host: "directimdb.com", label: "DirectIMDb" },
-  { host: "fastimdb.com", label: "FastIMDb" },
+const IMDB_DOMAINS: { host: string; label: string; name: string; accent: string }[] = [
+  { host: "playimdb.com", label: "PlayIMDb ⚡", name: "PlayIMDb", accent: "#00BCD4" },
+  { host: "runimdb.com", label: "RunIMDb", name: "Runimdb", accent: "#8B5CF6" },
+  { host: "streamimdb.com", label: "StreamIMDb", name: "Streamimdb", accent: "#EC4899" },
+  { host: "directimdb.com", label: "DirectIMDb", name: "Directimdb.com", accent: "#22C55E" },
+  { host: "fastimdb.com", label: "FastIMDb", name: "Fastimdb.com", accent: "#F97316" },
 ];
 
 const selectStyle: React.CSSProperties = {
