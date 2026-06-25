@@ -541,6 +541,8 @@ async function handleLivePrices(): Promise<Response> {
 
   cachedPrices = prices;
   cacheTimestamp = Date.now();
+  // Populate the shared DB cache so other isolates skip the upstream fetch for 10s.
+  await writeMetalsCache({ prices, sources, unavailable, spotStale, timestamp: cacheTimestamp });
   return new Response(
     JSON.stringify({
       prices,
@@ -548,6 +550,7 @@ async function handleLivePrices(): Promise<Response> {
       unavailable,
       spotStale,
       cached: false,
+      cacheSource: "upstream",
       timestamp: cacheTimestamp,
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
