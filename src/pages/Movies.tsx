@@ -147,6 +147,17 @@ const T = {
     chooseSE: "وەرز و ئەلقە هەڵبژێرە",
     playNow: "▶ لێدان",
     serverEmpty: "ناوی فیلم یان زنجیرەیەک بنووسە بۆ گەڕان",
+    filters: "فلتەرەکان",
+    yearLabel: "ساڵ",
+    ratingLabel: "هەڵسەنگاندن",
+    sortLabel: "ڕێکخستن",
+    anyYear: "هەموو ساڵەکان",
+    anyRating: "هەموو",
+    sortPopular: "بەناوبانگترین",
+    sortTopRated: "باشترین هەڵسەنگاندن",
+    sortNewest: "نوێترین",
+    sortOldest: "کۆنترین",
+    resetFilters: "سڕینەوەی فلتەر",
   },
   en: {
     title: "Mov",
@@ -224,6 +235,17 @@ const T = {
     chooseSE: "Choose season & episode",
     playNow: "▶ Play",
     serverEmpty: "Type a movie or series name to search",
+    filters: "Filters",
+    yearLabel: "Year",
+    ratingLabel: "Rating",
+    sortLabel: "Sort",
+    anyYear: "All Years",
+    anyRating: "Any",
+    sortPopular: "Most Popular",
+    sortTopRated: "Top Rated",
+    sortNewest: "Newest",
+    sortOldest: "Oldest",
+    resetFilters: "Reset",
   },
 };
 
@@ -265,8 +287,54 @@ const TV_GENRE_IDS: Record<string, number> = {
   Animation: 16, Adventure: 10759, Crime: 80, Fantasy: 10765,
 };
 
+// ====== Discovery filters: sort options, years & ratings ======
+type SortKey = "popular" | "top" | "new" | "old";
 
+const SORT_OPTIONS: { key: SortKey; ku: string; en: string }[] = [
+  { key: "popular", ku: "بەناوبانگترین", en: "Most Popular" },
+  { key: "top", ku: "باشترین هەڵسەنگاندن", en: "Top Rated" },
+  { key: "new", ku: "نوێترین", en: "Newest" },
+  { key: "old", ku: "کۆنترین", en: "Oldest" },
+];
 
+const CURRENT_YEAR = new Date().getFullYear();
+// Years from the current year down to 1970.
+const YEARS: string[] = Array.from(
+  { length: CURRENT_YEAR - 1969 },
+  (_, i) => String(CURRENT_YEAR - i),
+);
+const RATING_OPTIONS = ["9", "8", "7", "6", "5"];
+
+// Map a generic sort key → the matching TMDB `sort_by` param for the media type.
+function sortByParam(key: SortKey, media: "movie" | "tv"): string {
+  switch (key) {
+    case "top":
+      return "vote_average.desc";
+    case "new":
+      return media === "tv" ? "first_air_date.desc" : "primary_release_date.desc";
+    case "old":
+      return media === "tv" ? "first_air_date.asc" : "primary_release_date.asc";
+    default:
+      return "popularity.desc";
+  }
+}
+
+// Client-side sort (used on free-text search results).
+function sortMovies(arr: Movie[], key: SortKey): Movie[] {
+  const a = [...arr];
+  if (key === "top") {
+    a.sort((x, y) => (parseFloat(y.rating) || 0) - (parseFloat(x.rating) || 0));
+  } else if (key === "new") {
+    a.sort((x, y) => (parseInt(y.year) || 0) - (parseInt(x.year) || 0));
+  } else if (key === "old") {
+    a.sort((x, y) => (parseInt(x.year) || 9999) - (parseInt(y.year) || 9999));
+  } else {
+    a.sort(
+      (x, y) => (parseFloat(y.popularity) || 0) - (parseFloat(x.popularity) || 0),
+    );
+  }
+  return a;
+}
 
 
 
@@ -363,6 +431,9 @@ export default function Movies() {
   const [totalPages, setTotalPages] = useState(1);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [genre, setGenre] = useState("all");
+  const [year, setYear] = useState("all");
+  const [minRating, setMinRating] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("popular");
   const [search, setSearch] = useState("");
   const [aiSearching, setAiSearching] = useState(false);
   const [aiTitle, setAiTitle] = useState<string | null>(null);
@@ -396,20 +467,36 @@ export default function Movies() {
   };
 
   const fetchMovies = useCallback(
-    async (p: number, media: "movie" | "tv", g: string) => {
+    async (
+      p: number,
+      media: "movie" | "tv",
+      g: string,
+      yr: string,
+      rating: string,
+      sort: SortKey,
+    ) => {
       if (p === 1) setLoading(true);
       else setLoadingMore(true);
       try {
         let r: Response;
-        if (g && g !== "all") {
+        const useDiscover =
+          (g && g !== "all") ||
+          yr !== "all" ||
+          rating !== "all" ||
+          sort !== "popular";
+        if (useDiscover) {
           const gid =
             media === "tv" ? TV_GENRE_IDS[g] : MOVIE_GENRE_IDS[g];
           r = await tmdbFetch(`discover/${media}`, {
             language: "en-US",
-            sort_by: "popularity.desc",
+            sort_by: sortByParam(sort, media),
             include_adult: false,
-            "vote_count.gte": 40,
-            with_genres: gid ? gid : undefined,
+            // Top-rated needs a higher vote threshold to be meaningful.
+            "vote_count.gte": sort === "top" ? 300 : 40,
+            with_genres: g && g !== "all" && gid ? gid : undefined,
+            [media === "tv" ? "first_air_date_year" : "primary_release_year"]:
+              yr !== "all" ? yr : undefined,
+            "vote_average.gte": rating !== "all" ? rating : undefined,
             page: p,
           });
         } else {
@@ -441,13 +528,13 @@ export default function Movies() {
   );
 
   useEffect(() => {
-    fetchMovies(page, mediaTab, genre);
-  }, [page, mediaTab, genre, fetchMovies]);
+    fetchMovies(page, mediaTab, genre, year, minRating, sortKey);
+  }, [page, mediaTab, genre, year, minRating, sortKey, fetchMovies]);
 
-  /* reset to first page when switching media tab or genre */
+  /* reset to first page when switching media tab or any filter */
   useEffect(() => {
     setPage(1);
-  }, [mediaTab, genre]);
+  }, [mediaTab, genre, year, minRating, sortKey]);
 
   /* infinite scroll — load next page when sentinel scrolls into view */
   useEffect(() => {
@@ -673,13 +760,19 @@ export default function Movies() {
 
   const searching = searchResults !== null;
   const baseList = searching ? searchResults! : movies;
-  // Catalog is already genre-filtered server-side via TMDB discover; only
-  // apply client-side genre filtering to free-text search results.
+  // The catalog is already filtered + sorted server-side via TMDB discover.
+  // Free-text search results are filtered & sorted client-side here.
   const filtered = searching
-    ? baseList.filter(
-        (m) =>
-          genre === "all" ||
-          (m.genre || "").toLowerCase().includes(genre.toLowerCase()),
+    ? sortMovies(
+        baseList.filter(
+          (m) =>
+            (genre === "all" ||
+              (m.genre || "").toLowerCase().includes(genre.toLowerCase())) &&
+            (year === "all" || m.year === year) &&
+            (minRating === "all" ||
+              (parseFloat(m.rating) || 0) >= parseFloat(minRating)),
+        ),
+        sortKey,
       )
     : baseList;
 
@@ -871,42 +964,54 @@ export default function Movies() {
             )}
 
             {searching ? (
-              <div
-                className="mv-fade"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  marginBottom: 16,
-                }}
-              >
-                <div style={{ fontSize: 15, color: C.text }}>
-                  <span style={{ color: C.muted }}>{t.searchResultsFor} </span>
-                  <b style={{ color: C.gold }}>“{search.trim()}”</b>
-                  {!aiSearching && (
-                    <span style={{ color: C.muted }}>
-                      {" "}— {filtered.length} {t.resultsCount}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={clearSearch}
+              <>
+                <div
+                  className="mv-fade"
                   style={{
-                    background: C.panel2,
-                    color: C.text,
-                    border: `1px solid ${C.border}`,
-                    borderRadius: 999,
-                    padding: "6px 14px",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    marginBottom: 16,
                   }}
                 >
-                  {t.clearSearch}
-                </button>
-              </div>
+                  <div style={{ fontSize: 15, color: C.text }}>
+                    <span style={{ color: C.muted }}>{t.searchResultsFor} </span>
+                    <b style={{ color: C.gold }}>“{search.trim()}”</b>
+                    {!aiSearching && (
+                      <span style={{ color: C.muted }}>
+                        {" "}— {filtered.length} {t.resultsCount}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={clearSearch}
+                    style={{
+                      background: C.panel2,
+                      color: C.text,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 999,
+                      padding: "6px 14px",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {t.clearSearch}
+                  </button>
+                </div>
+                <FilterControls
+                  lang={lang}
+                  t={t}
+                  year={year}
+                  setYear={setYear}
+                  minRating={minRating}
+                  setMinRating={setMinRating}
+                  sortKey={sortKey}
+                  setSortKey={setSortKey}
+                />
+              </>
             ) : (
               !aiSearching && (
                 <div style={{ textAlign: "center", padding: "70px 0", color: C.muted }}>
@@ -1004,6 +1109,17 @@ export default function Movies() {
                 );
               })}
             </div>
+            {/* Year / rating / sort filters */}
+            <FilterControls
+              lang={lang}
+              t={t}
+              year={year}
+              setYear={setYear}
+              minRating={minRating}
+              setMinRating={setMinRating}
+              sortKey={sortKey}
+              setSortKey={setSortKey}
+            />
           </>
         )}
 
@@ -1160,7 +1276,104 @@ function Grid({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ====== Trending Today (TOP 10) horizontal rail ======
+// ====== Discovery filter bar (year / rating / sort) ======
+function FilterControls({
+  lang,
+  t,
+  year,
+  setYear,
+  minRating,
+  setMinRating,
+  sortKey,
+  setSortKey,
+}: {
+  lang: Lang;
+  t: (typeof T)["ku"];
+  year: string;
+  setYear: (v: string) => void;
+  minRating: string;
+  setMinRating: (v: string) => void;
+  sortKey: SortKey;
+  setSortKey: (v: SortKey) => void;
+}) {
+  const active = year !== "all" || minRating !== "all" || sortKey !== "popular";
+  return (
+    <div
+      className="mv-genre mv-scroll"
+      style={{
+        display: "flex",
+        gap: 8,
+        overflowX: "auto",
+        marginBottom: 18,
+        paddingBottom: 2,
+        alignItems: "center",
+      }}
+    >
+      <select
+        value={sortKey}
+        onChange={(e) => setSortKey(e.target.value as SortKey)}
+        style={{ ...selectStyle, flexShrink: 0 }}
+        aria-label={t.sortLabel}
+      >
+        {SORT_OPTIONS.map((o) => (
+          <option key={o.key} value={o.key}>
+            ⇅ {lang === "ku" ? o.ku : o.en}
+          </option>
+        ))}
+      </select>
+      <select
+        value={year}
+        onChange={(e) => setYear(e.target.value)}
+        style={{ ...selectStyle, flexShrink: 0 }}
+        aria-label={t.yearLabel}
+      >
+        <option value="all">📅 {t.anyYear}</option>
+        {YEARS.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+      <select
+        value={minRating}
+        onChange={(e) => setMinRating(e.target.value)}
+        style={{ ...selectStyle, flexShrink: 0 }}
+        aria-label={t.ratingLabel}
+      >
+        <option value="all">★ {t.anyRating}</option>
+        {RATING_OPTIONS.map((r) => (
+          <option key={r} value={r}>
+            ★ {r}+
+          </option>
+        ))}
+      </select>
+      {active && (
+        <button
+          onClick={() => {
+            setYear("all");
+            setMinRating("all");
+            setSortKey("popular");
+          }}
+          style={{
+            flexShrink: 0,
+            background: C.panel2,
+            color: C.muted,
+            border: `1px solid ${C.border}`,
+            borderRadius: 10,
+            padding: "8px 14px",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          ✕ {t.resetFilters}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function TrendingRow({
   lang,
   t,
@@ -2457,6 +2670,9 @@ function PlayerOverlay({
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [autoTrying, setAutoTrying] = useState(false);
+  // Once the user picks a specific server, stop the automatic fallback so their
+  // choice is honoured (each server button is dedicated).
+  const [manual, setManual] = useState(false);
   const loadedRef = useRef(false);
   const list = servers && servers.length > 0 ? servers : [];
   // Clamp the index defensively so we never read an out-of-range server.
@@ -2465,8 +2681,9 @@ function PlayerOverlay({
 
   // Automatic fallback: if the active domain doesn't load within a few
   // seconds (blocked / X-Frame-Options / network error), try the next one.
+  // Disabled after a manual pick.
   useEffect(() => {
-    if (list.length <= 1) return;
+    if (list.length <= 1 || manual) return;
     loadedRef.current = false;
     setLoaded(false);
     const timer = setTimeout(() => {
@@ -2476,7 +2693,7 @@ function PlayerOverlay({
       }
     }, 7000);
     return () => clearTimeout(timer);
-  }, [safeActive, currentSrc, list.length]);
+  }, [safeActive, currentSrc, list.length, manual]);
 
   const goNext = () => {
     if (safeActive < list.length - 1) {
@@ -2596,6 +2813,7 @@ function PlayerOverlay({
                     key={s.name}
                     onClick={() => {
                       setAutoTrying(false);
+                      setManual(true);
                       setActive(i);
                     }}
                     style={{
