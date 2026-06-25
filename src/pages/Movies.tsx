@@ -47,12 +47,12 @@ async function tmdbFetch(
 
 // Official IMDb streaming domains (source for all movies & series).
 // playimdb.com is primary; the rest are mirrors used if it is blocked.
-const IMDB_DOMAINS: { host: string; label: string }[] = [
-  { host: "playimdb.com", label: "PlayIMDb ⚡" },
-  { host: "runimdb.com", label: "RunIMDb" },
-  { host: "streamimdb.com", label: "StreamIMDb" },
-  { host: "directimdb.com", label: "DirectIMDb" },
-  { host: "fastimdb.com", label: "FastIMDb" },
+const IMDB_DOMAINS: { host: string; label: string; name: string; accent: string }[] = [
+  { host: "playimdb.com", label: "PlayIMDb ⚡", name: "PlayIMDb", accent: "#00BCD4" },
+  { host: "runimdb.com", label: "RunIMDb", name: "Runimdb", accent: "#8B5CF6" },
+  { host: "streamimdb.com", label: "StreamIMDb", name: "Streamimdb", accent: "#EC4899" },
+  { host: "directimdb.com", label: "DirectIMDb", name: "Directimdb.com", accent: "#22C55E" },
+  { host: "fastimdb.com", label: "FastIMDb", name: "Fastimdb.com", accent: "#F97316" },
 ];
 
 const selectStyle: React.CSSProperties = {
@@ -109,6 +109,8 @@ const T = {
     allLangs: "هەموو زمانەکان",
     openPlayIMDb: "🌐 کردنەوە لە PlayIMDb",
     copyPlayIMDb: "📋 کۆپی کردنی لینک",
+    openOn: "کردنەوە لە",
+    copy: "کۆپی",
     linkCopied: "لینکەکە کۆپی کرا ✓",
     searchResultsFor: "ئەنجامەکانی گەڕان بۆ",
     clearSearch: "✕ پاککردنەوەی گەڕان",
@@ -197,6 +199,8 @@ const T = {
     allLangs: "All languages",
     openPlayIMDb: "🌐 Open on PlayIMDb",
     copyPlayIMDb: "📋 Copy PlayIMDb Link",
+    openOn: "Open on",
+    copy: "Copy",
     linkCopied: "Link copied ✓",
     searchResultsFor: "Search results for",
     clearSearch: "✕ Clear search",
@@ -2365,26 +2369,84 @@ function MovieModal({
           </div>
         )}
 
-        {/* PlayIMDb buttons */}
+        {/* IMDb mirror buttons — one Open + one Copy per server */}
         {imdbId && (
-          <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
-            <ActionBtn
-              cyan
-              label={t.openPlayIMDb}
-              onClick={() => window.open(`https://www.playimdb.com/title/${imdbId}/`, "_blank")}
-            />
-            <ActionBtn
-              label={t.copyPlayIMDb}
-              onClick={async () => {
-                const url = `https://www.playimdb.com/title/${imdbId}/`;
-                try {
-                  await navigator.clipboard.writeText(url);
-                  toast.success(t.linkCopied);
-                } catch {
-                  toast.error(lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed");
-                }
-              }}
-            />
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              padding: "10px 16px 0",
+            }}
+          >
+            {IMDB_DOMAINS.map((d) => {
+              const url = `https://www.${d.host}/title/${imdbId}/`;
+              return (
+                <div key={d.host} style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => window.open(url, "_blank")}
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      background: d.accent,
+                      color: "#0A0A0F",
+                      border: `1px solid ${d.accent}`,
+                      borderRadius: 12,
+                      padding: "12px 10px",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      fontSize: 14,
+                      boxShadow: `0 4px 14px ${d.accent}33`,
+                      transition: "transform .15s",
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                  >
+                    <span>🌐</span>
+                    <span>
+                      {t.openOn} {d.name}
+                    </span>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast.success(t.linkCopied);
+                      } catch {
+                        toast.error(
+                          lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed",
+                        );
+                      }
+                    }}
+                    title={`${t.copy} ${d.name}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      minWidth: 96,
+                      background: C.panel2,
+                      color: d.accent,
+                      border: `1px solid ${d.accent}55`,
+                      borderRadius: 12,
+                      padding: "12px 10px",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      fontSize: 13,
+                      transition: "transform .15s",
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                  >
+                    <span>📋</span>
+                    <span>{t.copy}</span>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
         {trailer === "none" && (
