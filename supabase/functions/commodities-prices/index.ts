@@ -460,9 +460,29 @@ async function fetchOilPriceApi(): Promise<Record<string, number>> {
 }
 
 async function handleLivePrices(): Promise<Response> {
+  // L1: per-isolate memory cache (fastest path on a warm isolate).
   if (cachedPrices && Date.now() - cacheTimestamp < CACHE_TTL) {
     return new Response(
-      JSON.stringify({ prices: cachedPrices, sources: ["multi-source"], cached: true, timestamp: cacheTimestamp }),
+      JSON.stringify({ prices: cachedPrices, sources: ["multi-source"], cached: true, cacheSource: "memory", timestamp: cacheTimestamp }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  // L2: shared DB cache — valid snapshots are returned immediately, with NO upstream calls.
+  const dbCached = await readMetalsCache();
+  if (dbCached) {
+    cachedPrices = dbCached.prices;
+    cacheTimestamp = dbCached.timestamp || Date.now();
+    return new Response(
+      JSON.stringify({
+        prices: dbCached.prices,
+        sources: dbCached.sources,
+        unavailable: dbCached.unavailable,
+        spotStale: dbCached.spotStale,
+        cached: true,
+        cacheSource: "db",
+        timestamp: cacheTimestamp,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
