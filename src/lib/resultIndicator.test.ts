@@ -75,13 +75,28 @@ describe('computeTechScore', () => {
     expect(computeTechScore({ action: 'buy', confidence: 70 })).toBeCloseTo(0.7);
   });
 
-  it('returns 0 for NEUTRAL/WAIT regardless of confidence', () => {
+  it('returns 0 for NEUTRAL/WAIT with no trend fallback', () => {
     expect(computeTechScore({ action: 'neutral', confidence: 90 })).toBe(0);
     expect(computeTechScore({ action: 'wait', confidence: 90 })).toBe(0);
   });
 
   it('treats missing confidence as 0', () => {
     expect(computeTechScore({ action: 'buy' })).toBe(0);
+  });
+
+  it('falls back to the observed price trend when the call is NEUTRAL/WAIT/missing', () => {
+    // Bearish chart with a NEUTRAL discrete call → negative tech score.
+    expect(computeTechScore({ action: 'neutral', confidence: 50 }, { dir: 'down', strength: 80 })).toBeCloseTo(-0.8);
+    expect(computeTechScore({ action: 'wait' }, { dir: 'down', strength: 100 })).toBeCloseTo(-1);
+    expect(computeTechScore(null, { dir: 'up', strength: 67 })).toBeCloseTo(0.67);
+  });
+
+  it('explicit BUY/SELL takes priority over the trend fallback', () => {
+    expect(computeTechScore({ action: 'sell', confidence: 80 }, { dir: 'up', strength: 100 })).toBeCloseTo(-0.8);
+  });
+
+  it('ignores a neutral trend', () => {
+    expect(computeTechScore({ action: 'neutral' }, { dir: 'neutral', strength: 90 })).toBe(0);
   });
 });
 
