@@ -323,8 +323,9 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           tab was backgrounded). The signal may not reflect the live market. */}
       {stale && !loading && (
         <button
-          onClick={refresh}
-          className="flex w-full items-center gap-2 rounded-lg border border-[#f0b90b55] bg-[#f0b90b14] px-3 py-2 text-left"
+          onClick={handleRefresh}
+          disabled={refreshDisabled}
+          className="flex w-full items-center gap-2 rounded-lg border border-[#f0b90b55] bg-[#f0b90b14] px-3 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className="text-sm leading-none">⚠️</span>
           <span className="text-[11px] leading-snug text-[#f0b90b]">
