@@ -431,6 +431,9 @@ export default function Movies() {
   const [totalPages, setTotalPages] = useState(1);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [genre, setGenre] = useState("all");
+  const [year, setYear] = useState("all");
+  const [minRating, setMinRating] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("popular");
   const [search, setSearch] = useState("");
   const [aiSearching, setAiSearching] = useState(false);
   const [aiTitle, setAiTitle] = useState<string | null>(null);
