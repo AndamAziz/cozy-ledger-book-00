@@ -81,7 +81,7 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const engineAsset = supported ? asset : 'gold';
   const dropdownMeta = DROPDOWN_ASSETS.find((a) => a.key === asset);
 
-  const { meta, signal, macro, loading, refreshedAt, refresh } = useSignalEngine(engineAsset, tf);
+  const { meta, signal, macro, loading, refreshedAt, stale, refresh } = useSignalEngine(engineAsset, tf);
 
   // Remember the last successfully fetched macro values so a failed refresh can
   // keep showing a meaningful number (with a ⚠️ stale badge) instead of "—".
