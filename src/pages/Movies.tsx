@@ -235,6 +235,17 @@ const T = {
     chooseSE: "Choose season & episode",
     playNow: "▶ Play",
     serverEmpty: "Type a movie or series name to search",
+    filters: "Filters",
+    yearLabel: "Year",
+    ratingLabel: "Rating",
+    sortLabel: "Sort",
+    anyYear: "All Years",
+    anyRating: "Any",
+    sortPopular: "Most Popular",
+    sortTopRated: "Top Rated",
+    sortNewest: "Newest",
+    sortOldest: "Oldest",
+    resetFilters: "Reset",
   },
 };
 
