@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { RefreshCw, Bug, Activity, DollarSign, Gauge, LineChart, Info, Flame, Percent } from 'lucide-react';
 import { DROPDOWN_ASSETS, DropdownAssetKey, isSupportedAsset } from '@/lib/signalData';
@@ -82,6 +82,25 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const dropdownMeta = DROPDOWN_ASSETS.find((a) => a.key === asset);
 
   const { meta, signal, macro, loading, refreshedAt, stale, refresh } = useSignalEngine(engineAsset, tf);
+
+  // Guard against duplicate refreshes: ignore taps while one is in flight and
+  // enforce a short cooldown (debounce) between manual refreshes.
+  const REFRESH_COOLDOWN_MS = 3000;
+  const refreshingRef = useRef(false);
+  const lastRefreshRef = useRef(0);
+  const [cooling, setCooling] = useState(false);
+  const handleRefresh = useCallback(() => {
+    if (refreshingRef.current || loading) return;
+    if (Date.now() - lastRefreshRef.current < REFRESH_COOLDOWN_MS) return;
+    refreshingRef.current = true;
+    lastRefreshRef.current = Date.now();
+    setCooling(true);
+    Promise.resolve(refresh()).finally(() => {
+      refreshingRef.current = false;
+      window.setTimeout(() => setCooling(false), REFRESH_COOLDOWN_MS);
+    });
+  }, [refresh, loading]);
+  const refreshDisabled = loading || cooling;
 
   // Remember the last successfully fetched macro values so a failed refresh can
   // keep showing a meaningful number (with a ⚠️ stale badge) instead of "—".
@@ -256,10 +275,10 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
             <Bug className="h-3.5 w-3.5" /> {bi('دیباگ', 'Debug')}
           </button>
           <button
-            onClick={refresh}
-            disabled={loading}
+            onClick={handleRefresh}
+            disabled={refreshDisabled}
             aria-label={bi('نوێکردنەوە', 'Refresh')}
-            className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-[#1a1e2e] hover:bg-[#252a3a] text-xs font-bold text-[#f0b90b] disabled:opacity-50"
+            className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-[#1a1e2e] hover:bg-[#252a3a] text-xs font-bold text-[#f0b90b] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             {bi('نوێکردنەوە', 'Refresh')}
@@ -304,8 +323,9 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           tab was backgrounded). The signal may not reflect the live market. */}
       {stale && !loading && (
         <button
-          onClick={refresh}
-          className="flex w-full items-center gap-2 rounded-lg border border-[#f0b90b55] bg-[#f0b90b14] px-3 py-2 text-left"
+          onClick={handleRefresh}
+          disabled={refreshDisabled}
+          className="flex w-full items-center gap-2 rounded-lg border border-[#f0b90b55] bg-[#f0b90b14] px-3 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className="text-sm leading-none">⚠️</span>
           <span className="text-[11px] leading-snug text-[#f0b90b]">
