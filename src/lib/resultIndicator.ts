@@ -137,19 +137,31 @@ export interface ResultComputation {
 export const HIGH_CONFIDENCE_OVERRIDE = 75;
 
 /**
+ * Multi-timeframe trend agreement (%) above which the observed price trend
+ * overrides macro. Price action beats safe-haven theory: when the chart is
+ * clearly trending one way across timeframes, the badge must follow the chart.
+ */
+export const STRONG_TREND_OVERRIDE = 70;
+
+/**
  * Full Result computation: weighted combine of macro + technical, then threshold.
  *
- * High-confidence override: when a BUY/SELL signal has confidence > 75%, the
- * direction is forced (BUY → up, SELL → down) regardless of macro. The weighted
- * formula is only used when confidence is at or below 75%.
+ * Override priority (highest first):
+ *   1. High-confidence signal — a BUY/SELL call with confidence > 75% forces the
+ *      direction (BUY → up, SELL → down) regardless of macro.
+ *   2. Strong price trend — when the multi-timeframe trend agrees ≥ 70% in one
+ *      direction, the badge follows the chart, not the macro safe-haven model.
+ *      This prevents "GOLD UP" while every timeframe is falling.
+ *   3. Otherwise the weighted macro + technical formula with the ±0.3 threshold.
  */
 export function computeResult(
   tf: Timeframe,
   macro: MacroInputs,
   signal?: SignalInputs | null,
+  trend?: TrendInputs | null,
 ): ResultComputation {
   const macroScore = computeMacroScore(macro);
-  const techScore = computeTechScore(signal);
+  const techScore = computeTechScore(signal, trend);
   const macroWeight = macroWeightForTimeframe(tf);
   const techWeight = 1 - macroWeight;
   const resultScore = macroScore * macroWeight + techScore * techWeight;
@@ -157,12 +169,21 @@ export function computeResult(
   const confidence = signal?.confidence ?? 0;
   const action = signal?.action;
   const isDirectional = action === 'buy' || action === 'sell';
-  const overridden = isDirectional && confidence > HIGH_CONFIDENCE_OVERRIDE;
-  const resultDir: ResultDir = overridden
+  const highConfOverride = isDirectional && confidence > HIGH_CONFIDENCE_OVERRIDE;
+
+  const trendDir = trend?.dir;
+  const trendStrong =
+    !highConfOverride &&
+    (trendDir === 'up' || trendDir === 'down') &&
+    (trend?.strength ?? 0) >= STRONG_TREND_OVERRIDE;
+
+  const resultDir: ResultDir = highConfOverride
     ? action === 'sell'
       ? 'down'
       : 'up'
-    : resultDirForScore(resultScore);
+    : trendStrong
+      ? (trendDir as ResultDir)
+      : resultDirForScore(resultScore);
 
   return {
     macroScore,
