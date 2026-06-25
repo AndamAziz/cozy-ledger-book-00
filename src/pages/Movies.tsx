@@ -2670,6 +2670,9 @@ function PlayerOverlay({
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [autoTrying, setAutoTrying] = useState(false);
+  // Once the user picks a specific server, stop the automatic fallback so their
+  // choice is honoured (each server button is dedicated).
+  const [manual, setManual] = useState(false);
   const loadedRef = useRef(false);
   const list = servers && servers.length > 0 ? servers : [];
   // Clamp the index defensively so we never read an out-of-range server.
@@ -2678,8 +2681,9 @@ function PlayerOverlay({
 
   // Automatic fallback: if the active domain doesn't load within a few
   // seconds (blocked / X-Frame-Options / network error), try the next one.
+  // Disabled after a manual pick.
   useEffect(() => {
-    if (list.length <= 1) return;
+    if (list.length <= 1 || manual) return;
     loadedRef.current = false;
     setLoaded(false);
     const timer = setTimeout(() => {
@@ -2689,7 +2693,7 @@ function PlayerOverlay({
       }
     }, 7000);
     return () => clearTimeout(timer);
-  }, [safeActive, currentSrc, list.length]);
+  }, [safeActive, currentSrc, list.length, manual]);
 
   const goNext = () => {
     if (safeActive < list.length - 1) {
