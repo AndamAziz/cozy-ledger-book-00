@@ -25,6 +25,17 @@ export interface SignalInputs {
 }
 
 /**
+ * Observed multi-timeframe price trend (confluence). This is the ACTUAL price
+ * action across timeframes, independent of the discrete BUY/SELL/NEUTRAL call.
+ *   dir      → 'up' | 'down' | 'neutral'
+ *   strength → 0-100 (share of timeframes agreeing on `dir`)
+ */
+export interface TrendInputs {
+  dir?: ResultDir;
+  strength?: number;
+}
+
+/**
  * Macro score using the +1/-1 system (positive = bullish for gold / BUY).
  *   Fear/Greed < 40        → +1
  *   VIX > 20               → +1, VIX 15-20 → +0.5
