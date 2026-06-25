@@ -30,10 +30,77 @@ interface LiveRate {
   low: number;
 }
 
-// ─── Server-side cache so we can poll upstream once per ~2s regardless of clients ───
-const LIVE_TTL = 2000;
+// ─── Shared DB cache (cached_market_prices) so every isolate reads the same
+// recent snapshot instead of each cold isolate re-fetching all 41 Yahoo pairs. ───
+const FOREX_CACHE_KEY = "forex-live";
+const LIVE_TTL = 5000; // 5s shared TTL for forex (per requirements)
+
+// L1 per-isolate memory cache (avoids a DB round-trip on hot isolates).
 let liveCache: Record<string, LiveRate> | null = null;
 let liveCacheTs = 0;
+
+const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const db = supabaseUrl && serviceKey
+  ? createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } })
+  : null;
+
+interface CachedForexPayload {
+  rates: Record<string, LiveRate>;
+  timestamp: number;
+}
+
+/** Read a still-valid snapshot from the shared DB cache, or null if missing/expired. */
+async function readForexCache(): Promise<CachedForexPayload | null> {
+  if (!db) return null;
+  try {
+    const { data, error } = await db
+      .from("cached_market_prices")
+      .select("payload, expires_at")
+      .eq("cache_key", FOREX_CACHE_KEY)
+      .maybeSingle();
+    if (error || !data) return null;
+    if (new Date(data.expires_at as string).getTime() <= Date.now()) return null;
+    const payload = data.payload as CachedForexPayload;
+    if (!payload?.rates || Object.keys(payload.rates).length === 0) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+/** Persist a fresh snapshot to the shared DB cache with an explicit TTL. */
+async function writeForexCache(payload: CachedForexPayload): Promise<void> {
+  if (!db) return;
+  try {
+    await db.from("cached_market_prices").upsert({
+      cache_key: FOREX_CACHE_KEY,
+      payload,
+      expires_at: new Date(Date.now() + LIVE_TTL).toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  } catch {
+    /* cache write failures must never break the response */
+  }
+}
+
+/** Run async tasks with bounded concurrency to avoid Yahoo throttling 41 simultaneous hits. */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      results[index] = await fn(items[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
 
 // Spot Forex trades roughly Sunday 22:00 UTC → Friday 22:00 UTC.
 function isForexOpen(now = new Date()): boolean {
