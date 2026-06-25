@@ -258,9 +258,11 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           <button
             onClick={refresh}
             disabled={loading}
+            aria-label={bi('نوێکردنەوە', 'Refresh')}
             className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-[#1a1e2e] hover:bg-[#252a3a] text-xs font-bold text-[#f0b90b] disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {bi('نوێکردنەوە', 'Refresh')}
           </button>
         </div>
       </div>
