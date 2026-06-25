@@ -246,6 +246,55 @@ describe('computeResult — threshold behaviour end-to-end', () => {
   });
 });
 
+describe('computeResult — price trend overrides macro safe-haven theory', () => {
+  // The exact bug the user reported: bullish-for-gold macro (Fear/Greed 26,
+  // VIX ~18.6, S&P falling, DXY rising) while every timeframe is falling.
+  const bullishGoldMacro = { fgVal: 26, vixVal: 18.63, spxVal: -2.04, dxyVal: 0.63, u10yChg: -0.1 };
+  const neutralCall = { action: 'neutral' as const, confidence: 50 };
+  const fallingChart = { dir: 'down' as const, strength: 83 };
+
+  it('macro alone (no trend) would have said GOLD UP — regression baseline', () => {
+    // macroScore = +1.5; M30 → 1.5*0.4 = 0.6 > 0.3 → up (the old, wrong result)
+    const r = computeResult('M30', bullishGoldMacro, neutralCall);
+    expect(r.macroScore).toBeCloseTo(1.5);
+    expect(r.resultDir).toBe('up');
+  });
+
+  it('with a strongly falling chart the badge shows GOLD DOWN on every timeframe', () => {
+    const tfs: Timeframe[] = ['M5', 'M15', 'M30', 'H1', 'H4', 'D1'];
+    for (const tf of tfs) {
+      expect(computeResult(tf, bullishGoldMacro, neutralCall, fallingChart).resultDir).toBe('down');
+    }
+  });
+
+  it('a strongly rising chart shows GOLD UP even against bearish macro', () => {
+    const bearishMacro = { dxyVal: 1, u10yChg: 1 }; // macro = -2
+    const risingChart = { dir: 'up' as const, strength: 83 };
+    for (const tf of ['M5', 'H1', 'D1'] as Timeframe[]) {
+      expect(computeResult(tf, bearishMacro, { action: 'neutral' }, risingChart).resultDir).toBe('up');
+    }
+  });
+
+  it('a weak/mixed trend (< 70%) does NOT override — uses the weighted formula', () => {
+    // strength 60 < STRONG_TREND_OVERRIDE; tech = -0.6, macro 1.5
+    // M30: 1.5*0.4 + (-0.6)*0.6 = 0.6 - 0.36 = 0.24 → within band → neutral
+    const r = computeResult('M30', bullishGoldMacro, neutralCall, { dir: 'down', strength: 60 });
+    expect(r.resultDir).toBe('neutral');
+  });
+
+  it('an explicit high-confidence BUY still wins over a strong bearish trend', () => {
+    const buy85 = { action: 'buy' as const, confidence: 85 };
+    expect(computeResult('M30', bullishGoldMacro, buy85, fallingChart).resultDir).toBe('up');
+  });
+
+  it('trend has no effect when omitted (backward compatible)', () => {
+    const r = computeResult('D1', { fgVal: 20, vixVal: 30, spxVal: -1 }, { action: 'neutral', confidence: 0 });
+    expect(r.resultDir).toBe('up');
+  });
+});
+
+
+
 describe('isHighImpactUsdEventSoon — ⚠️ caution flag', () => {
   const highUsd = { country: 'USD', impact: 'High' };
 
