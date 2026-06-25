@@ -760,13 +760,19 @@ export default function Movies() {
 
   const searching = searchResults !== null;
   const baseList = searching ? searchResults! : movies;
-  // Catalog is already genre-filtered server-side via TMDB discover; only
-  // apply client-side genre filtering to free-text search results.
+  // The catalog is already filtered + sorted server-side via TMDB discover.
+  // Free-text search results are filtered & sorted client-side here.
   const filtered = searching
-    ? baseList.filter(
-        (m) =>
-          genre === "all" ||
-          (m.genre || "").toLowerCase().includes(genre.toLowerCase()),
+    ? sortMovies(
+        baseList.filter(
+          (m) =>
+            (genre === "all" ||
+              (m.genre || "").toLowerCase().includes(genre.toLowerCase())) &&
+            (year === "all" || m.year === year) &&
+            (minRating === "all" ||
+              (parseFloat(m.rating) || 0) >= parseFloat(minRating)),
+        ),
+        sortKey,
       )
     : baseList;
 
