@@ -131,5 +131,13 @@ export function useSignalEngine(assetKey: AssetKey, tf: SignalTF, opts?: { enabl
     prevActionRef.current[key] = signal.action;
   }, [signal, meta]);
 
-  return { meta, signal, macro, events, loading, refreshedAt, refresh: loadAll };
+  // Tick every 15s so `stale` recomputes even without a re-render from data.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => forceTick((n) => n + 1), 15 * 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const stale = refreshedAt != null && Date.now() - refreshedAt > STALE_MS;
+
+  return { meta, signal, macro, events, loading, refreshedAt, stale, refresh: loadAll };
 }
