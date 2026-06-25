@@ -287,8 +287,54 @@ const TV_GENRE_IDS: Record<string, number> = {
   Animation: 16, Adventure: 10759, Crime: 80, Fantasy: 10765,
 };
 
+// ====== Discovery filters: sort options, years & ratings ======
+type SortKey = "popular" | "top" | "new" | "old";
 
+const SORT_OPTIONS: { key: SortKey; ku: string; en: string }[] = [
+  { key: "popular", ku: "بەناوبانگترین", en: "Most Popular" },
+  { key: "top", ku: "باشترین هەڵسەنگاندن", en: "Top Rated" },
+  { key: "new", ku: "نوێترین", en: "Newest" },
+  { key: "old", ku: "کۆنترین", en: "Oldest" },
+];
 
+const CURRENT_YEAR = new Date().getFullYear();
+// Years from the current year down to 1970.
+const YEARS: string[] = Array.from(
+  { length: CURRENT_YEAR - 1969 },
+  (_, i) => String(CURRENT_YEAR - i),
+);
+const RATING_OPTIONS = ["9", "8", "7", "6", "5"];
+
+// Map a generic sort key → the matching TMDB `sort_by` param for the media type.
+function sortByParam(key: SortKey, media: "movie" | "tv"): string {
+  switch (key) {
+    case "top":
+      return "vote_average.desc";
+    case "new":
+      return media === "tv" ? "first_air_date.desc" : "primary_release_date.desc";
+    case "old":
+      return media === "tv" ? "first_air_date.asc" : "primary_release_date.asc";
+    default:
+      return "popularity.desc";
+  }
+}
+
+// Client-side sort (used on free-text search results).
+function sortMovies(arr: Movie[], key: SortKey): Movie[] {
+  const a = [...arr];
+  if (key === "top") {
+    a.sort((x, y) => (parseFloat(y.rating) || 0) - (parseFloat(x.rating) || 0));
+  } else if (key === "new") {
+    a.sort((x, y) => (parseInt(y.year) || 0) - (parseInt(x.year) || 0));
+  } else if (key === "old") {
+    a.sort((x, y) => (parseInt(x.year) || 9999) - (parseInt(y.year) || 9999));
+  } else {
+    a.sort(
+      (x, y) => (parseFloat(y.popularity) || 0) - (parseFloat(x.popularity) || 0),
+    );
+  }
+  return a;
+}
 
 
 
