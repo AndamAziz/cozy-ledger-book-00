@@ -199,6 +199,8 @@ const T = {
     allLangs: "All languages",
     openPlayIMDb: "🌐 Open on PlayIMDb",
     copyPlayIMDb: "📋 Copy PlayIMDb Link",
+    openOn: "Open on",
+    copy: "Copy",
     linkCopied: "Link copied ✓",
     searchResultsFor: "Search results for",
     clearSearch: "✕ Clear search",
