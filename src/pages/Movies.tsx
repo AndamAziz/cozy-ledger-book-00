@@ -964,55 +964,54 @@ export default function Movies() {
             )}
 
             {searching ? (
-              <div
-                className="mv-fade"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  marginBottom: 16,
-                }}
-              >
-                <div style={{ fontSize: 15, color: C.text }}>
-                  <span style={{ color: C.muted }}>{t.searchResultsFor} </span>
-                  <b style={{ color: C.gold }}>“{search.trim()}”</b>
-                  {!aiSearching && (
-                    <span style={{ color: C.muted }}>
-                      {" "}— {filtered.length} {t.resultsCount}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={clearSearch}
+              <>
+                <div
+                  className="mv-fade"
                   style={{
-                    background: C.panel2,
-                    color: C.text,
-                    border: `1px solid ${C.border}`,
-                    borderRadius: 999,
-                    padding: "6px 14px",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    marginBottom: 16,
                   }}
                 >
-                  {t.clearSearch}
-                </button>
-              </div>
-            )}
-            {searching && (
-              <FilterControls
-                lang={lang}
-                t={t}
-                year={year}
-                setYear={setYear}
-                minRating={minRating}
-                setMinRating={setMinRating}
-                sortKey={sortKey}
-                setSortKey={setSortKey}
-              />
-            )}
+                  <div style={{ fontSize: 15, color: C.text }}>
+                    <span style={{ color: C.muted }}>{t.searchResultsFor} </span>
+                    <b style={{ color: C.gold }}>“{search.trim()}”</b>
+                    {!aiSearching && (
+                      <span style={{ color: C.muted }}>
+                        {" "}— {filtered.length} {t.resultsCount}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={clearSearch}
+                    style={{
+                      background: C.panel2,
+                      color: C.text,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 999,
+                      padding: "6px 14px",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {t.clearSearch}
+                  </button>
+                </div>
+                <FilterControls
+                  lang={lang}
+                  t={t}
+                  year={year}
+                  setYear={setYear}
+                  minRating={minRating}
+                  setMinRating={setMinRating}
+                  sortKey={sortKey}
+                  setSortKey={setSortKey}
+                />
+              </>
             ) : (
               !aiSearching && (
                 <div style={{ textAlign: "center", padding: "70px 0", color: C.muted }}>
