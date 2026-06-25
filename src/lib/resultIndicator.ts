@@ -58,12 +58,25 @@ export function computeMacroScore(m: MacroInputs): number {
 
 /**
  * Technical score from the current signal: directional confidence (-1..1).
- *   SELL → negative, BUY → positive, NEUTRAL/WAIT/missing → 0.
+ *
+ *   1. An explicit BUY/SELL call dominates: SELL → negative, BUY → positive,
+ *      scaled by confidence.
+ *   2. When the call is NEUTRAL/WAIT/missing we DON'T return 0 blindly — that
+ *      would let macro theory drive the badge against the real chart. Instead we
+ *      fall back to the observed multi-timeframe price trend so a falling market
+ *      still produces a negative technical score.
  */
-export function computeTechScore(signal?: SignalInputs | null): number {
-  if (!signal) return 0;
-  const sign = signal.action === 'sell' ? -1 : signal.action === 'buy' ? 1 : 0;
-  return sign * ((signal.confidence ?? 0) / 100);
+export function computeTechScore(signal?: SignalInputs | null, trend?: TrendInputs | null): number {
+  if (signal && (signal.action === 'sell' || signal.action === 'buy')) {
+    const sign = signal.action === 'sell' ? -1 : 1;
+    return sign * ((signal.confidence ?? 0) / 100);
+  }
+  // No directional discrete signal → defer to the actual price trend.
+  if (trend && (trend.dir === 'up' || trend.dir === 'down')) {
+    const sign = trend.dir === 'down' ? -1 : 1;
+    return sign * ((trend.strength ?? 0) / 100);
+  }
+  return 0;
 }
 
 /**
