@@ -1000,6 +1000,19 @@ export default function Movies() {
                   {t.clearSearch}
                 </button>
               </div>
+            )}
+            {searching && (
+              <FilterControls
+                lang={lang}
+                t={t}
+                year={year}
+                setYear={setYear}
+                minRating={minRating}
+                setMinRating={setMinRating}
+                sortKey={sortKey}
+                setSortKey={setSortKey}
+              />
+            )}
             ) : (
               !aiSearching && (
                 <div style={{ textAlign: "center", padding: "70px 0", color: C.muted }}>
