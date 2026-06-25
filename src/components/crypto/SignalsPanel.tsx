@@ -81,7 +81,7 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const engineAsset = supported ? asset : 'gold';
   const dropdownMeta = DROPDOWN_ASSETS.find((a) => a.key === asset);
 
-  const { meta, signal, macro, loading, refreshedAt, refresh } = useSignalEngine(engineAsset, tf);
+  const { meta, signal, macro, loading, refreshedAt, stale, refresh } = useSignalEngine(engineAsset, tf);
 
   // Remember the last successfully fetched macro values so a failed refresh can
   // keep showing a meaningful number (with a ⚠️ stale badge) instead of "—".
@@ -244,7 +244,7 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           </h1>
           <p className="text-[11px] text-[#848e9c]">
             {bi('تەکنیکی + هەواڵ + دانیشتنی بازاڕ', 'Technical + News + Market session')}
-            {refreshedAt && ` · ${bi('نوێدەبێتەوە هەر ٥ خولەک', 'auto · 5 min')}`}
+            {refreshedAt && ` · ${bi('نوێدەبێتەوە هەر ١ خولەک', 'auto · 1 min')}`}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -297,6 +297,25 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           )}
         </div>
       </div>
+
+      {/* Stale-data warning: shown when the last refresh is overdue (e.g. the
+          tab was backgrounded). The signal may not reflect the live market. */}
+      {stale && !loading && (
+        <button
+          onClick={refresh}
+          className="flex w-full items-center gap-2 rounded-lg border border-[#f0b90b55] bg-[#f0b90b14] px-3 py-2 text-left"
+        >
+          <span className="text-sm leading-none">⚠️</span>
+          <span className="text-[11px] leading-snug text-[#f0b90b]">
+            {bi(
+              'دراوەکان دەکرێ کۆن بن — دەستبکە بۆ نوێکردنەوە لەگەڵ بازاڕی زیندوو',
+              'Data may be stale — tap to refresh with the live market',
+            )}
+          </span>
+        </button>
+      )}
+
+
 
 
 
