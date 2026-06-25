@@ -1253,7 +1253,104 @@ function Grid({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ====== Trending Today (TOP 10) horizontal rail ======
+// ====== Discovery filter bar (year / rating / sort) ======
+function FilterControls({
+  lang,
+  t,
+  year,
+  setYear,
+  minRating,
+  setMinRating,
+  sortKey,
+  setSortKey,
+}: {
+  lang: Lang;
+  t: (typeof T)["ku"];
+  year: string;
+  setYear: (v: string) => void;
+  minRating: string;
+  setMinRating: (v: string) => void;
+  sortKey: SortKey;
+  setSortKey: (v: SortKey) => void;
+}) {
+  const active = year !== "all" || minRating !== "all" || sortKey !== "popular";
+  return (
+    <div
+      className="mv-genre mv-scroll"
+      style={{
+        display: "flex",
+        gap: 8,
+        overflowX: "auto",
+        marginBottom: 18,
+        paddingBottom: 2,
+        alignItems: "center",
+      }}
+    >
+      <select
+        value={sortKey}
+        onChange={(e) => setSortKey(e.target.value as SortKey)}
+        style={{ ...selectStyle, flexShrink: 0 }}
+        aria-label={t.sortLabel}
+      >
+        {SORT_OPTIONS.map((o) => (
+          <option key={o.key} value={o.key}>
+            ⇅ {lang === "ku" ? o.ku : o.en}
+          </option>
+        ))}
+      </select>
+      <select
+        value={year}
+        onChange={(e) => setYear(e.target.value)}
+        style={{ ...selectStyle, flexShrink: 0 }}
+        aria-label={t.yearLabel}
+      >
+        <option value="all">📅 {t.anyYear}</option>
+        {YEARS.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+      <select
+        value={minRating}
+        onChange={(e) => setMinRating(e.target.value)}
+        style={{ ...selectStyle, flexShrink: 0 }}
+        aria-label={t.ratingLabel}
+      >
+        <option value="all">★ {t.anyRating}</option>
+        {RATING_OPTIONS.map((r) => (
+          <option key={r} value={r}>
+            ★ {r}+
+          </option>
+        ))}
+      </select>
+      {active && (
+        <button
+          onClick={() => {
+            setYear("all");
+            setMinRating("all");
+            setSortKey("popular");
+          }}
+          style={{
+            flexShrink: 0,
+            background: C.panel2,
+            color: C.muted,
+            border: `1px solid ${C.border}`,
+            borderRadius: 10,
+            padding: "8px 14px",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          ✕ {t.resetFilters}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function TrendingRow({
   lang,
   t,
