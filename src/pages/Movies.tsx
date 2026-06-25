@@ -2369,26 +2369,84 @@ function MovieModal({
           </div>
         )}
 
-        {/* PlayIMDb buttons */}
+        {/* IMDb mirror buttons — one Open + one Copy per server */}
         {imdbId && (
-          <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
-            <ActionBtn
-              cyan
-              label={t.openPlayIMDb}
-              onClick={() => window.open(`https://www.playimdb.com/title/${imdbId}/`, "_blank")}
-            />
-            <ActionBtn
-              label={t.copyPlayIMDb}
-              onClick={async () => {
-                const url = `https://www.playimdb.com/title/${imdbId}/`;
-                try {
-                  await navigator.clipboard.writeText(url);
-                  toast.success(t.linkCopied);
-                } catch {
-                  toast.error(lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed");
-                }
-              }}
-            />
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              padding: "10px 16px 0",
+            }}
+          >
+            {IMDB_DOMAINS.map((d) => {
+              const url = `https://www.${d.host}/title/${imdbId}/`;
+              return (
+                <div key={d.host} style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => window.open(url, "_blank")}
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      background: d.accent,
+                      color: "#0A0A0F",
+                      border: `1px solid ${d.accent}`,
+                      borderRadius: 12,
+                      padding: "12px 10px",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      fontSize: 14,
+                      boxShadow: `0 4px 14px ${d.accent}33`,
+                      transition: "transform .15s",
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                  >
+                    <span>🌐</span>
+                    <span>
+                      {t.openOn} {d.name}
+                    </span>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast.success(t.linkCopied);
+                      } catch {
+                        toast.error(
+                          lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed",
+                        );
+                      }
+                    }}
+                    title={`${t.copy} ${d.name}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      minWidth: 96,
+                      background: C.panel2,
+                      color: d.accent,
+                      border: `1px solid ${d.accent}55`,
+                      borderRadius: 12,
+                      padding: "12px 10px",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      fontSize: 13,
+                      transition: "transform .15s",
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                  >
+                    <span>📋</span>
+                    <span>{t.copy}</span>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
         {trailer === "none" && (
