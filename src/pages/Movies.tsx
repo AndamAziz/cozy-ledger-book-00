@@ -467,20 +467,36 @@ export default function Movies() {
   };
 
   const fetchMovies = useCallback(
-    async (p: number, media: "movie" | "tv", g: string) => {
+    async (
+      p: number,
+      media: "movie" | "tv",
+      g: string,
+      yr: string,
+      rating: string,
+      sort: SortKey,
+    ) => {
       if (p === 1) setLoading(true);
       else setLoadingMore(true);
       try {
         let r: Response;
-        if (g && g !== "all") {
+        const useDiscover =
+          (g && g !== "all") ||
+          yr !== "all" ||
+          rating !== "all" ||
+          sort !== "popular";
+        if (useDiscover) {
           const gid =
             media === "tv" ? TV_GENRE_IDS[g] : MOVIE_GENRE_IDS[g];
           r = await tmdbFetch(`discover/${media}`, {
             language: "en-US",
-            sort_by: "popularity.desc",
+            sort_by: sortByParam(sort, media),
             include_adult: false,
-            "vote_count.gte": 40,
-            with_genres: gid ? gid : undefined,
+            // Top-rated needs a higher vote threshold to be meaningful.
+            "vote_count.gte": sort === "top" ? 300 : 40,
+            with_genres: g && g !== "all" && gid ? gid : undefined,
+            [media === "tv" ? "first_air_date_year" : "primary_release_year"]:
+              yr !== "all" ? yr : undefined,
+            "vote_average.gte": rating !== "all" ? rating : undefined,
             page: p,
           });
         } else {
@@ -512,13 +528,13 @@ export default function Movies() {
   );
 
   useEffect(() => {
-    fetchMovies(page, mediaTab, genre);
-  }, [page, mediaTab, genre, fetchMovies]);
+    fetchMovies(page, mediaTab, genre, year, minRating, sortKey);
+  }, [page, mediaTab, genre, year, minRating, sortKey, fetchMovies]);
 
-  /* reset to first page when switching media tab or genre */
+  /* reset to first page when switching media tab or any filter */
   useEffect(() => {
     setPage(1);
-  }, [mediaTab, genre]);
+  }, [mediaTab, genre, year, minRating, sortKey]);
 
   /* infinite scroll — load next page when sentinel scrolls into view */
   useEffect(() => {
