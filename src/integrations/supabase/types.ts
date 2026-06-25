@@ -342,6 +342,27 @@ export type Database = {
         }
         Relationships: []
       }
+      cached_market_prices: {
+        Row: {
+          cache_key: string
+          expires_at: string
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          cache_key: string
+          expires_at: string
+          payload: Json
+          updated_at?: string
+        }
+        Update: {
+          cache_key?: string
+          expires_at?: string
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cigarettes: {
         Row: {
           alert_level: number

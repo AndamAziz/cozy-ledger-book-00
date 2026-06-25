@@ -1,9 +1,63 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+// ─── Shared DB cache (cached_market_prices) so every isolate serves the same
+// recent metals snapshot instead of each cold isolate re-hitting the upstreams. ───
+const METALS_CACHE_KEY = "metals-live";
+const METALS_DB_TTL = 10_000; // 10s shared TTL for metals (per requirements)
+
+const _supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+const _serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const db = _supabaseUrl && _serviceKey
+  ? createClient(_supabaseUrl, _serviceKey, { auth: { persistSession: false } })
+  : null;
+
+interface CachedMetalsPayload {
+  prices: Record<string, number>;
+  sources: string[];
+  unavailable: string[];
+  spotStale: boolean;
+  timestamp: number;
+}
+
+/** Read a still-valid metals snapshot from the shared DB cache, or null if missing/expired. */
+async function readMetalsCache(): Promise<CachedMetalsPayload | null> {
+  if (!db) return null;
+  try {
+    const { data, error } = await db
+      .from("cached_market_prices")
+      .select("payload, expires_at")
+      .eq("cache_key", METALS_CACHE_KEY)
+      .maybeSingle();
+    if (error || !data) return null;
+    if (new Date(data.expires_at as string).getTime() <= Date.now()) return null;
+    const payload = data.payload as CachedMetalsPayload;
+    if (!payload?.prices || Object.keys(payload.prices).length === 0) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+/** Persist a fresh metals snapshot to the shared DB cache with an explicit TTL. */
+async function writeMetalsCache(payload: CachedMetalsPayload): Promise<void> {
+  if (!db) return;
+  try {
+    await db.from("cached_market_prices").upsert({
+      cache_key: METALS_CACHE_KEY,
+      payload,
+      expires_at: new Date(Date.now() + METALS_DB_TTL).toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  } catch {
+    /* cache write failures must never break the response */
+  }
+}
 
 const YAHOO_SYMBOLS: Record<string, string> = {
   XAU: "GC=F",
@@ -406,9 +460,29 @@ async function fetchOilPriceApi(): Promise<Record<string, number>> {
 }
 
 async function handleLivePrices(): Promise<Response> {
+  // L1: per-isolate memory cache (fastest path on a warm isolate).
   if (cachedPrices && Date.now() - cacheTimestamp < CACHE_TTL) {
     return new Response(
-      JSON.stringify({ prices: cachedPrices, sources: ["multi-source"], cached: true, timestamp: cacheTimestamp }),
+      JSON.stringify({ prices: cachedPrices, sources: ["multi-source"], cached: true, cacheSource: "memory", timestamp: cacheTimestamp }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  // L2: shared DB cache — valid snapshots are returned immediately, with NO upstream calls.
+  const dbCached = await readMetalsCache();
+  if (dbCached) {
+    cachedPrices = dbCached.prices;
+    cacheTimestamp = dbCached.timestamp || Date.now();
+    return new Response(
+      JSON.stringify({
+        prices: dbCached.prices,
+        sources: dbCached.sources,
+        unavailable: dbCached.unavailable,
+        spotStale: dbCached.spotStale,
+        cached: true,
+        cacheSource: "db",
+        timestamp: cacheTimestamp,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
@@ -467,6 +541,8 @@ async function handleLivePrices(): Promise<Response> {
 
   cachedPrices = prices;
   cacheTimestamp = Date.now();
+  // Populate the shared DB cache so other isolates skip the upstream fetch for 10s.
+  await writeMetalsCache({ prices, sources, unavailable, spotStale, timestamp: cacheTimestamp });
   return new Response(
     JSON.stringify({
       prices,
@@ -474,6 +550,7 @@ async function handleLivePrices(): Promise<Response> {
       unavailable,
       spotStale,
       cached: false,
+      cacheSource: "upstream",
       timestamp: cacheTimestamp,
     }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
