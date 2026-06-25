@@ -63,7 +63,12 @@ export function useSignalEngine(assetKey: AssetKey, tf: SignalTF, opts?: { enabl
     setLoading(false);
   }, [meta]);
 
-  // Refetch when the asset changes + every 5 minutes (only while enabled).
+  // Keep a ref to the latest refresh time so the visibility handler can decide
+  // whether the data went stale while the tab was backgrounded.
+  const refreshedAtRef = useRef<number | null>(null);
+  useEffect(() => { refreshedAtRef.current = refreshedAt; }, [refreshedAt]);
+
+  // Refetch when the asset changes + every 60s (only while enabled).
   useEffect(() => {
     if (!enabled) {
       setLoading(false);
@@ -72,6 +77,25 @@ export function useSignalEngine(assetKey: AssetKey, tf: SignalTF, opts?: { enabl
     loadAll();
     const id = window.setInterval(loadAll, REFRESH_MS);
     return () => window.clearInterval(id);
+  }, [loadAll, enabled]);
+
+  // When the tab/app returns to the foreground (browsers throttle or pause
+  // timers in background tabs, so the signal can be minutes stale), re-analyze
+  // immediately so the direction reflects the *current* market instead of the
+  // snapshot from when the tab went to sleep.
+  useEffect(() => {
+    if (!enabled) return;
+    const maybeRefresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      const last = refreshedAtRef.current;
+      if (last == null || Date.now() - last > STALE_MS) loadAll();
+    };
+    document.addEventListener('visibilitychange', maybeRefresh);
+    window.addEventListener('focus', maybeRefresh);
+    return () => {
+      document.removeEventListener('visibilitychange', maybeRefresh);
+      window.removeEventListener('focus', maybeRefresh);
+    };
   }, [loadAll, enabled]);
 
   // Ask for notification permission once.
