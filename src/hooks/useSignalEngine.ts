@@ -17,7 +17,9 @@ import {
   fetchEvents,
 } from '@/lib/signalData';
 
-const REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+const REFRESH_MS = 60 * 1000; // 60s — keep the signal aligned with the live market
+/** If the last successful refresh is older than this, the data is considered stale. */
+const STALE_MS = 90 * 1000;
 
 function lastClose(candles: OHLCCandle[] | undefined): number {
   if (!candles || !candles.length) return 0;
