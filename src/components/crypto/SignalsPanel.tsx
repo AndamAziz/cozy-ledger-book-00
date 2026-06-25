@@ -184,8 +184,13 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
 
   // ---- Result indicator -------------------------------------------------
   // Pure logic lives in src/lib/resultIndicator.ts (unit-tested).
+  // Feed the observed multi-timeframe price trend (confluence) so a clearly
+  // falling/rising chart can't be overridden by macro safe-haven theory.
+  const trend = signal
+    ? { dir: signal.confluenceDebug.confDir, strength: signal.confluenceDebug.confScore }
+    : undefined;
   const { macroScore, techScore, macroWeight, techWeight, resultScore, resultDir } =
-    computeResult(tf as Timeframe, { fgVal, vixVal, spxVal, dxyVal, u10yChg }, signal);
+    computeResult(tf as Timeframe, { fgVal, vixVal, spxVal, dxyVal, u10yChg }, signal, trend);
 
   // High-impact USD event within 15 minutes → caution flag on the badge.
   const newsSoon = isHighImpactUsdEventSoon(signal?.newsRisk);
