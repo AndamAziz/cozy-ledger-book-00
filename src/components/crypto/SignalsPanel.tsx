@@ -244,7 +244,7 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           </h1>
           <p className="text-[11px] text-[#848e9c]">
             {bi('تەکنیکی + هەواڵ + دانیشتنی بازاڕ', 'Technical + News + Market session')}
-            {refreshedAt && ` · ${bi('نوێدەبێتەوە هەر ٥ خولەک', 'auto · 5 min')}`}
+            {refreshedAt && ` · ${bi('نوێدەبێتەوە هەر ١ خولەک', 'auto · 1 min')}`}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
