@@ -298,6 +298,25 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
         </div>
       </div>
 
+      {/* Stale-data warning: shown when the last refresh is overdue (e.g. the
+          tab was backgrounded). The signal may not reflect the live market. */}
+      {stale && !loading && (
+        <button
+          onClick={refresh}
+          className="flex w-full items-center gap-2 rounded-lg border border-[#f0b90b55] bg-[#f0b90b14] px-3 py-2 text-left"
+        >
+          <span className="text-sm leading-none">⚠️</span>
+          <span className="text-[11px] leading-snug text-[#f0b90b]">
+            {bi(
+              'دراوەکان دەکرێ کۆن بن — دەستبکە بۆ نوێکردنەوە لەگەڵ بازاڕی زیندوو',
+              'Data may be stale — tap to refresh with the live market',
+            )}
+          </span>
+        </button>
+      )}
+
+
+
 
 
 
