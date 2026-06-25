@@ -149,15 +149,30 @@ async function fetchErApi(): Promise<Record<string, number>> {
 }
 
 async function handleLive(): Promise<Response> {
+  // L1: per-isolate memory cache (fastest path on a warm isolate).
   if (liveCache && Date.now() - liveCacheTs < LIVE_TTL) {
     return new Response(
-      JSON.stringify({ rates: liveCache, marketOpen: isForexOpen(), cached: true, timestamp: liveCacheTs }),
+      JSON.stringify({ rates: liveCache, marketOpen: isForexOpen(), cached: true, cacheSource: "memory", timestamp: liveCacheTs }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 
+  // L2: shared DB cache — valid snapshots are returned immediately, with NO upstream calls.
+  const dbCached = await readForexCache();
+  if (dbCached) {
+    liveCache = dbCached.rates;
+    liveCacheTs = dbCached.timestamp || Date.now();
+    return new Response(
+      JSON.stringify({ rates: dbCached.rates, marketOpen: isForexOpen(), cached: true, cacheSource: "db", timestamp: liveCacheTs }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  // Cache miss: fetch upstream. Yahoo pairs are fetched with bounded concurrency
+  // (10 at a time) so a cold isolate never opens 41 simultaneous connections,
+  // which is what produced the multi-second cold-start spikes.
   const [yahooResults, erRates] = await Promise.all([
-    Promise.all(CODES.map(async (code) => [code, await fetchYahooMeta(`USD${code}=X`)] as const)),
+    mapWithConcurrency(CODES, 10, async (code) => [code, await fetchYahooMeta(`USD${code}=X`)] as const),
     fetchErApi(),
   ]);
 
@@ -197,8 +212,10 @@ async function handleLive(): Promise<Response> {
 
   liveCache = rates;
   liveCacheTs = Date.now();
+  // Populate the shared DB cache so other isolates skip the upstream fetch for 5s.
+  await writeForexCache({ rates, timestamp: liveCacheTs });
   return new Response(
-    JSON.stringify({ rates, marketOpen: isForexOpen(), cached: false, timestamp: liveCacheTs }),
+    JSON.stringify({ rates, marketOpen: isForexOpen(), cached: false, cacheSource: "upstream", timestamp: liveCacheTs }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 }
