@@ -111,7 +111,6 @@ const T = {
     copyPlayIMDb: "📋 کۆپی کردنی لینک",
     openOn: "کردنەوە لە",
     copy: "کۆپی",
-    serversTitle: "سێرڤەرەکانی بینین",
     linkCopied: "لینکەکە کۆپی کرا ✓",
     searchResultsFor: "ئەنجامەکانی گەڕان بۆ",
     clearSearch: "✕ پاککردنەوەی گەڕان",
