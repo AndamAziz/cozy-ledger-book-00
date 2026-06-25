@@ -83,6 +83,25 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
 
   const { meta, signal, macro, loading, refreshedAt, stale, refresh } = useSignalEngine(engineAsset, tf);
 
+  // Guard against duplicate refreshes: ignore taps while one is in flight and
+  // enforce a short cooldown (debounce) between manual refreshes.
+  const REFRESH_COOLDOWN_MS = 3000;
+  const refreshingRef = useRef(false);
+  const lastRefreshRef = useRef(0);
+  const [cooling, setCooling] = useState(false);
+  const handleRefresh = useCallback(() => {
+    if (refreshingRef.current || loading) return;
+    if (Date.now() - lastRefreshRef.current < REFRESH_COOLDOWN_MS) return;
+    refreshingRef.current = true;
+    lastRefreshRef.current = Date.now();
+    setCooling(true);
+    Promise.resolve(refresh()).finally(() => {
+      refreshingRef.current = false;
+      window.setTimeout(() => setCooling(false), REFRESH_COOLDOWN_MS);
+    });
+  }, [refresh, loading]);
+  const refreshDisabled = loading || cooling;
+
   // Remember the last successfully fetched macro values so a failed refresh can
   // keep showing a meaningful number (with a ⚠️ stale badge) instead of "—".
   const lastDxyRef = useRef<number | null>(null);
