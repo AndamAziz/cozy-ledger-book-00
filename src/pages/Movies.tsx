@@ -1097,6 +1097,17 @@ export default function Movies() {
                 );
               })}
             </div>
+            {/* Year / rating / sort filters */}
+            <FilterControls
+              lang={lang}
+              t={t}
+              year={year}
+              setYear={setYear}
+              minRating={minRating}
+              setMinRating={setMinRating}
+              sortKey={sortKey}
+              setSortKey={setSortKey}
+            />
           </>
         )}
 
