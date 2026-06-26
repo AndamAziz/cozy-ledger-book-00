@@ -6,6 +6,19 @@ import { toast } from '@/hooks/use-toast';
 export const DEMO_STARTING_BALANCE = 5000;
 /** Demo trading leverage (e.g. 100x). Used for margin + max-size guards. */
 export const DEMO_LEVERAGE = 100;
+/**
+ * Hard sanity ceiling on the demo balance ($1B). The 100x leverage loop can
+ * compound profits exponentially; without an upper bound a runaway sequence of
+ * max-size trades inflated one account to ~1e40. Any value above this ceiling
+ * (or non-finite / negative) is treated as corruption and clamped/reset.
+ */
+export const DEMO_MAX_BALANCE = 1_000_000_000;
+
+/** Coerce any balance into a safe, finite, bounded value. */
+const sanitizeBalance = (n: number): number => {
+  if (!Number.isFinite(n) || n < 0) return DEMO_STARTING_BALANCE;
+  return Math.min(n, DEMO_MAX_BALANCE);
+};
 
 export type PositionSide = 'buy' | 'sell';
 
