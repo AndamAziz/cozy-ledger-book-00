@@ -3,8 +3,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { fetchForexCandles, ForexCandle } from '@/lib/forexApi';
 import { computeIndicators, summarizeSignals } from '@/lib/indicators';
 import { computeSR } from '@/lib/supportResistance';
-import { DxyWidget, DxyData } from '@/components/crypto/DxyWidget';
-import { SentimentGauge, SentimentData } from '@/components/crypto/SentimentGauge';
+import { DxyWidget } from '@/components/crypto/DxyWidget';
+import { SentimentGauge } from '@/components/crypto/SentimentGauge';
+import { useMacro } from '@/hooks/useMacro';
 import { TechnicalSignals } from '@/components/crypto/TechnicalSignals';
 import { RiskCalculator } from '@/components/crypto/RiskCalculator';
 import { EventAlertBanner, CalendarEvent } from '@/components/crypto/EventAlertBanner';
@@ -43,11 +44,12 @@ export function ForexProPanel({ code, name, flag, rate }: Props) {
 
   const [candles, setCandles] = useState<ForexCandle[]>([]);
   const [loadingCandles, setLoadingCandles] = useState(true);
-  const [dxy, setDxy] = useState<DxyData>({ price: null, changePct: null, available: false });
-  const [sentiment, setSentiment] = useState<SentimentData>({ value: null, classification: '', available: false });
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loadingMacro, setLoadingMacro] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(true);
+
+  // SINGLE SOURCE OF TRUTH for macro indicators. Forex uses the CNN (US
+  // stock-market) Fear & Greed index — never the crypto one. Shared 60s hook.
+  const { dxy, sentiment, loading: loadingMacro, refresh: refreshMacro } = useMacro('cnn');
 
   const headers = {
     apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -66,21 +68,6 @@ export function ForexProPanel({ code, name, flag, rate }: Props) {
     }
   }, [code]);
 
-  const loadMacro = useCallback(async () => {
-    setLoadingMacro(true);
-    try {
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-sentiment`, { headers });
-      const data = await res.json();
-      if (data?.dxy) setDxy(data.dxy);
-      if (data?.sentiment) setSentiment(data.sentiment);
-    } catch {
-      /* ignore */
-    } finally {
-      setLoadingMacro(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const loadEvents = useCallback(async () => {
     setLoadingEvents(true);
     try {
@@ -97,9 +84,8 @@ export function ForexProPanel({ code, name, flag, rate }: Props) {
 
   useEffect(() => {
     loadCandles();
-    loadMacro();
     loadEvents();
-  }, [loadCandles, loadMacro, loadEvents]);
+  }, [loadCandles, loadEvents]);
 
   // Pair = USD/CODE → a stronger dollar pushes the pair UP.
   const fxBias: Bias = useMemo(() => {
