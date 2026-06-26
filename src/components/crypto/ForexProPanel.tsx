@@ -142,7 +142,7 @@ export function ForexProPanel({ code, name, flag, rate }: Props) {
     bi('چاوەڕوانبە', 'WAIT');
   const ActIcon = signal.action === 'buy' ? TrendingUp : signal.action === 'sell' ? TrendingDown : Minus;
 
-  const refreshAll = () => { loadCandles(); loadMacro(); loadEvents(); };
+  const refreshAll = () => { loadCandles(); refreshMacro(); loadEvents(); };
   const loadingAny = loadingMacro || loadingEvents || loadingCandles;
 
   return (
@@ -216,7 +216,7 @@ export function ForexProPanel({ code, name, flag, rate }: Props) {
       <SignalHistory storeKey={`USD${code}`} action={signal.action} confidence={signal.confidence} price={rate} decimals={dec} />
 
       <DxyWidget dxy={dxy} goldBias={fxBias} loading={loadingMacro} asset="forex" />
-      <SentimentGauge sentiment={sentiment} loading={loadingMacro} asset="crypto" />
+      <SentimentGauge sentiment={sentiment} loading={loadingMacro} asset="gold" />
       <TechnicalSignals candles={candlesForInd} price={rate} />
       <EventAlertBanner events={events} loading={loadingEvents} />
       <RiskCalculator
