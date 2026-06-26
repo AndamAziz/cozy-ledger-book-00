@@ -7,7 +7,7 @@
 //             an app asset, so it uses the same single-series decision core)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { OHLCCandle, SignalTF, SIGNAL_TIMEFRAMES, aggregateCandles } from "./signal-core.ts";
+import { OHLCCandle, SignalTF, SIGNAL_TIMEFRAMES, aggregateCandles, MacroContext } from "./signal-core.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
