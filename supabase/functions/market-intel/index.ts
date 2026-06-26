@@ -364,7 +364,7 @@ const CRYPTO_ENGINE: Record<string, { key: "eth" | "sol" | "xrp" | "bnb"; binanc
 async function computeEngine(symbol: string, livePrice: number): Promise<EngineSignal | null> {
   try {
     if (symbol === "XAU/USD") {
-      const [byTF, macro, events] = await Promise.all([fetchGoldAllTF(), fetchEngineMacro(), fetchEngineEvents()]);
+      const [byTF, macro, events] = await Promise.all([fetchGoldAllTF(), fetchEngineMacro("cnn"), fetchEngineEvents()]);
       const base = byTF.M15 ?? [];
       const price = base.length ? base[base.length - 1].close : livePrice;
       if (!base.length) return null;
@@ -374,7 +374,7 @@ async function computeEngine(symbol: string, livePrice: number): Promise<EngineS
       });
     }
     if (symbol === "XAG/USD") {
-      const [byTF, macro, events] = await Promise.all([fetchSilverAllTF(), fetchEngineMacro(), fetchEngineEvents()]);
+      const [byTF, macro, events] = await Promise.all([fetchSilverAllTF(), fetchEngineMacro("cnn"), fetchEngineEvents()]);
       const base = byTF.M15 ?? [];
       const price = base.length ? base[base.length - 1].close : livePrice;
       if (!base.length) return null;
@@ -384,7 +384,7 @@ async function computeEngine(symbol: string, livePrice: number): Promise<EngineS
       });
     }
     if (symbol === "BTC/USD") {
-      const [byTF, macro, events] = await Promise.all([fetchBtcAllTF(), fetchEngineMacro(), fetchEngineEvents()]);
+      const [byTF, macro, events] = await Promise.all([fetchBtcAllTF(), fetchEngineMacro("crypto"), fetchEngineEvents()]);
       const base = byTF.M15 ?? [];
       const price = base.length ? base[base.length - 1].close : livePrice;
       if (!base.length) return null;
@@ -395,7 +395,7 @@ async function computeEngine(symbol: string, livePrice: number): Promise<EngineS
     }
     const fx = FOREX_ENGINE[symbol];
     if (fx) {
-      const [byTF, macro, events] = await Promise.all([fetchForexAllTF(fx.code, fx.invert), fetchEngineMacro(), fetchEngineEvents()]);
+      const [byTF, macro, events] = await Promise.all([fetchForexAllTF(fx.code, fx.invert), fetchEngineMacro("cnn"), fetchEngineEvents()]);
       const base = byTF.M15 ?? [];
       const price = base.length ? base[base.length - 1].close : livePrice;
       if (!base.length) return null;
@@ -406,7 +406,7 @@ async function computeEngine(symbol: string, livePrice: number): Promise<EngineS
     }
     const cr = CRYPTO_ENGINE[symbol];
     if (cr) {
-      const [byTF, macro, events] = await Promise.all([fetchCryptoAllTF(cr.binanceSym), fetchEngineMacro(), fetchEngineEvents()]);
+      const [byTF, macro, events] = await Promise.all([fetchCryptoAllTF(cr.binanceSym), fetchEngineMacro("crypto"), fetchEngineEvents()]);
       const base = byTF.M15 ?? [];
       const price = base.length ? base[base.length - 1].close : livePrice;
       if (!base.length) return null;

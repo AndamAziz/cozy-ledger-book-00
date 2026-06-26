@@ -43,6 +43,9 @@ export interface MacroContext {
   dxyChangePct: number | null;
   fearGreed: number | null;
   spxChangePct: number | null;
+  vix: number | null;
+  us10y: number | null;
+  us10yChangePct: number | null;
 }
 
 export interface NewsEvent {

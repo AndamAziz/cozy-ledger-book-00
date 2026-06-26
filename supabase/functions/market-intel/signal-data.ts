@@ -7,7 +7,7 @@
 //             an app asset, so it uses the same single-series decision core)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { OHLCCandle, SignalTF, SIGNAL_TIMEFRAMES, aggregateCandles } from "./signal-core.ts";
+import { OHLCCandle, SignalTF, SIGNAL_TIMEFRAMES, aggregateCandles, MacroContext } from "./signal-core.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
@@ -254,21 +254,31 @@ export async function fetchCryptoAllTF(binanceSym: string): Promise<Partial<Reco
 }
 
 
-// ── Macro snapshot (DXY, Fear & Greed, S&P) — identical source to app ──
-export async function fetchMacro(): Promise<{ dxyChangePct: number | null; fearGreed: number | null; spxChangePct: number | null }> {
+// ── Macro snapshot (DXY, Fear & Greed, VIX, US10Y, S&P) — identical source/logic
+// to the web Signals panel. Fear & Greed is asset-aware:
+//   fgSource 'cnn'    → CNN US-stock index   (gold / silver / forex)
+//   fgSource 'crypto' → alternative.me index (BTC / crypto)
+export async function fetchMacro(
+  fgSource: "cnn" | "crypto" = "cnn",
+): Promise<MacroContext> {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/market-sentiment`, {
       headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}`, apikey: SUPABASE_ANON_KEY },
       signal: AbortSignal.timeout(8000),
     });
     const data = await res.json().catch(() => null);
+    const cnnFg = data?.sentimentCnn?.value ?? null;
+    const cryptoFg = data?.sentimentCrypto?.value ?? data?.sentiment?.value ?? null;
     return {
       dxyChangePct: data?.dxy?.changePct ?? null,
-      fearGreed: data?.sentiment?.value ?? null,
+      fearGreed: fgSource === "crypto" ? cryptoFg : (cnnFg ?? cryptoFg),
       spxChangePct: data?.spx?.changePct ?? null,
+      vix: data?.vix?.price ?? null,
+      us10y: data?.us10y?.price ?? null,
+      us10yChangePct: data?.us10y?.changePct ?? null,
     };
   } catch {
-    return { dxyChangePct: null, fearGreed: null, spxChangePct: null };
+    return { dxyChangePct: null, fearGreed: null, spxChangePct: null, vix: null, us10y: null, us10yChangePct: null };
   }
 }
 
