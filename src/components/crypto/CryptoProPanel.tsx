@@ -126,7 +126,7 @@ export function CryptoProPanel({ candles, price, symbol }: Props) {
     bi('چاوەڕوانبە', 'WAIT');
   const ActIcon = signal.action === 'buy' ? TrendingUp : signal.action === 'sell' ? TrendingDown : Minus;
 
-  const refreshAll = () => { loadMacro(); loadEvents(); };
+  const refreshAll = () => { refreshMacro(); loadEvents(); };
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#0a0e17] p-4 space-y-4">
