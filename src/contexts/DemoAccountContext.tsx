@@ -276,8 +276,17 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
       if (!active) return;
 
       if (data) {
-        setBalance(Number(data.balance));
+        const raw = Number(data.balance);
+        const safe = sanitizeBalance(raw);
+        setBalance(safe);
         setRealizedPnl(Number(data.realized_pnl ?? 0));
+        // Self-heal a corrupted (overflowed) balance straight back to the DB.
+        if (safe !== raw) {
+          await supabase
+            .from('demo_accounts')
+            .update({ balance: safe, updated_at: new Date().toISOString() })
+            .eq('user_id', user.id);
+        }
       } else {
         await supabase.from('demo_accounts').insert({
           user_id: user.id,
