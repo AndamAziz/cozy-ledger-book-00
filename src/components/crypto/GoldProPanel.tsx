@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { OHLCCandle } from '@/lib/krakenApi';
-import { DxyWidget, DxyData } from '@/components/crypto/DxyWidget';
-import { SentimentGauge, SentimentData } from '@/components/crypto/SentimentGauge';
+import { DxyWidget } from '@/components/crypto/DxyWidget';
+import { SentimentGauge } from '@/components/crypto/SentimentGauge';
 import { TechnicalSignals } from '@/components/crypto/TechnicalSignals';
 import { RiskCalculator } from '@/components/crypto/RiskCalculator';
 import { EventAlertBanner, CalendarEvent } from '@/components/crypto/EventAlertBanner';
@@ -107,7 +107,7 @@ export function GoldProPanel({ candles, price }: Props) {
     bi('چاوەڕوانبە', 'WAIT');
   const ActIcon = signal.action === 'buy' ? TrendingUp : signal.action === 'sell' ? TrendingDown : Minus;
 
-  const refreshAll = () => { loadMacro(); loadEvents(); };
+  const refreshAll = () => { refreshMacro(); loadEvents(); };
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#0a0e17] p-4 space-y-4">
