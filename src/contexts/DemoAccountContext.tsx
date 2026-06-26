@@ -311,7 +311,9 @@ export function DemoAccountProvider({ children }: { children: ReactNode }) {
 
   const applyPnl = useCallback((delta: number) => {
     setBalance((prev) => {
-      const next = Math.max(0, +(prev + delta).toFixed(2));
+      // Clamp every P&L application so a leveraged win streak can never
+      // overflow the balance into an astronomically incorrect number.
+      const next = sanitizeBalance(+(prev + delta).toFixed(2));
       persist(next);
       return next;
     });
