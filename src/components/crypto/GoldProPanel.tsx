@@ -11,6 +11,7 @@ import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { SignalHistory } from '@/components/crypto/SignalHistory';
 import { Crown, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
 import { useSignalEngine } from '@/hooks/useSignalEngine';
+import { useMacro } from '@/hooks/useMacro';
 
 
 interface Props {
@@ -36,34 +37,19 @@ export function GoldProPanel({ candles, price }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
-  const [dxy, setDxy] = useState<DxyData>({ price: null, changePct: null, available: false });
-  const [goldBias, setGoldBias] = useState<GoldBias>('neutral');
-  const [sentiment, setSentiment] = useState<SentimentData>({ value: null, classification: '', available: false });
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [eventsUpdated, setEventsUpdated] = useState<number | null>(null);
-  const [loadingMacro, setLoadingMacro] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(true);
+
+  // SINGLE SOURCE OF TRUTH for macro indicators (DXY, Fear & Greed, VIX, US10Y,
+  // SPX). Gold uses the CNN (US stock-market) Fear & Greed index — never the
+  // crypto one. The shared hook polls every 60s + refetches on focus when stale.
+  const { dxy, sentiment, goldBias, loading: loadingMacro, refresh: refreshMacro } = useMacro('cnn');
 
   const headers = {
     apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
     Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
   };
-
-  const loadMacro = useCallback(async () => {
-    setLoadingMacro(true);
-    try {
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/market-sentiment`, { headers });
-      const data = await res.json();
-      if (data?.dxy) setDxy(data.dxy);
-      if (data?.sentiment) setSentiment(data.sentiment);
-      if (data?.goldBias) setGoldBias(data.goldBias);
-    } catch {
-      /* ignore — UI shows unavailable state */
-    } finally {
-      setLoadingMacro(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const loadEvents = useCallback(async () => {
     setLoadingEvents(true);
@@ -83,15 +69,12 @@ export function GoldProPanel({ candles, price }: Props) {
   }, []);
 
   useEffect(() => {
-    loadMacro();
     loadEvents();
-    // Auto-refresh the gold signal + macro data every 30 minutes.
-    const id = setInterval(() => {
-      loadMacro();
-      loadEvents();
-    }, 30 * 60 * 1000);
+    // Economic calendar refreshes every 30 minutes; macro indicators are handled
+    // by the shared useMacro hook on a 60s cadence.
+    const id = setInterval(loadEvents, 30 * 60 * 1000);
     return () => clearInterval(id);
-  }, [loadMacro, loadEvents]);
+  }, [loadEvents]);
 
 
   // ---- Combined Gold Signal ----
