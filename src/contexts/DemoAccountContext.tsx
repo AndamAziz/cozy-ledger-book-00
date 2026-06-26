@@ -14,10 +14,12 @@ export const DEMO_LEVERAGE = 100;
  */
 export const DEMO_MAX_BALANCE = 1_000_000_000;
 
-/** Coerce any balance into a safe, finite, bounded value. */
+/** Coerce any balance into a safe, finite, bounded value within [0, MAX]. */
 const sanitizeBalance = (n: number): number => {
-  if (!Number.isFinite(n) || n < 0) return DEMO_STARTING_BALANCE;
-  return Math.min(n, DEMO_MAX_BALANCE);
+  // Non-finite (NaN/Infinity) is corruption => fall back to the starting value.
+  if (!Number.isFinite(n)) return DEMO_STARTING_BALANCE;
+  // A legitimate loss can drive the balance to 0 (never below); wins are capped.
+  return Math.min(Math.max(0, n), DEMO_MAX_BALANCE);
 };
 
 export type PositionSide = 'buy' | 'sell';
