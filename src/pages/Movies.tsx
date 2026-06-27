@@ -2690,29 +2690,37 @@ function MovieModal({
       {/* Watch player */}
       {watch && (
         <PlayerOverlay
+          title={movie.title}
+          playerLabel={t.inAppPlayer}
+          serversTitleLabel={t.serversLabel}
+          autoSwitchLabel={t.autoSwitch}
           servers={
             imdbId
               ? IMDB_DOMAINS.map((d) => ({
-                  name: d.label,
+                  name: d.name,
                   url: `https://www.${d.host}/title/${imdbId}/`,
+                  accent: d.accent,
                 }))
               : [
                   {
-                    name: "VidAPI ⚡",
+                    name: "VidAPI",
                     url: isTv
                       ? `https://vidapi.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
                       : `https://vidapi.ru/embed/movie/${movie.tmdb_id}`,
+                    accent: "#00BCD4",
                   },
                 ]
           }
           onClose={() => setWatch(false)}
           closeLabel={t.close}
-          hint={t.serverHint}
+          hint={t.autoSwitchHint}
         />
       )}
       {/* Trailer player */}
       {trailerOpen && trailer && trailer !== "none" && (
         <PlayerOverlay
+          title={movie.title}
+          playerLabel={t.inAppPlayer}
           src={`https://www.youtube.com/embed/${trailer}?autoplay=1`}
           onClose={() => setTrailerOpen(false)}
           closeLabel={t.close}
