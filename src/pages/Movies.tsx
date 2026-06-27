@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Bot } from "lucide-react";
+import { Bot, Play, X, RotateCcw, MonitorPlay } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 // ====== Theme ======
@@ -142,6 +142,10 @@ const T = {
     navSearch: "گەڕان",
     navMore: "زیاتر",
     serversTitle: "سێرڤەرەکانی سەیرکردن",
+    inAppPlayer: "لێدەری ناوبەرنامە",
+    serversLabel: "سێرڤەرەکان",
+    autoSwitch: "گۆڕینی خۆکار",
+    autoSwitchHint: "ئەگەر سێرڤەرێک کار نەکات، بەخۆکاری دەگۆڕێت",
     serversSubtitle: "سێرڤەرێک هەڵبژێرە و فیلم یان زنجیرەکەی تێدا بگەڕێ 👇",
     serverSearch: "لەم سێرڤەرەدا بگەڕێ...",
     backToServers: "← سێرڤەرەکان",
@@ -232,6 +236,10 @@ const T = {
     navSearch: "Search",
     navMore: "More",
     serversTitle: "Streaming Servers",
+    inAppPlayer: "IN-APP PLAYER",
+    serversLabel: "Servers",
+    autoSwitch: "Auto-switch",
+    autoSwitchHint: "If a server fails it switches automatically",
     serversSubtitle: "Pick a server and search for a movie or series inside it 👇",
     serverSearch: "Search inside this server...",
     backToServers: "← Servers",
@@ -2682,29 +2690,37 @@ function MovieModal({
       {/* Watch player */}
       {watch && (
         <PlayerOverlay
+          title={movie.title}
+          playerLabel={t.inAppPlayer}
+          serversTitleLabel={t.serversLabel}
+          autoSwitchLabel={t.autoSwitch}
           servers={
             imdbId
               ? IMDB_DOMAINS.map((d) => ({
-                  name: d.label,
+                  name: d.name,
                   url: `https://www.${d.host}/title/${imdbId}/`,
+                  accent: d.accent,
                 }))
               : [
                   {
-                    name: "VidAPI ⚡",
+                    name: "VidAPI",
                     url: isTv
                       ? `https://vidapi.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
                       : `https://vidapi.ru/embed/movie/${movie.tmdb_id}`,
+                    accent: "#00BCD4",
                   },
                 ]
           }
           onClose={() => setWatch(false)}
           closeLabel={t.close}
-          hint={t.serverHint}
+          hint={t.autoSwitchHint}
         />
       )}
       {/* Trailer player */}
       {trailerOpen && trailer && trailer !== "none" && (
         <PlayerOverlay
+          title={movie.title}
+          playerLabel={t.inAppPlayer}
           src={`https://www.youtube.com/embed/${trailer}?autoplay=1`}
           onClose={() => setTrailerOpen(false)}
           closeLabel={t.close}
@@ -2721,17 +2737,26 @@ function PlayerOverlay({
   closeLabel,
   serverLabel,
   hint,
+  title,
+  playerLabel,
+  serversTitleLabel,
+  autoSwitchLabel,
 }: {
   src?: string;
-  servers?: { name: string; url: string }[];
+  servers?: { name: string; url: string; accent?: string }[];
   onClose: () => void;
   closeLabel: string;
   serverLabel?: string;
   hint?: string;
+  title?: string;
+  playerLabel?: string;
+  serversTitleLabel?: string;
+  autoSwitchLabel?: string;
 }) {
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [autoTrying, setAutoTrying] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   // Once the user picks a specific server, stop the automatic fallback so their
   // choice is honoured (each server button is dedicated).
   const [manual, setManual] = useState(false);
@@ -2764,6 +2789,26 @@ function PlayerOverlay({
     }
   };
 
+  const reload = () => {
+    loadedRef.current = false;
+    setLoaded(false);
+    setReloadKey((k) => k + 1);
+  };
+
+  const circleBtnStyle: React.CSSProperties = {
+    width: 42,
+    height: 42,
+    borderRadius: "50%",
+    background: C.panel2,
+    border: `1px solid ${C.border}`,
+    color: C.text,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    flexShrink: 0,
+  };
+
   return (
     <div
       onClick={onClose}
@@ -2780,28 +2825,80 @@ function PlayerOverlay({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 980, position: "relative" }}
+        style={{
+          width: "100%",
+          maxWidth: 980,
+          maxHeight: "94vh",
+          overflowY: "auto",
+          background: C.bg,
+          borderRadius: 18,
+          border: `1px solid ${C.border}`,
+          overflowX: "hidden",
+        }}
       >
-        <button
-          onClick={onClose}
+        {/* Header */}
+        <div
           style={{
-            position: "absolute",
-            top: -44,
-            insetInlineStart: 0,
-            background: C.panel2,
-            color: C.text,
-            border: `1px solid ${C.border}`,
-            borderRadius: 10,
-            padding: "8px 16px",
-            cursor: "pointer",
-            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "14px 16px",
+            background: C.panel,
+            borderBottom: `1px solid ${C.border}`,
           }}
         >
-          {closeLabel}
-        </button>
-        <div style={{ width: "100%", aspectRatio: "16/9", borderRadius: 12, overflow: "hidden", position: "relative" }}>
+          <div
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 14,
+              background: C.gold,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              boxShadow: `0 0 18px ${C.goldDim}`,
+            }}
+          >
+            <MonitorPlay size={24} color="#0A0A0F" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: 1.5,
+                color: C.muted,
+                textTransform: "uppercase",
+              }}
+            >
+              {playerLabel || "IN-APP PLAYER"}
+            </div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: C.text,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {title || ""}
+            </div>
+          </div>
+          <button onClick={reload} aria-label="reload" style={circleBtnStyle}>
+            <RotateCcw size={18} />
+          </button>
+          <button onClick={onClose} aria-label={closeLabel} style={circleBtnStyle}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Video */}
+        <div style={{ width: "100%", aspectRatio: "16/9", overflow: "hidden", position: "relative", background: "#000" }}>
           <iframe
-            key={currentSrc}
+            key={`${currentSrc}-${reloadKey}`}
             src={currentSrc}
             title="player"
             allowFullScreen
@@ -2851,25 +2948,54 @@ function PlayerOverlay({
           )}
         </div>
 
-
         {/* server selector */}
         {servers && servers.length > 1 && (
-          <div style={{ marginTop: 12 }}>
-            {hint && (
-              <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8, textAlign: "center" }}>
-                {hint}
-              </div>
-            )}
+          <div style={{ padding: "18px 16px 22px" }}>
             <div
               style={{
                 display: "flex",
-                gap: 8,
-                flexWrap: "wrap",
-                justifyContent: "center",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  letterSpacing: 3,
+                  color: C.muted,
+                  textTransform: "uppercase",
+                }}
+              >
+                {serversTitleLabel || "Servers"}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#22C55E",
+                    boxShadow: "0 0 8px #22C55E",
+                  }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#22C55E" }}>
+                  {autoSwitchLabel || "Auto-switch"}
+                </span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: 12,
               }}
             >
               {servers.map((s, i) => {
                 const on = i === safeActive;
+                const accent = s.accent || C.gold;
                 return (
                   <button
                     key={s.name}
@@ -2879,22 +3005,58 @@ function PlayerOverlay({
                       setActive(i);
                     }}
                     style={{
-                      background: on ? C.gold : C.panel2,
-                      color: on ? "#0A0A0F" : C.text,
-                      border: `1px solid ${on ? C.gold : C.border}`,
-                      borderRadius: 10,
-                      padding: "8px 14px",
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      background: `linear-gradient(135deg, ${accent}26, ${C.panel2})`,
+                      color: C.text,
+                      border: `1.5px solid ${on ? accent : `${accent}55`}`,
+                      borderRadius: 14,
+                      padding: "16px 14px",
                       fontWeight: 800,
-                      fontSize: 13,
+                      fontSize: 15,
                       cursor: "pointer",
                       transition: "all .15s",
+                      boxShadow: on ? `0 0 0 1px ${accent}, 0 6px 18px ${accent}33` : "none",
                     }}
                   >
-                    {serverLabel ? `${serverLabel} ${i + 1}` : s.name}
+                    <Play size={18} color={accent} fill={accent} style={{ flexShrink: 0 }} />
+                    <span
+                      style={{
+                        flex: 1,
+                        textAlign: "center",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {serverLabel ? `${serverLabel} ${i + 1}` : s.name}
+                    </span>
+                    {on && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: -5,
+                          insetInlineEnd: -5,
+                          width: 14,
+                          height: 14,
+                          borderRadius: "50%",
+                          background: accent,
+                          border: `2px solid ${C.bg}`,
+                        }}
+                      />
+                    )}
                   </button>
                 );
               })}
             </div>
+
+            {hint && (
+              <div style={{ fontSize: 13, color: C.muted, marginTop: 16, textAlign: "center" }}>
+                {hint}
+              </div>
+            )}
           </div>
         )}
       </div>
