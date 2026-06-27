@@ -2829,7 +2829,17 @@ function PlayerOverlay({
     setReloadKey((k) => k + 1);
   };
 
-  const goFullscreen = () => {
+  const toggleFullscreen = () => {
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => void;
+    };
+    const fsEl = document.fullscreenElement || doc.webkitFullscreenElement;
+    if (fsEl) {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+      return;
+    }
     const el = videoRef.current as (HTMLDivElement & {
       webkitRequestFullscreen?: () => Promise<void>;
       webkitEnterFullscreen?: () => void;
@@ -2839,6 +2849,18 @@ function PlayerOverlay({
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
     else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen();
   };
+
+  useEffect(() => {
+    const doc = document as Document & { webkitFullscreenElement?: Element | null };
+    const onChange = () =>
+      setIsFullscreen(!!(document.fullscreenElement || doc.webkitFullscreenElement));
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange);
+    };
+  }, []);
 
 
   const circleBtnStyle: React.CSSProperties = {
