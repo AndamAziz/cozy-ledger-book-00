@@ -3017,7 +3017,7 @@ function PlayerOverlay({
                   cursor: "pointer",
                 }}
               >
-                <RotateCcw size={16} /> {closeLabel ? "↻" : "Retry"}
+                <RotateCcw size={16} />
               </button>
             </div>
           )}
