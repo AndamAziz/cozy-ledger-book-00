@@ -2757,43 +2757,77 @@ function PlayerOverlay({
   const [loaded, setLoaded] = useState(false);
   const [autoTrying, setAutoTrying] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  // Once the user picks a specific server, stop the automatic fallback so their
-  // choice is honoured (each server button is dedicated).
-  const [manual, setManual] = useState(false);
+  // Indices of servers that failed to load (timeout / error). We skip these
+  // during automatic failover so we never get stuck retrying a dead server.
+  const [failed, setFailed] = useState<number[]>([]);
+  const [allFailed, setAllFailed] = useState(false);
   const loadedRef = useRef(false);
+  const failedRef = useRef<Set<number>>(new Set());
   const list = servers && servers.length > 0 ? servers : [];
   // Clamp the index defensively so we never read an out-of-range server.
   const safeActive = Math.min(Math.max(active, 0), Math.max(list.length - 1, 0));
   const currentSrc = list.length > 0 ? list[safeActive]?.url ?? "" : src || "";
 
-  // Automatic fallback: if the active domain doesn't load within a few
-  // seconds (blocked / X-Frame-Options / network error), try the next one.
-  // Disabled after a manual pick.
+  // Mark the active server as failed and jump to the next server that hasn't
+  // failed yet, searching forward and wrapping around the list. Applies even
+  // after a manual pick: if the chosen server dies we still fail over.
+  const failover = useCallback(() => {
+    if (loadedRef.current || list.length <= 1) return;
+    failedRef.current.add(safeActive);
+    let next = -1;
+    for (let step = 1; step <= list.length; step++) {
+      const idx = (safeActive + step) % list.length;
+      if (!failedRef.current.has(idx)) {
+        next = idx;
+        break;
+      }
+    }
+    setFailed(Array.from(failedRef.current));
+    if (next >= 0) {
+      setAutoTrying(true);
+      loadedRef.current = false;
+      setLoaded(false);
+      setActive(next);
+    } else {
+      // Every server failed — stop trying and surface the error state.
+      setAutoTrying(false);
+      setAllFailed(true);
+    }
+  }, [list.length, safeActive]);
+
+  // Watchdog: if the active server doesn't load within a few seconds (blocked /
+  // X-Frame-Options / network stall), trigger automatic failover.
   useEffect(() => {
-    if (list.length <= 1 || manual) return;
+    if (list.length === 0) return;
     loadedRef.current = false;
     setLoaded(false);
     const timer = setTimeout(() => {
-      if (!loadedRef.current && safeActive < list.length - 1) {
-        setAutoTrying(true);
-        setActive((i) => Math.min(i + 1, list.length - 1));
-      }
-    }, 7000);
+      if (!loadedRef.current) failover();
+    }, 8000);
     return () => clearTimeout(timer);
-  }, [safeActive, currentSrc, list.length, manual]);
+  }, [safeActive, currentSrc, reloadKey, list.length, failover]);
 
-  const goNext = () => {
-    if (safeActive < list.length - 1) {
-      setAutoTrying(true);
-      setActive((i) => Math.min(i + 1, list.length - 1));
-    }
+  // User manually selects a server: clear its failed flag so it can be retried,
+  // reset load tracking, and keep automatic failover active.
+  const pickServer = (i: number) => {
+    failedRef.current.delete(i);
+    setFailed(Array.from(failedRef.current));
+    setAllFailed(false);
+    setAutoTrying(false);
+    loadedRef.current = false;
+    setLoaded(false);
+    setActive(i);
   };
 
   const reload = () => {
+    failedRef.current.delete(safeActive);
+    setFailed(Array.from(failedRef.current));
+    setAllFailed(false);
     loadedRef.current = false;
     setLoaded(false);
     setReloadKey((k) => k + 1);
   };
+
 
   const circleBtnStyle: React.CSSProperties = {
     width: 42,
@@ -2912,8 +2946,10 @@ function PlayerOverlay({
               loadedRef.current = true;
               setLoaded(true);
               setAutoTrying(false);
+              setAllFailed(false);
+              failedRef.current.delete(safeActive);
             }}
-            onError={goNext}
+            onError={failover}
             style={{ width: "100%", height: "100%", border: "none" }}
           />
           {autoTrying && !loaded && (
@@ -2946,7 +2982,47 @@ function PlayerOverlay({
               {list.length > 0 ? `Trying ${list[safeActive]?.name ?? ""}…` : "Trying next server…"}
             </div>
           )}
+          {allFailed && !loaded && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                background: "rgba(10,10,15,.92)",
+                color: C.text,
+                textAlign: "center",
+                padding: 16,
+              }}
+            >
+              <div style={{ fontWeight: 800, fontSize: 15 }}>
+                {hint || "All servers failed — tap a server to retry"}
+              </div>
+              <button
+                onClick={reload}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: C.gold,
+                  color: "#0A0A0F",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "9px 16px",
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                <RotateCcw size={16} />
+              </button>
+            </div>
+          )}
         </div>
+
 
         {/* server selector */}
         {servers && servers.length > 1 && (
@@ -2996,14 +3072,11 @@ function PlayerOverlay({
               {servers.map((s, i) => {
                 const on = i === safeActive;
                 const accent = s.accent || C.gold;
+                const isFailed = failed.includes(i) && !on;
                 return (
                   <button
                     key={s.name}
-                    onClick={() => {
-                      setAutoTrying(false);
-                      setManual(true);
-                      setActive(i);
-                    }}
+                    onClick={() => pickServer(i)}
                     style={{
                       position: "relative",
                       display: "flex",
@@ -3018,9 +3091,11 @@ function PlayerOverlay({
                       fontSize: 13,
                       cursor: "pointer",
                       transition: "all .15s",
+                      opacity: isFailed ? 0.4 : 1,
                       boxShadow: on ? `0 0 0 1px ${accent}, 0 4px 12px ${accent}33` : "none",
                     }}
                   >
+
                     <Play size={14} color={accent} fill={accent} style={{ flexShrink: 0 }} />
                     <span
                       style={{
