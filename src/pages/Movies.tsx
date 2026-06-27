@@ -1806,6 +1806,55 @@ function Hero({
 
 
 
+function FavButton({
+  movie,
+  t,
+  size = "card",
+}: {
+  movie: Movie;
+  t: Record<string, string>;
+  size?: "card" | "modal";
+}) {
+  const [fav, toggle] = useFavorite({
+    tmdb_id: movie.tmdb_id,
+    imdb_id: movie.imdb_id,
+    media: movie.media,
+    title: movie.title,
+    year: movie.year,
+    poster_url: movie.poster_url,
+    rating: movie.rating,
+    genre: movie.genre,
+  });
+  const dim = size === "modal" ? 42 : 34;
+  return (
+    <button
+      onClick={(e) => toggle(e)}
+      aria-label={fav ? t.removeFav : t.addFav}
+      title={fav ? t.removeFav : t.addFav}
+      style={{
+        width: dim,
+        height: dim,
+        borderRadius: "50%",
+        background: fav ? C.gold : "rgba(0,0,0,.6)",
+        border: `1px solid ${fav ? C.gold : "rgba(255,255,255,.2)"}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        backdropFilter: "blur(4px)",
+        flexShrink: 0,
+        transition: "all .2s",
+      }}
+    >
+      <Heart
+        size={size === "modal" ? 20 : 17}
+        color={fav ? "#0A0A0F" : "#fff"}
+        fill={fav ? "#0A0A0F" : "none"}
+      />
+    </button>
+  );
+}
+
 function MovieCard({ movie, t, onClick }: { movie: Movie; t: Record<string, string>; onClick: () => void }) {
   const rating = parseFloat(movie.rating) || 0;
   const isTv = movie.media === "tv";
