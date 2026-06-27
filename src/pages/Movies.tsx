@@ -2761,6 +2761,7 @@ function PlayerOverlay({
   // during automatic failover so we never get stuck retrying a dead server.
   const [failed, setFailed] = useState<number[]>([]);
   const [allFailed, setAllFailed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const loadedRef = useRef(false);
   const failedRef = useRef<Set<number>>(new Set());
   const videoRef = useRef<HTMLDivElement>(null);
