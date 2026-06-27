@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize, Minimize } from "lucide-react";
+import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize, Minimize, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useFavorite, useFavoritesList } from "@/lib/movieFavorites";
 
 // ====== Theme ======
 const C = {
@@ -141,6 +142,11 @@ const T = {
     navSeries: "سریال",
     navSearch: "گەڕان",
     navMore: "زیاتر",
+    navFav: "دڵخوازەکان",
+    favTitle: "دڵخوازەکان",
+    noFav: "هێشتا هیچ فیلم یان سریالێکت زیاد نەکردووە بۆ دڵخوازەکان",
+    addFav: "زیادکردن بۆ دڵخوازەکان",
+    removeFav: "لابردن لە دڵخوازەکان",
     serversTitle: "سێرڤەرەکانی سەیرکردن",
     inAppPlayer: "لێدەری ناوبەرنامە",
     serversLabel: "سێرڤەرەکان",
@@ -235,6 +241,11 @@ const T = {
     navSeries: "Series",
     navSearch: "Search",
     navMore: "More",
+    navFav: "Favorites",
+    favTitle: "Favorites",
+    noFav: "You haven't added any movies or series to favorites yet",
+    addFav: "Add to favorites",
+    removeFav: "Remove from favorites",
     serversTitle: "Streaming Servers",
     inAppPlayer: "IN-APP PLAYER",
     serversLabel: "Servers",
@@ -452,10 +463,10 @@ export default function Movies() {
   const [selected, setSelected] = useState<Movie | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
   const [mediaTab, setMediaTab] = useState<"movie" | "tv">("movie");
-  const [view, setView] = useState<"home" | "movie" | "tv" | "search">("home");
+  const [view, setView] = useState<"home" | "movie" | "tv" | "search" | "favorites">("home");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const goView = (v: "home" | "movie" | "tv" | "search") => {
+  const goView = (v: "home" | "movie" | "tv" | "search" | "favorites") => {
     if (v === "search") {
       setView("search");
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -465,6 +476,11 @@ export default function Movies() {
     setSearch("");
     setAiTitle(null);
     setSearchResults(null);
+    if (v === "favorites") {
+      setView("favorites");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     if (v === "tv") setMediaTab("tv");
     else setMediaTab("movie");
     setView(v);
@@ -1138,8 +1154,13 @@ export default function Movies() {
 
 
 
+        {/* ===== FAVORITES VIEW ===== */}
+        {view === "favorites" && (
+          <FavoritesView t={t} onSelect={(m) => setSelected(m)} />
+        )}
+
         {/* ===== SHARED GRID (home / movie / tv / search results) ===== */}
-        {(view !== "search" || searching) &&
+        {((view !== "search" && view !== "favorites") || searching) &&
           (loading || (aiSearching && filtered.length === 0) ? (
             <Grid>
               {Array.from({ length: 18 }).map((_, i) => (
@@ -1169,7 +1190,7 @@ export default function Movies() {
           ))}
 
         {/* Infinite scroll sentinel + loader (catalog views only) */}
-        {view !== "search" && !loading && filtered.length > 0 && (
+        {view !== "search" && view !== "favorites" && !loading && filtered.length > 0 && (
           <>
             {loadingMore && (
               <Grid>
@@ -1226,6 +1247,7 @@ export default function Movies() {
             { key: "home", icon: "🏠", label: t.navHome },
             { key: "movie", icon: "🎬", label: t.navMovie },
             { key: "tv", icon: "📺", label: t.navSeries },
+            { key: "favorites", icon: "❤️", label: t.navFav },
             { key: "search", icon: "🔍", label: t.navSearch },
           ] as const).map((item) => {
             const active = view === item.key;
@@ -1795,6 +1817,107 @@ function Hero({
 
 
 
+function FavoritesView({
+  t,
+  onSelect,
+}: {
+  t: Record<string, string>;
+  onSelect: (m: Movie) => void;
+}) {
+  const favs = useFavoritesList();
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 16px" }}>
+        <span
+          style={{ display: "inline-block", width: 4, height: 26, background: C.gold, borderRadius: 4 }}
+        />
+        <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>{t.favTitle} ❤️</h2>
+      </div>
+      {favs.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
+          <div style={{ fontSize: 48, marginBottom: 10 }}>💔</div>
+          {t.noFav}
+        </div>
+      ) : (
+        <Grid>
+          {favs.map((f) => {
+            const movie: Movie = {
+              tmdb_id: f.tmdb_id,
+              imdb_id: f.imdb_id || "",
+              media: f.media,
+              title: f.title,
+              year: f.year || "",
+              poster_url: f.poster_url || "",
+              rating: f.rating || "",
+              genre: f.genre || "",
+              popularity: "",
+              type: f.media,
+              embed_url: "",
+            };
+            return (
+              <MovieCard
+                key={`${f.media}-${f.tmdb_id}`}
+                movie={movie}
+                t={t}
+                onClick={() => onSelect(movie)}
+              />
+            );
+          })}
+        </Grid>
+      )}
+    </>
+  );
+}
+
+function FavButton({
+  movie,
+  t,
+  size = "card",
+}: {
+  movie: Movie;
+  t: Record<string, string>;
+  size?: "card" | "modal";
+}) {
+  const [fav, toggle] = useFavorite({
+    tmdb_id: movie.tmdb_id,
+    imdb_id: movie.imdb_id,
+    media: movie.media,
+    title: movie.title,
+    year: movie.year,
+    poster_url: movie.poster_url,
+    rating: movie.rating,
+    genre: movie.genre,
+  });
+  const dim = size === "modal" ? 42 : 34;
+  return (
+    <button
+      onClick={(e) => toggle(e)}
+      aria-label={fav ? t.removeFav : t.addFav}
+      title={fav ? t.removeFav : t.addFav}
+      style={{
+        width: dim,
+        height: dim,
+        borderRadius: "50%",
+        background: fav ? C.gold : "rgba(0,0,0,.6)",
+        border: `1px solid ${fav ? C.gold : "rgba(255,255,255,.2)"}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        backdropFilter: "blur(4px)",
+        flexShrink: 0,
+        transition: "all .2s",
+      }}
+    >
+      <Heart
+        size={size === "modal" ? 20 : 17}
+        color={fav ? "#0A0A0F" : "#fff"}
+        fill={fav ? "#0A0A0F" : "none"}
+      />
+    </button>
+  );
+}
+
 function MovieCard({ movie, t, onClick }: { movie: Movie; t: Record<string, string>; onClick: () => void }) {
   const rating = parseFloat(movie.rating) || 0;
   const isTv = movie.media === "tv";
@@ -1878,6 +2001,10 @@ function MovieCard({ movie, t, onClick }: { movie: Movie; t: Record<string, stri
             {t.actorTag}
           </div>
         )}
+        {/* favorite (bottom-end) */}
+        <div style={{ position: "absolute", bottom: 8, insetInlineEnd: 8, zIndex: 2 }}>
+          <FavButton movie={movie} t={t} />
+        </div>
         {/* play overlay */}
         <div
           className="mv-play"
@@ -2266,6 +2393,11 @@ function MovieModal({
           >
             ✕
           </button>
+          <div style={{ position: "absolute", top: 46, insetInlineEnd: 12, zIndex: 4 }}>
+            <FavButton movie={movie} t={t} size="modal" />
+          </div>
+
+
 
           {/* poster + title */}
           <div
