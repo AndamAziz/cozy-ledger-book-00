@@ -2383,14 +2383,14 @@ function MovieModal({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 8,
+              gap: 6,
               padding: "10px 16px 0",
             }}
           >
             {IMDB_DOMAINS.map((d) => {
               const url = `https://www.${d.host}/title/${imdbId}/`;
               return (
-                <div key={d.host} style={{ display: "flex", gap: 8 }}>
+                <div key={d.host} style={{ display: "flex", gap: 6 }}>
                   <button
                     onClick={() => window.open(url, "_blank")}
                     style={{
@@ -2398,22 +2398,21 @@ function MovieModal({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: 8,
-                      background: d.accent,
-                      color: "#0A0A0F",
-                      border: `1px solid ${d.accent}`,
-                      borderRadius: 12,
-                      padding: "12px 10px",
+                      gap: 7,
+                      background: `linear-gradient(135deg, ${d.accent}22, ${C.panel2})`,
+                      color: C.text,
+                      border: `1.5px solid ${d.accent}66`,
+                      borderRadius: 10,
+                      padding: "9px 10px",
                       cursor: "pointer",
-                      fontWeight: 800,
-                      fontSize: 14,
-                      boxShadow: `0 4px 14px ${d.accent}33`,
+                      fontWeight: 700,
+                      fontSize: 13,
                       transition: "transform .15s",
                     }}
                     onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
                     onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
                   >
-                    <span>🌐</span>
+                    <Play size={14} color={d.accent} fill={d.accent} style={{ flexShrink: 0 }} />
                     <span>
                       {t.openOn} {d.name}
                     </span>
@@ -2434,16 +2433,16 @@ function MovieModal({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      gap: 6,
-                      minWidth: 96,
+                      gap: 5,
+                      minWidth: 78,
                       background: C.panel2,
                       color: d.accent,
                       border: `1px solid ${d.accent}55`,
-                      borderRadius: 12,
-                      padding: "12px 10px",
+                      borderRadius: 10,
+                      padding: "9px 8px",
                       cursor: "pointer",
-                      fontWeight: 800,
-                      fontSize: 13,
+                      fontWeight: 700,
+                      fontSize: 12,
                       transition: "transform .15s",
                     }}
                     onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
@@ -2456,6 +2455,7 @@ function MovieModal({
               );
             })}
           </div>
+
         )}
         {trailer === "none" && (
           <div style={{ padding: "8px 16px 0", fontSize: 12.5, color: C.muted }}>
