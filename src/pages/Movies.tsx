@@ -2911,28 +2911,20 @@ function PlayerOverlay({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: 1.5,
-                color: C.muted,
-                textTransform: "uppercase",
-              }}
-            >
-              {playerLabel || "IN-APP PLAYER"}
-            </div>
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
+                fontSize: 17,
+                fontWeight: 600,
+                lineHeight: 1.25,
                 color: C.text,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                letterSpacing: 0.2,
+                wordBreak: "break-word",
               }}
             >
               {title || ""}
             </div>
           </div>
+          <button onClick={goFullscreen} aria-label="fullscreen" style={circleBtnStyle}>
+            <Maximize size={18} />
+          </button>
           <button onClick={reload} aria-label="reload" style={circleBtnStyle}>
             <RotateCcw size={18} />
           </button>
