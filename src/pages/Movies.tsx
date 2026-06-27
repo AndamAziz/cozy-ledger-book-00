@@ -2763,6 +2763,7 @@ function PlayerOverlay({
   const [allFailed, setAllFailed] = useState(false);
   const loadedRef = useRef(false);
   const failedRef = useRef<Set<number>>(new Set());
+  const videoRef = useRef<HTMLDivElement>(null);
   const list = servers && servers.length > 0 ? servers : [];
   // Clamp the index defensively so we never read an out-of-range server.
   const safeActive = Math.min(Math.max(active, 0), Math.max(list.length - 1, 0));
