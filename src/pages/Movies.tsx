@@ -2945,8 +2945,8 @@ function PlayerOverlay({
               {title || ""}
             </div>
           </div>
-          <button onClick={goFullscreen} aria-label="fullscreen" style={circleBtnStyle}>
-            <Maximize size={18} />
+          <button onClick={toggleFullscreen} aria-label="fullscreen" style={circleBtnStyle}>
+            {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
           <button onClick={reload} aria-label="reload" style={circleBtnStyle}>
             <RotateCcw size={18} />
