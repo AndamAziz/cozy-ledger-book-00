@@ -1816,6 +1816,58 @@ function Hero({
 
 
 
+function FavoritesView({
+  t,
+  onSelect,
+}: {
+  t: Record<string, string>;
+  onSelect: (m: Movie) => void;
+}) {
+  const favs = useFavoritesList();
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 16px" }}>
+        <span
+          style={{ display: "inline-block", width: 4, height: 26, background: C.gold, borderRadius: 4 }}
+        />
+        <h2 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>{t.favTitle} ❤️</h2>
+      </div>
+      {favs.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
+          <div style={{ fontSize: 48, marginBottom: 10 }}>💔</div>
+          {t.noFav}
+        </div>
+      ) : (
+        <Grid>
+          {favs.map((f) => {
+            const movie: Movie = {
+              tmdb_id: f.tmdb_id,
+              imdb_id: f.imdb_id || "",
+              media: f.media,
+              title: f.title,
+              year: f.year || "",
+              poster_url: f.poster_url || "",
+              rating: f.rating || "",
+              genre: f.genre || "",
+              popularity: "",
+              type: f.media,
+              embed_url: "",
+            };
+            return (
+              <MovieCard
+                key={`${f.media}-${f.tmdb_id}`}
+                movie={movie}
+                t={t}
+                onClick={() => onSelect(movie)}
+              />
+            );
+          })}
+        </Grid>
+      )}
+    </>
+  );
+}
+
 function FavButton({
   movie,
   t,
