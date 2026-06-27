@@ -2330,6 +2330,11 @@ function MovieModal({
           >
             ✕
           </button>
+          <div style={{ position: "absolute", top: 46, insetInlineEnd: 12, zIndex: 4 }}>
+            <FavButton movie={movie} t={t} size="modal" />
+          </div>
+
+
 
           {/* poster + title */}
           <div
