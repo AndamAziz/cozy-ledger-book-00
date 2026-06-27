@@ -2982,7 +2982,47 @@ function PlayerOverlay({
               {list.length > 0 ? `Trying ${list[safeActive]?.name ?? ""}…` : "Trying next server…"}
             </div>
           )}
+          {allFailed && !loaded && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+                background: "rgba(10,10,15,.92)",
+                color: C.text,
+                textAlign: "center",
+                padding: 16,
+              }}
+            >
+              <div style={{ fontWeight: 800, fontSize: 15 }}>
+                {hint || "All servers failed — tap a server to retry"}
+              </div>
+              <button
+                onClick={reload}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: C.gold,
+                  color: "#0A0A0F",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "9px 16px",
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                <RotateCcw size={16} /> {closeLabel ? "↻" : "Retry"}
+              </button>
+            </div>
+          )}
         </div>
+
 
         {/* server selector */}
         {servers && servers.length > 1 && (
