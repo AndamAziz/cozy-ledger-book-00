@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Bot, Play, X, RotateCcw, MonitorPlay } from "lucide-react";
+import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 // ====== Theme ======
@@ -2763,6 +2763,7 @@ function PlayerOverlay({
   const [allFailed, setAllFailed] = useState(false);
   const loadedRef = useRef(false);
   const failedRef = useRef<Set<number>>(new Set());
+  const videoRef = useRef<HTMLDivElement>(null);
   const list = servers && servers.length > 0 ? servers : [];
   // Clamp the index defensively so we never read an out-of-range server.
   const safeActive = Math.min(Math.max(active, 0), Math.max(list.length - 1, 0));
@@ -2826,6 +2827,17 @@ function PlayerOverlay({
     loadedRef.current = false;
     setLoaded(false);
     setReloadKey((k) => k + 1);
+  };
+
+  const goFullscreen = () => {
+    const el = videoRef.current as (HTMLDivElement & {
+      webkitRequestFullscreen?: () => Promise<void>;
+      webkitEnterFullscreen?: () => void;
+    }) | null;
+    if (!el) return;
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen();
   };
 
 
@@ -2899,28 +2911,20 @@ function PlayerOverlay({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: 1.5,
-                color: C.muted,
-                textTransform: "uppercase",
-              }}
-            >
-              {playerLabel || "IN-APP PLAYER"}
-            </div>
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
+                fontSize: 17,
+                fontWeight: 600,
+                lineHeight: 1.25,
                 color: C.text,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                letterSpacing: 0.2,
+                wordBreak: "break-word",
               }}
             >
               {title || ""}
             </div>
           </div>
+          <button onClick={goFullscreen} aria-label="fullscreen" style={circleBtnStyle}>
+            <Maximize size={18} />
+          </button>
           <button onClick={reload} aria-label="reload" style={circleBtnStyle}>
             <RotateCcw size={18} />
           </button>
@@ -2930,7 +2934,7 @@ function PlayerOverlay({
         </div>
 
         {/* Video */}
-        <div style={{ width: "100%", aspectRatio: "16/9", overflow: "hidden", position: "relative", background: "#000" }}>
+        <div ref={videoRef} style={{ width: "100%", aspectRatio: "16/9", overflow: "hidden", position: "relative", background: "#000" }}>
           <iframe
             key={`${currentSrc}-${reloadKey}`}
             src={currentSrc}
