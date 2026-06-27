@@ -3072,6 +3072,7 @@ function PlayerOverlay({
               {servers.map((s, i) => {
                 const on = i === safeActive;
                 const accent = s.accent || C.gold;
+                const isFailed = failed.includes(i) && !on;
                 return (
                   <button
                     key={s.name}
@@ -3090,9 +3091,11 @@ function PlayerOverlay({
                       fontSize: 13,
                       cursor: "pointer",
                       transition: "all .15s",
+                      opacity: isFailed ? 0.4 : 1,
                       boxShadow: on ? `0 0 0 1px ${accent}, 0 4px 12px ${accent}33` : "none",
                     }}
                   >
+
                     <Play size={14} color={accent} fill={accent} style={{ flexShrink: 0 }} />
                     <span
                       style={{
