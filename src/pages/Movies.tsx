@@ -2829,6 +2829,17 @@ function PlayerOverlay({
     setReloadKey((k) => k + 1);
   };
 
+  const goFullscreen = () => {
+    const el = videoRef.current as (HTMLDivElement & {
+      webkitRequestFullscreen?: () => Promise<void>;
+      webkitEnterFullscreen?: () => void;
+    }) | null;
+    if (!el) return;
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen();
+  };
+
 
   const circleBtnStyle: React.CSSProperties = {
     width: 42,
