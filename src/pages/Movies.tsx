@@ -1247,6 +1247,7 @@ export default function Movies() {
             { key: "home", icon: "🏠", label: t.navHome },
             { key: "movie", icon: "🎬", label: t.navMovie },
             { key: "tv", icon: "📺", label: t.navSeries },
+            { key: "favorites", icon: "❤️", label: t.navFav },
             { key: "search", icon: "🔍", label: t.navSearch },
           ] as const).map((item) => {
             const active = view === item.key;
