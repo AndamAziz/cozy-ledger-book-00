@@ -1938,6 +1938,10 @@ function MovieCard({ movie, t, onClick }: { movie: Movie; t: Record<string, stri
             {t.actorTag}
           </div>
         )}
+        {/* favorite (bottom-end) */}
+        <div style={{ position: "absolute", bottom: 8, insetInlineEnd: 8, zIndex: 2 }}>
+          <FavButton movie={movie} t={t} />
+        </div>
         {/* play overlay */}
         <div
           className="mv-play"
