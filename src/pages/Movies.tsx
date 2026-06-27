@@ -2979,6 +2979,31 @@ function PlayerOverlay({
             onError={failover}
             style={{ width: "100%", height: "100%", border: "none" }}
           />
+          {isFullscreen && (
+            <button
+              onClick={toggleFullscreen}
+              aria-label="exit-fullscreen"
+              style={{
+                position: "absolute",
+                top: 14,
+                right: 14,
+                zIndex: 5,
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                background: "rgba(10,10,15,.7)",
+                border: `1px solid ${C.border}`,
+                color: C.text,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              <Minimize size={20} />
+            </button>
+          )}
           {autoTrying && !loaded && (
             <div
               style={{
