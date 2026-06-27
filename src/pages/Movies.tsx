@@ -3035,11 +3035,7 @@ function PlayerOverlay({
                 return (
                   <button
                     key={s.name}
-                    onClick={() => {
-                      setAutoTrying(false);
-                      setManual(true);
-                      setActive(i);
-                    }}
+                    onClick={() => pickServer(i)}
                     style={{
                       position: "relative",
                       display: "flex",
