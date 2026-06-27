@@ -1154,8 +1154,13 @@ export default function Movies() {
 
 
 
+        {/* ===== FAVORITES VIEW ===== */}
+        {view === "favorites" && (
+          <FavoritesView t={t} onSelect={(m) => setSelected(m)} />
+        )}
+
         {/* ===== SHARED GRID (home / movie / tv / search results) ===== */}
-        {(view !== "search" || searching) &&
+        {((view !== "search" && view !== "favorites") || searching) &&
           (loading || (aiSearching && filtered.length === 0) ? (
             <Grid>
               {Array.from({ length: 18 }).map((_, i) => (
