@@ -1190,7 +1190,7 @@ export default function Movies() {
           ))}
 
         {/* Infinite scroll sentinel + loader (catalog views only) */}
-        {view !== "search" && !loading && filtered.length > 0 && (
+        {view !== "search" && view !== "favorites" && !loading && filtered.length > 0 && (
           <>
             {loadingMore && (
               <Grid>
