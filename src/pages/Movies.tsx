@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize } from "lucide-react";
+import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize, Minimize } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 // ====== Theme ======
@@ -2761,6 +2761,7 @@ function PlayerOverlay({
   // during automatic failover so we never get stuck retrying a dead server.
   const [failed, setFailed] = useState<number[]>([]);
   const [allFailed, setAllFailed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const loadedRef = useRef(false);
   const failedRef = useRef<Set<number>>(new Set());
   const videoRef = useRef<HTMLDivElement>(null);
@@ -2829,7 +2830,17 @@ function PlayerOverlay({
     setReloadKey((k) => k + 1);
   };
 
-  const goFullscreen = () => {
+  const toggleFullscreen = () => {
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => void;
+    };
+    const fsEl = document.fullscreenElement || doc.webkitFullscreenElement;
+    if (fsEl) {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+      return;
+    }
     const el = videoRef.current as (HTMLDivElement & {
       webkitRequestFullscreen?: () => Promise<void>;
       webkitEnterFullscreen?: () => void;
@@ -2839,6 +2850,18 @@ function PlayerOverlay({
     else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
     else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen();
   };
+
+  useEffect(() => {
+    const doc = document as Document & { webkitFullscreenElement?: Element | null };
+    const onChange = () =>
+      setIsFullscreen(!!(document.fullscreenElement || doc.webkitFullscreenElement));
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange);
+    };
+  }, []);
 
 
   const circleBtnStyle: React.CSSProperties = {
@@ -2922,8 +2945,8 @@ function PlayerOverlay({
               {title || ""}
             </div>
           </div>
-          <button onClick={goFullscreen} aria-label="fullscreen" style={circleBtnStyle}>
-            <Maximize size={18} />
+          <button onClick={toggleFullscreen} aria-label="fullscreen" style={circleBtnStyle}>
+            {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
           <button onClick={reload} aria-label="reload" style={circleBtnStyle}>
             <RotateCcw size={18} />
@@ -2934,7 +2957,7 @@ function PlayerOverlay({
         </div>
 
         {/* Video */}
-        <div ref={videoRef} style={{ width: "100%", aspectRatio: "16/9", overflow: "hidden", position: "relative", background: "#000" }}>
+        <div ref={videoRef} style={{ width: "100%", ...(isFullscreen ? { height: "100%" } : { aspectRatio: "16/9" }), overflow: "hidden", position: "relative", background: "#000" }}>
           <iframe
             key={`${currentSrc}-${reloadKey}`}
             src={currentSrc}
@@ -2956,6 +2979,31 @@ function PlayerOverlay({
             onError={failover}
             style={{ width: "100%", height: "100%", border: "none" }}
           />
+          {isFullscreen && (
+            <button
+              onClick={toggleFullscreen}
+              aria-label="exit-fullscreen"
+              style={{
+                position: "absolute",
+                top: 14,
+                right: 14,
+                zIndex: 5,
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                background: "rgba(10,10,15,.7)",
+                border: `1px solid ${C.border}`,
+                color: C.text,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              <Minimize size={20} />
+            </button>
+          )}
           {autoTrying && !loaded && (
             <div
               style={{
