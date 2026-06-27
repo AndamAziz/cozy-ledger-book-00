@@ -1,4 +1,4 @@
-import { useСallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 // Lightweight localStorage-backed favorites store for movies & series.
 // Stores the full lightweight Movie object so a favorites view can be rendered
@@ -76,7 +76,7 @@ export function useFavorite(movie: FavMovie) {
     () => subscribe(() => setFav(isFavorite(movie.media, movie.tmdb_id))),
     [movie.media, movie.tmdb_id],
   );
-  const toggle = useСallback(
+  const toggle = useCallback(
     (e?: { stopPropagation?: () => void; preventDefault?: () => void }) => {
       e?.stopPropagation?.();
       e?.preventDefault?.();
