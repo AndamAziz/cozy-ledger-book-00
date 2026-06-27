@@ -2737,14 +2737,333 @@ function PlayerOverlay({
   closeLabel,
   serverLabel,
   hint,
+  title,
+  playerLabel,
+  serversTitleLabel,
+  autoSwitchLabel,
 }: {
   src?: string;
-  servers?: { name: string; url: string }[];
+  servers?: { name: string; url: string; accent?: string }[];
   onClose: () => void;
   closeLabel: string;
   serverLabel?: string;
   hint?: string;
+  title?: string;
+  playerLabel?: string;
+  serversTitleLabel?: string;
+  autoSwitchLabel?: string;
 }) {
+  const [active, setActive] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [autoTrying, setAutoTrying] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Once the user picks a specific server, stop the automatic fallback so their
+  // choice is honoured (each server button is dedicated).
+  const [manual, setManual] = useState(false);
+  const loadedRef = useRef(false);
+  const list = servers && servers.length > 0 ? servers : [];
+  // Clamp the index defensively so we never read an out-of-range server.
+  const safeActive = Math.min(Math.max(active, 0), Math.max(list.length - 1, 0));
+  const currentSrc = list.length > 0 ? list[safeActive]?.url ?? "" : src || "";
+
+  // Automatic fallback: if the active domain doesn't load within a few
+  // seconds (blocked / X-Frame-Options / network error), try the next one.
+  // Disabled after a manual pick.
+  useEffect(() => {
+    if (list.length <= 1 || manual) return;
+    loadedRef.current = false;
+    setLoaded(false);
+    const timer = setTimeout(() => {
+      if (!loadedRef.current && safeActive < list.length - 1) {
+        setAutoTrying(true);
+        setActive((i) => Math.min(i + 1, list.length - 1));
+      }
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, [safeActive, currentSrc, list.length, manual]);
+
+  const goNext = () => {
+    if (safeActive < list.length - 1) {
+      setAutoTrying(true);
+      setActive((i) => Math.min(i + 1, list.length - 1));
+    }
+  };
+
+  const reload = () => {
+    loadedRef.current = false;
+    setLoaded(false);
+    setReloadKey((k) => k + 1);
+  };
+
+  const circleBtnStyle: React.CSSProperties = {
+    width: 42,
+    height: 42,
+    borderRadius: "50%",
+    background: C.panel2,
+    border: `1px solid ${C.border}`,
+    color: C.text,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    flexShrink: 0,
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 200,
+        background: "rgba(0,0,0,.92)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 12,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: 980,
+          maxHeight: "94vh",
+          overflowY: "auto",
+          background: C.bg,
+          borderRadius: 18,
+          border: `1px solid ${C.border}`,
+          overflowX: "hidden",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "14px 16px",
+            background: C.panel,
+            borderBottom: `1px solid ${C.border}`,
+          }}
+        >
+          <div
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 14,
+              background: C.gold,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              boxShadow: `0 0 18px ${C.goldDim}`,
+            }}
+          >
+            <MonitorPlay size={24} color="#0A0A0F" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: 1.5,
+                color: C.muted,
+                textTransform: "uppercase",
+              }}
+            >
+              {playerLabel || "IN-APP PLAYER"}
+            </div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: C.text,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {title || ""}
+            </div>
+          </div>
+          <button onClick={reload} aria-label="reload" style={circleBtnStyle}>
+            <RotateCcw size={18} />
+          </button>
+          <button onClick={onClose} aria-label={closeLabel} style={circleBtnStyle}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Video */}
+        <div style={{ width: "100%", aspectRatio: "16/9", overflow: "hidden", position: "relative", background: "#000" }}>
+          <iframe
+            key={`${currentSrc}-${reloadKey}`}
+            src={currentSrc}
+            title="player"
+            allowFullScreen
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            referrerPolicy="origin"
+            // Block the embed from redirecting/hijacking the whole app (the
+            // main cause of the player "crashing" the page) while still
+            // allowing the video, fullscreen and new-tab popups to work.
+            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox"
+            onLoad={() => {
+              loadedRef.current = true;
+              setLoaded(true);
+              setAutoTrying(false);
+            }}
+            onError={goNext}
+            style={{ width: "100%", height: "100%", border: "none" }}
+          />
+          {autoTrying && !loaded && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                background: "rgba(10,10,15,.85)",
+                color: C.text,
+                fontWeight: 700,
+                fontSize: 14,
+                pointerEvents: "none",
+              }}
+            >
+              <div
+                className="mv-spin"
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: "50%",
+                  border: `3px solid ${C.border}`,
+                  borderTopColor: C.gold,
+                }}
+              />
+              {list.length > 0 ? `Trying ${list[safeActive]?.name ?? ""}…` : "Trying next server…"}
+            </div>
+          )}
+        </div>
+
+        {/* server selector */}
+        {servers && servers.length > 1 && (
+          <div style={{ padding: "18px 16px 22px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  letterSpacing: 3,
+                  color: C.muted,
+                  textTransform: "uppercase",
+                }}
+              >
+                {serversTitleLabel || "Servers"}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#22C55E",
+                    boxShadow: "0 0 8px #22C55E",
+                  }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#22C55E" }}>
+                  {autoSwitchLabel || "Auto-switch"}
+                </span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: 12,
+              }}
+            >
+              {servers.map((s, i) => {
+                const on = i === safeActive;
+                const accent = s.accent || C.gold;
+                return (
+                  <button
+                    key={s.name}
+                    onClick={() => {
+                      setAutoTrying(false);
+                      setManual(true);
+                      setActive(i);
+                    }}
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      background: `linear-gradient(135deg, ${accent}26, ${C.panel2})`,
+                      color: C.text,
+                      border: `1.5px solid ${on ? accent : `${accent}55`}`,
+                      borderRadius: 14,
+                      padding: "16px 14px",
+                      fontWeight: 800,
+                      fontSize: 15,
+                      cursor: "pointer",
+                      transition: "all .15s",
+                      boxShadow: on ? `0 0 0 1px ${accent}, 0 6px 18px ${accent}33` : "none",
+                    }}
+                  >
+                    <Play size={18} color={accent} fill={accent} style={{ flexShrink: 0 }} />
+                    <span
+                      style={{
+                        flex: 1,
+                        textAlign: "center",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {serverLabel ? `${serverLabel} ${i + 1}` : s.name}
+                    </span>
+                    {on && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: -5,
+                          insetInlineEnd: -5,
+                          width: 14,
+                          height: 14,
+                          borderRadius: "50%",
+                          background: accent,
+                          border: `2px solid ${C.bg}`,
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {hint && (
+              <div style={{ fontSize: 13, color: C.muted, marginTop: 16, textAlign: "center" }}>
+                {hint}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [autoTrying, setAutoTrying] = useState(false);
