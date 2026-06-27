@@ -2990,7 +2990,7 @@ function PlayerOverlay({
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(2, 1fr)",
-                gap: 12,
+                gap: 9,
               }}
             >
               {servers.map((s, i) => {
@@ -3008,20 +3008,20 @@ function PlayerOverlay({
                       position: "relative",
                       display: "flex",
                       alignItems: "center",
-                      gap: 10,
-                      background: `linear-gradient(135deg, ${accent}26, ${C.panel2})`,
+                      gap: 8,
+                      background: `linear-gradient(135deg, ${accent}22, ${C.panel2})`,
                       color: C.text,
-                      border: `1.5px solid ${on ? accent : `${accent}55`}`,
-                      borderRadius: 14,
-                      padding: "16px 14px",
-                      fontWeight: 800,
-                      fontSize: 15,
+                      border: `1.5px solid ${on ? accent : `${accent}40`}`,
+                      borderRadius: 11,
+                      padding: "9px 11px",
+                      fontWeight: 700,
+                      fontSize: 13,
                       cursor: "pointer",
                       transition: "all .15s",
-                      boxShadow: on ? `0 0 0 1px ${accent}, 0 6px 18px ${accent}33` : "none",
+                      boxShadow: on ? `0 0 0 1px ${accent}, 0 4px 12px ${accent}33` : "none",
                     }}
                   >
-                    <Play size={18} color={accent} fill={accent} style={{ flexShrink: 0 }} />
+                    <Play size={14} color={accent} fill={accent} style={{ flexShrink: 0 }} />
                     <span
                       style={{
                         flex: 1,
@@ -3037,10 +3037,10 @@ function PlayerOverlay({
                       <span
                         style={{
                           position: "absolute",
-                          top: -5,
-                          insetInlineEnd: -5,
-                          width: 14,
-                          height: 14,
+                          top: -4,
+                          insetInlineEnd: -4,
+                          width: 11,
+                          height: 11,
                           borderRadius: "50%",
                           background: accent,
                           border: `2px solid ${C.bg}`,
@@ -3051,6 +3051,7 @@ function PlayerOverlay({
                 );
               })}
             </div>
+
 
             {hint && (
               <div style={{ fontSize: 13, color: C.muted, marginTop: 16, textAlign: "center" }}>
