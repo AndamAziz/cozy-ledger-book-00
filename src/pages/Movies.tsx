@@ -2946,8 +2946,10 @@ function PlayerOverlay({
               loadedRef.current = true;
               setLoaded(true);
               setAutoTrying(false);
+              setAllFailed(false);
+              failedRef.current.delete(safeActive);
             }}
-            onError={goNext}
+            onError={failover}
             style={{ width: "100%", height: "100%", border: "none" }}
           />
           {autoTrying && !loaded && (
