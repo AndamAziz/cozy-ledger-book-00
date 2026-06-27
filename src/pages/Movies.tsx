@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Bot, Play, X, RotateCcw, MonitorPlay } from "lucide-react";
+import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 // ====== Theme ======
