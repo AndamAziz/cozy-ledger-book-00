@@ -463,10 +463,10 @@ export default function Movies() {
   const [selected, setSelected] = useState<Movie | null>(null);
   const [searchResults, setSearchResults] = useState<Movie[] | null>(null);
   const [mediaTab, setMediaTab] = useState<"movie" | "tv">("movie");
-  const [view, setView] = useState<"home" | "movie" | "tv" | "search">("home");
+  const [view, setView] = useState<"home" | "movie" | "tv" | "search" | "favorites">("home");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const goView = (v: "home" | "movie" | "tv" | "search") => {
+  const goView = (v: "home" | "movie" | "tv" | "search" | "favorites") => {
     if (v === "search") {
       setView("search");
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -476,6 +476,11 @@ export default function Movies() {
     setSearch("");
     setAiTitle(null);
     setSearchResults(null);
+    if (v === "favorites") {
+      setView("favorites");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     if (v === "tv") setMediaTab("tv");
     else setMediaTab("movie");
     setView(v);
