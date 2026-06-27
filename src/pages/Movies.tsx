@@ -2957,7 +2957,7 @@ function PlayerOverlay({
         </div>
 
         {/* Video */}
-        <div ref={videoRef} style={{ width: "100%", aspectRatio: "16/9", overflow: "hidden", position: "relative", background: "#000" }}>
+        <div ref={videoRef} style={{ width: "100%", ...(isFullscreen ? { height: "100%" } : { aspectRatio: "16/9" }), overflow: "hidden", position: "relative", background: "#000" }}>
           <iframe
             key={`${currentSrc}-${reloadKey}`}
             src={currentSrc}
