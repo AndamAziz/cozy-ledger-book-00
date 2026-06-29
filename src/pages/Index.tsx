@@ -25,7 +25,6 @@ import { REVIEWS_I18N, getReviewLang } from '@/lib/reviews';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
-import { LiveScoreboard } from '@/components/sports/LiveScoreboard';
 import { Users, Sparkles, Tv, Film, Bitcoin, Moon, BookOpen, Radio, X } from 'lucide-react';
 
 const PRAYER_LABEL: Record<string, string> = {
@@ -263,8 +262,6 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <X className="h-4 w-4" />
             </button>
           </div>
-          {/* Live scoreboard (separate from the live-stream iframe below) */}
-          <LiveScoreboard />
           <div className="flex-1 min-h-0 bg-black">
             <iframe
               title="Sport Live"
