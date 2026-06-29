@@ -25,7 +25,7 @@ import { REVIEWS_I18N, getReviewLang } from '@/lib/reviews';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
-import { Users, Sparkles, Tv, Film, Bitcoin, Moon, BookOpen } from 'lucide-react';
+import { Users, Sparkles, Tv, Film, Bitcoin, Moon, BookOpen, Radio, X } from 'lucide-react';
 
 const PRAYER_LABEL: Record<string, string> = {
   en: 'Prayer Times & Qibla',
@@ -59,6 +59,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
+  const [sportOpen, setSportOpen] = useState(false);
   const financeData = useFinanceData();
   const reviewI18n = REVIEWS_I18N[getReviewLang(language)];
 
@@ -113,30 +114,46 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           <AlertBox lowStockItems={lowStockItems} />
 
           {/* External link buttons */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
+          <div className="mb-2 sm:mb-3 no-print">
             <a
               href="https://insta.kurdcloud.xyz/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 hover:border-primary/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 hover:border-primary/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0">
                 <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
               </div>
               <span className="font-bold text-foreground text-xs sm:text-sm truncate">ALL IN ONE</span>
             </a>
+          </div>
+
+          {/* TV + Sport Live (compact) */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
             <a
               href="https://famelack.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 px-2 py-2 sm:px-2.5 sm:py-2.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-md shadow-info/30 flex-shrink-0">
-                <Tv className="h-4 w-4 sm:h-5 sm:w-5 text-info-foreground" />
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-sm shadow-info/30 flex-shrink-0">
+                <Tv className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-info-foreground" />
               </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">TV</span>
+              <span className="font-bold text-foreground text-[11px] sm:text-xs truncate">TV</span>
             </a>
+            <button
+              onClick={() => setSportOpen(true)}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:border-success/50 px-2 py-2 sm:px-2.5 sm:py-2.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2"
+            >
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-gradient-to-br from-success to-success/80 flex items-center justify-center shadow-sm shadow-success/30 flex-shrink-0">
+                <Radio className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-[11px] sm:text-xs truncate">Sport Live</span>
+            </button>
           </div>
+
+
+
 
           {/* Movies + Crypto Tracker (side by side) */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
@@ -226,6 +243,37 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           </div>
         </div>
       </div>
+
+      {/* Sport Live player */}
+      {sportOpen && (
+        <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex flex-col no-print">
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/40">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-success to-success/80 flex items-center justify-center">
+                <Radio className="h-4 w-4 text-success-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-sm">Sport Live</span>
+            </div>
+            <button
+              onClick={() => setSportOpen(false)}
+              className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-colors touch-manipulation active:scale-95"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 bg-black">
+            <iframe
+              title="Sport Live"
+              src="https://ex.roooom.online/?alba-player=home2&serv=0"
+              allowFullScreen
+              scrolling="yes"
+              frameBorder="0"
+              className="w-full h-full"
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 };
