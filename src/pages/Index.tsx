@@ -267,6 +267,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               title="Sport Live"
               src="https://ex.roooom.online/?alba-player=home2&serv=0"
               allowFullScreen
+              allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
               scrolling="yes"
               frameBorder="0"
               className="w-full h-full"
