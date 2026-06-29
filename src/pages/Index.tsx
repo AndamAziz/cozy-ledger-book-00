@@ -59,6 +59,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
+  const [sportOpen, setSportOpen] = useState(false);
   const financeData = useFinanceData();
   const reviewI18n = REVIEWS_I18N[getReviewLang(language)];
 
