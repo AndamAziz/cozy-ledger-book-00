@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { RefreshCw, ChevronDown, AlertCircle } from 'lucide-react';
+import { RefreshCw, ChevronDown, AlertCircle, Trophy, Flag, Globe, Star, Radio } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 // ---- Types (subset of API-Football response) ----
 interface ApiTeam {
