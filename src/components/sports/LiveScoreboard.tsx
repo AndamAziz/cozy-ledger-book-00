@@ -127,9 +127,9 @@ export function LiveScoreboard() {
   const filtered = league === 'all' ? matches : matches.filter((m) => m.league.id === league);
 
   return (
-    <div className="border-b border-border/40 bg-background/95">
+    <div className="border-b-2 border-border/60 bg-background/95">
       {/* Heading + manual refresh */}
-      <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
+      <div className="flex items-center justify-between px-3 pt-2 pb-1">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
@@ -149,62 +149,67 @@ export function LiveScoreboard() {
         </button>
       </div>
 
-      {/* League filter tabs */}
-      <div className="flex gap-1.5 overflow-x-auto px-3 pb-2 no-scrollbar">
-        {LEAGUE_TABS.map((tab) => (
-          <button
-            key={String(tab.id)}
-            onClick={() => setLeague(tab.id)}
-            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-              league === tab.id
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* League filter tabs with fade edges */}
+      <div className="relative">
+        <div className="flex gap-1.5 overflow-x-auto px-3 pb-1.5 no-scrollbar scroll-smooth snap-x">
+          {LEAGUE_TABS.map((tab) => (
+            <button
+              key={String(tab.id)}
+              onClick={() => setLeague(tab.id)}
+              className={`snap-start whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                league === tab.id
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {/* Edge fades hint that more tabs exist */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-background to-transparent" />
       </div>
 
       {/* Content */}
-      <div className="px-3 pb-2.5">
+      <div className="pb-2">
         {error === 'missing_api_key' ? (
-          <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
+          <div className="mx-3 flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
             <span>Live scores need a sports data API key. Ask the admin to add it.</span>
           </div>
         ) : loading && matches.length === 0 ? (
-          <div className="flex gap-2 overflow-hidden">
+          <div className="flex gap-2.5 overflow-hidden px-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-[72px] w-44 flex-shrink-0 animate-pulse rounded-xl bg-muted/40" />
+              <div key={i} className="h-[78px] w-[80%] max-w-[260px] flex-shrink-0 animate-pulse rounded-xl bg-muted/40" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-lg bg-muted/30 px-3 py-3 text-center text-xs text-muted-foreground">
+          <div className="mx-3 rounded-lg bg-muted/30 px-3 py-3 text-center text-xs text-muted-foreground">
             No live matches right now.
           </div>
         ) : (
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto scroll-px-3 px-3 pb-1 no-scrollbar scroll-smooth">
             {filtered.map((m) => {
               const st = statusInfo(m.fixture.status.short, m.fixture.status.elapsed);
               const isExpanded = expanded === m.fixture.id;
               return (
                 <div
                   key={m.fixture.id}
-                  className={`flex-shrink-0 rounded-xl border border-border/50 bg-card transition-all ${
-                    isExpanded ? 'w-72' : 'w-48'
+                  className={`flex-shrink-0 snap-start rounded-xl border border-border/60 bg-card shadow-md shadow-black/20 transition-all ${
+                    isExpanded ? 'w-[88%] max-w-[300px]' : 'w-[80%] max-w-[260px]'
                   }`}
                 >
                   <button
                     onClick={() => toggleExpand(m.fixture.id)}
-                    className="w-full p-2.5 text-start"
+                    className="w-full p-3 text-start"
                   >
-                    <div className="mb-1.5 flex items-center justify-between gap-1">
-                      <span className="truncate text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <div className="mb-2 flex items-center justify-between gap-1">
+                      <span className="min-w-0 flex-1 truncate text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
                         {m.league.name}
                       </span>
                       {st.kind === 'live' ? (
-                        <span className="flex items-center gap-1 rounded-full bg-destructive/15 px-1.5 py-0.5 text-[9px] font-bold text-destructive">
+                        <span className="flex flex-shrink-0 items-center gap-1 rounded-full bg-destructive/15 px-1.5 py-0.5 text-[9px] font-bold text-destructive">
                           <span className="relative flex h-1.5 w-1.5">
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
                             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-destructive" />
@@ -212,34 +217,34 @@ export function LiveScoreboard() {
                           {st.label}
                         </span>
                       ) : st.kind === 'ht' ? (
-                        <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-500">
+                        <span className="flex-shrink-0 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-500">
                           HT
                         </span>
                       ) : st.kind === 'finished' ? (
-                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
+                        <span className="flex-shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
                           FT
                         </span>
                       ) : (
-                        <span className="rounded-full bg-info/15 px-1.5 py-0.5 text-[9px] font-bold text-info">
+                        <span className="flex-shrink-0 rounded-full bg-info/15 px-1.5 py-0.5 text-[9px] font-bold text-info">
                           {kickoffTime(m.fixture.date)}
                         </span>
                       )}
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <img src={m.teams.home.logo} alt="" className="h-4 w-4 flex-shrink-0 object-contain" loading="lazy" />
-                          <span className="truncate text-xs font-medium text-foreground">{m.teams.home.name}</span>
+                        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                          <img src={m.teams.home.logo} alt="" className="h-5 w-5 flex-shrink-0 object-contain" loading="lazy" />
+                          <span className="truncate text-[13px] font-medium text-foreground">{m.teams.home.name}</span>
                         </div>
-                        <span className="text-sm font-bold text-foreground">{m.goals.home ?? '-'}</span>
+                        <span className="flex-shrink-0 text-lg font-bold tabular-nums text-foreground">{m.goals.home ?? '-'}</span>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <img src={m.teams.away.logo} alt="" className="h-4 w-4 flex-shrink-0 object-contain" loading="lazy" />
-                          <span className="truncate text-xs font-medium text-foreground">{m.teams.away.name}</span>
+                        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                          <img src={m.teams.away.logo} alt="" className="h-5 w-5 flex-shrink-0 object-contain" loading="lazy" />
+                          <span className="truncate text-[13px] font-medium text-foreground">{m.teams.away.name}</span>
                         </div>
-                        <span className="text-sm font-bold text-foreground">{m.goals.away ?? '-'}</span>
+                        <span className="flex-shrink-0 text-lg font-bold tabular-nums text-foreground">{m.goals.away ?? '-'}</span>
                       </div>
                     </div>
 
@@ -251,7 +256,7 @@ export function LiveScoreboard() {
                   </button>
 
                   {isExpanded && (
-                    <div className="border-t border-border/40 px-2.5 py-2">
+                    <div className="border-t border-border/40 px-3 py-2">
                       {eventsLoading === m.fixture.id ? (
                         <p className="text-center text-[11px] text-muted-foreground">Loading…</p>
                       ) : (events[m.fixture.id]?.length ?? 0) === 0 ? (
