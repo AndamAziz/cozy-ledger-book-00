@@ -263,6 +263,8 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <X className="h-4 w-4" />
             </button>
           </div>
+          {/* Live scoreboard (separate from the live-stream iframe below) */}
+          <LiveScoreboard />
           <div className="flex-1 min-h-0 bg-black">
             <iframe
               title="Sport Live"
