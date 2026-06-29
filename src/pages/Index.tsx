@@ -114,44 +114,45 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           <AlertBox lowStockItems={lowStockItems} />
 
           {/* External link buttons */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-2 sm:mb-3 no-print">
+          <div className="mb-2 sm:mb-3 no-print">
             <a
               href="https://insta.kurdcloud.xyz/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 hover:border-primary/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 hover:border-primary/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0">
                 <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
               </div>
               <span className="font-bold text-foreground text-xs sm:text-sm truncate">ALL IN ONE</span>
             </a>
-            <button
-              onClick={() => setSportOpen(true)}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:border-success/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3"
-            >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-success to-success/80 flex items-center justify-center shadow-md shadow-success/30 flex-shrink-0">
-                <Radio className="h-4 w-4 sm:h-5 sm:w-5 text-success-foreground" />
-              </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">Sport Live</span>
-            </button>
           </div>
 
-          {/* TV (compact) */}
+          {/* TV + Sport Live (compact) */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
             <a
               href="https://famelack.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 px-2 py-1.5 sm:px-2.5 sm:py-2 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 px-2 py-2 sm:px-2.5 sm:py-2.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2"
             >
               <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-sm shadow-info/30 flex-shrink-0">
                 <Tv className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-info-foreground" />
               </div>
               <span className="font-bold text-foreground text-[11px] sm:text-xs truncate">TV</span>
             </a>
-            <div />
+            <button
+              onClick={() => setSportOpen(true)}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:border-success/50 px-2 py-2 sm:px-2.5 sm:py-2.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2"
+            >
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-gradient-to-br from-success to-success/80 flex items-center justify-center shadow-sm shadow-success/30 flex-shrink-0">
+                <Radio className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-[11px] sm:text-xs truncate">Sport Live</span>
+            </button>
           </div>
+
+
 
 
           {/* Movies + Crypto Tracker (side by side) */}
