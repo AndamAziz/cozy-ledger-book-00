@@ -29,15 +29,15 @@ interface ApiEvent {
 }
 
 // ---- League filter tabs (API-Football league IDs) ----
-const LEAGUE_TABS: { id: number | 'all'; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 2, label: 'UCL' },
-  { id: 39, label: 'Premier League' },
-  { id: 140, label: 'La Liga' },
-  { id: 135, label: 'Serie A' },
-  { id: 78, label: 'Bundesliga' },
-  { id: 61, label: 'Ligue 1' },
-  { id: 1, label: 'World Cup' },
+const LEAGUE_TABS: { id: number | 'all'; label: string; icon: LucideIcon }[] = [
+  { id: 'all', label: 'All', icon: Globe },
+  { id: 2, label: 'UCL', icon: Star },
+  { id: 39, label: 'Premier League', icon: Flag },
+  { id: 140, label: 'La Liga', icon: Flag },
+  { id: 135, label: 'Serie A', icon: Flag },
+  { id: 78, label: 'Bundesliga', icon: Flag },
+  { id: 61, label: 'Ligue 1', icon: Flag },
+  { id: 1, label: 'World Cup', icon: Trophy },
 ];
 
 const LIVE_SHORTS = new Set(['1H', '2H', 'ET', 'P', 'BT', 'LIVE', 'INT']);
