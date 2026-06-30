@@ -565,6 +565,17 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
           <div className="w-2 h-2 rounded-full bg-success/50" />
           <div className="w-2 h-2 rounded-full bg-info/50" />
         </div>
+
+        {/* Trust & Security link */}
+        <div className="flex justify-center mt-5">
+          <Link
+            to="/trust"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-primary transition-colors"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Trust &amp; Security</span>
+          </Link>
+        </div>
       </div>
     </div>
   );
