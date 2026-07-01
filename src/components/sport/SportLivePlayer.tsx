@@ -108,7 +108,10 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const { servers, statuses, latencies, isLoading, runHealthCheck, markStatus, refetch } =
     useStreamServers(open);
 
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem(ACTIVE_SERVER_KEY);
+  });
   const [iframeLoading, setIframeLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [allOffline, setAllOffline] = useState(false);
