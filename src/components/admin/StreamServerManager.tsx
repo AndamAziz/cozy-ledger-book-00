@@ -308,6 +308,20 @@ export function StreamServerManager({ isCEO }: StreamServerManagerProps) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => testStream(s)}
+                  disabled={testingId === s.id}
+                  className="h-8 w-8 rounded-lg text-primary"
+                  title="Test this stream"
+                >
+                  {testingId === s.id ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Activity className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => toggleActive(s)}
                   className={`h-8 w-8 rounded-lg ${s.is_active ? 'text-success' : 'text-muted-foreground'}`}
                   title={s.is_active ? 'Disable' : 'Re-enable'}
