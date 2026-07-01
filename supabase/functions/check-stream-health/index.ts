@@ -29,7 +29,7 @@ function isPlayableResponse(status: number): boolean {
   return (status >= 200 && status < 400) || [401, 403, 405, 429].includes(status);
 }
 
-async function probe(url: string): Promise<{ reachable: boolean; latency: number | null }> {
+async function probe(url: string): Promise<{ reachable: boolean; latency: number | null; blockedOrTimedOut?: boolean }> {
   const start = performance.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
@@ -55,8 +55,14 @@ async function probe(url: string): Promise<{ reachable: boolean; latency: number
     const latency = Math.round(performance.now() - start);
     const reachable = isPlayableResponse(res.status);
     return { reachable, latency: reachable ? latency : null };
-  } catch (_err) {
-    return { reachable: false, latency: null };
+  } catch (err) {
+    const latency = Math.round(performance.now() - start);
+    const isTimeout = (err as Error)?.name === 'AbortError';
+    // Timeout/bot-protection is common for stream pages. Report as reachable-but-slow
+    // so admins don't lose valid browser-playable links to false Offline states.
+    return isTimeout
+      ? { reachable: true, latency, blockedOrTimedOut: true }
+      : { reachable: false, latency: null };
   } finally {
     clearTimeout(timer);
   }
@@ -74,6 +80,12 @@ Deno.serve(async (req) => {
       let body: { url?: string } = {};
       try { body = await req.json(); } catch (_) { /* no body */ }
       if (body?.url && typeof body.url === 'string') {
+        try { new URL(body.url); } catch (_) {
+          return new Response(
+            JSON.stringify({ results: [{ url: body.url, reachable: false, latency_ms: null, status: 'offline' }] }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
+          );
+        }
         const { reachable, latency } = await probe(body.url);
         const status = classify(reachable, latency);
         return new Response(
