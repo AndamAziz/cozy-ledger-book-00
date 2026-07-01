@@ -190,8 +190,12 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   // Initial server selection once the list loads.
   useEffect(() => {
     if (!open) return;
-    if (activeId) return;
     if (orderedServers.length === 0) return;
+    // A restored activeId that still exists in the list stays as-is.
+    if (activeId && orderedServers.some((s) => s.id === activeId)) {
+      attemptedRef.current.add(activeId);
+      return;
+    }
     attemptedRef.current = new Set();
     const first = pickNextServer();
     switchTo(first);
@@ -203,6 +207,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
     clearLoadTimer();
     if (failoverTimerRef.current) clearTimeout(failoverTimerRef.current);
     setActiveId(null);
+    if (typeof window !== 'undefined') sessionStorage.removeItem(ACTIVE_SERVER_KEY);
     setIframeLoading(true);
     setSwitching(false);
     setAllOffline(false);
