@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export type StreamStatus = 'live' | 'slow' | 'offline' | 'checking';
@@ -22,18 +22,16 @@ interface HealthResult {
   status: 'live' | 'slow' | 'offline';
 }
 
-const HEALTH_INTERVAL_MS = 30_000;
-
 /**
- * Loads active stream servers ordered by priority and periodically runs a
- * server-side health check (Edge Function) so the UI can show Live/Slow/Offline.
+ * Loads active stream servers ordered by priority. Health checks are manual only
+ * because many stream/movie hosts block server-side probes while still playing in
+ * a browser iframe.
  */
 export function useStreamServers(enabled: boolean) {
   const [servers, setServers] = useState<StreamServer[]>([]);
   const [statuses, setStatuses] = useState<Record<string, StreamStatus>>({});
   const [latencies, setLatencies] = useState<Record<string, number | null>>({});
   const [isLoading, setIsLoading] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchServers = useCallback(async () => {
     try {
@@ -48,7 +46,7 @@ export function useStreamServers(enabled: boolean) {
       setStatuses((prev) => {
         const next = { ...prev };
         for (const s of list) {
-          if (!next[s.id]) next[s.id] = 'checking';
+          if (!next[s.id]) next[s.id] = (s.last_status as StreamStatus | null) ?? 'checking';
         }
         return next;
       });
@@ -76,11 +74,7 @@ export function useStreamServers(enabled: boolean) {
         for (const r of results) next[r.id] = r.latency_ms;
         return next;
       });
-      // A server may have been auto-disabled server-side; refresh the active list.
-      const offlineDisabled = results.some((r) => r.status === 'offline');
-      if (offlineDisabled) {
-        fetchServers();
-      }
+      fetchServers();
     } catch (err) {
       console.error('Health check failed:', err);
     }
@@ -92,21 +86,9 @@ export function useStreamServers(enabled: boolean) {
   }, [enabled, fetchServers]);
 
   useEffect(() => {
-    if (!enabled) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
-    // Run a single health check shortly after opening so statuses are populated.
-    // NOTE: we intentionally do NOT poll on an interval anymore. The recurring
-    // 30s probe was flipping a perfectly playable stream to "offline" (many
-    // hosts block server-side probes even though the iframe plays fine), which
-    // interrupted viewers. Status now refreshes only on manual request.
-    const initial = setTimeout(runHealthCheck, 1500);
-    return () => {
-      clearTimeout(initial);
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [enabled, runHealthCheck]);
+    // No automatic health check here: viewers should always get a chance to play
+    // the saved URL directly, even when probes report a false offline state.
+  }, [enabled]);
 
   // Allow the UI to mark a server offline locally (iframe onerror / timeout).
   const markStatus = useCallback((id: string, status: StreamStatus) => {
