@@ -26,7 +26,7 @@ function classify(reachable: boolean, latency: number | null): Status {
 function isPlayableResponse(status: number): boolean {
   // 401/403/405/429 often mean the host blocks server-side probes, not that the
   // browser iframe/video cannot play. Treat those as reachable for admin testing.
-  return (status >= 200 && status < 500) || [401, 403, 405, 429].includes(status);
+  return (status >= 200 && status < 400) || [401, 403, 405, 429].includes(status);
 }
 
 async function probe(url: string): Promise<{ reachable: boolean; latency: number | null }> {
