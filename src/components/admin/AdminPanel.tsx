@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { TelegramHealthCard } from './TelegramHealthCard';
 import { ReviewModeration } from './ReviewModeration';
+import { StreamServerManager } from './StreamServerManager';
 import { normalizeBrandText } from '@/lib/brand';
 
 interface UserApproval {
