@@ -277,7 +277,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
                 Servers
               </span>
               <span className="text-[10px] text-muted-foreground">
-                Auto-checks every 30s
+                Tap a server to switch
               </span>
             </div>
             {orderedServers.map((s) => {
