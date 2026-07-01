@@ -46,6 +46,8 @@ const QURAN_LABEL: Record<string, string> = {
 
 type TabType = 'finance' | 'inventory' | 'sales' | 'reports';
 
+const SPORT_OPEN_KEY = 'ctp-sport-live-open';
+
 interface DashboardProps {
   onOpenAdmin: () => void;
   isAdmin: boolean;
