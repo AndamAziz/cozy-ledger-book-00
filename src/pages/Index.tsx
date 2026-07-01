@@ -25,7 +25,8 @@ import { REVIEWS_I18N, getReviewLang } from '@/lib/reviews';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
-import { Users, Sparkles, Tv, Film, Bitcoin, Moon, BookOpen, Radio, X } from 'lucide-react';
+import { Users, Sparkles, Tv, Film, Bitcoin, Moon, BookOpen, Radio } from 'lucide-react';
+import { SportLivePlayer } from '@/components/sport/SportLivePlayer';
 
 const PRAYER_LABEL: Record<string, string> = {
   en: 'Prayer Times & Qibla',
