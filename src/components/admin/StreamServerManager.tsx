@@ -62,6 +62,39 @@ export function StreamServerManager({ isCEO }: StreamServerManagerProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+
+  const testStream = async (s: StreamServerRow) => {
+    setTestingId(s.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-stream-health', {
+        body: { url: s.url },
+      });
+      if (error) throw error;
+      const result = data?.results?.[0] as TestResult | undefined;
+      if (!result) throw new Error('No result returned');
+      setTestResults((prev) => ({ ...prev, [s.id]: result }));
+      const labels: Record<TestStatus, string> = {
+        live: 'Live',
+        slow: 'Slow',
+        offline: 'Offline',
+      };
+      toast({
+        title: `${s.name}: ${labels[result.status]}`,
+        description:
+          result.latency_ms != null ? `Responded in ${result.latency_ms}ms` : 'No response',
+        variant: result.status === 'offline' ? 'destructive' : 'default',
+      });
+    } catch (err) {
+      console.error('Test stream failed:', err);
+      setTestResults((prev) => ({ ...prev, [s.id]: { status: 'offline', latency_ms: null } }));
+      toast({ title: 'Test failed', description: String((err as Error)?.message), variant: 'destructive' });
+    } finally {
+      setTestingId(null);
+    }
+  };
+
 
   const fetchServers = useCallback(async () => {
     setIsLoading(true);
