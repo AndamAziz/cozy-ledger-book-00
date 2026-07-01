@@ -22,7 +22,14 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
+  Activity,
 } from 'lucide-react';
+
+type TestStatus = 'live' | 'slow' | 'offline';
+interface TestResult {
+  status: TestStatus;
+  latency_ms: number | null;
+}
 
 interface StreamServerRow {
   id: string;
@@ -55,6 +62,39 @@ export function StreamServerManager({ isCEO }: StreamServerManagerProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+
+  const testStream = async (s: StreamServerRow) => {
+    setTestingId(s.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-stream-health', {
+        body: { url: s.url },
+      });
+      if (error) throw error;
+      const result = data?.results?.[0] as TestResult | undefined;
+      if (!result) throw new Error('No result returned');
+      setTestResults((prev) => ({ ...prev, [s.id]: result }));
+      const labels: Record<TestStatus, string> = {
+        live: 'Live',
+        slow: 'Slow',
+        offline: 'Offline',
+      };
+      toast({
+        title: `${s.name}: ${labels[result.status]}`,
+        description:
+          result.latency_ms != null ? `Responded in ${result.latency_ms}ms` : 'No response',
+        variant: result.status === 'offline' ? 'destructive' : 'default',
+      });
+    } catch (err) {
+      console.error('Test stream failed:', err);
+      setTestResults((prev) => ({ ...prev, [s.id]: { status: 'offline', latency_ms: null } }));
+      toast({ title: 'Test failed', description: String((err as Error)?.message), variant: 'destructive' });
+    } finally {
+      setTestingId(null);
+    }
+  };
+
 
   const fetchServers = useCallback(async () => {
     setIsLoading(true);
@@ -247,9 +287,38 @@ export function StreamServerManager({ isCEO }: StreamServerManagerProps) {
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground truncate">{s.url}</p>
+                {testResults[s.id] && (
+                  <span
+                    className={`mt-1 inline-flex items-center gap-1 text-[10px] font-bold ${
+                      STATUS_STYLE[testResults[s.id].status] ?? 'text-muted-foreground'
+                    }`}
+                  >
+                    {testResults[s.id].status === 'offline' ? (
+                      <WifiOff className="h-3 w-3" />
+                    ) : (
+                      <Wifi className="h-3 w-3" />
+                    )}
+                    Test: {testResults[s.id].status}
+                    {testResults[s.id].latency_ms != null && ` · ${testResults[s.id].latency_ms}ms`}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-1 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => testStream(s)}
+                  disabled={testingId === s.id}
+                  className="h-8 w-8 rounded-lg text-primary"
+                  title="Test this stream"
+                >
+                  {testingId === s.id ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Activity className="h-4 w-4" />
+                  )}
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"

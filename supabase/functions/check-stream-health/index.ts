@@ -58,6 +58,21 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Single-URL test mode: probe one URL on demand (admin "Test this stream").
+    // No DB writes — this is a stateless check so it never affects failover.
+    if (req.method === 'POST') {
+      let body: { url?: string } = {};
+      try { body = await req.json(); } catch (_) { /* no body */ }
+      if (body?.url && typeof body.url === 'string') {
+        const { reachable, latency } = await probe(body.url);
+        const status = classify(reachable, latency);
+        return new Response(
+          JSON.stringify({ results: [{ url: body.url, reachable, latency_ms: latency, status }] }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
+        );
+      }
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey, {
