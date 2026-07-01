@@ -725,6 +725,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           </Button>
         </div>
 
+        {/* Sport Live server management (CEO only) */}
+        <StreamServerManager isCEO={isCEO} />
+
+
+
 
 
 
