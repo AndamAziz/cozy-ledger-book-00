@@ -46,7 +46,9 @@ export function useStreamServers(enabled: boolean) {
       setStatuses((prev) => {
         const next = { ...prev };
         for (const s of list) {
-          if (!next[s.id]) next[s.id] = (s.last_status as StreamStatus | null) ?? 'checking';
+          // Start neutral on the viewer side. Stored probe results can be false
+          // negatives for movie/stream hosts that block bots but load in-browser.
+          if (!next[s.id]) next[s.id] = 'checking';
         }
         return next;
       });
