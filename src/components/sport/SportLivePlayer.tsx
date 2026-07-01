@@ -203,7 +203,10 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
                 src={activeServer.url}
                 allowFullScreen
                 allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+                referrerPolicy="no-referrer"
+                // No `allow-popups` / `allow-top-navigation`: blocks ad scripts from
+                // opening new tabs or hijacking the page on refresh/click.
+                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                 onLoad={handleIframeLoad}
                 onError={handleIframeError}
                 className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${
