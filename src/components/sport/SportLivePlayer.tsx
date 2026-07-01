@@ -170,6 +170,8 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
     setIframeLoading(true);
     attemptedRef.current.add(server.id);
     setActiveId(server.id);
+    // Remember the stream so an ad-forced reload resumes the same server.
+    if (typeof window !== 'undefined') sessionStorage.setItem(ACTIVE_SERVER_KEY, server.id);
   }, []);
 
   // Debounced failover to avoid flicker loops if several servers fail at once.
