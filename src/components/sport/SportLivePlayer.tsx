@@ -56,7 +56,13 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
       const relaxed = orderedServers.filter(
         (s) => s.id !== excludeId && statuses[s.id] !== 'offline',
       );
-      return relaxed[0] ?? null;
+      if (relaxed.length > 0) return relaxed[0];
+      // Last resort: some hosts block server-side probes (bot protection) but still
+      // play inside a browser iframe. Give the iframe a chance rather than giving up.
+      const untried = orderedServers.filter(
+        (s) => s.id !== excludeId && !attemptedRef.current.has(s.id),
+      );
+      return untried[0] ?? null;
     },
     [orderedServers, statuses],
   );
