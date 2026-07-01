@@ -293,11 +293,13 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
                 title="Sport Live"
                 src={activeServer.url}
                 allowFullScreen
+                scrolling="no"
                 allow="fullscreen *; autoplay *; encrypted-media *; picture-in-picture *; web-share; clipboard-write; accelerometer; gyroscope"
-                referrerPolicy="no-referrer"
-                // No `allow-popups` / `allow-top-navigation`: blocks ad scripts from
-                // opening new tabs or hijacking the page on refresh/click.
-                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock allow-modals allow-downloads"
+                referrerPolicy="no-referrer-when-downgrade"
+                // No `sandbox` attribute: matches the standalone player that loads every
+                // provider (fastimdb, alba-player, HLS embeds, etc.). A sandbox breaks
+                // many stream/movie hosts because their players need unrestricted
+                // same-origin script + storage access to start playback.
                 onLoad={handleIframeLoad}
                 onError={handleIframeError}
                 className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${
@@ -305,6 +307,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
                 }`}
               />
             )}
+
 
             {activeServer && !allOffline && playbackMode !== 'iframe' && (
               <DirectStreamVideo
