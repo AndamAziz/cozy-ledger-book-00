@@ -9,6 +9,7 @@ interface SportLivePlayerProps {
 
 const STREAM_REVEAL_TIMEOUT_MS = 2500;
 const FAILOVER_DEBOUNCE_MS = 1200;
+const ACTIVE_SERVER_KEY = 'ctp-sport-active-server';
 
 const STATUS_META: Record<StreamStatus, { label: string; dot: string; text: string }> = {
   live: { label: 'Live', dot: 'bg-success', text: 'text-success' },
