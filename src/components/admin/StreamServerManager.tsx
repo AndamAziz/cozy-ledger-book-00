@@ -22,7 +22,14 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
+  Activity,
 } from 'lucide-react';
+
+type TestStatus = 'live' | 'slow' | 'offline';
+interface TestResult {
+  status: TestStatus;
+  latency_ms: number | null;
+}
 
 interface StreamServerRow {
   id: string;
