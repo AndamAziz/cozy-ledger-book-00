@@ -287,6 +287,21 @@ export function StreamServerManager({ isCEO }: StreamServerManagerProps) {
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground truncate">{s.url}</p>
+                {testResults[s.id] && (
+                  <span
+                    className={`mt-1 inline-flex items-center gap-1 text-[10px] font-bold ${
+                      STATUS_STYLE[testResults[s.id].status] ?? 'text-muted-foreground'
+                    }`}
+                  >
+                    {testResults[s.id].status === 'offline' ? (
+                      <WifiOff className="h-3 w-3" />
+                    ) : (
+                      <Wifi className="h-3 w-3" />
+                    )}
+                    Test: {testResults[s.id].status}
+                    {testResults[s.id].latency_ms != null && ` · ${testResults[s.id].latency_ms}ms`}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-1 flex-shrink-0">
