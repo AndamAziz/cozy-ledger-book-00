@@ -96,9 +96,12 @@ export function useStreamServers(enabled: boolean) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
-    // First check shortly after load, then every 30s.
+    // Run a single health check shortly after opening so statuses are populated.
+    // NOTE: we intentionally do NOT poll on an interval anymore. The recurring
+    // 30s probe was flipping a perfectly playable stream to "offline" (many
+    // hosts block server-side probes even though the iframe plays fine), which
+    // interrupted viewers. Status now refreshes only on manual request.
     const initial = setTimeout(runHealthCheck, 1500);
-    intervalRef.current = setInterval(runHealthCheck, HEALTH_INTERVAL_MS);
     return () => {
       clearTimeout(initial);
       if (intervalRef.current) clearInterval(intervalRef.current);
