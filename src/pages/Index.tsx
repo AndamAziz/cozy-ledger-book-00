@@ -245,37 +245,9 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
         </div>
       </div>
 
-      {/* Sport Live player */}
-      {sportOpen && (
-        <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex flex-col no-print">
-          <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/40">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-success to-success/80 flex items-center justify-center">
-                <Radio className="h-4 w-4 text-success-foreground" />
-              </div>
-              <span className="font-bold text-foreground text-sm">Sport Live</span>
-            </div>
-            <button
-              onClick={() => setSportOpen(false)}
-              className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-colors touch-manipulation active:scale-95"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="flex-1 min-h-0 bg-black">
-            <iframe
-              title="Sport Live"
-              src="https://ex.roooom.online/?alba-player=home2&serv=0"
-              allowFullScreen
-              allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
-              scrolling="yes"
-              frameBorder="0"
-              className="w-full h-full"
-            />
-          </div>
-        </div>
-      )}
+      {/* Sport Live player with auto-failover + health monitoring */}
+      <SportLivePlayer open={sportOpen} onClose={() => setSportOpen(false)} />
+
     </>
   );
 };
