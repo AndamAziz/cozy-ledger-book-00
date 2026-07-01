@@ -1,10 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
-// Number of consecutive failed checks before a server is auto-disabled (~2.5 min at 30s cadence)
-const AUTO_DISABLE_THRESHOLD = 5;
-// Per-request timeout for probing a stream URL
-const PROBE_TIMEOUT_MS = 3000;
+// Per-request timeout for probing a stream URL. Keep this lenient because many
+// stream/movie hosts are slow or bot-protected while still loading in the viewer.
+const PROBE_TIMEOUT_MS = 12000;
 
 type Status = 'live' | 'slow' | 'offline';
 
@@ -20,9 +19,14 @@ interface HealthResult {
 
 function classify(reachable: boolean, latency: number | null): Status {
   if (!reachable || latency === null) return 'offline';
-  if (latency < 800) return 'live';
-  if (latency <= 3000) return 'slow';
-  return 'offline';
+  if (latency < 1200) return 'live';
+  return 'slow';
+}
+
+function isPlayableResponse(status: number): boolean {
+  // 401/403/405/429 often mean the host blocks server-side probes, not that the
+  // browser iframe/video cannot play. Treat those as reachable for admin testing.
+  return (status >= 200 && status < 500) || [401, 403, 405, 429].includes(status);
 }
 
 async function probe(url: string): Promise<{ reachable: boolean; latency: number | null }> {
@@ -30,20 +34,26 @@ async function probe(url: string): Promise<{ reachable: boolean; latency: number
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
   try {
-    // Try HEAD first; some servers reject HEAD, so fall back to GET.
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,video/*,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Range': 'bytes=0-1',
+    };
+    // Try GET first with browser-like headers; some hosts reject HEAD probes.
     let res: Response;
     try {
-      res = await fetch(url, { method: 'HEAD', signal: controller.signal, redirect: 'follow' });
-      if (res.status >= 400) {
-        res = await fetch(url, { method: 'GET', signal: controller.signal, redirect: 'follow' });
+      res = await fetch(url, { method: 'GET', headers, signal: controller.signal, redirect: 'follow' });
+      if (res.status >= 500) {
+        res = await fetch(url, { method: 'HEAD', headers, signal: controller.signal, redirect: 'follow' });
       }
-    } catch (_headErr) {
-      res = await fetch(url, { method: 'GET', signal: controller.signal, redirect: 'follow' });
+    } catch (_getErr) {
+      res = await fetch(url, { method: 'HEAD', headers, signal: controller.signal, redirect: 'follow' });
     }
     // Drain body to avoid resource leaks
     try { await res.text(); } catch (_) { /* ignore */ }
     const latency = Math.round(performance.now() - start);
-    const reachable = res.status >= 200 && res.status < 400;
+    const reachable = isPlayableResponse(res.status);
     return { reachable, latency: reachable ? latency : null };
   } catch (_err) {
     return { reachable: false, latency: null };
@@ -93,12 +103,6 @@ Deno.serve(async (req) => {
         const status = classify(reachable, latency);
         const failCount = status === 'offline' ? (srv.fail_count ?? 0) + 1 : 0;
 
-        // Auto-disable only servers that are currently active and cross the threshold.
-        const shouldAutoDisable =
-          srv.is_active && failCount >= AUTO_DISABLE_THRESHOLD;
-        const nextIsActive = shouldAutoDisable ? false : srv.is_active;
-        const nextAutoDisabled = shouldAutoDisable ? true : srv.auto_disabled;
-
         try {
           await supabase
             .from('stream_servers')
@@ -106,8 +110,6 @@ Deno.serve(async (req) => {
               last_status: status,
               last_latency_ms: latency,
               fail_count: failCount,
-              is_active: nextIsActive,
-              auto_disabled: nextAutoDisabled,
             })
             .eq('id', srv.id);
         } catch (_updErr) {
@@ -120,8 +122,8 @@ Deno.serve(async (req) => {
           reachable,
           latency_ms: latency,
           status,
-          auto_disabled: nextAutoDisabled,
-          is_active: nextIsActive,
+          auto_disabled: srv.auto_disabled,
+          is_active: srv.is_active,
         };
       }),
     );
