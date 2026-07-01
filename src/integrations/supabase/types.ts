@@ -917,6 +917,48 @@ export type Database = {
         }
         Relationships: []
       }
+      stream_servers: {
+        Row: {
+          auto_disabled: boolean
+          created_at: string
+          fail_count: number
+          id: string
+          is_active: boolean
+          last_latency_ms: number | null
+          last_status: string
+          name: string
+          priority: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          auto_disabled?: boolean
+          created_at?: string
+          fail_count?: number
+          id?: string
+          is_active?: boolean
+          last_latency_ms?: number | null
+          last_status?: string
+          name: string
+          priority?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          auto_disabled?: boolean
+          created_at?: string
+          fail_count?: number
+          id?: string
+          is_active?: boolean
+          last_latency_ms?: number | null
+          last_status?: string
+          name?: string
+          priority?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
