@@ -292,12 +292,11 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
                     attemptedRef.current = new Set();
                     switchTo(s);
                   }}
-                  disabled={st === 'offline'}
-                  className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-start transition-all touch-manipulation ${
+                  className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-start transition-all touch-manipulation active:scale-[0.99] ${
                     isActive
                       ? 'border-success/50 bg-success/10 shadow-[0_0_18px_hsl(var(--success)/0.15)]'
                       : 'border-white/10 bg-secondary/30 hover:border-white/20'
-                  } ${st === 'offline' ? 'opacity-50 cursor-not-allowed' : 'active:scale-[0.99]'}`}
+                  } ${st === 'offline' ? 'opacity-60' : ''}`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${meta.dot}`} />
