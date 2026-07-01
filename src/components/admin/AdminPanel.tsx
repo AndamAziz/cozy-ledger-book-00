@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { TelegramHealthCard } from './TelegramHealthCard';
 import { ReviewModeration } from './ReviewModeration';
+import { StreamServerManager } from './StreamServerManager';
 import { normalizeBrandText } from '@/lib/brand';
 
 interface UserApproval {
@@ -723,6 +724,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <span className="text-xs md:text-sm">{t('activityLog')}</span>
           </Button>
         </div>
+
+        {/* Sport Live server management (CEO only) */}
+        <StreamServerManager isCEO={isCEO} />
+
+
 
 
 
