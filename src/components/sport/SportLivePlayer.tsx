@@ -7,15 +7,101 @@ interface SportLivePlayerProps {
   onClose: () => void;
 }
 
-const IFRAME_LOAD_TIMEOUT_MS = 8000;
+const STREAM_REVEAL_TIMEOUT_MS = 2500;
 const FAILOVER_DEBOUNCE_MS = 1200;
 
 const STATUS_META: Record<StreamStatus, { label: string; dot: string; text: string }> = {
   live: { label: 'Live', dot: 'bg-success', text: 'text-success' },
   slow: { label: 'Slow', dot: 'bg-warning', text: 'text-warning' },
   offline: { label: 'Offline', dot: 'bg-destructive', text: 'text-destructive' },
-  checking: { label: 'Checking', dot: 'bg-muted-foreground animate-pulse', text: 'text-muted-foreground' },
+  checking: { label: 'Ready', dot: 'bg-success/70', text: 'text-muted-foreground' },
 };
+
+type PlaybackMode = 'iframe' | 'hls' | 'video';
+
+function getPlaybackMode(url: string): PlaybackMode {
+  const cleanUrl = url.split('?')[0].toLowerCase();
+  if (cleanUrl.endsWith('.m3u8')) return 'hls';
+  if (/\.(mp4|webm|ogg|ogv|mov|m4v|ts|mkv)$/.test(cleanUrl)) return 'video';
+  return 'iframe';
+}
+
+function DirectStreamVideo({
+  server,
+  mode,
+  onReady,
+  onError,
+}: {
+  server: StreamServer;
+  mode: Exclude<PlaybackMode, 'iframe'>;
+  onReady: () => void;
+  onError: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    let hlsInstance: { destroy: () => void } | null = null;
+    let cancelled = false;
+
+    const playQuietly = () => {
+      video.play().catch(() => {
+        // Browser autoplay rules may require the user to tap play; keep controls visible.
+      });
+    };
+
+    if (mode === 'hls') {
+      import('hls.js')
+        .then(({ default: Hls }) => {
+          if (cancelled) return;
+          if (Hls.isSupported()) {
+            const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+            hlsInstance = hls;
+            hls.loadSource(server.url);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, playQuietly);
+            hls.on(Hls.Events.ERROR, (_event, data) => {
+              if (data?.fatal) onError();
+            });
+          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = server.url;
+            playQuietly();
+          } else {
+            onError();
+          }
+        })
+        .catch(onError);
+    } else {
+      video.src = server.url;
+      playQuietly();
+    }
+
+    return () => {
+      cancelled = true;
+      hlsInstance?.destroy();
+      video.removeAttribute('src');
+      video.load();
+    };
+  }, [mode, onError, onReady, server.url]);
+
+  return (
+    <video
+      ref={videoRef}
+      title={server.name}
+      controls
+      autoPlay
+      playsInline
+      muted={false}
+      preload="auto"
+      onCanPlay={onReady}
+      onPlaying={onReady}
+      onError={onError}
+      className="absolute inset-0 h-full w-full bg-black object-contain"
+    />
+  );
+}
 
 export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const { servers, statuses, latencies, isLoading, runHealthCheck, markStatus, refetch } =
@@ -25,6 +111,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const [iframeLoading, setIframeLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [allOffline, setAllOffline] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,27 +203,29 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
     attemptedRef.current = new Set();
   }, [open]);
 
-  // Start the 8s load-timeout whenever we point the iframe at a new server.
+  // Reveal iframe pages after a short grace period. Some movie/stream hosts keep
+  // loading scripts for a long time, so timeout must NOT mark the server offline.
   useEffect(() => {
     if (!open || !activeId) return;
     clearLoadTimer();
     loadTimerRef.current = setTimeout(() => {
-      // onload never fired in time -> treat as failure and failover.
-      triggerFailover(activeId);
-    }, IFRAME_LOAD_TIMEOUT_MS);
+      setIframeLoading(false);
+      setSwitching(false);
+    }, STREAM_REVEAL_TIMEOUT_MS);
     return clearLoadTimer;
-  }, [open, activeId, triggerFailover]);
+  }, [open, activeId, reloadNonce]);
 
   const handleIframeLoad = useCallback(() => {
     try {
       clearLoadTimer();
       setIframeLoading(false);
+      if (activeId) markStatus(activeId, 'live');
       // Give the cross-fade a beat to finish.
       setTimeout(() => setSwitching(false), 350);
     } catch (err) {
       console.error('iframe load handler error:', err);
     }
-  }, []);
+  }, [activeId, markStatus]);
 
   const handleIframeError = useCallback(() => {
     try {
@@ -149,12 +238,14 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const handleManualRetry = useCallback(() => {
     attemptedRef.current = new Set();
     setAllOffline(false);
-    setActiveId(null);
+    setIframeLoading(true);
+    setSwitching(false);
+    setReloadNonce((n) => n + 1);
     refetch();
-    runHealthCheck();
-  }, [refetch, runHealthCheck]);
+  }, [refetch]);
 
   const activeServer = orderedServers.find((s) => s.id === activeId) ?? null;
+  const playbackMode = activeServer ? getPlaybackMode(activeServer.url) : 'iframe';
 
   if (!open) return null;
 
@@ -175,9 +266,9 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
         </div>
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => runHealthCheck()}
+            onClick={handleManualRetry}
             className="w-8 h-8 rounded-lg bg-secondary/60 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors touch-manipulation active:scale-95"
-            aria-label="Refresh health"
+            aria-label="Reload stream"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
@@ -196,22 +287,32 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
         <div className="mx-auto w-full max-w-5xl p-2 sm:p-4">
           <div className="relative w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_0_40px_hsl(var(--success)/0.15)] aspect-video">
             {/* The stream iframe */}
-            {activeServer && !allOffline && (
+            {activeServer && !allOffline && playbackMode === 'iframe' && (
               <iframe
-                key={activeServer.id}
+                key={`${activeServer.id}-${reloadNonce}`}
                 title="Sport Live"
                 src={activeServer.url}
                 allowFullScreen
-                allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
+                allow="fullscreen *; autoplay *; encrypted-media *; picture-in-picture *; web-share; clipboard-write; accelerometer; gyroscope"
                 referrerPolicy="no-referrer"
                 // No `allow-popups` / `allow-top-navigation`: blocks ad scripts from
                 // opening new tabs or hijacking the page on refresh/click.
-                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-pointer-lock allow-modals allow-downloads"
                 onLoad={handleIframeLoad}
                 onError={handleIframeError}
                 className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${
                   iframeLoading || switching ? 'opacity-0' : 'opacity-100'
                 }`}
+              />
+            )}
+
+            {activeServer && !allOffline && playbackMode !== 'iframe' && (
+              <DirectStreamVideo
+                key={`${activeServer.id}-${reloadNonce}`}
+                server={activeServer}
+                mode={playbackMode}
+                onReady={handleIframeLoad}
+                onError={handleIframeError}
               />
             )}
 
@@ -299,7 +400,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
                     isActive
                       ? 'border-success/50 bg-success/10 shadow-[0_0_18px_hsl(var(--success)/0.15)]'
                       : 'border-white/10 bg-secondary/30 hover:border-white/20'
-                  } ${st === 'offline' ? 'opacity-60' : ''}`}
+                  }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${meta.dot}`} />
