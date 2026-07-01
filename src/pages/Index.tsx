@@ -46,6 +46,8 @@ const QURAN_LABEL: Record<string, string> = {
 
 type TabType = 'finance' | 'inventory' | 'sales' | 'reports';
 
+const SPORT_OPEN_KEY = 'ctp-sport-live-open';
+
 interface DashboardProps {
   onOpenAdmin: () => void;
   isAdmin: boolean;
@@ -60,8 +62,20 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
-  const [sportOpen, setSportOpen] = useState(false);
+  const [sportOpen, setSportOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    // Restore the Sport Live view if an ad hijacked the tab / forced a reload.
+    return sessionStorage.getItem(SPORT_OPEN_KEY) === '1';
+  });
   const financeData = useFinanceData();
+
+  // Persist open state so returning from an ad tab (or a forced reload) reopens
+  // Sport Live automatically instead of forcing the user to click again.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (sportOpen) sessionStorage.setItem(SPORT_OPEN_KEY, '1');
+    else sessionStorage.removeItem(SPORT_OPEN_KEY);
+  }, [sportOpen]);
   const reviewI18n = REVIEWS_I18N[getReviewLang(language)];
 
   const summary = financeData.getSummary();

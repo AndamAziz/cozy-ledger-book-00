@@ -9,6 +9,7 @@ interface SportLivePlayerProps {
 
 const STREAM_REVEAL_TIMEOUT_MS = 2500;
 const FAILOVER_DEBOUNCE_MS = 1200;
+const ACTIVE_SERVER_KEY = 'ctp-sport-active-server';
 
 const STATUS_META: Record<StreamStatus, { label: string; dot: string; text: string }> = {
   live: { label: 'Live', dot: 'bg-success', text: 'text-success' },
@@ -107,7 +108,10 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const { servers, statuses, latencies, isLoading, runHealthCheck, markStatus, refetch } =
     useStreamServers(open);
 
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem(ACTIVE_SERVER_KEY);
+  });
   const [iframeLoading, setIframeLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [allOffline, setAllOffline] = useState(false);
@@ -166,6 +170,8 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
     setIframeLoading(true);
     attemptedRef.current.add(server.id);
     setActiveId(server.id);
+    // Remember the stream so an ad-forced reload resumes the same server.
+    if (typeof window !== 'undefined') sessionStorage.setItem(ACTIVE_SERVER_KEY, server.id);
   }, []);
 
   // Debounced failover to avoid flicker loops if several servers fail at once.
@@ -184,8 +190,12 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   // Initial server selection once the list loads.
   useEffect(() => {
     if (!open) return;
-    if (activeId) return;
     if (orderedServers.length === 0) return;
+    // A restored activeId that still exists in the list stays as-is.
+    if (activeId && orderedServers.some((s) => s.id === activeId)) {
+      attemptedRef.current.add(activeId);
+      return;
+    }
     attemptedRef.current = new Set();
     const first = pickNextServer();
     switchTo(first);
@@ -197,6 +207,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
     clearLoadTimer();
     if (failoverTimerRef.current) clearTimeout(failoverTimerRef.current);
     setActiveId(null);
+    if (typeof window !== 'undefined') sessionStorage.removeItem(ACTIVE_SERVER_KEY);
     setIframeLoading(true);
     setSwitching(false);
     setAllOffline(false);
