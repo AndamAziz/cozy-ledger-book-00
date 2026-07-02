@@ -129,14 +129,14 @@ function ConfluenceBar({ a, bi }: { a: AssetAnalysis; bi: (ku: string, en: strin
     <div className="rounded-lg bg-[#0a0e17] border border-[#1a1e2e] p-3">
       <div className="flex items-center justify-between mb-2">
         <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#848e9c]">
-          <Gauge className="h-3.5 w-3.5" /> {bi('ڕێککەوتنی کاتەکان', 'Timeframe Agreement')}
+          <Gauge className="h-3.5 w-3.5" /> {bi('ڕێککەوتنی کاتەکان (لە ٦)', 'Timeframe Agreement (of 6)')}
         </span>
         <span className="text-lg font-extrabold" style={{ color }}>
           {a.confluence.score}%
         </span>
       </div>
       <div className="-mt-1 mb-2 text-[9px] leading-tight text-[#5e6673]">
-        {bi('ڕێژەی ئەو کاتانەی هاوئاراستەن (نەک متمانەی سیگناڵ)', '% of timeframes pointing the same way (not signal confidence)')}
+        {bi('ڕێژەی ئەو کاتانەی لە ٦ کاتدا هاوئاراستەن — نەک متمانەی سیگناڵ', '% of the 6 timeframes that agree — not signal confidence')}
       </div>
 
       <div className="h-2 rounded-full bg-[#1a1e2e] overflow-hidden">

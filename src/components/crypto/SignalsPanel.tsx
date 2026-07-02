@@ -302,20 +302,24 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
         {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale)}
         {macroChip('US10Y', u10yTxt, u10yColor, Percent, u10yTip, u10yStale)}
 
-        {/* Combined Result — auto-updates with macro/momentum/news */}
+        {/* Macro Bias badge — market-sentiment context, NOT the primary trade decision */}
         <div
           className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 ${resultFlash ? 'animate-pulse' : ''}`}
           style={{ backgroundColor: `${resultColor}1a`, borderColor: `${resultColor}66` }}
           role="status"
           aria-live="polite"
-          aria-label={`${bi('ئەنجام', 'Result')}: ${resultLabel}${newsSoon ? ` ${bi('ئاگاداری هەواڵ', 'news alert')}` : ''}`}
+          aria-label={`${bi('لایەنی ماکرۆ', 'Macro Bias')}: ${resultLabel}${newsSoon ? ` ${bi('ئاگاداری هەواڵ', 'news alert')}` : ''}`}
         >
-          <span className="text-[10px] font-bold text-[#848e9c]">{bi('ئەنجام', 'Result')}</span>
+          <span className="text-[10px] font-bold text-[#848e9c]">{bi('لایەنی ماکرۆ', 'Macro Bias')}</span>
           <span className="text-[11px] leading-none">{resultEmoji}</span>
           <span className="text-[11px] font-extrabold" style={{ color: resultColor }}>{resultLabel}</span>
           {newsSoon && (
             <span title={bi('ڕووداوی گرنگی دۆلار لە ١٥ خولەکدا', 'High-impact USD event within 15 min')}>⚠️</span>
           )}
+          <InfoTip
+            text={bi('لایەنی ماکرۆ/هەستی بازاڕ — بڕیاری کڕین/فرۆشتن نییە. سیگناڵی سەرەکی لە کارتی سەرەوەیە.', 'Macro / market-sentiment bias — not the buy/sell decision. The primary signal is the card above.')}
+            label={bi('زانیاری لایەنی ماکرۆ', 'Macro Bias info')}
+          />
         </div>
       </div>
 
@@ -356,6 +360,19 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           </button>
         ))}
       </div>
+
+      {/* Non-M15 viewing note: M15 is the canonical PRIMARY signal (matches Gold Pro) */}
+      {tf !== 'M15' && (
+        <div className="flex items-start gap-2 rounded-lg border border-[#1a1e2e] bg-[#0a0e17] px-3 py-2">
+          <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-[#848e9c]" />
+          <div className="text-[11px] leading-snug text-[#848e9c]">
+            {bi(
+              `تەماشای ${tf} دەکەیت — سیگناڵی بنەڕەت (M15) لەوانەیە جیاواز بێت.`,
+              `Viewing ${tf} — default signal (M15) may differ.`,
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Signal card */}
       <SignalCard signal={signal} loading={loading && !signal} emoji={meta.emoji} />
