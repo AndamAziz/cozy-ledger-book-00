@@ -2349,7 +2349,7 @@ function MovieModal({
             style={{
               position: "absolute",
               inset: 0,
-              background: `linear-gradient(to top, ${C.panel} 5%, rgba(19,19,28,.4) 60%, rgba(19,19,28,.1) 100%)`,
+              background: "linear-gradient(165deg, rgba(19,19,28,.10) 0%, rgba(19,19,28,.10) 55%, rgba(10,10,15,.92) 78%, rgba(10,10,15,.98) 100%)",
             }}
           />
           <button
@@ -2407,11 +2407,11 @@ function MovieModal({
           <div
             style={{
               position: "absolute",
-              bottom: 14,
-              insetInlineEnd: 16,
-              insetInlineStart: 16,
+              bottom: 10,
+              insetInlineEnd: 14,
+              insetInlineStart: 14,
               display: "flex",
-              gap: 14,
+              gap: 12,
               alignItems: "flex-end",
             }}
           >
@@ -2426,15 +2426,28 @@ function MovieModal({
                 boxShadow: "0 8px 20px rgba(0,0,0,.5)",
               }}
             />
-            <div style={{ paddingBottom: 4 }}>
-              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{movie.title}</h2>
+            <div style={{ paddingBottom: 2, minWidth: 0 }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: 17,
+                  fontWeight: 800,
+                  lineHeight: 1.35,
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
+                {movie.title}
+              </h2>
               <div
                 style={{
                   display: "flex",
-                  gap: 10,
+                  gap: 8,
                   flexWrap: "wrap",
-                  marginTop: 6,
-                  fontSize: 13,
+                  marginTop: 4,
+                  fontSize: 12,
                   color: C.muted,
                   alignItems: "center",
                 }}
@@ -2443,10 +2456,12 @@ function MovieModal({
                 {rating > 0 && (
                   <span style={{ color: C.gold, fontWeight: 800 }}>★ {rating.toFixed(1)}</span>
                 )}
-                <span>{(movie.genre || "").split(",").slice(0, 2).join("، ")}</span>
+                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "14ch" }}>
+                  {(movie.genre || "").split(",").slice(0, 2).join("، ")}
+                </span>
               </div>
               {director && (
-                <div style={{ fontSize: 12.5, color: C.muted, marginTop: 4 }}>
+                <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>
                   {t.director} <span style={{ color: C.text }}>{director}</span>
                 </div>
               )}
