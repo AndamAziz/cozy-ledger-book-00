@@ -293,6 +293,9 @@ function enrichWithActuals(events: CalendarEvent[], tv: TVEvent[]): CalendarEven
     // like Unemployment Rate vs U-6, or CPI vs Core CPI) to avoid wrong figures.
     if (!best || best.actual === null || bestScore < 1 || bestScore <= secondScore) return ev;
     const suffix = scaleSuffix(ev.forecast, ev.previous);
+    // Sanity guard: a "%" reading above 50 is almost always an index value that
+    // was mis-matched to a percentage indicator (e.g. CPI index vs CPI y/y%). Skip it.
+    if (suffix === "%" && Math.abs(best.actual) > 50) return ev;
     return {
       ...ev,
       actual: fmtTV(best.actual, best.unit, suffix),
