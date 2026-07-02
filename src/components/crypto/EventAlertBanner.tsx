@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { BellRing, Clock } from 'lucide-react';
+import { BellRing, Clock, CheckCircle2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { explainEventResult } from '@/lib/eventExplain';
 
 export interface CalendarEvent {
   title: string;
@@ -44,6 +45,20 @@ export function EventAlertBanner({ events, loading }: Props) {
     .sort((a, b) => a.t - b.t)
     .slice(0, 5);
 
+  // Recently released USD high/medium events (last 24h) that now have an actual figure.
+  const DAY = 86400000;
+  const released = events
+    .map((e) => ({ e, t: Date.parse(e.date) }))
+    .filter(({ e, t }) => {
+      if (Number.isNaN(t) || t > now || t < now - DAY) return false;
+      const imp = (e.impact || '').toLowerCase();
+      if (imp !== 'high' && imp !== 'medium') return false;
+      if (e.country !== 'USD' && e.country !== 'All') return false;
+      return !!explainEventResult(e);
+    })
+    .sort((a, b) => b.t - a.t)
+    .slice(0, 4);
+
   const countdown = (t: number): { text: string; soon: boolean } => {
     const diff = t - now;
     const mins = Math.round(diff / 60000);
@@ -64,10 +79,13 @@ export function EventAlertBanner({ events, loading }: Props) {
 
       {loading ? (
         <div className="h-12 animate-pulse bg-[#1a1e2e] rounded-lg" />
-      ) : upcoming.length === 0 ? (
-        <p className="text-xs text-[#848e9c]">{bi('هیچ ڕووداوێکی گرنگی نزیک نییە.', 'No high-impact events coming up.')}</p>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-3">
+          {upcoming.length === 0 && released.length === 0 && (
+            <p className="text-xs text-[#848e9c]">{bi('هیچ ڕووداوێکی گرنگی نزیک نییە.', 'No high-impact events coming up.')}</p>
+          )}
+          {upcoming.length > 0 && (
+          <div className="space-y-1.5">
           {upcoming.map(({ e, t }, i) => {
             const cd = countdown(t);
             const high = (e.impact || '').toLowerCase() === 'high';
@@ -96,6 +114,59 @@ export function EventAlertBanner({ events, loading }: Props) {
           <p className="text-[10px] text-[#848e9c] pt-1">
             {bi('کاتی سور = لە ماوەی ٦٠ خولەکدا — زێڕ زۆر دەجوڵێت، وریابە.', 'Red = within 60 min — gold can move sharply, be careful.')}
           </p>
+          </div>
+          )}
+
+          {released.length > 0 && (
+            <div className="space-y-1.5 border-t border-[#1a1e2e] pt-3">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#0ecb81]" />
+                <span className="text-xs font-bold text-white">{bi('ئەنجامی دوایین ڕووداوەکان', 'Latest results')}</span>
+              </div>
+              {released.map(({ e }, i) => {
+                const exp = explainEventResult(e);
+                const high = (e.impact || '').toLowerCase() === 'high';
+                const goldUp = exp?.goldUp ?? null;
+                const color = goldUp === true ? '#0ecb81' : goldUp === false ? '#f6465d' : '#f0b90b';
+                const GoldIcon = goldUp === true ? TrendingUp : goldUp === false ? TrendingDown : Minus;
+                return (
+                  <div
+                    key={`done-${e.title}-${i}`}
+                    className="rounded-lg px-3 py-2 border border-[#1a1e2e] bg-[#0a0e17]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-base shrink-0">{FLAGS[e.country] ?? '🌐'}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: high ? '#f6465d' : '#f0b90b' }} />
+                          <span className="text-sm text-white truncate">{e.title}</span>
+                        </div>
+                        <div className="text-[10px] text-[#848e9c]">
+                          <span className="font-bold text-white">{bi('ئەنجام', 'Actual')}: {e.actual}</span>
+                          {e.forecast && <> · {bi('پێشبینی', 'Forecast')}: {e.forecast}</>}
+                          {e.previous && <> · {bi('پێشتر', 'Previous')}: {e.previous}</>}
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-bold text-[#0ecb81] shrink-0 inline-flex items-center gap-0.5">
+                        <CheckCircle2 className="h-3 w-3" />{bi('تەواوبوو', 'Done')}
+                      </span>
+                    </div>
+                    {exp && (
+                      <div
+                        className="mt-1.5 flex items-start gap-1 rounded-md px-2 py-1"
+                        style={{ backgroundColor: color + '14' }}
+                      >
+                        <GoldIcon className="h-3.5 w-3.5 mt-px shrink-0" style={{ color }} />
+                        <span className="text-[11px] font-medium leading-snug" style={{ color }}>
+                          {bi(exp.ku, exp.en)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -191,15 +191,134 @@ async function fetchCalendar(): Promise<CalendarEvent[]> {
   return filtered.slice(0, 60);
 }
 
+// ---- TradingView economic calendar (provides the "actual" figure once released) ----
+interface TVEvent {
+  currency: string;
+  ts: number;
+  title: string;
+  actual: number | null;
+  forecast: number | null;
+  previous: number | null;
+  unit: string;
+}
+
+const TV_COUNTRIES = "US,EU,GB,JP,CH,CA,AU,NZ,CN";
+
+async function fetchTradingViewEvents(): Promise<TVEvent[]> {
+  const now = Date.now();
+  const DAY = 86400000;
+  const from = new Date(now - 5 * DAY).toISOString().slice(0, 10) + "T00:00:00.000Z";
+  const to = new Date(now + 8 * DAY).toISOString().slice(0, 10) + "T00:00:00.000Z";
+  const url = `https://economic-calendar.tradingview.com/events?from=${from}&to=${to}&countries=${TV_COUNTRIES}`;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const r = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0", Origin: "https://www.tradingview.com" },
+      });
+      if (r.ok) {
+        const j = await r.json();
+        const res = Array.isArray(j?.result) ? j.result : [];
+        return res.map((e: Record<string, unknown>) => ({
+          currency: String(e.currency ?? ""),
+          ts: e.date ? Date.parse(String(e.date)) : NaN,
+          title: String(e.title ?? ""),
+          actual: typeof e.actual === "number" ? e.actual : null,
+          forecast: typeof e.forecast === "number" ? e.forecast : null,
+          previous: typeof e.previous === "number" ? e.previous : null,
+          unit: String(e.unit ?? ""),
+        })) as TVEvent[];
+      }
+    } catch (e) {
+      console.error(`TradingView calendar fetch failed (attempt ${i + 1}):`, e);
+    }
+    if (i < 2) await new Promise((res) => setTimeout(res, 500 * (i + 1)));
+  }
+  return [];
+}
+
+const TOKEN_STOP = new Set(["the", "and", "for", "rate", "index", "final", "flash", "yoy", "mom", "qoq"]);
+function titleTokens(s: string): Set<string> {
+  return new Set(
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length >= 3 && !TOKEN_STOP.has(w)),
+  );
+}
+
+// Keep the numeric scale suffix (K/M/B/T/%) that FairEconomy already uses so the
+// TradingView figure renders in the same style (e.g. 57 -> "57K").
+function scaleSuffix(...samples: string[]): string {
+  for (const s of samples) {
+    const m = (s || "").match(/([KMBT%])\s*$/i);
+    if (m) return m[1].toUpperCase() === "%" ? "%" : m[1].toUpperCase();
+  }
+  return "";
+}
+
+function fmtTV(n: number | null, unit: string, suffix: string): string {
+  if (n === null) return "";
+  const base = Number.isInteger(n) ? String(n) : String(n);
+  if (unit === "%") return `${base}%`;
+  return suffix ? `${base}${suffix}` : base;
+}
+
+// Attach the released "actual" figure (and matching forecast/previous, same source
+// & scale) to FairEconomy events by matching currency + release time + title tokens.
+function enrichWithActuals(events: CalendarEvent[], tv: TVEvent[]): CalendarEvent[] {
+  if (tv.length === 0) return events;
+  const WINDOW = 6 * 60000; // ±6 minutes
+  return events.map((ev) => {
+    const t = Date.parse(ev.date);
+    if (Number.isNaN(t)) return ev;
+    const feTokens = titleTokens(ev.title);
+    let best: TVEvent | null = null;
+    let bestScore = -1;
+    let secondScore = -1;
+    for (const c of tv) {
+      if (c.currency !== ev.country) continue;
+      if (Number.isNaN(c.ts) || Math.abs(c.ts - t) > WINDOW) continue;
+      let score = 0;
+      for (const tok of titleTokens(c.title)) if (feTokens.has(tok)) score++;
+      if (score > bestScore) {
+        secondScore = bestScore;
+        best = c;
+        bestScore = score;
+      } else if (score > secondScore) {
+        secondScore = score;
+      }
+    }
+    // Require an unambiguous winner: reject ties (same-time indicator variants
+    // like Unemployment Rate vs U-6, or CPI vs Core CPI) to avoid wrong figures.
+    if (!best || best.actual === null || bestScore < 1 || bestScore <= secondScore) return ev;
+    const suffix = scaleSuffix(ev.forecast, ev.previous);
+    // Sanity guard: a "%" reading above 50 is almost always an index value that
+    // was mis-matched to a percentage indicator (e.g. CPI index vs CPI y/y%). Skip it.
+    if (suffix === "%" && Math.abs(best.actual) > 50) return ev;
+    return {
+      ...ev,
+      actual: fmtTV(best.actual, best.unit, suffix),
+      forecast: best.forecast !== null ? fmtTV(best.forecast, best.unit, suffix) : ev.forecast,
+      previous: best.previous !== null ? fmtTV(best.previous, best.unit, suffix) : ev.previous,
+    };
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const [news, events] = await Promise.all([fetchNews(), fetchCalendar()]);
+    const [news, events, tv] = await Promise.all([
+      fetchNews(),
+      fetchCalendar(),
+      fetchTradingViewEvents(),
+    ]);
+    const enriched = enrichWithActuals(events, tv);
     return new Response(
-      JSON.stringify({ news, events, generatedAt: new Date().toISOString() }),
+      JSON.stringify({ news, events: enriched, generatedAt: new Date().toISOString() }),
       {
         headers: {
           ...corsHeaders,
