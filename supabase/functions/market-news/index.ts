@@ -275,18 +275,23 @@ function enrichWithActuals(events: CalendarEvent[], tv: TVEvent[]): CalendarEven
     const feTokens = titleTokens(ev.title);
     let best: TVEvent | null = null;
     let bestScore = -1;
+    let secondScore = -1;
     for (const c of tv) {
       if (c.currency !== ev.country) continue;
       if (Number.isNaN(c.ts) || Math.abs(c.ts - t) > WINDOW) continue;
       let score = 0;
       for (const tok of titleTokens(c.title)) if (feTokens.has(tok)) score++;
-      // Prefer stronger title overlap; break ties by closeness in time.
-      if (score > bestScore || (score === bestScore && best && Math.abs(c.ts - t) < Math.abs(best.ts - t))) {
+      if (score > bestScore) {
+        secondScore = bestScore;
         best = c;
         bestScore = score;
+      } else if (score > secondScore) {
+        secondScore = score;
       }
     }
-    if (!best || best.actual === null) return ev;
+    // Require an unambiguous winner: reject ties (same-time indicator variants
+    // like Unemployment Rate vs U-6, or CPI vs Core CPI) to avoid wrong figures.
+    if (!best || best.actual === null || bestScore < 1 || bestScore <= secondScore) return ev;
     const suffix = scaleSuffix(ev.forecast, ev.previous);
     return {
       ...ev,
