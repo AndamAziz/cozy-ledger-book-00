@@ -168,12 +168,18 @@ export function GoldSignalPanel({ events, price, loading, lastUpdated }: Props) 
   })();
 
   return (
-    <div className="rounded-xl border overflow-hidden" style={{ borderColor: biasColor + '55', backgroundColor: biasColor + '0d' }}>
-      {/* Header */}
+    <div className="rounded-xl border border-[#1a1e2e] bg-[#0d1117] overflow-hidden">
+      {/* Header — supplementary context, NOT the primary trade signal */}
       <div className="flex items-center justify-between px-4 pt-4">
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-[#d4af37]" />
-          <h3 className="text-sm font-bold text-white">{bi('سیگناڵی زێڕ — ئەمڕۆ', 'Gold Signal — Today')}</h3>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-white">{bi('لایەنی هەواڵی ئەمڕۆ', "Today's News Bias")}</h3>
+              <span className="text-[8px] font-bold uppercase tracking-wide text-[#848e9c] bg-[#1a1e2e] rounded px-1.5 py-0.5 leading-none">{bi('پاڵپشت', 'Context')}</span>
+            </div>
+            <div className="text-[9px] text-[#5e6673] mt-0.5">{bi('لە ساڵنامەی هەواڵەوە — نەک سیگناڵی سەرەکی', 'From the news calendar — not the primary signal')}</div>
+          </div>
         </div>
         <span className="text-[10px] text-[#848e9c]">{bi('نوێدەبێتەوە هەر ٣٠ خولەک', 'auto · 30 min')}{updatedAgo ? ` · ${updatedAgo}` : ''}</span>
       </div>
@@ -182,18 +188,18 @@ export function GoldSignalPanel({ events, price, loading, lastUpdated }: Props) 
         <div className="m-4 h-24 animate-pulse bg-[#1a1e2e] rounded-lg" />
       ) : (
         <div className="p-4 space-y-3">
-          {/* Bias + confidence */}
+          {/* Bias + confidence — news-derived context only */}
           <div className="flex items-center justify-between rounded-lg bg-[#0a0e17] p-3">
             <div className="flex items-center gap-2">
-              <BiasIcon className={`h-7 w-7 ${signal.bias !== 'neutral' ? 'animate-flash-blink' : ''}`} style={{ color: biasColor }} />
+              <BiasIcon className="h-6 w-6" style={{ color: biasColor }} />
               <div>
-                <div className="text-lg font-extrabold leading-none" style={{ color: biasColor }}>{biasLabel}</div>
-                <div className="text-[10px] text-[#848e9c] mt-1">{bi('لایەنی ئەمڕۆ', "Today's bias")}</div>
+                <div className="text-base font-bold leading-none" style={{ color: biasColor }}>{biasLabel}</div>
+                <div className="text-[10px] text-[#848e9c] mt-1">{bi('لایەنی هەواڵ', 'News bias')}</div>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-base font-bold" style={{ color: confColor }}>{confLabel}</div>
-              <div className="text-[10px] text-[#848e9c]">{bi('ئاستی متمانە', 'Confidence')}</div>
+              <div className="text-sm font-bold" style={{ color: confColor }}>{confLabel}</div>
+              <div className="text-[10px] text-[#848e9c]">{bi('متمانەی هەواڵ', 'News confidence')}</div>
             </div>
           </div>
 
