@@ -118,11 +118,13 @@ function esc(s: string): string {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-type Signal = "BUY" | "SELL" | "HOLD";
-// Rich color indicators: 🟢 BUY · 🔴 SELL · 🟡 HOLD (with extra colored squares for emphasis).
-const sigEmoji = (s: Signal) => (s === "BUY" ? "🟢" : s === "SELL" ? "🔴" : "🟡");
-const sigBadge = (s: Signal) => (s === "BUY" ? "🟢🟩" : s === "SELL" ? "🔴🟥" : "🟡🟧");
-const sigKu = (s: Signal) => (s === "BUY" ? "کڕین" : s === "SELL" ? "فرۆشتن" : "هەڵگرتن");
+type Signal = "BUY" | "SELL" | "WAIT" | "HOLD";
+// Rich color indicators — now mirrors decideFromScores' four actions:
+//   🟢 BUY (buy) · 🔴 SELL (sell) · 🟠 WAIT (wait: blocking news / hard TF conflict)
+//   · 🟡 HOLD (neutral: confidence < 60, no strong setup).
+const sigEmoji = (s: Signal) => (s === "BUY" ? "🟢" : s === "SELL" ? "🔴" : s === "WAIT" ? "🟠" : "🟡");
+const sigBadge = (s: Signal) => (s === "BUY" ? "🟢🟩" : s === "SELL" ? "🔴🟥" : s === "WAIT" ? "🟠🟧" : "🟡🟨");
+const sigKu = (s: Signal) => (s === "BUY" ? "کڕین" : s === "SELL" ? "فرۆشتن" : s === "WAIT" ? "چاوەڕێ" : "هەڵگرتن");
 // Colored dot for % change: green up / red down / yellow flat.
 const changeDot = (pct: number) => (pct > 0 ? "🟢" : pct < 0 ? "🔴" : "🟡");
 
@@ -134,20 +136,24 @@ interface Quote {
   eng?: EngineSignal | null;
 }
 
-// Map the engine's action → the bot's BUY/SELL/HOLD signal. WAIT/NEUTRAL → HOLD
-// (no trade). This is the ONLY place a direction is derived for the bot, and it
-// comes straight from `decideFromScores` via the shared engine — never from the
-// raw daily % change anymore.
+// Map the engine's action → the bot's BUY/SELL/WAIT/HOLD label, mirroring the
+// UI's decideFromScores: 'wait' (blocking news ≤60min OR hard TF conflict) is now
+// shown as WAIT, distinct from 'neutral' (confidence < 60) which is HOLD. This is
+// the ONLY place a direction is derived for the bot, and it comes straight from
+// `decideFromScores` via the shared engine — never from the raw daily % change
+// (the %-move fallback below runs only when there is no engine data at all).
 function quoteSignal(q: Quote): Signal {
   const a = q.eng?.action;
   if (a === "buy") return "BUY";
   if (a === "sell") return "SELL";
+  if (a === "wait") return "WAIT";
   // No engine data yet → conservative fallback on the day's move (rare).
+  // (Left intact per scope — do NOT alter the %-move fallback in this pass.)
   if (!q.eng) {
     if (q.changePct >= 0.15) return "BUY";
     if (q.changePct <= -0.15) return "SELL";
   }
-  return "HOLD";
+  return "HOLD"; // engine 'neutral' (confidence < 60) or a flat no-engine move
 }
 
 // Engine confidence for a quote (0..100). Falls back to a move-based estimate
