@@ -2407,11 +2407,11 @@ function MovieModal({
           <div
             style={{
               position: "absolute",
-              bottom: 14,
-              insetInlineEnd: 16,
-              insetInlineStart: 16,
+              bottom: 10,
+              insetInlineEnd: 14,
+              insetInlineStart: 14,
               display: "flex",
-              gap: 14,
+              gap: 12,
               alignItems: "flex-end",
             }}
           >
