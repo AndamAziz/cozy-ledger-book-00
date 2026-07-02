@@ -2349,7 +2349,7 @@ function MovieModal({
             style={{
               position: "absolute",
               inset: 0,
-              background: `linear-gradient(to top, ${C.panel} 5%, rgba(19,19,28,.4) 60%, rgba(19,19,28,.1) 100%)`,
+              background: "linear-gradient(165deg, rgba(19,19,28,.10) 0%, rgba(19,19,28,.10) 55%, rgba(10,10,15,.92) 78%, rgba(10,10,15,.98) 100%)",
             }}
           />
           <button
