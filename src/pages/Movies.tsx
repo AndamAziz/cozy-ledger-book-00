@@ -1620,11 +1620,11 @@ function Hero({
       style={{
         position: "relative",
         width: "100%",
-        aspectRatio: "16/9",
-        maxHeight: 460,
-        borderRadius: 20,
+        aspectRatio: "16/11",
+        maxHeight: 360,
+        borderRadius: 18,
         overflow: "hidden",
-        marginBottom: 22,
+        marginBottom: 18,
         background: C.panel,
         border: `1px solid ${C.border}`,
       }}
@@ -1645,21 +1645,12 @@ function Hero({
           }}
         />
       ))}
+      {/* Bottom-weighted gradient: strong only in the lower third so poster art stays visible */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background:
-            dir === "rtl"
-              ? `linear-gradient(to left, ${C.bg} 6%, rgba(10,10,15,.55) 45%, rgba(10,10,15,.15) 100%)`
-              : `linear-gradient(to right, ${C.bg} 6%, rgba(10,10,15,.55) 45%, rgba(10,10,15,.15) 100%)`,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: `linear-gradient(to top, ${C.bg} 2%, transparent 55%)`,
+          background: `linear-gradient(to top, ${C.bg} 0%, rgba(10,10,15,.92) 22%, rgba(10,10,15,.45) 42%, rgba(10,10,15,.05) 62%, transparent 78%)`,
         }}
       />
 
@@ -1670,7 +1661,8 @@ function Hero({
           position: "absolute",
           bottom: 0,
           insetInlineStart: 0,
-          padding: "0 22px 22px",
+          insetInlineEnd: 0,
+          padding: "0 16px 14px",
           maxWidth: 560,
         }}
       >
@@ -1678,14 +1670,14 @@ function Hero({
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 6,
+            gap: 5,
             background: C.gold,
             color: "#0A0A0F",
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: 900,
-            padding: "4px 10px",
+            padding: "3px 8px",
             borderRadius: 999,
-            marginBottom: 12,
+            marginBottom: 8,
             letterSpacing: ".5px",
           }}
         >
@@ -1694,10 +1686,14 @@ function Hero({
         <h2
           style={{
             margin: 0,
-            fontSize: "clamp(24px, 6vw, 44px)",
+            fontSize: "clamp(17px, 4.6vw, 30px)",
             fontWeight: 900,
-            lineHeight: 1.05,
+            lineHeight: 1.1,
             textShadow: "0 4px 24px rgba(0,0,0,.7)",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
           }}
         >
           {cur.title}
@@ -1705,12 +1701,14 @@ function Hero({
         <div
           style={{
             display: "flex",
-            gap: 12,
+            gap: 8,
             alignItems: "center",
-            marginTop: 10,
-            fontSize: 14,
+            marginTop: 6,
+            fontSize: 11.5,
             color: C.text,
-            flexWrap: "wrap",
+            flexWrap: "nowrap",
+            overflow: "hidden",
+            whiteSpace: "nowrap",
           }}
         >
           {cur.media === "tv" && (
@@ -1718,27 +1716,32 @@ function Hero({
               style={{
                 background: "#2563eb",
                 color: "#fff",
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: 800,
-                padding: "2px 8px",
-                borderRadius: 6,
+                padding: "1px 6px",
+                borderRadius: 5,
+                flexShrink: 0,
               }}
             >
               📺 {t.tvTag}
             </span>
           )}
           {parseFloat(cur.rating) > 0 && (
-            <span style={{ color: C.gold, fontWeight: 800 }}>★ {parseFloat(cur.rating).toFixed(1)}</span>
+            <span style={{ color: C.gold, fontWeight: 800, flexShrink: 0 }}>★ {parseFloat(cur.rating).toFixed(1)}</span>
           )}
-          {cur.year && <span style={{ color: C.muted }}>{cur.year}</span>}
-          {cur.genre && <span style={{ color: C.muted }}>{cur.genre.split(",")[0]}</span>}
+          {cur.year && <span style={{ color: C.muted, flexShrink: 0 }}>{cur.year}</span>}
+          {cur.genre && (
+            <span style={{ color: C.muted, overflow: "hidden", textOverflow: "ellipsis" }}>
+              {cur.genre.split(",")[0]}
+            </span>
+          )}
         </div>
         {cur.overview && (
           <p
             style={{
-              margin: "12px 0 0",
-              fontSize: 13.5,
-              lineHeight: 1.6,
+              margin: "8px 0 0",
+              fontSize: 12,
+              lineHeight: 1.45,
               color: C.muted,
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -1749,17 +1752,17 @@ function Hero({
             {cur.overview}
           </p>
         )}
-        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <button
             onClick={() => onSelect(cur)}
             style={{
               background: C.gold,
               color: "#0A0A0F",
               border: "none",
-              borderRadius: 12,
-              padding: "11px 24px",
+              borderRadius: 999,
+              padding: "7px 18px",
               fontWeight: 900,
-              fontSize: 14.5,
+              fontSize: 12.5,
               cursor: "pointer",
             }}
           >
@@ -1771,10 +1774,10 @@ function Hero({
               background: "rgba(255,255,255,0.12)",
               color: C.text,
               border: `1px solid ${C.border}`,
-              borderRadius: 12,
-              padding: "11px 22px",
+              borderRadius: 999,
+              padding: "7px 16px",
               fontWeight: 800,
-              fontSize: 14.5,
+              fontSize: 12.5,
               cursor: "pointer",
               backdropFilter: "blur(6px)",
             }}
@@ -1783,6 +1786,7 @@ function Hero({
           </button>
         </div>
       </div>
+
 
       {/* dots */}
       <div
