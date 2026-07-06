@@ -545,16 +545,14 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
       timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
     });
-    // Only re-anchor when there's no VALID remembered view for this metal+timeframe;
-    // otherwise the saved pan/zoom is restored by the data effect. A stale saved
-    // range (wrong length) is ignored so bars never cram into a corner.
-    const savedForView = savedViewsRef.current[`${name || ''}-${range}`];
-    const total = candles.length;
-    if (autoFit && total > 0 && !isValidSavedRange(savedForView, total, preset.rightOffset)) {
+    // Match the proven Bitcoin (CryptoChart) behaviour: only auto-fit when there
+    // is no remembered view for this metal+timeframe; otherwise the saved
+    // pan/zoom is restored by the data effect. fitContent() reliably renders the
+    // full series (the custom right-anchored setVisibleLogicalRange path left the
+    // canvas blank on some timeframes).
+    if (autoFit && !savedViewsRef.current[`${name || ''}-${range}`]) {
       restoringRef.current = true;
-      chartRef.current.timeScale().setVisibleLogicalRange(
-        defaultVisibleRange(total, TARGET_VISIBLE_BARS[range] ?? 120, preset.rightOffset),
-      );
+      chartRef.current.timeScale().fitContent();
       requestAnimationFrame(() => { restoringRef.current = false; });
     }
 
