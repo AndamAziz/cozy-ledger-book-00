@@ -73,25 +73,10 @@ const BTC_INTERVAL: Record<SignalTF, number> = {
   M5: 5, M15: 15, M30: 30, H1: 60, H4: 240, D1: 1440,
 };
 
-/** commodities-prices history range + aggregation per timeframe (gold + oil). */
-const GOLD_TF: Record<SignalTF, { range: string; agg: number }> = {
-  M5: { range: '5min', agg: 1 },
-  M15: { range: '15min', agg: 1 },
-  M30: { range: '5d', agg: 2 },
-  H1: { range: '1mo', agg: 1 },
-  H4: { range: '1mo', agg: 4 },
-  D1: { range: '3mo', agg: 1 },
-};
-
-/** forex-prices history range + aggregation per timeframe. */
-const FOREX_TF: Record<SignalTF, { range: string; agg: number }> = {
-  M5: { range: '1d', agg: 1 },
-  M15: { range: '5d', agg: 1 },
-  M30: { range: '5d', agg: 2 },
-  H1: { range: '1mo', agg: 1 },
-  H4: { range: '1mo', agg: 4 },
-  D1: { range: '3mo', agg: 1 },
-};
+// Commodity (gold/oil) & forex history mappings now live in the shared
+// timeframeFeed module so the chart and the signal engine stay in lock-step.
+const GOLD_TF = COMMODITY_TF_FEED;
+const FOREX_TF = FOREX_TF_FEED;
 
 /** Fetch OHLC candles from the commodities-prices function (gold XAU, oil USOIL, …). */
 async function fetchCommodityCandles(code: string, range: string, agg: number): Promise<OHLCCandle[]> {
