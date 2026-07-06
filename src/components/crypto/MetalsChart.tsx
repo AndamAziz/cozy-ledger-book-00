@@ -595,7 +595,23 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       }
       requestAnimationFrame(() => { restoringRef.current = false; });
     }
-  }, [candles, activeMAs, maType, chartType, name, range]);
+
+    // Render-health check: after the paint settles, confirm the chart produced a
+    // valid visible range for the loaded candles. If the canvas failed to paint
+    // (blank chart despite data), surface the fallback + retry overlay.
+    const healthTimer = window.setTimeout(() => {
+      const chart = chartRef.current;
+      const container = chartContainerRef.current;
+      if (!chart || !container) return;
+      const rect = container.getBoundingClientRect();
+      let visible = null;
+      try { visible = chart.timeScale().getVisibleLogicalRange(); } catch { visible = null; }
+      const hasSize = rect.width > 0 && rect.height > 0;
+      const hasRange = !!visible && (visible.to - visible.from) > 0;
+      setRenderFailed(candles.length > 0 && (!hasSize || !hasRange));
+    }, 250);
+    return () => window.clearTimeout(healthTimer);
+  }, [candles, activeMAs, maType, chartType, name, range, remountKey]);
 
 
   // Update price line. Re-anchors after every timeframe switch (the chart &
