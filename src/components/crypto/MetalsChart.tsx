@@ -351,6 +351,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
         barSpacing: preset.barSpacing,
         minBarSpacing: preset.minBarSpacing,
         ticksVisible: true,
+        tickMarkFormatter: (t: number) => formatAxisTime(t),
       },
       // Touch-friendly gestures: one-finger HORIZONTAL swipe pans the chart,
       // vertical swipes are released to the page for scrolling, and two-finger
