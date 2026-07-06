@@ -3339,7 +3339,7 @@ Deno.serve(async (req) => {
         const newLegs: OpenLeg[] = [];
         for (const tfDef of TIMEFRAME_CASCADE) {
           const activeFrom = now + tfDef.delayMs;
-          const expiresAt = activeFrom + (TF_PERIOD_MS[tfDef.tf] ?? TF_PERIOD_MS["15M"]);
+          const expiresAt = activeFrom + goldExpiryMs(symbol, tfDef.tf, entry, tp, sl);
 
           const { data: ins } = await admin.from("ai_signals").insert({
             asset: m.name, signal: sig, entry, tp, tp2, sl, confidence,
