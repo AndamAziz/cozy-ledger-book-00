@@ -506,7 +506,7 @@ export interface GoldGateResult {
 
 /**
  * GOLD-only signal-quality gates — mirrors applyGoldGates in the app engine.
- *   1. RSI > 70 downgrades a fresh BUY, RSI < 30 downgrades a fresh SELL (−15).
+ *   1. RSI > 70 downgrades a fresh BUY, RSI < 30 downgrades a fresh SELL (−25).
  *   2. Any two adjacent timeframes disagreeing caps confidence < 60 (forces WAIT).
  */
 export function applyGoldGates(
@@ -519,8 +519,8 @@ export function applyGoldGates(
   let c = confidence;
 
   if (rsi != null) {
-    if (a === "buy" && rsi > 70) c -= 15;
-    else if (a === "sell" && rsi < 30) c -= 15;
+    if (a === "buy" && rsi > 70) c -= 25;
+    else if (a === "sell" && rsi < 30) c -= 25;
   }
 
   const adjConflict = hasAdjacentConflict(perTF);

@@ -475,7 +475,7 @@ export interface GoldGateResult {
  * GOLD-only signal-quality gates. Applied on top of the shared decision core so
  * that no other asset's behaviour changes:
  *   1. Overbought/oversold gate — RSI > 70 downgrades a fresh BUY, RSI < 30
- *      downgrades a fresh SELL (−15 confidence points).
+ *      downgrades a fresh SELL (−25 confidence points).
  *   2. Stricter conflict — ANY two adjacent timeframes disagreeing caps
  *      confidence below the 60 action threshold (forces WAIT).
  * Anything pushed under 60 is demoted: WAIT when it was an adjacent conflict,
@@ -492,8 +492,8 @@ export function applyGoldGates(
 
   // Gate 1 — extreme RSI against a fresh directional call.
   if (rsi != null) {
-    if (a === 'buy' && rsi > 70) c -= 15;
-    else if (a === 'sell' && rsi < 30) c -= 15;
+    if (a === 'buy' && rsi > 70) c -= 25;
+    else if (a === 'sell' && rsi < 30) c -= 25;
   }
 
   // Gate 2 — adjacent-timeframe conflict.
