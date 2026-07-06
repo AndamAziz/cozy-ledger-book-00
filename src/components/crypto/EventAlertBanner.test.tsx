@@ -75,3 +75,59 @@ describe('EventAlertBanner — released NFP', () => {
     expect(screen.queryByText(/Actual: 57K/)).not.toBeInTheDocument();
   });
 });
+
+// NFP that BEAT expectations: Actual 200K > Forecast 110K → stronger USD, bearish gold.
+const nfpBeat: CalendarEvent = {
+  ...nfpReleased,
+  actual: '200K',
+};
+
+describe('EventAlertBanner — NFP confidence states (USD + Gold)', () => {
+  it('High match (miss): shows High badge + bearish-USD / bullish-Gold call', () => {
+    renderBanner([{ ...nfpReleased, actualConfidence: 'high' }]);
+    expect(screen.getByText('High match')).toBeInTheDocument();
+    expect(screen.getByText(/Actual: 57K/)).toBeInTheDocument();
+    const call = screen.getByText('Weaker than forecast → bearish for USD, bullish for Gold');
+    expect(call).toHaveTextContent(/bearish for USD/);
+    expect(call).toHaveTextContent(/bullish for Gold/);
+  });
+
+  it('High match (beat): shows High badge + bullish-USD / bearish-Gold call', () => {
+    renderBanner([{ ...nfpBeat, actualConfidence: 'high' }]);
+    expect(screen.getByText('High match')).toBeInTheDocument();
+    expect(screen.getByText(/Actual: 200K/)).toBeInTheDocument();
+    const call = screen.getByText('Stronger than forecast → bullish for USD, bearish for Gold');
+    expect(call).toHaveTextContent(/bullish for USD/);
+    expect(call).toHaveTextContent(/bearish for Gold/);
+  });
+
+  it('Likely match (miss): shows Likely badge + bearish-USD / bullish-Gold call', () => {
+    renderBanner([{ ...nfpReleased, actualConfidence: 'medium' }]);
+    expect(screen.getByText('Likely')).toBeInTheDocument();
+    expect(screen.queryByText('High match')).not.toBeInTheDocument();
+    expect(screen.getByText(/Actual: 57K/)).toBeInTheDocument();
+    const call = screen.getByText('Weaker than forecast → bearish for USD, bullish for Gold');
+    expect(call).toHaveTextContent(/bearish for USD/);
+    expect(call).toHaveTextContent(/bullish for Gold/);
+  });
+
+  it('Likely match (beat): shows Likely badge + bullish-USD / bearish-Gold call', () => {
+    renderBanner([{ ...nfpBeat, actualConfidence: 'medium' }]);
+    expect(screen.getByText('Likely')).toBeInTheDocument();
+    expect(screen.queryByText('High match')).not.toBeInTheDocument();
+    const call = screen.getByText('Stronger than forecast → bullish for USD, bearish for Gold');
+    expect(call).toHaveTextContent(/bullish for USD/);
+    expect(call).toHaveTextContent(/bearish for Gold/);
+  });
+
+  it('Actual unavailable: shows unavailable badge and hides USD + Gold call', () => {
+    renderBanner([{ ...nfpReleased, actual: '', actualConfidence: undefined }]);
+    expect(screen.getAllByText('Actual unavailable').length).toBeGreaterThan(0);
+    expect(screen.queryByText('High match')).not.toBeInTheDocument();
+    expect(screen.queryByText('Likely')).not.toBeInTheDocument();
+    // Neither the USD nor the Gold directional call should render without an actual.
+    expect(screen.queryByText(/for USD/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/for Gold/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Actual: 57K/)).not.toBeInTheDocument();
+  });
+});
