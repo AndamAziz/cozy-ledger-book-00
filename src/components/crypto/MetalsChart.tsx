@@ -1026,14 +1026,9 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
             onClick={() => {
               delete savedViewsRef.current[`${name || ''}-${range}`];
               const ts = chartRef.current?.timeScale();
-              const total = candles.length;
-              // Re-anchor to the most recent window instead of fitContent(),
-              // which would squeeze the full over-fetched series into the corner.
-              if (ts && total > 0) {
+              if (ts && candles.length > 0) {
                 restoringRef.current = true;
-                ts.setVisibleLogicalRange(
-                  defaultVisibleRange(total, TARGET_VISIBLE_BARS[range] ?? 120, preset.rightOffset),
-                );
+                ts.fitContent();
                 requestAnimationFrame(() => { restoringRef.current = false; });
               }
             }}
