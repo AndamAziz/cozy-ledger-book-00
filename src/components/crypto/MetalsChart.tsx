@@ -597,34 +597,21 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
 
     // Only adjust the visible range when switching metal / timeframe / chart
     // type. Live price ticks keep the user's current zoom & pan untouched.
+    // Mirrors CryptoChart (Bitcoin): restore a saved pan/zoom if present,
+    // otherwise fitContent(). The previous custom right-anchored
+    // setVisibleLogicalRange path left the canvas blank on 5m/15m/1D.
     const fitKey = `${name || ''}-${range}-${chartType}`;
     if (lastFitKeyRef.current !== fitKey) {
       lastFitKeyRef.current = fitKey;
       const ts = chartRef.current?.timeScale();
-      const total = candles.length;
-      const target = TARGET_VISIBLE_BARS[range] ?? 120;
-      const fallback = defaultVisibleRange(total, target, preset.rightOffset);
       const saved = savedViewsRef.current[viewKey];
       restoringRef.current = true;
-      // Restore the user's saved pan/zoom only if it still fits the current
-      // dataset; otherwise right-anchor to the most recent `target` candles.
-      // fitContent() is intentionally avoided — it would cram the full
-      // over-fetched, weekend-gapped series into thin left-hugging lines.
-      if (isValidSavedRange(saved, total, preset.rightOffset)) {
-        try { ts?.setVisibleLogicalRange(saved as { from: number; to: number }); }
-        catch { ts?.setVisibleLogicalRange(fallback); }
+      if (saved) {
+        try { ts?.setVisibleLogicalRange(saved); } catch { ts?.fitContent(); }
       } else {
-        ts?.setVisibleLogicalRange(fallback);
+        ts?.fitContent();
       }
-      requestAnimationFrame(() => {
-        restoringRef.current = false;
-        // TEMP dev-only diagnostics — remove once chart render is confirmed.
-        if (import.meta.env.DEV) {
-          const vr = chartRef.current?.timeScale().getVisibleLogicalRange();
-          // eslint-disable-next-line no-console
-          console.log('[MetalsChart]', { name, range, chartType, candles: candles.length, target, fallback, visibleRange: vr });
-        }
-      });
+      requestAnimationFrame(() => { restoringRef.current = false; });
     }
   }, [candles, activeMAs, maType, chartType, name, range]);
 
