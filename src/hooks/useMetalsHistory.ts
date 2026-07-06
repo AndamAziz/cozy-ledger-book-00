@@ -156,7 +156,7 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
       }]);
     }
 
-  }, [livePrice, range]);
+  }, [livePrice, range, agg]);
 
 
   const refetch = () => setReloadKey((k) => k + 1);
