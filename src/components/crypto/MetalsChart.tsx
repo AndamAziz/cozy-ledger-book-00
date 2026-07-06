@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, CandlestickSeries, HistogramSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { clearChartCacheAndReload } from '@/lib/serviceWorker';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
