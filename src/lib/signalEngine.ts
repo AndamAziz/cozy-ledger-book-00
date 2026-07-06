@@ -492,8 +492,8 @@ export function applyGoldGates(
 
   // Gate 1 — extreme RSI against a fresh directional call.
   if (rsi != null) {
-    if (a === 'buy' && rsi > 70) c -= 15;
-    else if (a === 'sell' && rsi < 30) c -= 15;
+    if (a === 'buy' && rsi > 70) c -= 25;
+    else if (a === 'sell' && rsi < 30) c -= 25;
   }
 
   // Gate 2 — adjacent-timeframe conflict.
