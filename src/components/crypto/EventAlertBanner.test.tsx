@@ -1,11 +1,18 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EventAlertBanner, type CalendarEvent } from './EventAlertBanner';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
-function renderBanner(events: CalendarEvent[]) {
+const LANGUAGE_STORAGE_KEY = 'central-tech-platform-language';
+
+beforeEach(() => {
+  localStorage.clear();
+});
+
+function renderBanner(events: CalendarEvent[], lang: 'en' | 'ku' = 'en') {
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
   return render(
     <LanguageProvider>
       <TooltipProvider>
