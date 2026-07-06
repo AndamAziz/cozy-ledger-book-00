@@ -516,7 +516,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       macdSignalRef.current = null;
       if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     };
-  }, [chartType, range, isUp, activeMAs, maType, language]);
+  }, [chartType, range, isUp, activeMAs, maType, language, remountKey]);
 
   // Apply layout preset without recreating the chart. Recomputes whenever the
   // preset values, the selected range, or the auto-fit mode change so the Auto
