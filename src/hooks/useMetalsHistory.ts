@@ -130,7 +130,7 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
       '1min': 60, '5min': 300, '15min': 900, '1d': 300, '5d': 900,
       '1mo': 3600, '3mo': 86_400, '6mo': 86_400, '1y': 86_400, '5y': 604_800,
     };
-    const step = STEP_SECONDS[range] ?? 60;
+    const step = (STEP_SECONDS[range] ?? 60) * (agg > 1 ? agg : 1);
     // Align to the UTC clock: epoch 0 is 1970-01-01 00:00 UTC, so flooring by
     // the step lands exactly on :00 / :05 / :15 / hour / day boundaries.
     const bucket = Math.floor(Date.now() / 1000 / step) * step;
