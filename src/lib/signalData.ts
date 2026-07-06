@@ -1,6 +1,7 @@
 import { OHLCCandle, fetchOHLC } from './krakenApi';
 import { aggregateCandles } from './aiAnalysis';
 import { fetchForexCandles } from './forexApi';
+import { COMMODITY_TF_FEED, FOREX_TF_FEED } from './timeframeFeed';
 import {
   AssetKey,
   SignalTF,
