@@ -102,5 +102,5 @@ export function explainEventResult(ev: CalendarEventLike): EventExplanation | nu
     ku = `لاوازتر لە ${refWordKu} → دابەزینی دۆلار، بەرزبوونەوەی زێڕ`;
   }
 
-  return { usdUp, goldUp, vsForecast, en, ku };
+  return { usdUp, goldUp, vsForecast, method: vsForecast ? 'beat-miss' : 'direction', en, ku };
 }
