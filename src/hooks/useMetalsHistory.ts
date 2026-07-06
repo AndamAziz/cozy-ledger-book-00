@@ -82,8 +82,9 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
         if (cancelled) return;
 
         if (res.ok && data && Array.isArray(data.candles) && data.candles.length > 0) {
-          baseCandlesRef.current = data.candles;
-          setCandles(data.candles);
+          const aggregated = aggregateMetalCandles(data.candles as MetalCandle[], agg);
+          baseCandlesRef.current = aggregated;
+          setCandles(aggregated);
           setSource(typeof data.source === 'string' ? data.source : null);
           setError(null);
         } else {
