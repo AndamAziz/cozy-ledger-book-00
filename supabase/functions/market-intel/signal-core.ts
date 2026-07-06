@@ -566,9 +566,22 @@ export function buildAssetSignal(p: {
     METAL_ASSETS.includes(p.asset) || CRYPTO_ASSETS.includes(p.asset) ? 0.4 : 0.25;
   const d = decideFromScores(tech.score, macro.score, macroWeight, perTF, news.blocking);
 
+  // ── GOLD-only signal-quality gates (other assets untouched) ──
+  let action = d.action;
+  let confidence = d.confidence;
+  let conflict = d.conflict;
+  let confluenceAlignment = d.confluenceAlignment;
+  if (p.asset === "gold") {
+    const g = applyGoldGates(action, confidence, tech.rsi, perTF);
+    action = g.action;
+    confidence = g.confidence;
+    conflict = conflict || g.adjConflict;
+    if (action === "wait" || action === "neutral") confluenceAlignment = "neutral";
+  }
+
   const atr = calculateATR(p.candles);
   const slDist = atr > 0 ? atr * 1.5 : price * 0.005;
-  const dirSign = d.action === "buy" ? 1 : d.action === "sell" ? -1 : 0;
+  const dirSign = action === "buy" ? 1 : action === "sell" ? -1 : 0;
   const entry = +price.toFixed(p.decimals);
   const stopLoss = dirSign !== 0 ? +(price - dirSign * slDist).toFixed(p.decimals) : 0;
   const takeProfit1 = dirSign !== 0 ? +(price + dirSign * slDist * 1.5).toFixed(p.decimals) : 0;
