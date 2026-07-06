@@ -117,6 +117,11 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
+  // Forces a full chart teardown + recreation (used by the render-failed retry).
+  const [remountKey, setRemountKey] = useState(0);
+  // True when candles are present but the canvas failed to paint a visible range
+  // (blank chart). Drives an on-chart fallback + retry overlay.
+  const [renderFailed, setRenderFailed] = useState(false);
 
   useEffect(() => {
     try { localStorage.setItem('chart_show_trade_details', String(showTradeDetails)); } catch {}
