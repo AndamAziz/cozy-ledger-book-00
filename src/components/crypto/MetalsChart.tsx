@@ -618,7 +618,15 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       } else {
         ts?.setVisibleLogicalRange(fallback);
       }
-      requestAnimationFrame(() => { restoringRef.current = false; });
+      requestAnimationFrame(() => {
+        restoringRef.current = false;
+        // TEMP dev-only diagnostics — remove once chart render is confirmed.
+        if (import.meta.env.DEV) {
+          const vr = chartRef.current?.timeScale().getVisibleLogicalRange();
+          // eslint-disable-next-line no-console
+          console.log('[MetalsChart]', { name, range, chartType, candles: candles.length, target, fallback, visibleRange: vr });
+        }
+      });
     }
   }, [candles, activeMAs, maType, chartType, name, range]);
 
