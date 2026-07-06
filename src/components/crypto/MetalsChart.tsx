@@ -62,30 +62,7 @@ const TARGET_VISIBLE_BARS: Record<string, number> = {
   '1mo': 120, '3mo': 120, '1y': 120,
 };
 
-type LogicalRange = { from: number; to: number } | null | undefined;
 
-// The default right-anchored view: the last `target` bars plus the right offset
-// gap. `to` may exceed the last index by `rightOffset` (that's the empty gap
-// between the newest candle and the price axis, MT5-style).
-function defaultVisibleRange(total: number, target: number, rightOffset: number): { from: number; to: number } {
-  const shown = Math.min(total, Math.max(target, 10));
-  const to = total - 1 + rightOffset;
-  return { from: Math.max(0, total - shown), to };
-}
-
-// A saved pan/zoom is only safe to restore if it still fits the CURRENT dataset.
-// Stale ranges (captured when the series had a different length, e.g. after a
-// live-append grew the array or a timeframe with fewer bars) would squeeze the
-// candles into a corner and leave the rest of the width blank.
-function isValidSavedRange(saved: LogicalRange, total: number, rightOffset: number): boolean {
-  if (!saved || !Number.isFinite(saved.from) || !Number.isFinite(saved.to)) return false;
-  if (saved.to <= saved.from) return false;
-  const span = saved.to - saved.from;
-  if (span < 2 || span > total + rightOffset + 10) return false;
-  if (saved.from < -rightOffset - 5) return false;
-  if (saved.to > total + rightOffset + 5) return false;
-  return true;
-}
 
 
 export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, accentColor, range, onRangeChange, currentPrice, name, code }: MetalsChartProps) {
@@ -545,16 +522,14 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       rightPriceScale: { scaleMargins: { top: preset.scaleMarginTop, bottom: preset.scaleMarginBottom } },
       timeScale: { rightOffset: preset.rightOffset, barSpacing: preset.barSpacing, minBarSpacing: preset.minBarSpacing },
     });
-    // Only re-anchor when there's no VALID remembered view for this metal+timeframe;
-    // otherwise the saved pan/zoom is restored by the data effect. A stale saved
-    // range (wrong length) is ignored so bars never cram into a corner.
-    const savedForView = savedViewsRef.current[`${name || ''}-${range}`];
-    const total = candles.length;
-    if (autoFit && total > 0 && !isValidSavedRange(savedForView, total, preset.rightOffset)) {
+    // Match the proven Bitcoin (CryptoChart) behaviour: only auto-fit when there
+    // is no remembered view for this metal+timeframe; otherwise the saved
+    // pan/zoom is restored by the data effect. fitContent() reliably renders the
+    // full series (the custom right-anchored setVisibleLogicalRange path left the
+    // canvas blank on some timeframes).
+    if (autoFit && !savedViewsRef.current[`${name || ''}-${range}`]) {
       restoringRef.current = true;
-      chartRef.current.timeScale().setVisibleLogicalRange(
-        defaultVisibleRange(total, TARGET_VISIBLE_BARS[range] ?? 120, preset.rightOffset),
-      );
+      chartRef.current.timeScale().fitContent();
       requestAnimationFrame(() => { restoringRef.current = false; });
     }
 
@@ -599,34 +574,21 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
 
     // Only adjust the visible range when switching metal / timeframe / chart
     // type. Live price ticks keep the user's current zoom & pan untouched.
+    // Mirrors CryptoChart (Bitcoin): restore a saved pan/zoom if present,
+    // otherwise fitContent(). The previous custom right-anchored
+    // setVisibleLogicalRange path left the canvas blank on 5m/15m/1D.
     const fitKey = `${name || ''}-${range}-${chartType}`;
     if (lastFitKeyRef.current !== fitKey) {
       lastFitKeyRef.current = fitKey;
       const ts = chartRef.current?.timeScale();
-      const total = candles.length;
-      const target = TARGET_VISIBLE_BARS[range] ?? 120;
-      const fallback = defaultVisibleRange(total, target, preset.rightOffset);
       const saved = savedViewsRef.current[viewKey];
       restoringRef.current = true;
-      // Restore the user's saved pan/zoom only if it still fits the current
-      // dataset; otherwise right-anchor to the most recent `target` candles.
-      // fitContent() is intentionally avoided — it would cram the full
-      // over-fetched, weekend-gapped series into thin left-hugging lines.
-      if (isValidSavedRange(saved, total, preset.rightOffset)) {
-        try { ts?.setVisibleLogicalRange(saved as { from: number; to: number }); }
-        catch { ts?.setVisibleLogicalRange(fallback); }
+      if (saved) {
+        try { ts?.setVisibleLogicalRange(saved); } catch { ts?.fitContent(); }
       } else {
-        ts?.setVisibleLogicalRange(fallback);
+        ts?.fitContent();
       }
-      requestAnimationFrame(() => {
-        restoringRef.current = false;
-        // TEMP dev-only diagnostics — remove once chart render is confirmed.
-        if (import.meta.env.DEV) {
-          const vr = chartRef.current?.timeScale().getVisibleLogicalRange();
-          // eslint-disable-next-line no-console
-          console.log('[MetalsChart]', { name, range, chartType, candles: candles.length, target, fallback, visibleRange: vr });
-        }
-      });
+      requestAnimationFrame(() => { restoringRef.current = false; });
     }
   }, [candles, activeMAs, maType, chartType, name, range]);
 
@@ -1041,14 +1003,9 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
             onClick={() => {
               delete savedViewsRef.current[`${name || ''}-${range}`];
               const ts = chartRef.current?.timeScale();
-              const total = candles.length;
-              // Re-anchor to the most recent window instead of fitContent(),
-              // which would squeeze the full over-fetched series into the corner.
-              if (ts && total > 0) {
+              if (ts && candles.length > 0) {
                 restoringRef.current = true;
-                ts.setVisibleLogicalRange(
-                  defaultVisibleRange(total, TARGET_VISIBLE_BARS[range] ?? 120, preset.rightOffset),
-                );
+                ts.fitContent();
                 requestAnimationFrame(() => { restoringRef.current = false; });
               }
             }}
