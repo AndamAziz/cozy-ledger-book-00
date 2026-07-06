@@ -454,6 +454,64 @@ export function buildLocalSignal(candles: OHLCCandle[], price: number, decimals:
 }
 
 
+/** True when any two adjacent timeframes (in the M5→D1 ladder) disagree in direction. */
+export function hasAdjacentConflict(perTF: TFView[]): boolean {
+  for (let i = 0; i < perTF.length - 1; i++) {
+    const a = perTF[i].dir;
+    const b = perTF[i + 1].dir;
+    if ((a === 'up' && b === 'down') || (a === 'down' && b === 'up')) return true;
+  }
+  return false;
+}
+
+export interface GoldGateResult {
+  action: SignalAction;
+  confidence: number;
+  /** Whether an adjacent-timeframe conflict was detected (stricter than the 6-TF set). */
+  adjConflict: boolean;
+}
+
+/**
+ * GOLD-only signal-quality gates. Applied on top of the shared decision core so
+ * that no other asset's behaviour changes:
+ *   1. Overbought/oversold gate — RSI > 70 downgrades a fresh BUY, RSI < 30
+ *      downgrades a fresh SELL (−15 confidence points).
+ *   2. Stricter conflict — ANY two adjacent timeframes disagreeing caps
+ *      confidence below the 60 action threshold (forces WAIT).
+ * Anything pushed under 60 is demoted: WAIT when it was an adjacent conflict,
+ * otherwise NEUTRAL.
+ */
+export function applyGoldGates(
+  action: SignalAction,
+  confidence: number,
+  rsi: number | null,
+  perTF: TFView[],
+): GoldGateResult {
+  let a = action;
+  let c = confidence;
+
+  // Gate 1 — extreme RSI against a fresh directional call.
+  if (rsi != null) {
+    if (a === 'buy' && rsi > 70) c -= 15;
+    else if (a === 'sell' && rsi < 30) c -= 15;
+  }
+
+  // Gate 2 — adjacent-timeframe conflict.
+  const adjConflict = hasAdjacentConflict(perTF);
+  if (adjConflict) c = Math.min(c, 59);
+
+  c = clamp(c, 0, 96);
+
+  // Enforce the 60 threshold after downgrades.
+  if ((a === 'buy' || a === 'sell') && c < 60) {
+    a = adjConflict ? 'wait' : 'neutral';
+  }
+  if (a === 'wait' || a === 'neutral') c = Math.min(c, 59);
+
+  return { action: a, confidence: c, adjConflict };
+}
+
+
 /** Build a complete, live multi-source trade signal for one asset + timeframe. */
 export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
   const now = p.now ?? Date.now();
@@ -477,11 +535,21 @@ export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
   // filter + confidence gate). The exact same function powers buildLocalSignal,
   // so every signal across the app is decided by ONE codepath.
   const d = decideFromScores(tech.score, macro.score, macroWeight, perTF, news.blocking);
-  const { conflict, confScore, confDir, damp, combinedBefore } = d;
+  const { confScore, confDir, damp, combinedBefore } = d;
   const combined = d.combined;
-  const confidence = d.confidence;
-  const action = d.action;
-  const confluenceAlignment = d.confluenceAlignment;
+  let confidence = d.confidence;
+  let action = d.action;
+  let conflict = d.conflict;
+  let confluenceAlignment = d.confluenceAlignment;
+
+  // ── GOLD-only signal-quality gates (other assets are untouched) ──
+  if (p.asset === 'gold') {
+    const g = applyGoldGates(action, confidence, tech.rsi, perTF);
+    action = g.action;
+    confidence = g.confidence;
+    conflict = conflict || g.adjConflict;
+    if (action === 'wait' || action === 'neutral') confluenceAlignment = 'neutral';
+  }
   const signalDir: TrendDir = combinedBefore > 0 ? 'up' : combinedBefore < 0 ? 'down' : 'neutral';
 
   if (typeof console !== 'undefined') {

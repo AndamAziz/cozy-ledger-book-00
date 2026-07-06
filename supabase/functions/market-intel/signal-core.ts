@@ -488,6 +488,54 @@ export interface EngineSignal {
   perTF: TFView[];
 }
 
+/** True when any two adjacent timeframes (M5→D1 ladder) disagree in direction. */
+export function hasAdjacentConflict(perTF: TFView[]): boolean {
+  for (let i = 0; i < perTF.length - 1; i++) {
+    const a = perTF[i].dir;
+    const b = perTF[i + 1].dir;
+    if ((a === "up" && b === "down") || (a === "down" && b === "up")) return true;
+  }
+  return false;
+}
+
+export interface GoldGateResult {
+  action: SignalAction;
+  confidence: number;
+  adjConflict: boolean;
+}
+
+/**
+ * GOLD-only signal-quality gates — mirrors applyGoldGates in the app engine.
+ *   1. RSI > 70 downgrades a fresh BUY, RSI < 30 downgrades a fresh SELL (−15).
+ *   2. Any two adjacent timeframes disagreeing caps confidence < 60 (forces WAIT).
+ */
+export function applyGoldGates(
+  action: SignalAction,
+  confidence: number,
+  rsi: number | null,
+  perTF: TFView[],
+): GoldGateResult {
+  let a = action;
+  let c = confidence;
+
+  if (rsi != null) {
+    if (a === "buy" && rsi > 70) c -= 15;
+    else if (a === "sell" && rsi < 30) c -= 15;
+  }
+
+  const adjConflict = hasAdjacentConflict(perTF);
+  if (adjConflict) c = Math.min(c, 59);
+
+  c = clamp(c, 0, 96);
+
+  if ((a === "buy" || a === "sell") && c < 60) {
+    a = adjConflict ? "wait" : "neutral";
+  }
+  if (a === "wait" || a === "neutral") c = Math.min(c, 59);
+
+  return { action: a, confidence: c, adjConflict };
+}
+
 /** Multi-source signal (gold / btc) — mirrors buildAssetSignal in the app. */
 export function buildAssetSignal(p: {
   asset: AssetKey;
@@ -518,9 +566,22 @@ export function buildAssetSignal(p: {
     METAL_ASSETS.includes(p.asset) || CRYPTO_ASSETS.includes(p.asset) ? 0.4 : 0.25;
   const d = decideFromScores(tech.score, macro.score, macroWeight, perTF, news.blocking);
 
+  // ── GOLD-only signal-quality gates (other assets untouched) ──
+  let action = d.action;
+  let confidence = d.confidence;
+  let conflict = d.conflict;
+  let confluenceAlignment = d.confluenceAlignment;
+  if (p.asset === "gold") {
+    const g = applyGoldGates(action, confidence, tech.rsi, perTF);
+    action = g.action;
+    confidence = g.confidence;
+    conflict = conflict || g.adjConflict;
+    if (action === "wait" || action === "neutral") confluenceAlignment = "neutral";
+  }
+
   const atr = calculateATR(p.candles);
   const slDist = atr > 0 ? atr * 1.5 : price * 0.005;
-  const dirSign = d.action === "buy" ? 1 : d.action === "sell" ? -1 : 0;
+  const dirSign = action === "buy" ? 1 : action === "sell" ? -1 : 0;
   const entry = +price.toFixed(p.decimals);
   const stopLoss = dirSign !== 0 ? +(price - dirSign * slDist).toFixed(p.decimals) : 0;
   const takeProfit1 = dirSign !== 0 ? +(price + dirSign * slDist * 1.5).toFixed(p.decimals) : 0;
@@ -528,8 +589,8 @@ export function buildAssetSignal(p: {
   const riskReward = dirSign !== 0 ? 1.5 : 0;
 
   return {
-    action: d.action,
-    confidence: d.confidence,
+    action,
+    confidence,
     score: d.combined,
     price,
     entry,
@@ -542,10 +603,10 @@ export function buildAssetSignal(p: {
     macd: tech.macd,
     ema20: tech.ema20,
     ema50: tech.ema50,
-    confluenceAlignment: d.confluenceAlignment,
+    confluenceAlignment,
     confScore: d.confScore,
     confDir: d.confDir,
-    conflict: d.conflict,
+    conflict,
     perTF,
   };
 }
