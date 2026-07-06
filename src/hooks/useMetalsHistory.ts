@@ -114,7 +114,7 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
 
     fetchHistory();
     return () => { cancelled = true; };
-  }, [code, range, reloadKey]);
+  }, [code, range, agg, reloadKey]);
 
   // Append live price as the latest point for real-time feel.
   // Candle boundaries are aligned to UTC clock intervals (TradingView / MT5
