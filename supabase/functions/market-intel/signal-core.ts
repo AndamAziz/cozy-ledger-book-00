@@ -589,8 +589,8 @@ export function buildAssetSignal(p: {
   const riskReward = dirSign !== 0 ? 1.5 : 0;
 
   return {
-    action: d.action,
-    confidence: d.confidence,
+    action,
+    confidence,
     score: d.combined,
     price,
     entry,
@@ -603,10 +603,10 @@ export function buildAssetSignal(p: {
     macd: tech.macd,
     ema20: tech.ema20,
     ema50: tech.ema50,
-    confluenceAlignment: d.confluenceAlignment,
+    confluenceAlignment,
     confScore: d.confScore,
     confDir: d.confDir,
-    conflict: d.conflict,
+    conflict,
     perTF,
   };
 }
