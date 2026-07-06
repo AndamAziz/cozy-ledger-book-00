@@ -48,7 +48,9 @@ export function EventAlertBanner({ events, loading }: Props) {
     .sort((a, b) => a.t - b.t)
     .slice(0, 5);
 
-  // Recently released USD high/medium events (last 24h) that now have an actual figure.
+  // Recently released USD high/medium events (last 24h). Includes events whose
+  // actual figure hasn't been confidently matched yet so we can surface a clear
+  // "Actual unavailable" state rather than silently dropping them.
   const DAY = 86400000;
   const released = events
     .map((e) => ({ e, t: Date.parse(e.date) }))
@@ -56,8 +58,7 @@ export function EventAlertBanner({ events, loading }: Props) {
       if (Number.isNaN(t) || t > now || t < now - DAY) return false;
       const imp = (e.impact || '').toLowerCase();
       if (imp !== 'high' && imp !== 'medium') return false;
-      if (e.country !== 'USD' && e.country !== 'All') return false;
-      return !!explainEventResult(e);
+      return e.country === 'USD' || e.country === 'All';
     })
     .sort((a, b) => b.t - a.t)
     .slice(0, 4);
