@@ -506,7 +506,7 @@ export interface GoldGateResult {
 
 /**
  * GOLD-only signal-quality gates — mirrors applyGoldGates in the app engine.
- *   1. RSI > 70 downgrades a fresh BUY, RSI < 30 downgrades a fresh SELL (−15).
+ *   1. RSI > 70 downgrades a fresh BUY, RSI < 30 downgrades a fresh SELL (−25).
  *   2. Any two adjacent timeframes disagreeing caps confidence < 60 (forces WAIT).
  */
 export function applyGoldGates(
