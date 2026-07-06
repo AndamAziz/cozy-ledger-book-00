@@ -96,6 +96,34 @@ const TF_PERIOD_MS: Record<string, number> = {
   "1H": 60 * 60_000,
 };
 
+// GOLD-only: extend a leg's expiry window so it is proportional to the ATR-based
+// TP/SL distance instead of collapsing to a single candle period. The unified
+// risk model places SL at 1.5×ATR and TP1 at 1.5R (=2.25×ATR). Assuming a
+// conservative ~0.5×ATR of net directional progress per candle plus a 1.5×
+// slack, price needs ≈7 candles to reach TP1 — so gold windows are ~7× their
+// candle period (clamped to 1..12 candles). Other assets keep TF_PERIOD_MS.
+// Effective gold windows: 5M→~35m, 15M→~1h45m, 30M→~3h30m, 1H→~7h.
+const GOLD_NET_ATR_PER_CANDLE = 0.5;
+const GOLD_EXPIRY_SLACK = 1.5;
+function goldExpiryMs(
+  symbol: string,
+  tf: string,
+  entry: number,
+  tp: number,
+  sl: number,
+): number {
+  const baseMs = TF_PERIOD_MS[tf] ?? TF_PERIOD_MS["15M"];
+  if (symbol !== "XAU/USD") return baseMs;
+  const atr = Math.abs(entry - sl) / 1.5; // SL = 1.5×ATR
+  const tpDist = Math.abs(tp - entry); // to TP1
+  if (!(atr > 0) || !(tpDist > 0)) return baseMs;
+  const atrToTp = tpDist / atr; // ≈2.25 under the fixed R model
+  const candlesNeeded = Math.ceil((atrToTp / GOLD_NET_ATR_PER_CANDLE) * GOLD_EXPIRY_SLACK);
+  const ms = candlesNeeded * baseMs;
+  return Math.max(baseMs, Math.min(ms, baseMs * 12));
+}
+
+
 
 
 // News is broadcast at most once per 60 minutes (its own standalone message).
