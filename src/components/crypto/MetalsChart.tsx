@@ -1031,6 +1031,19 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
           >
             {bi('ڕێستکردنی بینین', 'Reset View')}
           </button>
+
+          {/* Clear chart cache: drop the service worker + cached bundles and
+              hard-reload so the latest immutable assets are fetched. */}
+          <button
+            onClick={() => {
+              toast.info(bi('پاککردنەوەی کاش و نوێکردنەوە...', 'Clearing cache & reloading…'));
+              void clearChartCacheAndReload();
+            }}
+            className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border text-[#848e9c] border-white/5 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
+          >
+            <Trash2 className="w-3 h-3" />
+            {bi('پاککردنی کاش', 'Clear cache')}
+          </button>
         </div>
       </div>
 
