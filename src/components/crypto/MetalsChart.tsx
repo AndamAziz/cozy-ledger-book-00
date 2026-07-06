@@ -1167,6 +1167,32 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
             </div>
           </div>
         )}
+        {/* Render-failed fallback: data loaded but the canvas didn't paint. */}
+        {!isLoading && !error && candles.length > 0 && renderFailed && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/95 z-10 px-6">
+            <div className="flex flex-col items-center gap-3 text-center max-w-[280px]">
+              <AlertTriangle className="w-7 h-7 text-[#f0b90b]" />
+              <span className="text-xs font-medium text-white">
+                {language === 'en'
+                  ? 'Chart failed to render.'
+                  : 'چارت نەخشە نەکرا.'}
+              </span>
+              <span className="text-[10px] text-[#848e9c] leading-relaxed">
+                {language === 'en'
+                  ? 'The price data loaded but the chart could not be drawn. Tap reload to redraw it.'
+                  : 'داتای نرخ بارکرا بەڵام چارتەکە نەکێشرا. کرتە بکە بۆ کێشانەوە.'}
+              </span>
+              <button
+                onClick={() => { setRenderFailed(false); setRemountKey(k => k + 1); }}
+                className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-black active:scale-95 transition-transform"
+                style={{ backgroundColor: accentColor }}
+              >
+                <RefreshCw className="w-3 h-3" />
+                {language === 'en' ? 'Reload chart' : 'کێشانەوەی چارت'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Trade history / journal modal */}
