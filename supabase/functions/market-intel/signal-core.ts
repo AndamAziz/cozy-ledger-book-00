@@ -488,6 +488,54 @@ export interface EngineSignal {
   perTF: TFView[];
 }
 
+/** True when any two adjacent timeframes (M5→D1 ladder) disagree in direction. */
+export function hasAdjacentConflict(perTF: TFView[]): boolean {
+  for (let i = 0; i < perTF.length - 1; i++) {
+    const a = perTF[i].dir;
+    const b = perTF[i + 1].dir;
+    if ((a === "up" && b === "down") || (a === "down" && b === "up")) return true;
+  }
+  return false;
+}
+
+export interface GoldGateResult {
+  action: SignalAction;
+  confidence: number;
+  adjConflict: boolean;
+}
+
+/**
+ * GOLD-only signal-quality gates — mirrors applyGoldGates in the app engine.
+ *   1. RSI > 70 downgrades a fresh BUY, RSI < 30 downgrades a fresh SELL (−15).
+ *   2. Any two adjacent timeframes disagreeing caps confidence < 60 (forces WAIT).
+ */
+export function applyGoldGates(
+  action: SignalAction,
+  confidence: number,
+  rsi: number | null,
+  perTF: TFView[],
+): GoldGateResult {
+  let a = action;
+  let c = confidence;
+
+  if (rsi != null) {
+    if (a === "buy" && rsi > 70) c -= 15;
+    else if (a === "sell" && rsi < 30) c -= 15;
+  }
+
+  const adjConflict = hasAdjacentConflict(perTF);
+  if (adjConflict) c = Math.min(c, 59);
+
+  c = clamp(c, 0, 96);
+
+  if ((a === "buy" || a === "sell") && c < 60) {
+    a = adjConflict ? "wait" : "neutral";
+  }
+  if (a === "wait" || a === "neutral") c = Math.min(c, 59);
+
+  return { action: a, confidence: c, adjConflict };
+}
+
 /** Multi-source signal (gold / btc) — mirrors buildAssetSignal in the app. */
 export function buildAssetSignal(p: {
   asset: AssetKey;
