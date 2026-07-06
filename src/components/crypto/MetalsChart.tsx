@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, LineSeries, AreaSeries, CandlestickSeries, HistogramSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { clearChartCacheAndReload } from '@/lib/serviceWorker';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
@@ -1028,6 +1030,19 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
             className="shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border text-[#848e9c] border-white/5 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
           >
             {bi('ڕێستکردنی بینین', 'Reset View')}
+          </button>
+
+          {/* Clear chart cache: drop the service worker + cached bundles and
+              hard-reload so the latest immutable assets are fetched. */}
+          <button
+            onClick={() => {
+              toast.info(bi('پاککردنەوەی کاش و نوێکردنەوە...', 'Clearing cache & reloading…'));
+              void clearChartCacheAndReload();
+            }}
+            className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border text-[#848e9c] border-white/5 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
+          >
+            <Trash2 className="w-3 h-3" />
+            {bi('پاککردنی کاش', 'Clear cache')}
           </button>
         </div>
       </div>

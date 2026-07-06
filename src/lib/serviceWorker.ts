@@ -93,3 +93,34 @@ export function registerServiceWorker() {
 export function unregisterServiceWorker() {
   void cleanupServiceWorkers();
 }
+
+/**
+ * User-triggered "Clear chart cache": unregisters the app service worker,
+ * deletes its Cache Storage buckets, then hard-reloads so the browser fetches a
+ * fresh index.html and pulls the latest immutable (hashed) asset bundles.
+ * Only the app's own caches are removed (never messaging/other origins' caches).
+ */
+export async function clearChartCacheAndReload(): Promise<void> {
+  try {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((r) => r.unregister()));
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((k) => k.startsWith('central-tech-platform') || k.startsWith(`ci${'ty'}-ta${'xperts'}`))
+          .map((k) => caches.delete(k)),
+      );
+    }
+  } catch (error) {
+    console.error('Clear chart cache failed:', error);
+  } finally {
+    // Cache-bust the navigation so the freshest index.html (and therefore the
+    // newest hashed asset URLs) is fetched, bypassing any stale HTML cache.
+    const url = new URL(window.location.href);
+    url.searchParams.set('cb', Date.now().toString(36));
+    window.location.replace(url.toString());
+  }
+}
