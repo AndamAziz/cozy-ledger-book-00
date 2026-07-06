@@ -62,30 +62,7 @@ const TARGET_VISIBLE_BARS: Record<string, number> = {
   '1mo': 120, '3mo': 120, '1y': 120,
 };
 
-type LogicalRange = { from: number; to: number } | null | undefined;
 
-// The default right-anchored view: the last `target` bars plus the right offset
-// gap. `to` may exceed the last index by `rightOffset` (that's the empty gap
-// between the newest candle and the price axis, MT5-style).
-function defaultVisibleRange(total: number, target: number, rightOffset: number): { from: number; to: number } {
-  const shown = Math.min(total, Math.max(target, 10));
-  const to = total - 1 + rightOffset;
-  return { from: Math.max(0, total - shown), to };
-}
-
-// A saved pan/zoom is only safe to restore if it still fits the CURRENT dataset.
-// Stale ranges (captured when the series had a different length, e.g. after a
-// live-append grew the array or a timeframe with fewer bars) would squeeze the
-// candles into a corner and leave the rest of the width blank.
-function isValidSavedRange(saved: LogicalRange, total: number, rightOffset: number): boolean {
-  if (!saved || !Number.isFinite(saved.from) || !Number.isFinite(saved.to)) return false;
-  if (saved.to <= saved.from) return false;
-  const span = saved.to - saved.from;
-  if (span < 2 || span > total + rightOffset + 10) return false;
-  if (saved.from < -rightOffset - 5) return false;
-  if (saved.to > total + rightOffset + 5) return false;
-  return true;
-}
 
 
 export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, accentColor, range, onRangeChange, currentPrice, name, code }: MetalsChartProps) {
