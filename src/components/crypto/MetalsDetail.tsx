@@ -7,12 +7,12 @@ import { MarketStatusBadge } from '@/components/crypto/MarketStatusBadge';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { GoldProPanel } from '@/components/crypto/GoldProPanel';
 import type { OHLCCandle } from '@/lib/krakenApi';
+import { CHART_TIMEFRAMES, chartFeedFor } from '@/lib/timeframeFeed';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
 
-const RANGE_LABELS: Record<string, string> = {
-  '1min': '1m', '5min': '5m', '15min': '15m',
-  '1d': '1D', '5d': '5D', '1mo': '1M', '3mo': '3M', '6mo': '6M', '1y': '1Y', '5y': '5Y',
-};
+const RANGE_LABELS: Record<string, string> = Object.fromEntries(
+  CHART_TIMEFRAMES.map((t) => [t.key, t.label]),
+);
 
 interface MetalsDetailProps {
   metals: Metal[];
@@ -24,15 +24,18 @@ interface MetalsDetailProps {
 export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDetailProps) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
-  const [chartRange, setChartRange] = useState('15min');
+  const [chartRange, setChartRange] = useState('M15');
   const selected = selectedCode ? metals.find(m => m.code === selectedCode) : null;
   const livePrice = selected?.price || 0;
   // The analysis & pro views need plenty of candles for accurate indicators
   // (RSI 14, MACD 26/9, Bollinger 20, EMA 50). The 1d/5min ranges only return
   // ~15 candles, which makes RSI unstable and the slower indicators unavailable.
   // Use a data-rich intraday range (15m candles, ~270 bars) for those views.
-  const effectiveRange = view === 'market' ? chartRange : '15min';
-  const { candles: historyCandles, isLoading: historyLoading, error: historyError, lastUpdated: historyLastUpdated, refetch: refetchHistory } = useMetalsHistory(selectedCode, effectiveRange, livePrice);
+  const effectiveRange = view === 'market' ? chartRange : 'M15';
+  // Resolve the selected timeframe to the SHARED backend feed (range + client
+  // aggregation) so the chart series matches the signal engine exactly.
+  const feed = chartFeedFor(effectiveRange);
+  const { candles: historyCandles, isLoading: historyLoading, error: historyError, lastUpdated: historyLastUpdated, refetch: refetchHistory } = useMetalsHistory(selectedCode, feed.range, livePrice, feed.agg);
 
   // Adapt metals candles (close/high/low) to the OHLC shape the analysis expects
   const ohlcCandles = useMemo<OHLCCandle[]>(

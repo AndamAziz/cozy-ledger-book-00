@@ -6,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { MetalCandle } from '@/hooks/useMetalsHistory';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
+import { CHART_TIMEFRAMES } from '@/lib/timeframeFeed';
 import { computeIndicators, summarizeSignals, computeBuySellPct, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
@@ -31,35 +32,28 @@ interface MetalsChartProps {
   code?: string;
 }
 
-const RANGES = [
-  { key: '1min', label: '1m' },
-  { key: '5min', label: '5m' },
-  { key: '15min', label: '15m' },
-  { key: '1d', label: '1D' },
-  { key: '5d', label: '5D' },
-  { key: '1mo', label: '1M' },
-  { key: '3mo', label: '3M' },
-  { key: '1y', label: '1Y' },
-];
+// Timeframe buttons come from the SHARED timeframeFeed map so the chart and the
+// signal engine agree on exactly what each timeframe means (1D = true daily,
+// 1H/4H = engine H1/H4, …).
+const RANGES = CHART_TIMEFRAMES.map((t) => ({ key: t.key, label: t.label }));
 
-// Approximate candle duration (minutes) per range, used for the hold hint.
+// Approximate candle duration (minutes) per timeframe, used for the hold hint.
 const RANGE_MINUTES: Record<string, number> = {
-  '1min': 1, '5min': 5, '15min': 15, '1d': 1440, '5d': 1440, '1mo': 1440, '3mo': 1440, '1y': 1440,
+  '1min': 1, M5: 5, M15: 15, M30: 30, H1: 60, H4: 240, D1: 1440,
 };
 
 
-const INTRADAY_RANGES = new Set(['1min', '5min', '15min', '1d', '5d']);
+const INTRADAY_RANGES = new Set(
+  CHART_TIMEFRAMES.filter((t) => t.intraday).map((t) => t.key),
+);
 
 // How many of the most-recent candles to show by default when a timeframe is
-// opened. The backend deliberately over-fetches intraday history (several days,
-// incl. weekend gaps) so RSI/MACD have enough bars — but dumping all ~1000+
-// gap-laden candles onto the chart made bars collapse into thin, left-crammed
-// lines. We keep the full series for indicator math and only *window* the view
-// to a readable, right-anchored slice. Indices collapse calendar gaps, so the
-// weekend gap never leaves empty space.
+// opened. The backend deliberately over-fetches history so RSI/MACD have enough
+// bars — but dumping all gap-laden candles onto the chart made bars collapse
+// into thin, left-crammed lines. We keep the full series for indicator math and
+// only *window* the view to a readable, right-anchored slice.
 const TARGET_VISIBLE_BARS: Record<string, number> = {
-  '1min': 90, '5min': 90, '15min': 90, '1d': 90, '5d': 90,
-  '1mo': 120, '3mo': 120, '1y': 120,
+  '1min': 90, M5: 90, M15: 90, M30: 90, H1: 90, H4: 90, D1: 120,
 };
 
 
@@ -117,6 +111,11 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
   const [tradePct, setTradePct] = useState<TradePct | null>(null);
   // Bumped whenever the chart series is recreated so the trade line redraws.
   const [seriesVersion, setSeriesVersion] = useState(0);
+  // Forces a full chart teardown + recreation (used by the render-failed retry).
+  const [remountKey, setRemountKey] = useState(0);
+  // True when candles are present but the canvas failed to paint a visible range
+  // (blank chart). Drives an on-chart fallback + retry overlay.
+  const [renderFailed, setRenderFailed] = useState(false);
 
   useEffect(() => {
     try { localStorage.setItem('chart_show_trade_details', String(showTradeDetails)); } catch {}
@@ -511,7 +510,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       macdSignalRef.current = null;
       if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     };
-  }, [chartType, range, isUp, activeMAs, maType, language]);
+  }, [chartType, range, isUp, activeMAs, maType, language, remountKey]);
 
   // Apply layout preset without recreating the chart. Recomputes whenever the
   // preset values, the selected range, or the auto-fit mode change so the Auto
@@ -590,7 +589,23 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       }
       requestAnimationFrame(() => { restoringRef.current = false; });
     }
-  }, [candles, activeMAs, maType, chartType, name, range]);
+
+    // Render-health check: after the paint settles, confirm the chart produced a
+    // valid visible range for the loaded candles. If the canvas failed to paint
+    // (blank chart despite data), surface the fallback + retry overlay.
+    const healthTimer = window.setTimeout(() => {
+      const chart = chartRef.current;
+      const container = chartContainerRef.current;
+      if (!chart || !container) return;
+      const rect = container.getBoundingClientRect();
+      let visible = null;
+      try { visible = chart.timeScale().getVisibleLogicalRange(); } catch { visible = null; }
+      const hasSize = rect.width > 0 && rect.height > 0;
+      const hasRange = !!visible && (visible.to - visible.from) > 0;
+      setRenderFailed(candles.length > 0 && (!hasSize || !hasRange));
+    }, 250);
+    return () => window.clearTimeout(healthTimer);
+  }, [candles, activeMAs, maType, chartType, name, range, remountKey]);
 
 
   // Update price line. Re-anchors after every timeframe switch (the chart &
@@ -1143,6 +1158,32 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
                   {language === 'en' ? 'Retry' : 'دووبارە'}
                 </button>
               )}
+            </div>
+          </div>
+        )}
+        {/* Render-failed fallback: data loaded but the canvas didn't paint. */}
+        {!isLoading && !error && candles.length > 0 && renderFailed && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0a0e17]/95 z-10 px-6">
+            <div className="flex flex-col items-center gap-3 text-center max-w-[280px]">
+              <AlertTriangle className="w-7 h-7 text-[#f0b90b]" />
+              <span className="text-xs font-medium text-white">
+                {language === 'en'
+                  ? 'Chart failed to render.'
+                  : 'چارت نەخشە نەکرا.'}
+              </span>
+              <span className="text-[10px] text-[#848e9c] leading-relaxed">
+                {language === 'en'
+                  ? 'The price data loaded but the chart could not be drawn. Tap reload to redraw it.'
+                  : 'داتای نرخ بارکرا بەڵام چارتەکە نەکێشرا. کرتە بکە بۆ کێشانەوە.'}
+              </span>
+              <button
+                onClick={() => { setRenderFailed(false); setRemountKey(k => k + 1); }}
+                className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-black active:scale-95 transition-transform"
+                style={{ backgroundColor: accentColor }}
+              >
+                <RefreshCw className="w-3 h-3" />
+                {language === 'en' ? 'Reload chart' : 'کێشانەوەی چارت'}
+              </button>
             </div>
           </div>
         )}

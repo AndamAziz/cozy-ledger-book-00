@@ -18,7 +18,28 @@ export interface MetalsHistoryState {
   refetch: () => void;
 }
 
-export function useMetalsHistory(code: string | null, range: string = '1mo', livePrice?: number): MetalsHistoryState {
+/**
+ * Aggregate raw backend candles into a coarser timeframe (client-side), mirroring
+ * `aggregateCandles` used by the signal engine so the chart series matches the
+ * engine's series exactly for shared timeframes (H1/H4/D1, …).
+ */
+function aggregateMetalCandles(candles: MetalCandle[], factor: number): MetalCandle[] {
+  if (!factor || factor <= 1) return candles;
+  const out: MetalCandle[] = [];
+  for (let i = 0; i + factor <= candles.length; i += factor) {
+    const group = candles.slice(i, i + factor);
+    out.push({
+      time: group[0].time,
+      open: group[0].open,
+      high: Math.max(...group.map((c) => c.high)),
+      low: Math.min(...group.map((c) => c.low)),
+      close: group[group.length - 1].close,
+    });
+  }
+  return out;
+}
+
+export function useMetalsHistory(code: string | null, range: string = '1mo', livePrice?: number, agg: number = 1): MetalsHistoryState {
   const [candles, setCandles] = useState<MetalCandle[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,8 +82,9 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
         if (cancelled) return;
 
         if (res.ok && data && Array.isArray(data.candles) && data.candles.length > 0) {
-          baseCandlesRef.current = data.candles;
-          setCandles(data.candles);
+          const aggregated = aggregateMetalCandles(data.candles as MetalCandle[], agg);
+          baseCandlesRef.current = aggregated;
+          setCandles(aggregated);
           setSource(typeof data.source === 'string' ? data.source : null);
           setError(null);
         } else {
@@ -92,7 +114,7 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
 
     fetchHistory();
     return () => { cancelled = true; };
-  }, [code, range, reloadKey]);
+  }, [code, range, agg, reloadKey]);
 
   // Append live price as the latest point for real-time feel.
   // Candle boundaries are aligned to UTC clock intervals (TradingView / MT5
@@ -108,7 +130,7 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
       '1min': 60, '5min': 300, '15min': 900, '1d': 300, '5d': 900,
       '1mo': 3600, '3mo': 86_400, '6mo': 86_400, '1y': 86_400, '5y': 604_800,
     };
-    const step = STEP_SECONDS[range] ?? 60;
+    const step = (STEP_SECONDS[range] ?? 60) * (agg > 1 ? agg : 1);
     // Align to the UTC clock: epoch 0 is 1970-01-01 00:00 UTC, so flooring by
     // the step lands exactly on :00 / :05 / :15 / hour / day boundaries.
     const bucket = Math.floor(Date.now() / 1000 / step) * step;
@@ -134,7 +156,7 @@ export function useMetalsHistory(code: string | null, range: string = '1mo', liv
       }]);
     }
 
-  }, [livePrice, range]);
+  }, [livePrice, range, agg]);
 
 
   const refetch = () => setReloadKey((k) => k + 1);
