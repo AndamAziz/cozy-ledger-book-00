@@ -475,7 +475,7 @@ export interface GoldGateResult {
  * GOLD-only signal-quality gates. Applied on top of the shared decision core so
  * that no other asset's behaviour changes:
  *   1. Overbought/oversold gate — RSI > 70 downgrades a fresh BUY, RSI < 30
- *      downgrades a fresh SELL (−15 confidence points).
+ *      downgrades a fresh SELL (−25 confidence points).
  *   2. Stricter conflict — ANY two adjacent timeframes disagreeing caps
  *      confidence below the 60 action threshold (forces WAIT).
  * Anything pushed under 60 is demoted: WAIT when it was an adjacent conflict,
