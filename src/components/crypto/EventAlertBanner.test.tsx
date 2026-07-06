@@ -1,11 +1,18 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EventAlertBanner, type CalendarEvent } from './EventAlertBanner';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
-function renderBanner(events: CalendarEvent[]) {
+const LANGUAGE_STORAGE_KEY = 'central-tech-platform-language';
+
+beforeEach(() => {
+  localStorage.clear();
+});
+
+function renderBanner(events: CalendarEvent[], lang: 'en' | 'ku' = 'en') {
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
   return render(
     <LanguageProvider>
       <TooltipProvider>
@@ -129,5 +136,94 @@ describe('EventAlertBanner — NFP confidence states (USD + Gold)', () => {
     expect(screen.queryByText(/for USD/)).not.toBeInTheDocument();
     expect(screen.queryByText(/for Gold/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Actual: 57K/)).not.toBeInTheDocument();
+  });
+});
+
+// NFP with no forecast → engine falls back to Actual-vs-Previous (direction logic).
+const nfpNoForecast: CalendarEvent = {
+  ...nfpReleased,
+  forecast: '',
+  previous: '172K',
+  actual: '57K',
+};
+
+describe('EventAlertBanner — method tooltip EN + KU', () => {
+  it('EN beat/miss: trigger label + tooltip content in English', async () => {
+    const user = userEvent.setup();
+    renderBanner([nfpReleased], 'en');
+    expect(screen.getByText('Beat/miss logic')).toBeInTheDocument();
+    await user.hover(screen.getByRole('button', { name: /how this call was made/i }));
+    const tips = await screen.findAllByText('Compared Actual vs Forecast (beat/miss logic)');
+    expect(tips.length).toBeGreaterThan(0);
+  });
+
+  it('KU beat/miss: trigger label + tooltip content in Kurdish', async () => {
+    const user = userEvent.setup();
+    renderBanner([nfpReleased], 'ku');
+    expect(screen.getByText('لۆژیکی بردن/دۆڕان')).toBeInTheDocument();
+    await user.hover(screen.getByRole('button', { name: /چۆن ئەم شیکارییە دروستکرا/ }));
+    const tips = await screen.findAllByText('بەراوردی ئەنجام لەگەڵ پێشبینی (لۆژیکی بردن/دۆڕان)');
+    expect(tips.length).toBeGreaterThan(0);
+  });
+
+  it('EN direction: trigger label + tooltip content in English', async () => {
+    const user = userEvent.setup();
+    renderBanner([nfpNoForecast], 'en');
+    expect(screen.getByText('Direction logic')).toBeInTheDocument();
+    await user.hover(screen.getByRole('button', { name: /how this call was made/i }));
+    const tips = await screen.findAllByText(
+      'No forecast available — compared Actual vs Previous (direction logic)',
+    );
+    expect(tips.length).toBeGreaterThan(0);
+  });
+
+  it('KU direction: trigger label + tooltip content in Kurdish', async () => {
+    const user = userEvent.setup();
+    renderBanner([nfpNoForecast], 'ku');
+    expect(screen.getByText('لۆژیکی ئاراستە')).toBeInTheDocument();
+    await user.hover(screen.getByRole('button', { name: /چۆن ئەم شیکارییە دروستکرا/ }));
+    const tips = await screen.findAllByText(
+      'پێشبینی نییە — بەراوردی ئەنجام لەگەڵ پێشتر (لۆژیکی ئاراستە)',
+    );
+    expect(tips.length).toBeGreaterThan(0);
+  });
+});
+
+describe('EventAlertBanner — boundary values (in-line outcomes)', () => {
+  it('Actual exactly equals Forecast → neutral USD/Gold via beat/miss logic', () => {
+    renderBanner([{ ...nfpReleased, forecast: '110K', previous: '172K', actual: '110K' }]);
+    expect(
+      screen.getByText('In line with forecast → neutral for USD and Gold'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Beat/miss logic')).toBeInTheDocument();
+    expect(screen.queryByText(/Stronger than/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Weaker than/)).not.toBeInTheDocument();
+  });
+
+  it('Actual exactly equals Previous (no forecast) → neutral via direction logic', () => {
+    renderBanner([{ ...nfpReleased, forecast: '', previous: '172K', actual: '172K' }]);
+    expect(
+      screen.getByText('In line with previous → neutral for USD and Gold'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Direction logic')).toBeInTheDocument();
+  });
+
+  it('Boundary: one tick above Forecast flips to Stronger/bearish-Gold', () => {
+    renderBanner([{ ...nfpReleased, forecast: '110K', previous: '172K', actual: '111K' }]);
+    expect(
+      screen.getByText('Stronger than forecast → bullish for USD, bearish for Gold'),
+    ).toBeInTheDocument();
+  });
+
+  it('Boundary: one tick below Forecast flips to Weaker/bullish-Gold', () => {
+    renderBanner([{ ...nfpReleased, forecast: '110K', previous: '172K', actual: '109K' }]);
+    expect(
+      screen.getByText('Weaker than forecast → bearish for USD, bullish for Gold'),
+    ).toBeInTheDocument();
+  });
+
+  it('KU: Actual equals Forecast → neutral wording in Kurdish', () => {
+    renderBanner([{ ...nfpReleased, forecast: '110K', previous: '172K', actual: '110K' }], 'ku');
+    expect(screen.getByText('وەک پێشبینی → بێلایەن بۆ دۆلار و زێڕ')).toBeInTheDocument();
   });
 });
