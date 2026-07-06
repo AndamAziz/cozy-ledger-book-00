@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { BellRing, Clock, CheckCircle2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { explainEventResult } from '@/lib/eventExplain';
+import { BellRing, Clock, CheckCircle2, TrendingUp, TrendingDown, Minus, Info, ShieldCheck, ShieldAlert, HelpCircle } from 'lucide-react';
+import { explainEventResult, explainMethodLabel } from '@/lib/eventExplain';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export interface CalendarEvent {
   title: string;
@@ -11,6 +12,8 @@ export interface CalendarEvent {
   forecast: string;
   previous: string;
   actual: string;
+  /** Match confidence for the released actual figure, set by the market-news function. */
+  actualConfidence?: 'high' | 'medium';
 }
 
 interface Props {
@@ -45,7 +48,9 @@ export function EventAlertBanner({ events, loading }: Props) {
     .sort((a, b) => a.t - b.t)
     .slice(0, 5);
 
-  // Recently released USD high/medium events (last 24h) that now have an actual figure.
+  // Recently released USD high/medium events (last 24h). Includes events whose
+  // actual figure hasn't been confidently matched yet so we can surface a clear
+  // "Actual unavailable" state rather than silently dropping them.
   const DAY = 86400000;
   const released = events
     .map((e) => ({ e, t: Date.parse(e.date) }))
@@ -53,8 +58,7 @@ export function EventAlertBanner({ events, loading }: Props) {
       if (Number.isNaN(t) || t > now || t < now - DAY) return false;
       const imp = (e.impact || '').toLowerCase();
       if (imp !== 'high' && imp !== 'medium') return false;
-      if (e.country !== 'USD' && e.country !== 'All') return false;
-      return !!explainEventResult(e);
+      return e.country === 'USD' || e.country === 'All';
     })
     .sort((a, b) => b.t - a.t)
     .slice(0, 4);
@@ -129,6 +133,12 @@ export function EventAlertBanner({ events, loading }: Props) {
                 const goldUp = exp?.goldUp ?? null;
                 const color = goldUp === true ? '#0ecb81' : goldUp === false ? '#f6465d' : '#f0b90b';
                 const GoldIcon = goldUp === true ? TrendingUp : goldUp === false ? TrendingDown : Minus;
+                // Matched = we have a usable actual figure + explanation. Native
+                // source actuals have no confidence tag, so treat them as "high".
+                const matched = !!exp;
+                const confidence = e.actualConfidence ?? (matched ? 'high' : undefined);
+                const method = exp?.method ?? 'beat-miss';
+                const methodLabel = explainMethodLabel(method);
                 return (
                   <div
                     key={`done-${e.title}-${i}`}
@@ -141,24 +151,67 @@ export function EventAlertBanner({ events, loading }: Props) {
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: high ? '#f6465d' : '#f0b90b' }} />
                           <span className="text-sm text-white truncate">{e.title}</span>
                         </div>
-                        <div className="text-[10px] text-[#848e9c]">
-                          <span className="font-bold text-white">{bi('ئەنجام', 'Actual')}: {e.actual}</span>
-                          {e.forecast && <> · {bi('پێشبینی', 'Forecast')}: {e.forecast}</>}
-                          {e.previous && <> · {bi('پێشتر', 'Previous')}: {e.previous}</>}
-                        </div>
+                        {matched ? (
+                          <div className="text-[10px] text-[#848e9c]">
+                            <span className="font-bold text-white">{bi('ئەنجام', 'Actual')}: {e.actual}</span>
+                            {e.forecast && <> · {bi('پێشبینی', 'Forecast')}: {e.forecast}</>}
+                            {e.previous && <> · {bi('پێشتر', 'Previous')}: {e.previous}</>}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-[#848e9c]">
+                            {e.forecast && <>{bi('پێشبینی', 'Forecast')}: {e.forecast} · </>}
+                            {e.previous && <>{bi('پێشتر', 'Previous')}: {e.previous}</>}
+                          </div>
+                        )}
                       </div>
-                      <span className="text-[9px] font-bold text-[#0ecb81] shrink-0 inline-flex items-center gap-0.5">
-                        <CheckCircle2 className="h-3 w-3" />{bi('تەواوبوو', 'Done')}
-                      </span>
+                      {matched ? (
+                        confidence === 'high' ? (
+                          <span className="text-[9px] font-bold text-[#0ecb81] shrink-0 inline-flex items-center gap-0.5" title={bi('ئەنجام بە دڵنیاییەوە هاوتا کرا', 'Actual confidently matched')}>
+                            <ShieldCheck className="h-3 w-3" />{bi('دڵنیا', 'High match')}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold text-[#f0b90b] shrink-0 inline-flex items-center gap-0.5" title={bi('ئەنجام بە ئەگەری زۆر هاوتا کرا', 'Actual likely matched')}>
+                            <ShieldAlert className="h-3 w-3" />{bi('ئەگەری زۆر', 'Likely')}
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-[9px] font-bold text-[#848e9c] shrink-0 inline-flex items-center gap-0.5" title={bi('ئەنجامی متمانەپێکراو بەردەست نییە', 'No confident actual figure available yet')}>
+                          <HelpCircle className="h-3 w-3" />{bi('ئەنجام بەردەست نییە', 'Actual unavailable')}
+                        </span>
+                      )}
                     </div>
-                    {exp && (
-                      <div
-                        className="mt-1.5 flex items-start gap-1 rounded-md px-2 py-1"
-                        style={{ backgroundColor: color + '14' }}
-                      >
-                        <GoldIcon className="h-3.5 w-3.5 mt-px shrink-0" style={{ color }} />
-                        <span className="text-[11px] font-medium leading-snug" style={{ color }}>
-                          {bi(exp.ku, exp.en)}
+                    {exp ? (
+                      <div className="mt-1.5 space-y-1">
+                        <div
+                          className="flex items-start gap-1 rounded-md px-2 py-1"
+                          style={{ backgroundColor: color + '14' }}
+                        >
+                          <GoldIcon className="h-3.5 w-3.5 mt-px shrink-0" style={{ color }} />
+                          <span className="text-[11px] font-medium leading-snug" style={{ color }}>
+                            {bi(exp.ku, exp.en)}
+                          </span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 text-[9px] text-[#848e9c] hover:text-white transition-colors"
+                              aria-label={bi('چۆن ئەم شیکارییە دروستکرا', 'How this call was made')}
+                            >
+                              <Info className="h-3 w-3" />
+                              {method === 'beat-miss' ? bi('لۆژیکی بردن/دۆڕان', 'Beat/miss logic') : bi('لۆژیکی ئاراستە', 'Direction logic')}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[220px] text-[11px] leading-snug">
+                            {bi(methodLabel.ku, methodLabel.en)}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    ) : (
+                      <div className="mt-1.5 flex items-start gap-1 rounded-md px-2 py-1 bg-[#848e9c14]">
+                        <HelpCircle className="h-3.5 w-3.5 mt-px shrink-0 text-[#848e9c]" />
+                        <span className="text-[11px] font-medium leading-snug text-[#848e9c]">
+                          {bi('ئەنجام هێشتا بە دڵنیاییەوە هاوتا نەکراوە — دوای بڵاوکردنەوە نوێ دەبێتەوە.', 'Actual not confidently matched yet — will update after release is confirmed.')}
                         </span>
                       </div>
                     )}

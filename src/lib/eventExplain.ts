@@ -35,8 +35,29 @@ export interface EventExplanation {
   goldUp: boolean | null;
   /** Whether the comparison was made against forecast (true) or previous (false). */
   vsForecast: boolean;
+  /**
+   * Which comparison rule produced this call:
+   * - "beat-miss": Actual vs Forecast (a beat or miss of expectations).
+   * - "direction": Actual vs Previous (no forecast, so we read the trend).
+   */
+  method: 'beat-miss' | 'direction';
   en: string;
   ku: string;
+}
+
+/** Short bilingual label describing which comparison rule was used. */
+export function explainMethodLabel(
+  method: EventExplanation['method'],
+): { en: string; ku: string } {
+  return method === 'beat-miss'
+    ? {
+        en: 'Compared Actual vs Forecast (beat/miss logic)',
+        ku: 'بەراوردی ئەنجام لەگەڵ پێشبینی (لۆژیکی بردن/دۆڕان)',
+      }
+    : {
+        en: 'No forecast available — compared Actual vs Previous (direction logic)',
+        ku: 'پێشبینی نییە — بەراوردی ئەنجام لەگەڵ پێشتر (لۆژیکی ئاراستە)',
+      };
 }
 
 /**
@@ -81,5 +102,5 @@ export function explainEventResult(ev: CalendarEventLike): EventExplanation | nu
     ku = `لاوازتر لە ${refWordKu} → دابەزینی دۆلار، بەرزبوونەوەی زێڕ`;
   }
 
-  return { usdUp, goldUp, vsForecast, en, ku };
+  return { usdUp, goldUp, vsForecast, method: vsForecast ? 'beat-miss' : 'direction', en, ku };
 }

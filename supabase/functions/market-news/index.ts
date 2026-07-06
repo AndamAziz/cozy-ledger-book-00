@@ -9,6 +9,10 @@ interface CalendarEvent {
   forecast: string;
   previous: string;
   actual: string;
+  // Confidence that the released "actual" figure is correctly matched to this
+  // event. "high" = strong unambiguous match (or native source), "medium" =
+  // matched but a slimmer margin. Absent when no actual has been attached.
+  actualConfidence?: "high" | "medium";
 }
 
 interface NewsItem {
@@ -296,11 +300,16 @@ function enrichWithActuals(events: CalendarEvent[], tv: TVEvent[]): CalendarEven
     // Sanity guard: a "%" reading above 50 is almost always an index value that
     // was mis-matched to a percentage indicator (e.g. CPI index vs CPI y/y%). Skip it.
     if (suffix === "%" && Math.abs(best.actual) > 50) return ev;
+    // "high" = a strong, well-separated match (multiple shared tokens and a clear
+    // margin over the runner-up); otherwise "medium" (matched, but slimmer).
+    const confidence: "high" | "medium" =
+      bestScore >= 2 && bestScore - secondScore >= 2 ? "high" : "medium";
     return {
       ...ev,
       actual: fmtTV(best.actual, best.unit, suffix),
       forecast: best.forecast !== null ? fmtTV(best.forecast, best.unit, suffix) : ev.forecast,
       previous: best.previous !== null ? fmtTV(best.previous, best.unit, suffix) : ev.previous,
+      actualConfidence: confidence,
     };
   });
 }
