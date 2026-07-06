@@ -477,11 +477,21 @@ export function buildAssetSignal(p: BuildSignalParams): AssetSignal {
   // filter + confidence gate). The exact same function powers buildLocalSignal,
   // so every signal across the app is decided by ONE codepath.
   const d = decideFromScores(tech.score, macro.score, macroWeight, perTF, news.blocking);
-  const { conflict, confScore, confDir, damp, combinedBefore } = d;
+  const { confScore, confDir, damp, combinedBefore } = d;
   const combined = d.combined;
-  const confidence = d.confidence;
-  const action = d.action;
-  const confluenceAlignment = d.confluenceAlignment;
+  let confidence = d.confidence;
+  let action = d.action;
+  let conflict = d.conflict;
+  let confluenceAlignment = d.confluenceAlignment;
+
+  // ── GOLD-only signal-quality gates (other assets are untouched) ──
+  if (p.asset === 'gold') {
+    const g = applyGoldGates(action, confidence, tech.rsi, perTF);
+    action = g.action;
+    confidence = g.confidence;
+    conflict = conflict || g.adjConflict;
+    if (action === 'wait' || action === 'neutral') confluenceAlignment = 'neutral';
+  }
   const signalDir: TrendDir = combinedBefore > 0 ? 'up' : combinedBefore < 0 ? 'down' : 'neutral';
 
   if (typeof console !== 'undefined') {
