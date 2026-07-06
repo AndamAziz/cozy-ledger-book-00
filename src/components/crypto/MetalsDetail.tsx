@@ -7,12 +7,12 @@ import { MarketStatusBadge } from '@/components/crypto/MarketStatusBadge';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { GoldProPanel } from '@/components/crypto/GoldProPanel';
 import type { OHLCCandle } from '@/lib/krakenApi';
+import { CHART_TIMEFRAMES, chartFeedFor } from '@/lib/timeframeFeed';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
 
-const RANGE_LABELS: Record<string, string> = {
-  '1min': '1m', '5min': '5m', '15min': '15m',
-  '1d': '1D', '5d': '5D', '1mo': '1M', '3mo': '3M', '6mo': '6M', '1y': '1Y', '5y': '5Y',
-};
+const RANGE_LABELS: Record<string, string> = Object.fromEntries(
+  CHART_TIMEFRAMES.map((t) => [t.key, t.label]),
+);
 
 interface MetalsDetailProps {
   metals: Metal[];
