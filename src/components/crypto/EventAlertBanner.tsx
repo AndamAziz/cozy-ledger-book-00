@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { BellRing, Clock, CheckCircle2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { explainEventResult } from '@/lib/eventExplain';
+import { BellRing, Clock, CheckCircle2, TrendingUp, TrendingDown, Minus, Info, ShieldCheck, ShieldAlert, HelpCircle } from 'lucide-react';
+import { explainEventResult, explainMethodLabel } from '@/lib/eventExplain';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export interface CalendarEvent {
   title: string;
@@ -11,6 +12,8 @@ export interface CalendarEvent {
   forecast: string;
   previous: string;
   actual: string;
+  /** Match confidence for the released actual figure, set by the market-news function. */
+  actualConfidence?: 'high' | 'medium';
 }
 
 interface Props {
