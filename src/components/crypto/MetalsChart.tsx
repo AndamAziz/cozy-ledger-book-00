@@ -31,35 +31,28 @@ interface MetalsChartProps {
   code?: string;
 }
 
-const RANGES = [
-  { key: '1min', label: '1m' },
-  { key: '5min', label: '5m' },
-  { key: '15min', label: '15m' },
-  { key: '1d', label: '1D' },
-  { key: '5d', label: '5D' },
-  { key: '1mo', label: '1M' },
-  { key: '3mo', label: '3M' },
-  { key: '1y', label: '1Y' },
-];
+// Timeframe buttons come from the SHARED timeframeFeed map so the chart and the
+// signal engine agree on exactly what each timeframe means (1D = true daily,
+// 1H/4H = engine H1/H4, …).
+const RANGES = CHART_TIMEFRAMES.map((t) => ({ key: t.key, label: t.label }));
 
-// Approximate candle duration (minutes) per range, used for the hold hint.
+// Approximate candle duration (minutes) per timeframe, used for the hold hint.
 const RANGE_MINUTES: Record<string, number> = {
-  '1min': 1, '5min': 5, '15min': 15, '1d': 1440, '5d': 1440, '1mo': 1440, '3mo': 1440, '1y': 1440,
+  '1min': 1, M5: 5, M15: 15, M30: 30, H1: 60, H4: 240, D1: 1440,
 };
 
 
-const INTRADAY_RANGES = new Set(['1min', '5min', '15min', '1d', '5d']);
+const INTRADAY_RANGES = new Set(
+  CHART_TIMEFRAMES.filter((t) => t.intraday).map((t) => t.key),
+);
 
 // How many of the most-recent candles to show by default when a timeframe is
-// opened. The backend deliberately over-fetches intraday history (several days,
-// incl. weekend gaps) so RSI/MACD have enough bars — but dumping all ~1000+
-// gap-laden candles onto the chart made bars collapse into thin, left-crammed
-// lines. We keep the full series for indicator math and only *window* the view
-// to a readable, right-anchored slice. Indices collapse calendar gaps, so the
-// weekend gap never leaves empty space.
+// opened. The backend deliberately over-fetches history so RSI/MACD have enough
+// bars — but dumping all gap-laden candles onto the chart made bars collapse
+// into thin, left-crammed lines. We keep the full series for indicator math and
+// only *window* the view to a readable, right-anchored slice.
 const TARGET_VISIBLE_BARS: Record<string, number> = {
-  '1min': 90, '5min': 90, '15min': 90, '1d': 90, '5d': 90,
-  '1mo': 120, '3mo': 120, '1y': 120,
+  '1min': 90, M5: 90, M15: 90, M30: 90, H1: 90, H4: 90, D1: 120,
 };
 
 
