@@ -9,6 +9,10 @@ interface CalendarEvent {
   forecast: string;
   previous: string;
   actual: string;
+  // Confidence that the released "actual" figure is correctly matched to this
+  // event. "high" = strong unambiguous match (or native source), "medium" =
+  // matched but a slimmer margin. Absent when no actual has been attached.
+  actualConfidence?: "high" | "medium";
 }
 
 interface NewsItem {
