@@ -299,7 +299,31 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
     }
 
     const rect = container.getBoundingClientRect();
+
+    // Some sandbox/CI environments report an invalid POSIX locale tag
+    // (e.g. "en-US@posix") which lightweight-charts passes straight into
+    // Intl.DateTimeFormat, throwing `RangeError: Invalid language tag` and
+    // aborting the entire chart paint (blank canvas). Pin the chart to a
+    // guaranteed-valid BCP-47 tag and format axis ticks ourselves so the
+    // library never falls back to the environment locale.
+    const SAFE_LOCALE = language === 'en' ? 'en-GB' : 'ku-Arab-u-nu-latn';
+    const formatAxisTime = (t: number): string => {
+      try {
+        const d = new Date((typeof t === 'number' ? t : 0) * 1000);
+        const opts: Intl.DateTimeFormatOptions = INTRADAY_RANGES.has(range)
+          ? { hour: '2-digit', minute: '2-digit', hour12: false }
+          : { day: 'numeric', month: 'short' };
+        return d.toLocaleString(SAFE_LOCALE, opts);
+      } catch {
+        return '';
+      }
+    };
+
     const chart = createChart(container, {
+      localization: {
+        locale: SAFE_LOCALE,
+        timeFormatter: (t: number) => formatAxisTime(t),
+      },
       layout: {
         background: { type: ColorType.Solid, color: '#0a0e17' },
         textColor: '#848e9c',
@@ -327,6 +351,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
         barSpacing: preset.barSpacing,
         minBarSpacing: preset.minBarSpacing,
         ticksVisible: true,
+        tickMarkFormatter: (t: number) => formatAxisTime(t),
       },
       // Touch-friendly gestures: one-finger HORIZONTAL swipe pans the chart,
       // vertical swipes are released to the page for scrolling, and two-finger
@@ -593,7 +618,15 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
       } else {
         ts?.setVisibleLogicalRange(fallback);
       }
-      requestAnimationFrame(() => { restoringRef.current = false; });
+      requestAnimationFrame(() => {
+        restoringRef.current = false;
+        // TEMP dev-only diagnostics — remove once chart render is confirmed.
+        if (import.meta.env.DEV) {
+          const vr = chartRef.current?.timeScale().getVisibleLogicalRange();
+          // eslint-disable-next-line no-console
+          console.log('[MetalsChart]', { name, range, chartType, candles: candles.length, target, fallback, visibleRange: vr });
+        }
+      });
     }
   }, [candles, activeMAs, maType, chartType, name, range]);
 
