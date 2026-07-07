@@ -125,16 +125,19 @@ export function TechnicalSignals({ candles, price }: Props) {
               <h4 className="text-[11px] font-bold text-[#848e9c] uppercase tracking-wider mb-2">{bi('پشتگیری و بەرگری', 'Support & Resistance')}</h4>
               <div className="grid grid-cols-3 gap-1.5 text-center">
                 {[
-                  { l: 'R2', v: sr.r2, c: C_SELL },
-                  { l: 'R1', v: sr.r1, c: C_SELL },
-                  { l: bi('ناوەند', 'Pivot'), v: sr.pivot, c: C_NEUTRAL },
-                  { l: 'S1', v: sr.s1, c: C_BUY },
-                  { l: 'S2', v: sr.s2, c: C_BUY },
-                  { l: bi('بەرزترین', 'High'), v: sr.recentHigh, c: C_SELL },
+                  { l: 'R2', v: sr.r2, c: C_SELL, d: dirR2 },
+                  { l: 'R1', v: sr.r1, c: C_SELL, d: dirR1 },
+                  { l: bi('ناوەند', 'Pivot'), v: sr.pivot, c: C_NEUTRAL, d: dirPivot },
+                  { l: 'S1', v: sr.s1, c: C_BUY, d: dirS1 },
+                  { l: 'S2', v: sr.s2, c: C_BUY, d: dirS2 },
+                  { l: bi('بەرزترین', 'High'), v: sr.recentHigh, c: C_SELL, d: dirHigh },
                 ].map((x) => (
                   <div key={x.l} className="bg-[#0a0e17] border border-[#1a1e2e] rounded-lg py-1.5">
                     <div className="text-[9px] font-bold" style={{ color: x.c }}>{x.l}</div>
-                    <div className="text-[11px] tabular-nums text-white">${x.v.toFixed(2)}</div>
+                    <div className="flex items-center justify-center gap-0.5">
+                      <span className="text-[11px] tabular-nums text-white">${x.v.toFixed(2)}</span>
+                      <DirArrow dir={x.d} size={10} />
+                    </div>
                   </div>
                 ))}
               </div>
