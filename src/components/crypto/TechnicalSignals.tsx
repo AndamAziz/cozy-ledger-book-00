@@ -31,6 +31,14 @@ export function TechnicalSignals({ candles, price }: Props) {
     return { ind, summary, pct, sr };
   }, [candles, price]);
 
+  // Per-refresh direction for each S/R level (hooks must run unconditionally).
+  const dirR2 = useValueDirection(sr?.r2 ?? null);
+  const dirR1 = useValueDirection(sr?.r1 ?? null);
+  const dirPivot = useValueDirection(sr?.pivot ?? null);
+  const dirS1 = useValueDirection(sr?.s1 ?? null);
+  const dirS2 = useValueDirection(sr?.s2 ?? null);
+  const dirHigh = useValueDirection(sr?.recentHigh ?? null);
+
   const sigLabel = (s: SignalType) =>
     s === 'buy' ? bi('بکڕە', 'Buy') : s === 'sell' ? bi('بفرۆشە', 'Sell') : bi('ناوەند', 'Neutral');
 
