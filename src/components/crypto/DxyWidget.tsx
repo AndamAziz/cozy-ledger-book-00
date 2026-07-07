@@ -1,5 +1,6 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DollarSign, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { DirArrow, useValueDirection } from '@/components/crypto/DirIndicator';
 
 export interface DxyData {
   price: number | null;
