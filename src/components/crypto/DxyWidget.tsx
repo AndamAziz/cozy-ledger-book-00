@@ -45,8 +45,11 @@ export function DxyWidget({ dxy, goldBias, loading, asset = 'gold' }: Props) {
       ) : (
         <>
           <div className="flex items-end justify-between">
-            <div className="text-2xl font-bold tabular-nums text-white">
-              {dxy.price?.toFixed(3)}
+            <div className="flex items-center gap-1.5">
+              <div className="text-2xl font-bold tabular-nums text-white">
+                {dxy.price?.toFixed(3)}
+              </div>
+              <DirArrow dir={priceDir} size={16} />
             </div>
             <div className="flex items-center gap-1 text-sm font-bold" style={{ color: dxyColor }}>
               {flat ? <Minus className="h-4 w-4" /> : up ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
