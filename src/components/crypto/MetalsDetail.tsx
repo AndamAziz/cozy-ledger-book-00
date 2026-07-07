@@ -9,6 +9,41 @@ import { GoldProPanel } from '@/components/crypto/GoldProPanel';
 import type { OHLCCandle } from '@/lib/krakenApi';
 import { CHART_TIMEFRAMES, chartFeedFor } from '@/lib/timeframeFeed';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
+import { DirArrow, useValueDirection } from '@/components/crypto/DirIndicator';
+
+type BiFn = (ku: string, en: string) => string;
+
+/** Overview card for one commodity, with a live per-refresh price direction arrow. */
+function MetalCard({ m, bi }: { m: Metal; bi: BiFn }) {
+  const isPositive = m.change > 0;
+  const isNeutral = m.change === 0;
+  const accentColor = m.category === 'oil' ? '#e67e22' : '#d4af37';
+  const priceDir = useValueDirection(m.price > 0 ? m.price : null);
+  return (
+    <div key={m.code} className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4 hover:border-opacity-30 transition-colors">
+      <div className="flex items-center gap-3 mb-3">
+        <span className="text-3xl">{m.emoji}</span>
+        <div>
+          <h3 className="text-base font-bold text-white">{m.name}</h3>
+          <p className="text-xs text-[#848e9c]">{m.symbol}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 mb-1">
+        <p className="text-2xl font-bold tabular-nums" style={{ color: accentColor }}>
+          ${m.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </p>
+        <DirArrow dir={priceDir} size={18} />
+      </div>
+      <p className="text-[10px] text-[#848e9c] mb-2">{bi('بۆ', 'per')} {m.unit === 'bbl' ? bi('بەرمیل', 'barrel') : bi('ئۆنسی ترۆی', 'troy ounce')}</p>
+      <div className={`flex items-center gap-1 text-xs font-medium ${
+        isNeutral ? 'text-[#848e9c]' : isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'
+      }`}>
+        {isNeutral ? <Minus className="h-3.5 w-3.5" /> : isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+        {isNeutral ? bi('بێ گۆڕان', 'No change') : `${isPositive ? '+' : ''}${m.change.toFixed(2)}%`}
+      </div>
+    </div>
+  );
+}
 
 const RANGE_LABELS: Record<string, string> = Object.fromEntries(
   CHART_TIMEFRAMES.map((t) => [t.key, t.label]),
