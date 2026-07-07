@@ -300,19 +300,20 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
 
       {/* Macro context chips */}
       <div className="flex flex-wrap gap-2">
-        {macroChip('DXY', dxyTxt, dxyColor, DollarSign, dxyTip, dxyStale)}
+        {macroChip('DXY', dxyTxt, dxyColor, DollarSign, dxyTip, dxyStale, dxyDir)}
         <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
           <Gauge className="h-3.5 w-3.5" style={{ color: fgColor }} />
           <span className="text-[10px] text-[#848e9c]">{bi('ترس/چاوبڕکێ', 'Fear/Greed')}</span>
           <span className="text-[11px] font-bold tabular-nums" style={{ color: fgColor }}>{fgTxt}</span>
+          <DirArrow dir={fgDir} size={11} />
           <span className="text-[9px] font-semibold text-[#5b6472] bg-[#1a1e2e] rounded px-1 py-0.5 leading-none">{fgSource}</span>
           {fgStale && <StaleBadge label={bi('ترس/چاوبڕکێ', 'Fear/Greed')} />}
           <InfoTip text={fgTip} label={bi('زانیاری ترس/چاوبڕکێ', 'Fear/Greed info')} />
 
         </div>
-        {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale)}
-        {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale)}
-        {macroChip('US10Y', u10yTxt, u10yColor, Percent, u10yTip, u10yStale)}
+        {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale, spxDir)}
+        {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale, vixDir)}
+        {macroChip('US10Y', u10yTxt, u10yColor, Percent, u10yTip, u10yStale, u10yDir)}
 
         {/* Macro Bias badge — market-sentiment context, NOT the primary trade decision */}
         <div
