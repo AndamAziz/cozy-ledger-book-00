@@ -1,5 +1,6 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Gauge } from 'lucide-react';
+import { DirArrow, useValueDirection } from '@/components/crypto/DirIndicator';
 
 export interface SentimentData {
   value: number | null;
