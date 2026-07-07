@@ -176,11 +176,13 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
     Icon: typeof DollarSign,
     tip: string,
     stale: boolean,
+    dir: Dir = 'flat',
   ) => (
     <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
       <Icon className="h-3.5 w-3.5" style={{ color }} />
       <span className="text-[10px] text-[#848e9c]">{label}</span>
       <span className="text-[11px] font-bold tabular-nums" style={{ color }}>{value}</span>
+      <DirArrow dir={dir} size={11} />
       {stale && <StaleBadge label={label} />}
       <InfoTip text={tip} label={bi(`زانیاری ${label}`, `${label} info`)} />
     </div>
