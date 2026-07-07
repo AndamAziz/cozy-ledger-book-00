@@ -116,14 +116,14 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
           <div>
             <h3 className="text-xs font-bold text-[#d4af37] uppercase tracking-wider mb-3">🏆 {bi('کانزا بەهادارەکان', 'Precious Metals')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {metalItems.map(renderCard)}
+              {metalItems.map((m) => <MetalCard key={m.code} m={m} bi={bi} />)}
             </div>
           </div>
           {/* Crude Oil */}
           <div>
             <h3 className="text-xs font-bold text-[#e67e22] uppercase tracking-wider mb-3">🛢️ {bi('نەوتی خاو', 'Crude Oil')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {oilItems.map(renderCard)}
+              {oilItems.map((m) => <MetalCard key={m.code} m={m} bi={bi} />)}
             </div>
           </div>
         </div>
