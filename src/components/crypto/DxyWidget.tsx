@@ -28,6 +28,8 @@ export function DxyWidget({ dxy, goldBias, loading, asset = 'gold' }: Props) {
   const flat = !dxy.changePct;
   const dxyColor = flat ? C_FLAT : up ? C_UP : C_DOWN;
   const goldColor = goldBias === 'bullish' ? C_UP : goldBias === 'bearish' ? C_DOWN : C_FLAT;
+  // Per-refresh tick direction (distinct from the daily % change shown alongside).
+  const priceDir = useValueDirection(dxy.available ? dxy.price : null);
 
   return (
     <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4">
