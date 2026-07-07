@@ -57,6 +57,7 @@ export function SentimentGauge({ sentiment, loading, asset = 'gold' }: Props) {
         <>
           <div className="flex items-center gap-3">
             <div className="text-3xl font-bold tabular-nums" style={{ color: col }}>{v}</div>
+            <DirArrow dir={dir} size={18} />
             <div className="text-sm font-semibold" style={{ color: col }}>
               {language === 'en' || language === 'tr' ? sentiment.classification : classKu(sentiment.classification)}
             </div>
