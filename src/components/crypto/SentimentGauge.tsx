@@ -29,6 +29,7 @@ export function SentimentGauge({ sentiment, loading, asset = 'gold' }: Props) {
 
   const v = sentiment.value ?? 0;
   const col = colorFor(v);
+  const dir = useValueDirection(sentiment.available ? sentiment.value : null);
 
   const classKu = (c: string): string => {
     const m: Record<string, string> = {
