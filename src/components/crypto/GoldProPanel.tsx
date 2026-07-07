@@ -17,6 +17,8 @@ import { useMacro } from '@/hooks/useMacro';
 interface Props {
   candles: OHLCCandle[];
   price: number;
+  /** Timeframe bar length in seconds — aligns S/R pivots to real candles. */
+  stepSeconds?: number;
 }
 
 type GoldBias = 'bullish' | 'bearish' | 'neutral';
@@ -33,7 +35,7 @@ function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
 }
 
-export function GoldProPanel({ candles, price }: Props) {
+export function GoldProPanel({ candles, price, stepSeconds }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
@@ -187,7 +189,7 @@ export function GoldProPanel({ candles, price }: Props) {
 
       <DxyWidget dxy={dxy} goldBias={goldBias} loading={loadingMacro} />
       <SentimentGauge sentiment={sentiment} loading={loadingMacro} />
-      <TechnicalSignals candles={candles} price={price} />
+      <TechnicalSignals candles={candles} price={price} stepSeconds={stepSeconds} />
       <EventAlertBanner events={events} loading={loadingEvents} />
       <RiskCalculator defaultEntry={price} />
     </div>
