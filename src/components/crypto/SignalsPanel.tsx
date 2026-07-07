@@ -8,6 +8,7 @@ import { SignalCard } from '@/components/crypto/SignalCard';
 import { SignalParityCheck } from '@/components/crypto/SignalParityCheck';
 import { LegOutcomeTimeline } from '@/components/crypto/LegOutcomeTimeline';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { DirArrow, useValueDirection, type Dir } from '@/components/crypto/DirIndicator';
 import { computeResult, isHighImpactUsdEventSoon, type Timeframe } from '@/lib/resultIndicator';
 
 const C_BULL = '#0ecb81';
