@@ -130,6 +130,15 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const u10yStale = macro.us10y == null && lastU10yRef.current != null;
   const u10yChg = macro.us10yChangePct ?? lastU10yChgRef.current;
 
+  // Per-refresh direction arrows for each macro metric (presentation only).
+  const dxyDir = useValueDirection(dxyVal);
+  const fgDir = useValueDirection(fgVal);
+  const spxDir = useValueDirection(spxVal);
+  const vixDir = useValueDirection(vixVal);
+  const u10yDir = useValueDirection(u10yVal);
+
+
+
   const StaleBadge = ({ label }: { label: string }) => {
     const [open, setOpen] = useState(false);
     const msg = bi('بەهای کۆن', 'Stale value');
