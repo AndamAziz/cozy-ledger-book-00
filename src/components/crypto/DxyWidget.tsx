@@ -1,5 +1,6 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DollarSign, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { DirArrow, useValueDirection } from '@/components/crypto/DirIndicator';
 
 export interface DxyData {
   price: number | null;
@@ -27,6 +28,8 @@ export function DxyWidget({ dxy, goldBias, loading, asset = 'gold' }: Props) {
   const flat = !dxy.changePct;
   const dxyColor = flat ? C_FLAT : up ? C_UP : C_DOWN;
   const goldColor = goldBias === 'bullish' ? C_UP : goldBias === 'bearish' ? C_DOWN : C_FLAT;
+  // Per-refresh tick direction (distinct from the daily % change shown alongside).
+  const priceDir = useValueDirection(dxy.available ? dxy.price : null);
 
   return (
     <div className="bg-[#0d1117] border border-[#1a1e2e] rounded-xl p-4">
@@ -42,8 +45,11 @@ export function DxyWidget({ dxy, goldBias, loading, asset = 'gold' }: Props) {
       ) : (
         <>
           <div className="flex items-end justify-between">
-            <div className="text-2xl font-bold tabular-nums text-white">
-              {dxy.price?.toFixed(3)}
+            <div className="flex items-center gap-1.5">
+              <div className="text-2xl font-bold tabular-nums text-white">
+                {dxy.price?.toFixed(3)}
+              </div>
+              <DirArrow dir={priceDir} size={16} />
             </div>
             <div className="flex items-center gap-1 text-sm font-bold" style={{ color: dxyColor }}>
               {flat ? <Minus className="h-4 w-4" /> : up ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}

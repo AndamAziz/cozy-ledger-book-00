@@ -1,5 +1,6 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Gauge } from 'lucide-react';
+import { DirArrow, useValueDirection } from '@/components/crypto/DirIndicator';
 
 export interface SentimentData {
   value: number | null;
@@ -28,6 +29,7 @@ export function SentimentGauge({ sentiment, loading, asset = 'gold' }: Props) {
 
   const v = sentiment.value ?? 0;
   const col = colorFor(v);
+  const dir = useValueDirection(sentiment.available ? sentiment.value : null);
 
   const classKu = (c: string): string => {
     const m: Record<string, string> = {
@@ -55,6 +57,7 @@ export function SentimentGauge({ sentiment, loading, asset = 'gold' }: Props) {
         <>
           <div className="flex items-center gap-3">
             <div className="text-3xl font-bold tabular-nums" style={{ color: col }}>{v}</div>
+            <DirArrow dir={dir} size={18} />
             <div className="text-sm font-semibold" style={{ color: col }}>
               {language === 'en' || language === 'tr' ? sentiment.classification : classKu(sentiment.classification)}
             </div>

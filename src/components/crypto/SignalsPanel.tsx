@@ -8,6 +8,7 @@ import { SignalCard } from '@/components/crypto/SignalCard';
 import { SignalParityCheck } from '@/components/crypto/SignalParityCheck';
 import { LegOutcomeTimeline } from '@/components/crypto/LegOutcomeTimeline';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { DirArrow, useValueDirection, type Dir } from '@/components/crypto/DirIndicator';
 import { computeResult, isHighImpactUsdEventSoon, type Timeframe } from '@/lib/resultIndicator';
 
 const C_BULL = '#0ecb81';
@@ -129,6 +130,15 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const u10yStale = macro.us10y == null && lastU10yRef.current != null;
   const u10yChg = macro.us10yChangePct ?? lastU10yChgRef.current;
 
+  // Per-refresh direction arrows for each macro metric (presentation only).
+  const dxyDir = useValueDirection(dxyVal);
+  const fgDir = useValueDirection(fgVal);
+  const spxDir = useValueDirection(spxVal);
+  const vixDir = useValueDirection(vixVal);
+  const u10yDir = useValueDirection(u10yVal);
+
+
+
   const StaleBadge = ({ label }: { label: string }) => {
     const [open, setOpen] = useState(false);
     const msg = bi('بەهای کۆن', 'Stale value');
@@ -166,11 +176,13 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
     Icon: typeof DollarSign,
     tip: string,
     stale: boolean,
+    dir: Dir = 'flat',
   ) => (
     <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
       <Icon className="h-3.5 w-3.5" style={{ color }} />
       <span className="text-[10px] text-[#848e9c]">{label}</span>
       <span className="text-[11px] font-bold tabular-nums" style={{ color }}>{value}</span>
+      <DirArrow dir={dir} size={11} />
       {stale && <StaleBadge label={label} />}
       <InfoTip text={tip} label={bi(`زانیاری ${label}`, `${label} info`)} />
     </div>
@@ -288,19 +300,20 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
 
       {/* Macro context chips */}
       <div className="flex flex-wrap gap-2">
-        {macroChip('DXY', dxyTxt, dxyColor, DollarSign, dxyTip, dxyStale)}
+        {macroChip('DXY', dxyTxt, dxyColor, DollarSign, dxyTip, dxyStale, dxyDir)}
         <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
           <Gauge className="h-3.5 w-3.5" style={{ color: fgColor }} />
           <span className="text-[10px] text-[#848e9c]">{bi('ترس/چاوبڕکێ', 'Fear/Greed')}</span>
           <span className="text-[11px] font-bold tabular-nums" style={{ color: fgColor }}>{fgTxt}</span>
+          <DirArrow dir={fgDir} size={11} />
           <span className="text-[9px] font-semibold text-[#5b6472] bg-[#1a1e2e] rounded px-1 py-0.5 leading-none">{fgSource}</span>
           {fgStale && <StaleBadge label={bi('ترس/چاوبڕکێ', 'Fear/Greed')} />}
           <InfoTip text={fgTip} label={bi('زانیاری ترس/چاوبڕکێ', 'Fear/Greed info')} />
 
         </div>
-        {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale)}
-        {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale)}
-        {macroChip('US10Y', u10yTxt, u10yColor, Percent, u10yTip, u10yStale)}
+        {macroChip('S&P 500', spxTxt, spxColor, LineChart, spxTip, spxStale, spxDir)}
+        {macroChip('VIX', vixTxt, vixColor, Flame, vixTip, vixStale, vixDir)}
+        {macroChip('US10Y', u10yTxt, u10yColor, Percent, u10yTip, u10yStale, u10yDir)}
 
         {/* Macro Bias badge — market-sentiment context, NOT the primary trade decision */}
         <div

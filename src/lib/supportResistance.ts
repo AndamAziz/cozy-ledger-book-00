@@ -22,8 +22,10 @@ export interface SRLevels {
 export function computeSR(candles: OHLCCandle[], lookback = 30): SRLevels | null {
   if (!candles || candles.length < 2) return null;
 
-  // Use the last completed candle for the pivot maths.
-  const last = candles[candles.length - 1];
+  // Use the last COMPLETED candle for the pivot maths — never the live,
+  // still-forming candle (its H/L/C often collapse to one value, which would
+  // make pivot/R1/R2/S1/S2 all equal). Fall back to the only candle available.
+  const last = candles.length >= 2 ? candles[candles.length - 2] : candles[candles.length - 1];
   const high = last.high;
   const low = last.low;
   const close = last.close;
