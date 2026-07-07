@@ -71,3 +71,18 @@ export const CHART_TIMEFRAMES: ChartTimeframe[] = [
 export function chartFeedFor(key: string): FeedSpec {
   return CHART_TIMEFRAMES.find((t) => t.key === key)?.feed ?? COMMODITY_TF_FEED.M15;
 }
+
+/** Backend range key → bar length in seconds (matches the server intervals). */
+const RANGE_STEP_SECONDS: Record<string, number> = {
+  '1min': 60, '5min': 300, '15min': 900, '1d': 300, '5d': 900,
+  '1mo': 3600, '3mo': 86_400, '6mo': 86_400, '1y': 86_400, '5y': 604_800,
+};
+
+/**
+ * Bar length in seconds for a resolved feed (range × aggregation). Used to align
+ * S/R pivot maths to real candle boundaries and skip synthetic spot candles.
+ */
+export function feedStepSeconds(feed: FeedSpec): number {
+  const base = RANGE_STEP_SECONDS[feed.range] ?? 60;
+  return base * (feed.agg > 1 ? feed.agg : 1);
+}

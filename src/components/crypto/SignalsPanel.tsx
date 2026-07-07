@@ -130,12 +130,19 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
   const u10yStale = macro.us10y == null && lastU10yRef.current != null;
   const u10yChg = macro.us10yChangePct ?? lastU10yChgRef.current;
 
-  // Per-refresh direction arrows for each macro metric (presentation only).
-  const dxyDir = useValueDirection(dxyVal);
+  // Per-chip direction arrows (presentation only). Each metric is evaluated
+  // independently — no shared/stale comparison.
+  //  - DXY / S&P 500 / US10Y expose a signed % change, so the arrow follows that
+  //    sign directly (▲ up / ▼ down / — only when genuinely 0). This is the real
+  //    market direction and never gets stuck on flat.
+  //  - VIX / Fear&Greed are levels, so track movement since the last refresh.
+  const signDir = (v: number | null | undefined): Dir =>
+    v == null || !Number.isFinite(v) ? 'flat' : v > 0 ? 'up' : v < 0 ? 'down' : 'flat';
+  const dxyDir = signDir(dxyVal);
+  const spxDir = signDir(spxVal);
+  const u10yDir = signDir(u10yChg);
   const fgDir = useValueDirection(fgVal);
-  const spxDir = useValueDirection(spxVal);
   const vixDir = useValueDirection(vixVal);
-  const u10yDir = useValueDirection(u10yVal);
 
 
 
@@ -181,8 +188,8 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
     <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
       <Icon className="h-3.5 w-3.5" style={{ color }} />
       <span className="text-[10px] text-[#848e9c]">{label}</span>
-      <span className="text-[11px] font-bold tabular-nums" style={{ color }}>{value}</span>
-      <DirArrow dir={dir} size={11} />
+      <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{value}</span>
+      <DirArrow dir={dir} size={10} />
       {stale && <StaleBadge label={label} />}
       <InfoTip text={tip} label={bi(`زانیاری ${label}`, `${label} info`)} />
     </div>
@@ -304,8 +311,8 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
         <div className="flex items-center gap-1.5 rounded-lg bg-[#0a0e17] border border-[#1a1e2e] px-2.5 py-1.5">
           <Gauge className="h-3.5 w-3.5" style={{ color: fgColor }} />
           <span className="text-[10px] text-[#848e9c]">{bi('ترس/چاوبڕکێ', 'Fear/Greed')}</span>
-          <span className="text-[11px] font-bold tabular-nums" style={{ color: fgColor }}>{fgTxt}</span>
-          <DirArrow dir={fgDir} size={11} />
+          <span className="text-[10px] font-bold tabular-nums" style={{ color: fgColor }}>{fgTxt}</span>
+          <DirArrow dir={fgDir} size={10} />
           <span className="text-[9px] font-semibold text-[#5b6472] bg-[#1a1e2e] rounded px-1 py-0.5 leading-none">{fgSource}</span>
           {fgStale && <StaleBadge label={bi('ترس/چاوبڕکێ', 'Fear/Greed')} />}
           <InfoTip text={fgTip} label={bi('زانیاری ترس/چاوبڕکێ', 'Fear/Greed info')} />
@@ -324,8 +331,8 @@ export function SignalsPanel({ asset }: SignalsPanelProps) {
           aria-label={`${bi('لایەنی ماکرۆ', 'Macro Bias')}: ${resultLabel}${newsSoon ? ` ${bi('ئاگاداری هەواڵ', 'news alert')}` : ''}`}
         >
           <span className="text-[10px] font-bold text-[#848e9c]">{bi('لایەنی ماکرۆ', 'Macro Bias')}</span>
-          <span className="text-[11px] leading-none">{resultEmoji}</span>
-          <span className="text-[11px] font-extrabold" style={{ color: resultColor }}>{resultLabel}</span>
+          <span className="text-[10px] leading-none">{resultEmoji}</span>
+          <span className="text-[10px] font-extrabold" style={{ color: resultColor }}>{resultLabel}</span>
           {newsSoon && (
             <span title={bi('ڕووداوی گرنگی دۆلار لە ١٥ خولەکدا', 'High-impact USD event within 15 min')}>⚠️</span>
           )}

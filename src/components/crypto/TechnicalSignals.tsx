@@ -9,6 +9,8 @@ import { Activity } from 'lucide-react';
 interface Props {
   candles: OHLCCandle[];
   price: number;
+  /** Timeframe bar length in seconds — aligns S/R pivots to real candles. */
+  stepSeconds?: number;
 }
 
 const C_BUY = '#0ecb81';
@@ -19,7 +21,7 @@ function sigColor(s: SignalType): string {
   return s === 'buy' ? C_BUY : s === 'sell' ? C_SELL : C_NEUTRAL;
 }
 
-export function TechnicalSignals({ candles, price }: Props) {
+export function TechnicalSignals({ candles, price, stepSeconds }: Props) {
   const { language } = useLanguage();
   const bi = (ku: string, en: string) => (language === 'en' || language === 'tr' ? en : ku);
 
@@ -27,9 +29,9 @@ export function TechnicalSignals({ candles, price }: Props) {
     const ind = computeIndicators(candles);
     const summary = summarizeSignals(ind, price);
     const pct = computeBuySellPct(summary);
-    const sr = computeSR(candles);
+    const sr = computeSR(candles, 30, stepSeconds);
     return { ind, summary, pct, sr };
-  }, [candles, price]);
+  }, [candles, price, stepSeconds]);
 
   // Per-refresh direction for each S/R level (hooks must run unconditionally).
   const dirR2 = useValueDirection(sr?.r2 ?? null);
@@ -135,7 +137,7 @@ export function TechnicalSignals({ candles, price }: Props) {
                   <div key={x.l} className="bg-[#0a0e17] border border-[#1a1e2e] rounded-lg py-1.5">
                     <div className="text-[9px] font-bold" style={{ color: x.c }}>{x.l}</div>
                     <div className="flex items-center justify-center gap-0.5">
-                      <span className="text-[11px] tabular-nums text-white">${x.v.toFixed(2)}</span>
+                      <span className="text-[10px] tabular-nums text-white">${x.v.toFixed(2)}</span>
                       <DirArrow dir={x.d} size={10} />
                     </div>
                   </div>

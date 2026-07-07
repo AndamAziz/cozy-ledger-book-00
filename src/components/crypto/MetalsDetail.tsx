@@ -7,7 +7,7 @@ import { MarketStatusBadge } from '@/components/crypto/MarketStatusBadge';
 import { CryptoAnalysis } from '@/components/crypto/CryptoAnalysis';
 import { GoldProPanel } from '@/components/crypto/GoldProPanel';
 import type { OHLCCandle } from '@/lib/krakenApi';
-import { CHART_TIMEFRAMES, chartFeedFor } from '@/lib/timeframeFeed';
+import { CHART_TIMEFRAMES, chartFeedFor, feedStepSeconds } from '@/lib/timeframeFeed';
 import { ArrowUpRight, ArrowDownRight, Minus, RefreshCw } from 'lucide-react';
 import { DirArrow, useValueDirection } from '@/components/crypto/DirIndicator';
 
@@ -70,6 +70,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
   // Resolve the selected timeframe to the SHARED backend feed (range + client
   // aggregation) so the chart series matches the signal engine exactly.
   const feed = chartFeedFor(effectiveRange);
+  const stepSeconds = feedStepSeconds(feed);
   const { candles: historyCandles, isLoading: historyLoading, error: historyError, lastUpdated: historyLastUpdated, refetch: refetchHistory } = useMetalsHistory(selectedCode, feed.range, livePrice, feed.agg);
 
   // Adapt metals candles (close/high/low) to the OHLC shape the analysis expects
@@ -155,6 +156,7 @@ export function MetalsDetail({ metals, selectedCode, isLoading, view }: MetalsDe
         <GoldProPanel
           candles={ohlcCandles}
           price={selected.price}
+          stepSeconds={stepSeconds}
         />
       ) : (
       <>

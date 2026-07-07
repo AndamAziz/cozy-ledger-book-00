@@ -18,14 +18,32 @@ export interface SRLevels {
 /**
  * Classic pivot-point support/resistance from the most recent completed
  * candle, plus recent swing high/low over a lookback window.
+ *
+ * `stepSeconds` is the timeframe's bar length in seconds. When provided, the
+ * pivot maths only uses a candle whose timestamp is aligned to that boundary
+ * (`time % stepSeconds === 0`). This skips the synthetic spot-price candles some
+ * feeds append (flat H==L==C bars carrying an unaligned fetch-time timestamp),
+ * which would otherwise collapse pivot/R1/R2/S1/S2 to a single value.
  */
-export function computeSR(candles: OHLCCandle[], lookback = 30): SRLevels | null {
+export function computeSR(candles: OHLCCandle[], lookback = 30, stepSeconds?: number): SRLevels | null {
   if (!candles || candles.length < 2) return null;
 
-  // Use the last COMPLETED candle for the pivot maths — never the live,
-  // still-forming candle (its H/L/C often collapse to one value, which would
-  // make pivot/R1/R2/S1/S2 all equal). Fall back to the only candle available.
-  const last = candles.length >= 2 ? candles[candles.length - 2] : candles[candles.length - 1];
+  // Scan backwards from the second-to-last bar (never the live, still-forming
+  // last candle) for the last REAL completed candle: it must have a non-zero
+  // range (not a flat synthetic candle) and, when the timeframe step is known,
+  // an aligned timestamp.
+  let last: OHLCCandle | null = null;
+  for (let i = candles.length - 2; i >= 0; i--) {
+    const c = candles[i];
+    if (!c) continue;
+    const range = c.high - c.low;
+    if (!(range > 0)) continue; // flat / synthetic spot candle
+    if (stepSeconds && stepSeconds > 0 && Math.round(c.time) % stepSeconds !== 0) continue;
+    last = c;
+    break;
+  }
+  if (!last) return null;
+
   const high = last.high;
   const low = last.low;
   const close = last.close;
