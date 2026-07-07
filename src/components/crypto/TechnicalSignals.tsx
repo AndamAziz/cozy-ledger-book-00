@@ -3,6 +3,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import type { OHLCCandle } from '@/lib/krakenApi';
 import { computeIndicators, summarizeSignals, computeBuySellPct, SignalType } from '@/lib/indicators';
 import { computeSR } from '@/lib/supportResistance';
+import { DirArrow, useValueDirection } from '@/components/crypto/DirIndicator';
 import { Activity } from 'lucide-react';
 
 interface Props {
