@@ -2107,20 +2107,11 @@ function MovieCard({ movie, t, onClick }: { movie: Movie; t: Record<string, stri
 // ====== Modal ======
 type Tab = "info" | "details" | "cast" | "ai" | "subs";
 
-interface TmdbDetails {
-  overview?: string;
-  runtime?: number;
-  episode_run_time?: number[];
-  release_date?: string;
-  first_air_date?: string;
-  original_language?: string;
-  production_countries?: { iso_3166_1: string; name: string }[];
-  created_by?: { id: number; name: string }[];
-  credits?: {
-    cast?: { id: number; name: string; character?: string; profile_path: string | null }[];
-    crew?: { id: number; name: string; job: string }[];
-  };
-}
+// Module-level cache so Details data is reused per TMDB id across modal opens.
+const detailsCache = new Map<string, { data: TmdbDetails; ts: number }>();
+const DETAILS_TTL = 60 * 60 * 1000; // 1 hour
+
+
 
 interface Subtitle {
   id: string;
