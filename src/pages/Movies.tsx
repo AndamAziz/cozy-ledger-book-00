@@ -2736,6 +2736,174 @@ function MovieModal({
             </div>
           )}
 
+          {tab === "details" && (
+            <div>
+              {detailsLoading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div className="mv-skel" style={{ height: 16, width: "40%", borderRadius: 8 }} />
+                  <div className="mv-skel" style={{ height: 70, width: "100%", borderRadius: 10 }} />
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(140px,1fr))",
+                      gap: 10,
+                    }}
+                  >
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="mv-skel" style={{ height: 52, borderRadius: 12 }} />
+                    ))}
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(90px,1fr))",
+                      gap: 12,
+                    }}
+                  >
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="mv-skel" style={{ aspectRatio: "2/3", borderRadius: 10 }} />
+                    ))}
+                  </div>
+                </div>
+              ) : detailsError ? (
+                <div style={{ color: "#ff6b6b", fontSize: 14 }}>{detailsError}</div>
+              ) : details ? (
+                (() => {
+                  const runtime = isTv
+                    ? details.episode_run_time?.[0]
+                    : details.runtime;
+                  const releaseDate = isTv ? details.first_air_date : details.release_date;
+                  const languageName = (() => {
+                    const code = details.original_language;
+                    if (!code) return "";
+                    try {
+                      return (
+                        new Intl.DisplayNames([lang === "ku" ? "en" : lang], {
+                          type: "language",
+                        }).of(code) || code.toUpperCase()
+                      );
+                    } catch {
+                      return code.toUpperCase();
+                    }
+                  })();
+                  const country = (details.production_countries || [])
+                    .map((c) => c.name)
+                    .filter(Boolean)
+                    .join(", ");
+                  const director = isTv
+                    ? ""
+                    : details.credits?.crew?.find((c) => c.job === "Director")?.name || "";
+                  const creators = isTv
+                    ? (details.created_by || []).map((c) => c.name).filter(Boolean).join(", ")
+                    : "";
+                  const topCast = (details.credits?.cast || []).slice(0, 6);
+
+                  const cells: { label: string; value: string }[] = [];
+                  if (runtime && runtime > 0)
+                    cells.push({ label: t.dRuntime, value: `${runtime} ${t.dMinutes}` });
+                  if (releaseDate)
+                    cells.push({
+                      label: isTv ? t.dFirstAir : t.dReleaseDate,
+                      value: releaseDate,
+                    });
+                  if (languageName) cells.push({ label: t.dLanguage, value: languageName });
+                  if (country) cells.push({ label: t.dCountry, value: country });
+                  if (director) cells.push({ label: t.dDirector, value: director });
+                  if (creators) cells.push({ label: t.dCreator, value: creators });
+
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                      {details.overview && (
+                        <div>
+                          <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 5 }}>
+                            {t.dOverview}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 14,
+                              lineHeight: 1.75,
+                              color: C.text,
+                              background: C.panel2,
+                              border: `1px solid ${C.border}`,
+                              borderRadius: 12,
+                              padding: "12px 14px",
+                            }}
+                          >
+                            {details.overview}
+                          </div>
+                        </div>
+                      )}
+
+                      {cells.length > 0 && (
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(140px,1fr))",
+                            gap: 10,
+                          }}
+                        >
+                          {cells.map((c) => (
+                            <InfoCell key={c.label} label={c.label} value={c.value} />
+                          ))}
+                        </div>
+                      )}
+
+                      {topCast.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8 }}>
+                            {t.dCastLabel}
+                          </div>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fill, minmax(90px,1fr))",
+                              gap: 12,
+                            }}
+                          >
+                            {topCast.map((c) => (
+                              <div key={c.id} style={{ textAlign: "center" }}>
+                                <img
+                                  src={
+                                    c.profile_path
+                                      ? TMDB_PROFILE + c.profile_path
+                                      : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='150'%3E%3Crect width='100%25' height='100%25' fill='%231b1b27'/%3E%3Ctext x='50%25' y='50%25' font-size='40' fill='%239a9aae' text-anchor='middle' dy='.35em'%3E%3F%3C/text%3E%3C/svg%3E"
+                                  }
+                                  alt={c.name}
+                                  loading="lazy"
+                                  style={{
+                                    width: "100%",
+                                    aspectRatio: "2/3",
+                                    objectFit: "cover",
+                                    borderRadius: 10,
+                                    border: `1px solid ${C.border}`,
+                                  }}
+                                />
+                                <div style={{ fontSize: 12, fontWeight: 700, marginTop: 5 }}>
+                                  {c.name}
+                                </div>
+                                {c.character && (
+                                  <div style={{ fontSize: 11, color: C.muted }}>{c.character}</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {!details.overview && cells.length === 0 && topCast.length === 0 && (
+                        <div style={{ color: C.muted, fontSize: 14 }}>{t.noInfo}</div>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : (
+                <div style={{ color: C.muted, fontSize: 14 }}>{t.detailsLoading}</div>
+              )}
+            </div>
+          )}
+
+
+
           {tab === "cast" && (
             <div>
               {cast.length === 0 ? (
