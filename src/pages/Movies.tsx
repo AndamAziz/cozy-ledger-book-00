@@ -2974,6 +2974,95 @@ function MovieModal({
                         </div>
                       )}
 
+                      {tvInfo && (
+                        <div>
+                          <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8 }}>
+                            {t.dSeriesInfo}
+                          </div>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(120px,1fr))",
+                              gap: 10,
+                            }}
+                          >
+                            {tvInfo.seasons > 0 && (
+                              <InfoCell label={t.dSeasons} value={String(tvInfo.seasons)} />
+                            )}
+                            {tvInfo.episodes > 0 && (
+                              <InfoCell label={t.dEpisodes} value={String(tvInfo.episodes)} />
+                            )}
+                            {tvInfo.runtime && tvInfo.runtime > 0 && (
+                              <InfoCell
+                                label={t.dEpisodeRuntime}
+                                value={`${tvInfo.runtime} ${t.dMinutes}`}
+                              />
+                            )}
+                            {tvInfo.status && (
+                              <InfoCell label={t.dStatus} value={tvInfo.status} />
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {isTv && (
+                        <div>
+                          <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8 }}>
+                            {t.dNextEpisode}
+                          </div>
+                          {nextEp ? (
+                            <div
+                              style={{
+                                background: C.panel2,
+                                border: `1px solid ${C.border}`,
+                                borderRadius: 12,
+                                padding: "12px 14px",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 4,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                {nextEp.code && (
+                                  <span
+                                    style={{
+                                      background: C.goldDim,
+                                      color: C.gold,
+                                      borderRadius: 8,
+                                      padding: "2px 8px",
+                                      fontSize: 12,
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {nextEp.code}
+                                  </span>
+                                )}
+                                {nextEp.name && (
+                                  <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
+                                    {nextEp.name}
+                                  </span>
+                                )}
+                              </div>
+                              {nextEp.airDate && (
+                                <div style={{ fontSize: 12.5, color: C.muted }}>
+                                  📅 {nextEp.airDate}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 13, color: C.muted }}>{t.dNoNext}</div>
+                          )}
+                        </div>
+                      )}
+
+
                       {topCast.length > 0 && (
                         <div>
                           <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8 }}>
