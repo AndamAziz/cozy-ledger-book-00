@@ -83,3 +83,48 @@ export function initialsFromName(name: string): string {
     .join("");
   return letters || "?";
 }
+
+export interface TvSummary {
+  seasons: number;
+  episodes: number;
+  runtime?: number;
+  status?: string;
+}
+
+/**
+ * Build a compact season/episode + per-episode runtime summary for a TV series.
+ * Returns null when there is nothing meaningful to show.
+ */
+export function tvSummary(d: TmdbDetails): TvSummary | null {
+  const seasons = typeof d.number_of_seasons === "number" ? d.number_of_seasons : 0;
+  const episodes = typeof d.number_of_episodes === "number" ? d.number_of_episodes : 0;
+  const runtime = pickRuntime(true, d);
+  const status = d.status && d.status.trim() ? d.status.trim() : undefined;
+  if (!seasons && !episodes && !runtime && !status) return null;
+  return { seasons, episodes, runtime, status };
+}
+
+export interface NextEpisodeInfo {
+  season?: number;
+  episode?: number;
+  code?: string; // e.g. "S02E05"
+  name?: string;
+  airDate?: string;
+}
+
+/** Normalize the upcoming episode into display-friendly fields, or null if none. */
+export function nextEpisode(d: TmdbDetails): NextEpisodeInfo | null {
+  const n = d.next_episode_to_air;
+  if (!n) return null;
+  const season = typeof n.season_number === "number" ? n.season_number : undefined;
+  const episode = typeof n.episode_number === "number" ? n.episode_number : undefined;
+  const airDate = n.air_date && n.air_date.trim() ? n.air_date : undefined;
+  const name = n.name && n.name.trim() ? n.name : undefined;
+  if (season === undefined && episode === undefined && !airDate && !name) return null;
+  const code =
+    season !== undefined && episode !== undefined
+      ? `S${String(season).padStart(2, "0")}E${String(episode).padStart(2, "0")}`
+      : undefined;
+  return { season, episode, code, name, airDate };
+}
+
