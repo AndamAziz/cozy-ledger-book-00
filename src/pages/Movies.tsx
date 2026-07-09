@@ -5,6 +5,12 @@ import { toast } from "sonner";
 import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize, Minimize, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFavorite, useFavoritesList } from "@/lib/movieFavorites";
+import {
+  pickRuntime,
+  pickReleaseDate,
+  initialsFromName,
+  type TmdbDetails,
+} from "@/lib/tmdbDetails";
 
 // ====== Theme ======
 const C = {
