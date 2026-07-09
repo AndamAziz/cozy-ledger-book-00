@@ -2333,25 +2333,56 @@ function MovieModal({
     }
   };
 
-  const loadDetails = async () => {
-    setTab("details");
-    if (details || detailsLoading) return;
-    setDetailsLoading(true);
-    setDetailsError("");
-    try {
-      const r = await tmdbFetch(`${mediaPath}/${movie.tmdb_id}`, {
-        append_to_response: "credits",
-        language: "en-US",
-      });
-      const d = await r.json();
-      if (!r.ok || !d || d.success === false) throw new Error("tmdb");
-      setDetails(d as TmdbDetails);
-    } catch {
-      setDetailsError(t.detailsError);
-    } finally {
-      setDetailsLoading(false);
-    }
-  };
+  const loadDetails = useCallback(
+    async (force = false) => {
+      setTab("details");
+      const cacheKey = `${mediaPath}:${movie.tmdb_id}`;
+      if (!force) {
+        if (detailsLoading) return;
+        // Reuse cached details for this TMDB id if still fresh.
+        const cached = detailsCache.get(cacheKey);
+        if (cached && Date.now() - cached.ts < DETAILS_TTL) {
+          setDetails(cached.data);
+          setDetailsError("");
+          return;
+        }
+        if (details) return;
+      }
+      setDetailsLoading(true);
+      setDetailsError("");
+      try {
+        const r = await tmdbFetch(`${mediaPath}/${movie.tmdb_id}`, {
+          append_to_response: "credits",
+          language: "en-US",
+        });
+        const d = await r.json();
+        if (!r.ok || !d || d.success === false) throw new Error("tmdb");
+        detailsCache.set(cacheKey, { data: d as TmdbDetails, ts: Date.now() });
+        setDetails(d as TmdbDetails);
+        setDetailsError("");
+        detailsAutoRetried.current = false;
+      } catch {
+        setDetailsError(t.detailsError);
+      } finally {
+        setDetailsLoading(false);
+      }
+    },
+    [details, detailsLoading, mediaPath, movie.tmdb_id, t.detailsError],
+  );
+
+  const retryDetails = useCallback(() => {
+    detailsAutoRetried.current = false;
+    loadDetails(true);
+  }, [loadDetails]);
+
+  // Optional auto-retry once, shortly after a failure.
+  useEffect(() => {
+    if (!detailsError || detailsLoading || detailsAutoRetried.current) return;
+    detailsAutoRetried.current = true;
+    const id = setTimeout(() => loadDetails(true), 2500);
+    return () => clearTimeout(id);
+  }, [detailsError, detailsLoading, loadDetails]);
+
 
 
 
