@@ -222,6 +222,8 @@ const T = {
     dMinutes: "min",
     detailsLoading: "Loading details...",
     detailsError: "Couldn't load details. Please try again.",
+    retry: "Retry",
+    autoRetrying: "Auto-retrying...",
     director: "Director:",
     fTitle: "Title",
     fYear: "Year",
