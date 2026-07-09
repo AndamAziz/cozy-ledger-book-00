@@ -9,6 +9,8 @@ import {
   pickRuntime,
   pickReleaseDate,
   initialsFromName,
+  tvSummary,
+  nextEpisode,
   type TmdbDetails,
 } from "@/lib/tmdbDetails";
 
