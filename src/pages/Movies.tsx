@@ -2970,22 +2970,7 @@ function MovieModal({
                           >
                             {topCast.map((c) => (
                               <div key={c.id} style={{ textAlign: "center" }}>
-                                <img
-                                  src={
-                                    c.profile_path
-                                      ? TMDB_PROFILE + c.profile_path
-                                      : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='150'%3E%3Crect width='100%25' height='100%25' fill='%231b1b27'/%3E%3Ctext x='50%25' y='50%25' font-size='40' fill='%239a9aae' text-anchor='middle' dy='.35em'%3E%3F%3C/text%3E%3C/svg%3E"
-                                  }
-                                  alt={c.name}
-                                  loading="lazy"
-                                  style={{
-                                    width: "100%",
-                                    aspectRatio: "2/3",
-                                    objectFit: "cover",
-                                    borderRadius: 10,
-                                    border: `1px solid ${C.border}`,
-                                  }}
-                                />
+                                <CastAvatar name={c.name} profilePath={c.profile_path} />
                                 <div style={{ fontSize: 12, fontWeight: 700, marginTop: 5 }}>
                                   {c.name}
                                 </div>
