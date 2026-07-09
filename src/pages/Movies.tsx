@@ -9,6 +9,8 @@ import {
   pickRuntime,
   pickReleaseDate,
   initialsFromName,
+  tvSummary,
+  nextEpisode,
   type TmdbDetails,
 } from "@/lib/tmdbDetails";
 
@@ -110,6 +112,13 @@ const T = {
     detailsError: "نەتوانرا وردەکاری بهێنرێت. تکایە دووبارە هەوڵبدەرەوە.",
     retry: "دووبارە هەوڵبدەرەوە",
     autoRetrying: "هەوڵی دووبارە بەخۆکاری...",
+    dSeriesInfo: "زانیاری زنجیرە",
+    dSeasons: "وەرزەکان",
+    dEpisodes: "ئەلقەکان",
+    dEpisodeRuntime: "ماوەی ئەلقە",
+    dStatus: "دۆخ",
+    dNextEpisode: "ئەلقەی داهاتوو",
+    dNoNext: "هیچ ئەلقەیەکی داهاتوو ڕێکنەخراوە.",
     director: "دەرهێنەر:",
     fTitle: "ناونیشان",
     fYear: "ساڵ",
@@ -224,6 +233,13 @@ const T = {
     detailsError: "Couldn't load details. Please try again.",
     retry: "Retry",
     autoRetrying: "Auto-retrying...",
+    dSeriesInfo: "Series Info",
+    dSeasons: "Seasons",
+    dEpisodes: "Episodes",
+    dEpisodeRuntime: "Episode Runtime",
+    dStatus: "Status",
+    dNextEpisode: "Next Episode",
+    dNoNext: "No upcoming episode scheduled.",
     director: "Director:",
     fTitle: "Title",
     fYear: "Year",
@@ -2905,6 +2921,8 @@ function MovieModal({
                     ? (details.created_by || []).map((c) => c.name).filter(Boolean).join(", ")
                     : "";
                   const topCast = (details.credits?.cast || []).slice(0, 6);
+                  const tvInfo = isTv ? tvSummary(details) : null;
+                  const nextEp = isTv ? nextEpisode(details) : null;
 
                   const cells: { label: string; value: string }[] = [];
                   if (runtime && runtime > 0)
@@ -2956,6 +2974,95 @@ function MovieModal({
                         </div>
                       )}
 
+                      {tvInfo && (
+                        <div>
+                          <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8 }}>
+                            {t.dSeriesInfo}
+                          </div>
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fit, minmax(120px,1fr))",
+                              gap: 10,
+                            }}
+                          >
+                            {tvInfo.seasons > 0 && (
+                              <InfoCell label={t.dSeasons} value={String(tvInfo.seasons)} />
+                            )}
+                            {tvInfo.episodes > 0 && (
+                              <InfoCell label={t.dEpisodes} value={String(tvInfo.episodes)} />
+                            )}
+                            {tvInfo.runtime && tvInfo.runtime > 0 && (
+                              <InfoCell
+                                label={t.dEpisodeRuntime}
+                                value={`${tvInfo.runtime} ${t.dMinutes}`}
+                              />
+                            )}
+                            {tvInfo.status && (
+                              <InfoCell label={t.dStatus} value={tvInfo.status} />
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {isTv && (
+                        <div>
+                          <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8 }}>
+                            {t.dNextEpisode}
+                          </div>
+                          {nextEp ? (
+                            <div
+                              style={{
+                                background: C.panel2,
+                                border: `1px solid ${C.border}`,
+                                borderRadius: 12,
+                                padding: "12px 14px",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 4,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                {nextEp.code && (
+                                  <span
+                                    style={{
+                                      background: C.goldDim,
+                                      color: C.gold,
+                                      borderRadius: 8,
+                                      padding: "2px 8px",
+                                      fontSize: 12,
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    {nextEp.code}
+                                  </span>
+                                )}
+                                {nextEp.name && (
+                                  <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>
+                                    {nextEp.name}
+                                  </span>
+                                )}
+                              </div>
+                              {nextEp.airDate && (
+                                <div style={{ fontSize: 12.5, color: C.muted }}>
+                                  📅 {nextEp.airDate}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 13, color: C.muted }}>{t.dNoNext}</div>
+                          )}
+                        </div>
+                      )}
+
+
                       {topCast.length > 0 && (
                         <div>
                           <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8 }}>
@@ -2983,7 +3090,11 @@ function MovieModal({
                         </div>
                       )}
 
-                      {!details.overview && cells.length === 0 && topCast.length === 0 && (
+                      {!details.overview &&
+                        cells.length === 0 &&
+                        topCast.length === 0 &&
+                        !tvInfo &&
+                        !isTv && (
                         <div style={{ color: C.muted, fontSize: 14 }}>{t.noInfo}</div>
                       )}
                     </div>
