@@ -2693,7 +2693,13 @@ function MovieModal({
           {tabs.map((tb) => (
             <button
               key={tb.key}
-              onClick={() => (tb.key === "ai" ? loadAiInfo() : setTab(tb.key))}
+              onClick={() =>
+                tb.key === "ai"
+                  ? loadAiInfo()
+                  : tb.key === "details"
+                    ? loadDetails()
+                    : setTab(tb.key)
+              }
               style={{
                 background: "none",
                 border: "none",
