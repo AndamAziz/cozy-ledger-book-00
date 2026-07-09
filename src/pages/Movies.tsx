@@ -2291,6 +2291,28 @@ function MovieModal({
     }
   };
 
+  const loadDetails = async () => {
+    setTab("details");
+    if (details || detailsLoading) return;
+    setDetailsLoading(true);
+    setDetailsError("");
+    try {
+      const r = await tmdbFetch(`${mediaPath}/${movie.tmdb_id}`, {
+        append_to_response: "credits",
+        language: "en-US",
+      });
+      const d = await r.json();
+      if (!r.ok || !d || d.success === false) throw new Error("tmdb");
+      setDetails(d as TmdbDetails);
+    } catch {
+      setDetailsError(t.detailsError);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+
+
   const loadSubs = async () => {
     setTab("subs");
     if (subs || subsLoading || !imdbId) return;
