@@ -2843,13 +2843,44 @@ function MovieModal({
                   </div>
                 </div>
               ) : detailsError ? (
-                <div style={{ color: "#ff6b6b", fontSize: 14 }}>{detailsError}</div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ color: "#ff6b6b", fontSize: 14 }}>{detailsError}</div>
+                  <button
+                    onClick={retryDetails}
+                    disabled={detailsLoading}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 7,
+                      background: C.goldDim,
+                      color: C.gold,
+                      border: `1px solid ${C.gold}`,
+                      borderRadius: 10,
+                      padding: "8px 16px",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: detailsLoading ? "default" : "pointer",
+                      opacity: detailsLoading ? 0.6 : 1,
+                    }}
+                  >
+                    <RotateCcw size={14} />
+                    {detailsAutoRetried.current && !detailsLoading ? t.retry : t.retry}
+                  </button>
+                  {!detailsAutoRetried.current && (
+                    <div style={{ color: C.muted, fontSize: 12 }}>{t.autoRetrying}</div>
+                  )}
+                </div>
               ) : details ? (
                 (() => {
-                  const runtime = isTv
-                    ? details.episode_run_time?.[0]
-                    : details.runtime;
-                  const releaseDate = isTv ? details.first_air_date : details.release_date;
+                  const runtime = pickRuntime(isTv, details);
+                  const releaseDate = pickReleaseDate(isTv, details);
                   const languageName = (() => {
                     const code = details.original_language;
                     if (!code) return "";
