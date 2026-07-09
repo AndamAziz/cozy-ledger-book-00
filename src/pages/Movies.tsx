@@ -3090,7 +3090,11 @@ function MovieModal({
                         </div>
                       )}
 
-                      {!details.overview && cells.length === 0 && topCast.length === 0 && (
+                      {!details.overview &&
+                        cells.length === 0 &&
+                        topCast.length === 0 &&
+                        !tvInfo &&
+                        !isTv && (
                         <div style={{ color: C.muted, fontSize: 14 }}>{t.noInfo}</div>
                       )}
                     </div>
