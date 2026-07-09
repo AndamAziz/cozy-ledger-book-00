@@ -5,6 +5,12 @@ import { toast } from "sonner";
 import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize, Minimize, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFavorite, useFavoritesList } from "@/lib/movieFavorites";
+import {
+  pickRuntime,
+  pickReleaseDate,
+  initialsFromName,
+  type TmdbDetails,
+} from "@/lib/tmdbDetails";
 
 // ====== Theme ======
 const C = {
@@ -102,6 +108,8 @@ const T = {
     dMinutes: "خولەک",
     detailsLoading: "بارکردنی وردەکاری...",
     detailsError: "نەتوانرا وردەکاری بهێنرێت. تکایە دووبارە هەوڵبدەرەوە.",
+    retry: "دووبارە هەوڵبدەرەوە",
+    autoRetrying: "هەوڵی دووبارە بەخۆکاری...",
     director: "دەرهێنەر:",
     fTitle: "ناونیشان",
     fYear: "ساڵ",
@@ -214,6 +222,8 @@ const T = {
     dMinutes: "min",
     detailsLoading: "Loading details...",
     detailsError: "Couldn't load details. Please try again.",
+    retry: "Retry",
+    autoRetrying: "Auto-retrying...",
     director: "Director:",
     fTitle: "Title",
     fYear: "Year",
@@ -2101,20 +2111,55 @@ function MovieCard({ movie, t, onClick }: { movie: Movie; t: Record<string, stri
 // ====== Modal ======
 type Tab = "info" | "details" | "cast" | "ai" | "subs";
 
-interface TmdbDetails {
-  overview?: string;
-  runtime?: number;
-  episode_run_time?: number[];
-  release_date?: string;
-  first_air_date?: string;
-  original_language?: string;
-  production_countries?: { iso_3166_1: string; name: string }[];
-  created_by?: { id: number; name: string }[];
-  credits?: {
-    cast?: { id: number; name: string; character?: string; profile_path: string | null }[];
-    crew?: { id: number; name: string; job: string }[];
-  };
+// Module-level cache so Details data is reused per TMDB id across modal opens.
+const detailsCache = new Map<string, { data: TmdbDetails; ts: number }>();
+const DETAILS_TTL = 60 * 60 * 1000; // 1 hour
+
+// Cast photo with graceful fallback: shows initials when TMDB has no profile
+// image or when the image fails to load (broken/blocked URL).
+function CastAvatar({
+  name,
+  profilePath,
+}: {
+  name: string;
+  profilePath: string | null;
+}) {
+  const [broken, setBroken] = useState(false);
+  const showImg = !!profilePath && !broken;
+  return (
+    <div
+      style={{
+        width: "100%",
+        aspectRatio: "2/3",
+        borderRadius: 10,
+        border: `1px solid ${C.border}`,
+        overflow: "hidden",
+        background: C.panel2,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {showImg ? (
+        <img
+          src={TMDB_PROFILE + profilePath}
+          alt={name}
+          loading="lazy"
+          onError={() => setBroken(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      ) : (
+        <span style={{ fontSize: 24, fontWeight: 800, color: C.muted, letterSpacing: 1 }}>
+          {initialsFromName(name)}
+        </span>
+      )}
+    </div>
+  );
 }
+
+
+
+
 
 interface Subtitle {
   id: string;
@@ -2159,6 +2204,7 @@ function MovieModal({
   const [details, setDetails] = useState<TmdbDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string>("");
+  const detailsAutoRetried = useRef(false);
   const [subs, setSubs] = useState<Subtitle[] | null>(null);
   const [subsLoading, setSubsLoading] = useState(false);
   const [subsError, setSubsError] = useState<string>("");
@@ -2291,25 +2337,56 @@ function MovieModal({
     }
   };
 
-  const loadDetails = async () => {
-    setTab("details");
-    if (details || detailsLoading) return;
-    setDetailsLoading(true);
-    setDetailsError("");
-    try {
-      const r = await tmdbFetch(`${mediaPath}/${movie.tmdb_id}`, {
-        append_to_response: "credits",
-        language: "en-US",
-      });
-      const d = await r.json();
-      if (!r.ok || !d || d.success === false) throw new Error("tmdb");
-      setDetails(d as TmdbDetails);
-    } catch {
-      setDetailsError(t.detailsError);
-    } finally {
-      setDetailsLoading(false);
-    }
-  };
+  const loadDetails = useCallback(
+    async (force = false) => {
+      setTab("details");
+      const cacheKey = `${mediaPath}:${movie.tmdb_id}`;
+      if (!force) {
+        if (detailsLoading) return;
+        // Reuse cached details for this TMDB id if still fresh.
+        const cached = detailsCache.get(cacheKey);
+        if (cached && Date.now() - cached.ts < DETAILS_TTL) {
+          setDetails(cached.data);
+          setDetailsError("");
+          return;
+        }
+        if (details) return;
+      }
+      setDetailsLoading(true);
+      setDetailsError("");
+      try {
+        const r = await tmdbFetch(`${mediaPath}/${movie.tmdb_id}`, {
+          append_to_response: "credits",
+          language: "en-US",
+        });
+        const d = await r.json();
+        if (!r.ok || !d || d.success === false) throw new Error("tmdb");
+        detailsCache.set(cacheKey, { data: d as TmdbDetails, ts: Date.now() });
+        setDetails(d as TmdbDetails);
+        setDetailsError("");
+        detailsAutoRetried.current = false;
+      } catch {
+        setDetailsError(t.detailsError);
+      } finally {
+        setDetailsLoading(false);
+      }
+    },
+    [details, detailsLoading, mediaPath, movie.tmdb_id, t.detailsError],
+  );
+
+  const retryDetails = useCallback(() => {
+    detailsAutoRetried.current = false;
+    loadDetails(true);
+  }, [loadDetails]);
+
+  // Optional auto-retry once, shortly after a failure.
+  useEffect(() => {
+    if (!detailsError || detailsLoading || detailsAutoRetried.current) return;
+    detailsAutoRetried.current = true;
+    const id = setTimeout(() => loadDetails(true), 2500);
+    return () => clearTimeout(id);
+  }, [detailsError, detailsLoading, loadDetails]);
+
 
 
 
@@ -2766,13 +2843,44 @@ function MovieModal({
                   </div>
                 </div>
               ) : detailsError ? (
-                <div style={{ color: "#ff6b6b", fontSize: 14 }}>{detailsError}</div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ color: "#ff6b6b", fontSize: 14 }}>{detailsError}</div>
+                  <button
+                    onClick={retryDetails}
+                    disabled={detailsLoading}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 7,
+                      background: C.goldDim,
+                      color: C.gold,
+                      border: `1px solid ${C.gold}`,
+                      borderRadius: 10,
+                      padding: "8px 16px",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: detailsLoading ? "default" : "pointer",
+                      opacity: detailsLoading ? 0.6 : 1,
+                    }}
+                  >
+                    <RotateCcw size={14} />
+                    {t.retry}
+                  </button>
+                  {!detailsAutoRetried.current && (
+                    <div style={{ color: C.muted, fontSize: 12 }}>{t.autoRetrying}</div>
+                  )}
+                </div>
               ) : details ? (
                 (() => {
-                  const runtime = isTv
-                    ? details.episode_run_time?.[0]
-                    : details.runtime;
-                  const releaseDate = isTv ? details.first_air_date : details.release_date;
+                  const runtime = pickRuntime(isTv, details);
+                  const releaseDate = pickReleaseDate(isTv, details);
                   const languageName = (() => {
                     const code = details.original_language;
                     if (!code) return "";
@@ -2862,22 +2970,7 @@ function MovieModal({
                           >
                             {topCast.map((c) => (
                               <div key={c.id} style={{ textAlign: "center" }}>
-                                <img
-                                  src={
-                                    c.profile_path
-                                      ? TMDB_PROFILE + c.profile_path
-                                      : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='150'%3E%3Crect width='100%25' height='100%25' fill='%231b1b27'/%3E%3Ctext x='50%25' y='50%25' font-size='40' fill='%239a9aae' text-anchor='middle' dy='.35em'%3E%3F%3C/text%3E%3C/svg%3E"
-                                  }
-                                  alt={c.name}
-                                  loading="lazy"
-                                  style={{
-                                    width: "100%",
-                                    aspectRatio: "2/3",
-                                    objectFit: "cover",
-                                    borderRadius: 10,
-                                    border: `1px solid ${C.border}`,
-                                  }}
-                                />
+                                <CastAvatar name={c.name} profilePath={c.profile_path} />
                                 <div style={{ fontSize: 12, fontWeight: 700, marginTop: 5 }}>
                                   {c.name}
                                 </div>
