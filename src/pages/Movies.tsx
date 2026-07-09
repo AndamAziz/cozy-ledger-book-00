@@ -2364,6 +2364,7 @@ function MovieModal({
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "info", label: t.tabInfo },
+    { key: "details", label: t.tabDetails },
     { key: "cast", label: t.tabCast },
     { key: "ai", label: t.tabAi },
     { key: "subs", label: t.tabSubs },
