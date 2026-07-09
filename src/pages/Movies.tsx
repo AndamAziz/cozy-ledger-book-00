@@ -2156,6 +2156,9 @@ function MovieModal({
   const [aiInfo, setAiInfo] = useState<string>("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string>("");
+  const [details, setDetails] = useState<TmdbDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState<string>("");
   const [subs, setSubs] = useState<Subtitle[] | null>(null);
   const [subsLoading, setSubsLoading] = useState(false);
   const [subsError, setSubsError] = useState<string>("");
