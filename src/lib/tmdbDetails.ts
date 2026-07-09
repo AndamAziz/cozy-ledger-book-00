@@ -1,6 +1,14 @@
 // Shared types + pure helpers for the movie/show "Details" tab.
 // Kept framework-free so the field-selection logic is unit-testable.
 
+export interface TmdbEpisode {
+  air_date?: string | null;
+  episode_number?: number | null;
+  season_number?: number | null;
+  name?: string | null;
+  runtime?: number | null;
+}
+
 export interface TmdbDetails {
   overview?: string;
   // Movies
@@ -9,7 +17,11 @@ export interface TmdbDetails {
   // TV
   episode_run_time?: number[];
   first_air_date?: string;
-  last_episode_to_air?: { runtime?: number | null } | null;
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  status?: string;
+  last_episode_to_air?: TmdbEpisode | null;
+  next_episode_to_air?: TmdbEpisode | null;
   // Shared
   original_language?: string;
   production_countries?: { iso_3166_1: string; name: string }[];
@@ -24,6 +36,7 @@ export interface TmdbDetails {
     crew?: { id: number; name: string; job: string }[];
   };
 }
+
 
 /**
  * Pick the correct runtime for the media type.
