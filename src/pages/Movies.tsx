@@ -2921,6 +2921,8 @@ function MovieModal({
                     ? (details.created_by || []).map((c) => c.name).filter(Boolean).join(", ")
                     : "";
                   const topCast = (details.credits?.cast || []).slice(0, 6);
+                  const tvInfo = isTv ? tvSummary(details) : null;
+                  const nextEp = isTv ? nextEpisode(details) : null;
 
                   const cells: { label: string; value: string }[] = [];
                   if (runtime && runtime > 0)
