@@ -2111,6 +2111,50 @@ type Tab = "info" | "details" | "cast" | "ai" | "subs";
 const detailsCache = new Map<string, { data: TmdbDetails; ts: number }>();
 const DETAILS_TTL = 60 * 60 * 1000; // 1 hour
 
+// Cast photo with graceful fallback: shows initials when TMDB has no profile
+// image or when the image fails to load (broken/blocked URL).
+function CastAvatar({
+  name,
+  profilePath,
+}: {
+  name: string;
+  profilePath: string | null;
+}) {
+  const [broken, setBroken] = useState(false);
+  const showImg = !!profilePath && !broken;
+  return (
+    <div
+      style={{
+        width: "100%",
+        aspectRatio: "2/3",
+        borderRadius: 10,
+        border: `1px solid ${C.border}`,
+        overflow: "hidden",
+        background: C.panel2,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {showImg ? (
+        <img
+          src={TMDB_PROFILE + profilePath}
+          alt={name}
+          loading="lazy"
+          onError={() => setBroken(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      ) : (
+        <span style={{ fontSize: 24, fontWeight: 800, color: C.muted, letterSpacing: 1 }}>
+          {initialsFromName(name)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+
+
 
 
 interface Subtitle {
