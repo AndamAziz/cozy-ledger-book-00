@@ -3,6 +3,8 @@ import {
   pickRuntime,
   pickReleaseDate,
   initialsFromName,
+  tvSummary,
+  nextEpisode,
   type TmdbDetails,
 } from "./tmdbDetails";
 
