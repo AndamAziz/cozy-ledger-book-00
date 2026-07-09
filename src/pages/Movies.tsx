@@ -2871,7 +2871,7 @@ function MovieModal({
                     }}
                   >
                     <RotateCcw size={14} />
-                    {detailsAutoRetried.current && !detailsLoading ? t.retry : t.retry}
+                    {t.retry}
                   </button>
                   {!detailsAutoRetried.current && (
                     <div style={{ color: C.muted, fontSize: 12 }}>{t.autoRetrying}</div>
