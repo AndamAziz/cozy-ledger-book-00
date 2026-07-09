@@ -2099,7 +2099,22 @@ function MovieCard({ movie, t, onClick }: { movie: Movie; t: Record<string, stri
 
 
 // ====== Modal ======
-type Tab = "info" | "cast" | "ai" | "subs";
+type Tab = "info" | "details" | "cast" | "ai" | "subs";
+
+interface TmdbDetails {
+  overview?: string;
+  runtime?: number;
+  episode_run_time?: number[];
+  release_date?: string;
+  first_air_date?: string;
+  original_language?: string;
+  production_countries?: { iso_3166_1: string; name: string }[];
+  created_by?: { id: number; name: string }[];
+  credits?: {
+    cast?: { id: number; name: string; character?: string; profile_path: string | null }[];
+    crew?: { id: number; name: string; job: string }[];
+  };
+}
 
 interface Subtitle {
   id: string;
