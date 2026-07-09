@@ -2200,6 +2200,7 @@ function MovieModal({
   const [details, setDetails] = useState<TmdbDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string>("");
+  const detailsAutoRetried = useRef(false);
   const [subs, setSubs] = useState<Subtitle[] | null>(null);
   const [subsLoading, setSubsLoading] = useState(false);
   const [subsError, setSubsError] = useState<string>("");
