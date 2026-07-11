@@ -33,6 +33,8 @@ export function SalesTab({
   maxDays,
   defaultDay,
   currentMonthKey,
+  locations,
+  onAddLocation,
   onAddSale,
   onDeleteSale,
 }: SalesTabProps) {
