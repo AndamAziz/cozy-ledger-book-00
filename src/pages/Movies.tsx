@@ -70,11 +70,6 @@ const IMDB_DOMAINS: { host: string; label: string; name: string; accent: string 
   { host: "playimdb.com", label: "PlayIMDb ⚡", name: "PlayIMDb", accent: "#00BCD4" },
 ];
 
-const imdbPlayerUrl = (host: string, imdbId: string, media: "movie" | "tv", season = 1, episode = 1) => {
-  const kind = media === "tv" ? "tv" : "movie";
-  const path = media === "tv" ? `${kind}/${imdbId}/${season}/${episode}` : `${kind}/${imdbId}`;
-  return `https://www.${host}/embed/${path}`;
-};
 
 const imdbTitleUrl = (host: string, imdbId: string) => `https://www.${host}/title/${imdbId}/`;
 
