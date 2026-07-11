@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { SummaryCard } from './SummaryCard';
 import { SellModal } from './SellModal';
-import { Cigarette, Sale } from '@/types/finance';
+import { Cigarette, Sale, Location } from '@/types/finance';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { ShoppingCart, Trash2, Package, TrendingUp } from 'lucide-react';
+import { formatCurrencyBy } from '@/lib/currency';
+import { ShoppingCart, Trash2, Package, TrendingUp, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -19,6 +20,8 @@ interface SalesTabProps {
   maxDays: number;
   defaultDay: number;
   currentMonthKey: string;
+  locations: Location[];
+  onAddLocation: (name: string) => Promise<Location | null>;
   onAddSale: (sale: Omit<Sale, 'id'>, cigaretteId: string | number) => void;
   onDeleteSale: (id: string | number) => void;
 }
