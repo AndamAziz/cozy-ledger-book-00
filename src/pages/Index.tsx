@@ -240,7 +240,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             <InventoryTab cigaretteData={financeData.cigaretteData} summary={summary} onAddCigarette={financeData.addCigarette} onUpdateCigarette={financeData.updateCigarette} onDeleteCigarette={financeData.deleteCigarette} onAddStock={financeData.addStock} onUpdateStock={financeData.updateStock} />
           )}
           {activeTab === 'sales' && (
-            <SalesTab salesData={financeData.salesData} cigaretteData={financeData.cigaretteData} summary={summary} maxDays={financeData.getMaxDays()} defaultDay={financeData.getDefaultDay()} currentMonthKey={financeData.currentMonthKey} onAddSale={financeData.addSale} onDeleteSale={financeData.deleteSale} />
+            <SalesTab salesData={financeData.salesData} cigaretteData={financeData.cigaretteData} summary={summary} maxDays={financeData.getMaxDays()} defaultDay={financeData.getDefaultDay()} currentMonthKey={financeData.currentMonthKey} locations={financeData.locations} onAddLocation={financeData.addLocation} onAddSale={financeData.addSale} onDeleteSale={financeData.deleteSale} />
           )}
           {activeTab === 'reports' && (
             <ReportsTab incomeData={financeData.incomeData} expenseData={financeData.expenseData} cigaretteData={financeData.cigaretteData} salesData={financeData.salesData} summary={summary} currentMonthLabel={financeData.getCurrentMonthLabel()} currentMonthKey={financeData.currentMonthKey} />
