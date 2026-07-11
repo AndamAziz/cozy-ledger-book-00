@@ -111,13 +111,20 @@ export function SalesTab({
                         </div>
                         <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md w-fit">
                           <TrendingUp className="h-2.5 w-2.5 text-info flex-shrink-0" />
-                          <span className="text-info text-[11px] font-semibold font-mono">{formatCurrency(sale.profit)}</span>
+                          <span className="text-info text-[11px] font-semibold font-mono">{formatCurrencyBy(sale.profit, sale.currency || 'GBP')}</span>
                         </div>
+                        {locations.find((l) => l.id === sale.locationId) && (
+                          <div className="flex items-center gap-1 bg-secondary/60 px-1.5 py-0.5 rounded-md w-fit">
+                            <MapPin className="h-2.5 w-2.5 text-muted-foreground flex-shrink-0" />
+                            <span className="text-muted-foreground text-[11px] font-mono">{locations.find((l) => l.id === sale.locationId)?.name}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Total */}
-                    <div className="text-success font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(sale.totalSale)}</div>
+                    <div className="text-success font-bold text-[13px] font-mono flex-shrink-0">{formatCurrencyBy(sale.totalSale, sale.currency || 'GBP')}</div>
+
 
                     {/* Delete */}
                     <button
