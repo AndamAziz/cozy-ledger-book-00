@@ -465,6 +465,7 @@ export function FinanceTab({
         maxDays={maxDays}
         defaultDay={defaultDay}
         monthKey={currentMonthKey}
+        onMonthChange={onMonthChange}
         locations={locations}
         onAddLocation={onAddLocation}
       />
@@ -477,6 +478,7 @@ export function FinanceTab({
         defaultDay={defaultDay}
         defaultExpenseType={defaultExpenseType}
         monthKey={currentMonthKey}
+        onMonthChange={onMonthChange}
         locations={locations}
         onAddLocation={onAddLocation}
       />
