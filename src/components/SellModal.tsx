@@ -217,7 +217,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
         </div>
 
         {/* Currency + Location */}
-        <div class="grid grid-cols-2 gap-3" className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-muted-foreground text-xs font-medium flex items-center gap-1.5">
               <Coins className="h-3.5 w-3.5 text-primary" /> {t('currency')}
