@@ -122,16 +122,34 @@ export function FinanceTab({
 
   return (
     <div className="space-y-5 sm:space-y-6 md:space-y-8">
+      {/* Location filter */}
+      <div className="glass-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3 animate-fade-in">
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground shrink-0">
+          <MapPin className="h-4 w-4 text-primary" />
+          <span className="hidden sm:inline">{t('location')}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <LocationSelect
+            locations={locations}
+            value={selectedLocationId}
+            onChange={onSelectLocation}
+            onAddLocation={onAddLocation}
+            includeAllOption
+          />
+        </div>
+      </div>
+
       {/* Summary Grid */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:gap-5">
-        <SummaryCard title={t('cash')}         value={formatCurrency(summary.totalCash)}    variant="cash"     delay={0} />
-        <SummaryCard title={t('card')}         value={formatCurrency(summary.totalCard)}    variant="card"     delay={60} />
-        <SummaryCard title={t('totalSales')}   value={formatCurrency(summary.totalIncome)}  variant="income"   delay={120} />
-        <SummaryCard title={t('totalExpense')} value={formatCurrency(summary.totalExpense)} variant="expense"  delay={180} />
-        <SummaryCard title={t('purchase')}     value={formatCurrency(totalPurchase)}        variant="purchase" delay={240} />
-        <SummaryCard title={t('cost')}         value={formatCurrency(totalCost)}            variant="cost"     delay={300} />
-        <SummaryCard title={t('balance')}      value={formatCurrency(summary.balance)}      variant="balance"  delay={360} fullWidth />
+        <SummaryCard title={t('cash')}         lines={totalsToLines(summary.cashByCcy)}    variant="cash"     delay={0} />
+        <SummaryCard title={t('card')}         lines={totalsToLines(summary.cardByCcy)}    variant="card"     delay={60} />
+        <SummaryCard title={t('totalSales')}   lines={totalsToLines(summary.incomeByCcy)}  variant="income"   delay={120} />
+        <SummaryCard title={t('totalExpense')} lines={totalsToLines(summary.expenseByCcy)} variant="expense"  delay={180} />
+        <SummaryCard title={t('purchase')}     lines={totalsToLines(summary.purchaseByCcy)} variant="purchase" delay={240} />
+        <SummaryCard title={t('cost')}         lines={totalsToLines(summary.costByCcy)}     variant="cost"     delay={300} />
+        <SummaryCard title={t('balance')}      lines={totalsToLines(summary.balanceByCcy)}  variant="balance"  delay={360} fullWidth />
       </div>
+
 
       {/* Action Buttons */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-5 animate-fade-in" style={{ animationDelay: '100ms' }}>
