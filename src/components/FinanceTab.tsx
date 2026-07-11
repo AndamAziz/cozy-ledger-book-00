@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { SummaryCard } from './SummaryCard';
 import { IncomeModal } from './IncomeModal';
 import { ExpenseModal } from './ExpenseModal';
-import { Income, Expense, ExpenseType } from '@/types/finance';
-import { formatCurrency, formatDate } from '@/lib/format';
-import { Plus, Pencil, Trash2, ShoppingCart, Receipt, Banknote, CreditCard, TrendingUp } from 'lucide-react';
+import { LocationSelect } from './LocationSelect';
+import { Income, Expense, ExpenseType, Location, Currency } from '@/types/finance';
+import { formatDate } from '@/lib/format';
+import { formatCurrencyBy, totalsToLines, nonZeroCurrencies } from '@/lib/currency';
+import { Plus, Pencil, Trash2, ShoppingCart, Receipt, Banknote, CreditCard, TrendingUp, MapPin, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+type CurrencyTotals = Record<Currency, number>;
 
 interface FinanceTabProps {
   incomeData: Income[];
@@ -18,10 +21,21 @@ interface FinanceTabProps {
     totalIncome: number;
     totalExpense: number;
     balance: number;
+    cashByCcy: CurrencyTotals;
+    cardByCcy: CurrencyTotals;
+    incomeByCcy: CurrencyTotals;
+    expenseByCcy: CurrencyTotals;
+    purchaseByCcy: CurrencyTotals;
+    costByCcy: CurrencyTotals;
+    balanceByCcy: CurrencyTotals;
   };
   maxDays: number;
   defaultDay: number;
   currentMonthKey: string;
+  locations: Location[];
+  selectedLocationId: string | null;
+  onSelectLocation: (id: string | null) => void;
+  onAddLocation: (name: string) => Promise<Location | null>;
   onAddIncome: (income: Omit<Income, 'id'>) => void;
   onUpdateIncome: (id: string | number, income: Omit<Income, 'id'>) => void;
   onDeleteIncome: (id: string | number) => void;
@@ -38,6 +52,10 @@ export function FinanceTab({
   maxDays,
   defaultDay,
   currentMonthKey,
+  locations,
+  selectedLocationId,
+  onSelectLocation,
+  onAddLocation,
   onAddIncome,
   onUpdateIncome,
   onDeleteIncome,
@@ -54,18 +72,21 @@ export function FinanceTab({
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  // Separate expenses by type
-  const purchaseData = expenseData.filter(exp => exp.expenseType === 'purchase');
-  const costData = expenseData.filter(exp => exp.expenseType === 'cost' || !exp.expenseType);
+  const locMatch = (id?: string | null) => !selectedLocationId || id === selectedLocationId;
+  const locName = (id?: string | null) => locations.find((l) => l.id === id)?.name;
 
-  const totalPurchase = purchaseData.reduce((sum, exp) => sum + exp.amount, 0);
-  const totalCost = costData.reduce((sum, exp) => sum + exp.amount, 0);
+  // Separate expenses by type (respecting the location filter)
+  const purchaseData = expenseData.filter(exp => exp.expenseType === 'purchase' && locMatch(exp.locationId));
+  const costData = expenseData.filter(exp => (exp.expenseType === 'cost' || !exp.expenseType) && locMatch(exp.locationId));
+  const filteredIncome = incomeData.filter(inc => locMatch(inc.locationId));
+
+
 
 
   const handleIncomeSubmit = (income: Omit<Income, 'id'>) => {
-    // Prevent duplicate days (exclude the item being edited)
+    // Prevent duplicate days per location (exclude the item being edited)
     const dayExists = incomeData.some(
-      (inc) => inc.day === income.day && (!editingIncome || inc.id !== editingIncome.id)
+      (inc) => inc.day === income.day && (inc.locationId || null) === (income.locationId || null) && (!editingIncome || inc.id !== editingIncome.id)
     );
     if (dayExists) {
       toast({ title: t('error') || '❌', description: t('dayAlreadyExists') || `Day ${income.day} already has income recorded`, variant: 'destructive' });
@@ -101,16 +122,34 @@ export function FinanceTab({
 
   return (
     <div className="space-y-5 sm:space-y-6 md:space-y-8">
+      {/* Location filter */}
+      <div className="glass-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3 animate-fade-in">
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground shrink-0">
+          <MapPin className="h-4 w-4 text-primary" />
+          <span className="hidden sm:inline">{t('location')}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <LocationSelect
+            locations={locations}
+            value={selectedLocationId}
+            onChange={onSelectLocation}
+            onAddLocation={onAddLocation}
+            includeAllOption
+          />
+        </div>
+      </div>
+
       {/* Summary Grid */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:gap-5">
-        <SummaryCard title={t('cash')}         value={formatCurrency(summary.totalCash)}    variant="cash"     delay={0} />
-        <SummaryCard title={t('card')}         value={formatCurrency(summary.totalCard)}    variant="card"     delay={60} />
-        <SummaryCard title={t('totalSales')}   value={formatCurrency(summary.totalIncome)}  variant="income"   delay={120} />
-        <SummaryCard title={t('totalExpense')} value={formatCurrency(summary.totalExpense)} variant="expense"  delay={180} />
-        <SummaryCard title={t('purchase')}     value={formatCurrency(totalPurchase)}        variant="purchase" delay={240} />
-        <SummaryCard title={t('cost')}         value={formatCurrency(totalCost)}            variant="cost"     delay={300} />
-        <SummaryCard title={t('balance')}      value={formatCurrency(summary.balance)}      variant="balance"  delay={360} fullWidth />
+        <SummaryCard title={t('cash')}         lines={totalsToLines(summary.cashByCcy)}    variant="cash"     delay={0} />
+        <SummaryCard title={t('card')}         lines={totalsToLines(summary.cardByCcy)}    variant="card"     delay={60} />
+        <SummaryCard title={t('totalSales')}   lines={totalsToLines(summary.incomeByCcy)}  variant="income"   delay={120} />
+        <SummaryCard title={t('totalExpense')} lines={totalsToLines(summary.expenseByCcy)} variant="expense"  delay={180} />
+        <SummaryCard title={t('purchase')}     lines={totalsToLines(summary.purchaseByCcy)} variant="purchase" delay={240} />
+        <SummaryCard title={t('cost')}         lines={totalsToLines(summary.costByCcy)}     variant="cost"     delay={300} />
+        <SummaryCard title={t('balance')}      lines={totalsToLines(summary.balanceByCcy)}  variant="balance"  delay={360} fullWidth />
       </div>
+
 
       {/* Action Buttons */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-5 animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -181,10 +220,10 @@ export function FinanceTab({
           </div>
           <div>
             <span className="block">{t('dailyIncomeTitle')}</span>
-            <span className="text-xs font-normal text-muted-foreground">{incomeData.length} {t('records')}</span>
+            <span className="text-xs font-normal text-muted-foreground">{filteredIncome.length} {t('records')}</span>
           </div>
         </h3>
-        {incomeData.length === 0 ? (
+        {filteredIncome.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-3 shadow-inner">
               <TrendingUp className="h-8 w-8 opacity-40" />
@@ -194,35 +233,50 @@ export function FinanceTab({
           </div>
         ) : (
           <div className="space-y-2">
-            {incomeData.map((income, index) => {
+            {filteredIncome.map((income, index) => {
               const dateStr = formatDate(income.day, currentMonthKey);
+              const iLoc = locName(income.locationId);
               return (
                 <div
                   key={income.id}
                   className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-success/10 via-success/5 to-transparent border border-success/20 px-3 py-2.5 hover:border-success/40 hover:shadow-lg hover:shadow-success/10 active:scale-[0.99] transition-all duration-200"
                   style={{ animationDelay: `${index * 40}ms` }}
                 >
-                  {/* Single row: day badge + pills + total + actions */}
                   <div className="flex items-center gap-3">
-                    {/* Day badge — fixed circle, same on all devices */}
+                    {/* Day badge */}
                     <div className="w-9 h-9 flex-shrink-0 rounded-full bg-gradient-to-br from-success/30 to-success/10 border border-success/30 flex items-center justify-center shadow-sm">
                       <span className="text-success font-bold text-[13px] font-mono leading-none">{income.day}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      {/* Cash + Card pills — always stacked vertically for consistency */}
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1 bg-success/10 px-1.5 py-0.5 rounded-md w-fit">
-                          <Banknote className="h-3 w-3 text-success flex-shrink-0" />
-                          <span className="text-success text-[11px] font-semibold font-mono">{formatCurrency(income.cash)}</span>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {/* Per-currency cash/card pills */}
+                      {income.amounts.map((a, ai) => (
+                        <div key={ai} className="flex flex-wrap items-center gap-1">
+                          <span className="text-[9px] font-bold text-muted-foreground bg-secondary/60 px-1 rounded">{a.currency}</span>
+                          {a.cash > 0 && (
+                            <span className="flex items-center gap-1 bg-success/10 px-1.5 py-0.5 rounded-md">
+                              <Banknote className="h-3 w-3 text-success" />
+                              <span className="text-success text-[11px] font-semibold font-mono">{formatCurrencyBy(a.cash, a.currency)}</span>
+                            </span>
+                          )}
+                          {a.card > 0 && (
+                            <span className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md">
+                              <CreditCard className="h-3 w-3 text-info" />
+                              <span className="text-info text-[11px] font-semibold font-mono">{formatCurrencyBy(a.card, a.currency)}</span>
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md w-fit">
-                          <CreditCard className="h-3 w-3 text-info flex-shrink-0" />
-                          <span className="text-info text-[11px] font-semibold font-mono">{formatCurrency(income.card)}</span>
-                        </div>
+                      ))}
+                      {/* Meta: source + location + date */}
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <span className="font-mono">{dateStr}</span>
+                        {income.source && (
+                          <span className="flex items-center gap-0.5 text-primary"><Tag className="h-2.5 w-2.5" />{income.source}</span>
+                        )}
+                        {iLoc && (
+                          <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{iLoc}</span>
+                        )}
                       </div>
                     </div>
-                    {/* Total — fixed size, no responsive variants */}
-                    <div className="text-success font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(income.total)}</div>
                     {/* Actions */}
                     <div className="flex gap-1 flex-shrink-0">
                       <button
@@ -281,14 +335,24 @@ export function FinanceTab({
                       <span className="text-accent font-bold text-[13px] font-mono leading-none">{expense.day}</span>
                     </div>
 
-                    {/* Description — two-line stacked */}
+                    {/* Description — stacked */}
                     <div className="flex-1 min-w-0">
                       <p className="text-foreground text-xs font-medium truncate">{expense.description}</p>
-                      <p className="text-muted-foreground text-[10px] mt-0.5 font-mono">{dateStr}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
+                        <span className="font-mono">{dateStr}</span>
+                        {locName(expense.locationId) && (
+                          <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{locName(expense.locationId)}</span>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Amount */}
-                    <div className="text-accent font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(expense.amount)}</div>
+                    {/* Amounts per currency */}
+                    <div className="text-accent font-bold text-[13px] font-mono flex-shrink-0 text-right space-y-0.5">
+                      {expense.amounts.map((a, ai) => (
+                        <div key={ai}>{formatCurrencyBy(a.amount, a.currency)}</div>
+                      ))}
+                    </div>
+
 
                     {/* Actions */}
                     <div className="flex gap-1 flex-shrink-0">
@@ -348,14 +412,24 @@ export function FinanceTab({
                       <span className="text-destructive font-bold text-[13px] font-mono leading-none">{expense.day}</span>
                     </div>
 
-                    {/* Description — two-line stacked */}
+                    {/* Description — stacked */}
                     <div className="flex-1 min-w-0">
                       <p className="text-foreground text-xs font-medium truncate">{expense.description}</p>
-                      <p className="text-muted-foreground text-[10px] mt-0.5 font-mono">{dateStr}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
+                        <span className="font-mono">{dateStr}</span>
+                        {locName(expense.locationId) && (
+                          <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{locName(expense.locationId)}</span>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Amount */}
-                    <div className="text-destructive font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(expense.amount)}</div>
+                    {/* Amounts per currency */}
+                    <div className="text-destructive font-bold text-[13px] font-mono flex-shrink-0 text-right space-y-0.5">
+                      {expense.amounts.map((a, ai) => (
+                        <div key={ai}>{formatCurrencyBy(a.amount, a.currency)}</div>
+                      ))}
+                    </div>
+
 
                     {/* Actions */}
                     <div className="flex gap-1 flex-shrink-0">
@@ -389,6 +463,8 @@ export function FinanceTab({
         maxDays={maxDays}
         defaultDay={defaultDay}
         monthKey={currentMonthKey}
+        locations={locations}
+        onAddLocation={onAddLocation}
       />
       <ExpenseModal
         isOpen={expenseModalOpen}
@@ -399,6 +475,8 @@ export function FinanceTab({
         defaultDay={defaultDay}
         defaultExpenseType={defaultExpenseType}
         monthKey={currentMonthKey}
+        locations={locations}
+        onAddLocation={onAddLocation}
       />
     </div>
   );

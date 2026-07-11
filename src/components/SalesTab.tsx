@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { SummaryCard } from './SummaryCard';
 import { SellModal } from './SellModal';
-import { Cigarette, Sale } from '@/types/finance';
+import { Cigarette, Sale, Location } from '@/types/finance';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { ShoppingCart, Trash2, Package, TrendingUp } from 'lucide-react';
+import { formatCurrencyBy } from '@/lib/currency';
+import { ShoppingCart, Trash2, Package, TrendingUp, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -19,6 +20,8 @@ interface SalesTabProps {
   maxDays: number;
   defaultDay: number;
   currentMonthKey: string;
+  locations: Location[];
+  onAddLocation: (name: string) => Promise<Location | null>;
   onAddSale: (sale: Omit<Sale, 'id'>, cigaretteId: string | number) => void;
   onDeleteSale: (id: string | number) => void;
 }
@@ -30,6 +33,8 @@ export function SalesTab({
   maxDays,
   defaultDay,
   currentMonthKey,
+  locations,
+  onAddLocation,
   onAddSale,
   onDeleteSale,
 }: SalesTabProps) {
@@ -106,13 +111,20 @@ export function SalesTab({
                         </div>
                         <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md w-fit">
                           <TrendingUp className="h-2.5 w-2.5 text-info flex-shrink-0" />
-                          <span className="text-info text-[11px] font-semibold font-mono">{formatCurrency(sale.profit)}</span>
+                          <span className="text-info text-[11px] font-semibold font-mono">{formatCurrencyBy(sale.profit, sale.currency || 'GBP')}</span>
                         </div>
+                        {locations.find((l) => l.id === sale.locationId) && (
+                          <div className="flex items-center gap-1 bg-secondary/60 px-1.5 py-0.5 rounded-md w-fit">
+                            <MapPin className="h-2.5 w-2.5 text-muted-foreground flex-shrink-0" />
+                            <span className="text-muted-foreground text-[11px] font-mono">{locations.find((l) => l.id === sale.locationId)?.name}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Total */}
-                    <div className="text-success font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(sale.totalSale)}</div>
+                    <div className="text-success font-bold text-[13px] font-mono flex-shrink-0">{formatCurrencyBy(sale.totalSale, sale.currency || 'GBP')}</div>
+
 
                     {/* Delete */}
                     <button
@@ -143,6 +155,8 @@ export function SalesTab({
         maxDays={maxDays}
         defaultDay={defaultDay}
         monthKey={currentMonthKey}
+        locations={locations}
+        onAddLocation={onAddLocation}
       />
     </div>
   );

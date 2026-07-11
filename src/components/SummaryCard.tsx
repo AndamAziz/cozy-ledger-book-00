@@ -3,7 +3,8 @@ import { TrendingUp, TrendingDown, Wallet, ShoppingCart, Receipt, Banknote, Cred
 
 interface SummaryCardProps {
   title: string;
-  value: string;
+  value?: string;
+  lines?: string[];
   variant?: 'income' | 'expense' | 'balance' | 'stock' | 'accent' | 'default' | 'cash' | 'card' | 'purchase' | 'cost';
   fullWidth?: boolean;
   icon?: string;
@@ -113,9 +114,10 @@ const variantConfig = {
   },
 };
 
-export function SummaryCard({ title, value, variant = 'default', fullWidth, delay = 0 }: SummaryCardProps) {
+export function SummaryCard({ title, value, lines, variant = 'default', fullWidth, delay = 0 }: SummaryCardProps) {
   const config = variantConfig[variant] ?? variantConfig.default;
   const IconComponent = config.icon;
+  const multi = lines && lines.length > 0;
 
   return (
     <div
@@ -147,12 +149,29 @@ export function SummaryCard({ title, value, variant = 'default', fullWidth, dela
           <h3 className="text-[10px] sm:text-xs font-semibold text-muted-foreground truncate leading-tight">{title}</h3>
         </div>
 
-        <div className={cn(
-          'text-lg sm:text-xl md:text-2xl font-bold tracking-tight leading-none',
-          config.color
-        )}>
-          {value}
-        </div>
+        {multi ? (
+          <div className="space-y-0.5">
+            {lines!.map((ln, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'font-bold tracking-tight leading-tight font-mono',
+                  lines!.length > 1 ? 'text-sm sm:text-base md:text-lg' : 'text-lg sm:text-xl md:text-2xl',
+                  config.color
+                )}
+              >
+                {ln}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={cn(
+            'text-lg sm:text-xl md:text-2xl font-bold tracking-tight leading-none',
+            config.color
+          )}>
+            {value}
+          </div>
+        )}
       </div>
 
       {/* Bottom bar */}

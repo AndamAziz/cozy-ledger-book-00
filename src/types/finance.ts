@@ -1,20 +1,46 @@
+export type Currency = 'GBP' | 'IQD' | 'EUR';
+
+export interface Location {
+  id: string;
+  name: string;
+  isArchived?: boolean;
+}
+
+export interface IncomeAmount {
+  currency: Currency;
+  cash: number;
+  card: number;
+}
+
 export interface Income {
   id: string | number;
   day: number;
+  amounts: IncomeAmount[];
+  source?: string;
+  locationId?: string | null;
+  note?: string;
+  // Legacy GBP-derived aggregates kept for existing charts/reports.
   cash: number;
   card: number;
   total: number;
-  note?: string;
 }
 
 export type ExpenseType = 'purchase' | 'cost';
 
+export interface ExpenseAmount {
+  currency: Currency;
+  amount: number;
+}
+
 export interface Expense {
   id: string | number;
   day: number;
-  amount: number;
+  amounts: ExpenseAmount[];
   description: string;
   expenseType: ExpenseType;
+  locationId?: string | null;
+  // Legacy GBP-derived aggregate kept for existing charts/reports.
+  amount: number;
 }
 
 export type UnitType = 'box' | 'meter' | 'piece' | 'kg' | 'liter' | 'pack';
@@ -41,6 +67,8 @@ export interface Sale {
   packPrice: number;
   totalSale: number;
   profit: number;
+  currency?: Currency;
+  locationId?: string | null;
 }
 
 export interface MonthData {

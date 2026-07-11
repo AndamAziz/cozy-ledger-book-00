@@ -3,12 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Modal } from './Modal';
-import { Cigarette, Sale, UnitType } from '@/types/finance';
+import { Cigarette, Sale, UnitType, Currency, Location } from '@/types/finance';
 import { formatCurrency } from '@/lib/format';
+import { CURRENCIES, CURRENCY_LABELS } from '@/lib/currency';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Box, Ruler, Hash, Scale, Droplets, Package } from 'lucide-react';
+import { Box, Ruler, Hash, Scale, Droplets, Package, Coins, MapPin } from 'lucide-react';
 import { DayPicker } from './DayPicker';
 import { NumericInput } from './NumericInput';
+import { LocationSelect } from './LocationSelect';
 
 interface SellModalProps {
   isOpen: boolean;
@@ -18,6 +20,8 @@ interface SellModalProps {
   maxDays: number;
   defaultDay: number;
   monthKey: string;
+  locations: Location[];
+  onAddLocation: (name: string) => Promise<Location | null>;
 }
 
 const unitTypeIcons: Record<UnitType, React.ReactNode> = {
@@ -29,11 +33,13 @@ const unitTypeIcons: Record<UnitType, React.ReactNode> = {
   pack: <Package className="w-4 h-4" />,
 };
 
-export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defaultDay, monthKey }: SellModalProps) {
+export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defaultDay, monthKey, locations, onAddLocation }: SellModalProps) {
   const [day, setDay] = useState(defaultDay);
   const [selectedId, setSelectedId] = useState<string>('');
   const [packs, setPacks] = useState<string>('1');
   const [packPrice, setPackPrice] = useState<string>('');
+  const [currency, setCurrency] = useState<Currency>('GBP');
+  const [locationId, setLocationId] = useState<string | null>(null);
   const { t } = useLanguage();
 
   const selectedCigarette = useMemo(() => {
@@ -117,11 +123,15 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
         packPrice: packPriceNum,
         totalSale: total,
         profit: total - (packsNum * selectedCigarette.packPrice),
+        currency,
+        locationId,
       }, selectedCigarette.id);
 
       setSelectedId('');
       setPacks('1');
       setPackPrice('');
+      setCurrency('GBP');
+      setLocationId(null);
       onClose();
     }
   };
@@ -205,7 +215,32 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
             />
           </div>
         </div>
-        
+
+        {/* Currency + Location */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs font-medium flex items-center gap-1.5">
+              <Coins className="h-3.5 w-3.5 text-primary" /> {t('currency')}
+            </Label>
+            <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)}>
+              <SelectTrigger className="bg-secondary/50 border-border h-11 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c} value={c}>{CURRENCY_LABELS[c]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs font-medium flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-primary" /> {t('location')}
+            </Label>
+            <LocationSelect locations={locations} value={locationId} onChange={setLocationId} onAddLocation={onAddLocation} />
+          </div>
+        </div>
+
         {/* Total */}
         <div className="bg-success/10 border border-success/20 px-4 py-3 rounded-xl flex items-center justify-between">
           <Label className="text-success text-xs font-medium">{t('total')}</Label>
@@ -213,6 +248,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
             {formatCurrency(total)}
           </div>
         </div>
+
         
         <Button type="submit" className="w-full btn-gradient-primary py-4 sm:py-5 text-base font-bold rounded-xl">
           {t('recordSale')}

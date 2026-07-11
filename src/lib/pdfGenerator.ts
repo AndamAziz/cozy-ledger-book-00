@@ -75,6 +75,14 @@ function formatMoney(value: number | undefined | null): string {
   return `£${num.toFixed(2)}`;
 }
 
+// Currency-code-prefixed money for PDF (avoids non-latin symbols not in default font).
+function moneyByCcy(value: number | undefined | null, ccy: string): string {
+  const num = typeof value === 'number' && !isNaN(value) ? value : 0;
+  const digits = ccy === 'IQD' ? 0 : 2;
+  return `${ccy} ${num.toLocaleString('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+}
+
+
 export function generatePDFReport(data: ReportData): void {
   const { monthLabel, incomeData, expenseData, cigaretteData, salesData, summary } = data;
   
@@ -150,14 +158,18 @@ export function generatePDFReport(data: ReportData): void {
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Date', 'Cash', 'Card', 'Total', 'Note']],
-      body: incomeData.map(inc => [
-        formatDayWithMonth(inc.day, monthLabel),
-        formatMoney(inc.cash),
-        formatMoney(inc.card),
-        formatMoney(inc.total),
-        inc.note || '-',
-      ]),
+      head: [['Date', 'Currency', 'Cash', 'Card', 'Total', 'Source']],
+      body: incomeData.flatMap(inc => {
+        const rows = (inc.amounts && inc.amounts.length ? inc.amounts : [{ currency: 'GBP', cash: inc.cash, card: inc.card }]);
+        return rows.map((a, idx) => [
+          idx === 0 ? formatDayWithMonth(inc.day, monthLabel) : '',
+          a.currency,
+          moneyByCcy(a.cash, a.currency),
+          moneyByCcy(a.card, a.currency),
+          moneyByCcy((Number(a.cash) || 0) + (Number(a.card) || 0), a.currency),
+          idx === 0 ? (inc.source || '-') : '',
+        ]);
+      }),
       theme: 'striped',
       headStyles: { 
         fillColor: [34, 197, 94],
@@ -191,12 +203,16 @@ export function generatePDFReport(data: ReportData): void {
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Date', 'Description', 'Amount']],
-      body: purchases.map(exp => [
-        formatDayWithMonth(exp.day, monthLabel),
-        exp.description ? (exp.description.length > 40 ? exp.description.substring(0, 40) + '...' : exp.description) : '-',
-        formatMoney(exp.amount),
-      ]),
+      head: [['Date', 'Description', 'Currency', 'Amount']],
+      body: purchases.flatMap(exp => {
+        const rows = (exp.amounts && exp.amounts.length ? exp.amounts : [{ currency: 'GBP', amount: exp.amount }]);
+        return rows.map((a, idx) => [
+          idx === 0 ? formatDayWithMonth(exp.day, monthLabel) : '',
+          idx === 0 ? (exp.description ? (exp.description.length > 40 ? exp.description.substring(0, 40) + '...' : exp.description) : '-') : '',
+          a.currency,
+          moneyByCcy(a.amount, a.currency),
+        ]);
+      }),
       theme: 'striped',
       headStyles: { 
         fillColor: [245, 158, 11],
@@ -230,12 +246,16 @@ export function generatePDFReport(data: ReportData): void {
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Date', 'Description', 'Amount']],
-      body: costs.map(exp => [
-        formatDayWithMonth(exp.day, monthLabel),
-        exp.description ? (exp.description.length > 40 ? exp.description.substring(0, 40) + '...' : exp.description) : '-',
-        formatMoney(exp.amount),
-      ]),
+      head: [['Date', 'Description', 'Currency', 'Amount']],
+      body: costs.flatMap(exp => {
+        const rows = (exp.amounts && exp.amounts.length ? exp.amounts : [{ currency: 'GBP', amount: exp.amount }]);
+        return rows.map((a, idx) => [
+          idx === 0 ? formatDayWithMonth(exp.day, monthLabel) : '',
+          idx === 0 ? (exp.description ? (exp.description.length > 40 ? exp.description.substring(0, 40) + '...' : exp.description) : '-') : '',
+          a.currency,
+          moneyByCcy(a.amount, a.currency),
+        ]);
+      }),
       theme: 'striped',
       headStyles: { 
         fillColor: [239, 68, 68],
