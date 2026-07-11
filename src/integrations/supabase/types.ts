@@ -1338,7 +1338,7 @@ export type Database = {
       app_role: "admin" | "user"
       bot_status: "idle" | "running" | "stopped"
       bot_strategy: "conservative" | "balanced" | "aggressive"
-      currency_code: "GBP" | "IQD" | "EUR"
+      currency_code: "GBP" | "IQD" | "EUR" | "USD"
       trade_close_reason: "tp" | "sl" | "manual"
       trade_direction: "buy" | "sell"
       trade_result: "win" | "loss"
@@ -1473,7 +1473,7 @@ export const Constants = {
       app_role: ["admin", "user"],
       bot_status: ["idle", "running", "stopped"],
       bot_strategy: ["conservative", "balanced", "aggressive"],
-      currency_code: ["GBP", "IQD", "EUR"],
+      currency_code: ["GBP", "IQD", "EUR", "USD"],
       trade_close_reason: ["tp", "sl", "manual"],
       trade_direction: ["buy", "sell"],
       trade_result: ["win", "loss"],
