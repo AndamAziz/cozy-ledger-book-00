@@ -3,7 +3,8 @@ import { TrendingUp, TrendingDown, Wallet, ShoppingCart, Receipt, Banknote, Cred
 
 interface SummaryCardProps {
   title: string;
-  value: string;
+  value?: string;
+  lines?: string[];
   variant?: 'income' | 'expense' | 'balance' | 'stock' | 'accent' | 'default' | 'cash' | 'card' | 'purchase' | 'cost';
   fullWidth?: boolean;
   icon?: string;
