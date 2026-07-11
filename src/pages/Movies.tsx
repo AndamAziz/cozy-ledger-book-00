@@ -54,8 +54,9 @@ async function tmdbFetch(
   });
 }
 
-// Official IMDb streaming domains (source for all movies & series).
-// playimdb.com is primary; the rest are mirrors used if it is blocked.
+// IMDb streaming domains. Use the direct /embed route for the in-app player;
+// /title redirects through extra landing/ad frames and is less reliable on
+// mobile Safari/Firefox.
 const IMDB_DOMAINS: { host: string; label: string; name: string; accent: string }[] = [
   { host: "fastimdb.com", label: "FastIMDb", name: "Fastimdb", accent: "#F97316" },
   { host: "directimdb.com", label: "DirectIMDb", name: "Directimdb", accent: "#22C55E" },
@@ -63,6 +64,14 @@ const IMDB_DOMAINS: { host: string; label: string; name: string; accent: string 
   { host: "runimdb.com", label: "RunIMDb", name: "Runimdb", accent: "#8B5CF6" },
   { host: "playimdb.com", label: "PlayIMDb ⚡", name: "PlayIMDb", accent: "#00BCD4" },
 ];
+
+const imdbPlayerUrl = (host: string, imdbId: string, media: "movie" | "tv", season = 1, episode = 1) => {
+  const kind = media === "tv" ? "tv" : "movie";
+  const path = media === "tv" ? `${kind}/${imdbId}/${season}/${episode}` : `${kind}/${imdbId}`;
+  return `https://www.${host}/embed/${path}`;
+};
+
+const imdbTitleUrl = (host: string, imdbId: string) => `https://www.${host}/title/${imdbId}/`;
 
 const selectStyle: React.CSSProperties = {
   background: C.panel2,
@@ -1236,7 +1245,7 @@ export default function Movies() {
           ) : (
             <Grid>
               {filtered.map((m, i) => (
-                <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} t={t} onClick={() => setSelected(m)} />
+                    <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} t={t} onClick={() => setSelected(m)} />
               ))}
             </Grid>
           ))}
@@ -2631,7 +2640,7 @@ function MovieModal({
 
         {/* Action buttons */}
         <div style={{ display: "flex", gap: 8, padding: "14px 16px 0" }}>
-          <ActionBtn primary label={t.watch} onClick={() => setWatch(true)} />
+          <ActionBtn primary label={t.watch} ariaLabel="watch-now-player" onClick={() => setWatch(true)} />
           <ActionBtn
             label={trailerLoading ? "..." : t.trailer}
             onClick={loadTrailer}
@@ -2699,7 +2708,7 @@ function MovieModal({
             }}
           >
             {IMDB_DOMAINS.map((d) => {
-              const url = `https://www.${d.host}/title/${imdbId}/`;
+              const url = imdbTitleUrl(d.host, imdbId);
               return (
                 <div key={d.host} style={{ display: "flex", gap: 6 }}>
                   <button
@@ -3294,7 +3303,7 @@ function MovieModal({
             imdbId
               ? IMDB_DOMAINS.map((d) => ({
                   name: d.name,
-                  url: `https://www.${d.host}/title/${imdbId}/`,
+                  url: imdbPlayerUrl(d.host, imdbId, movie.media, season, episode),
                   accent: d.accent,
                 }))
               : [
@@ -3796,12 +3805,14 @@ function ActionBtn({
   primary,
   cyan,
   disabled,
+  ariaLabel,
 }: {
   label: string;
   onClick: () => void;
   primary?: boolean;
   cyan?: boolean;
   disabled?: boolean;
+  ariaLabel?: string;
 }) {
   let bg: string, color: string, border: string;
   if (cyan) {
@@ -3820,6 +3831,7 @@ function ActionBtn({
   return (
     <button
       onClick={onClick}
+      aria-label={ariaLabel || label}
       disabled={disabled}
       style={{
         flex: 1,
