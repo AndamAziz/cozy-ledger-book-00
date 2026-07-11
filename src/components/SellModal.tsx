@@ -20,6 +20,7 @@ interface SellModalProps {
   maxDays: number;
   defaultDay: number;
   monthKey: string;
+  onMonthChange?: (monthKey: string) => void;
   locations: Location[];
   onAddLocation: (name: string) => Promise<Location | null>;
 }
@@ -33,7 +34,7 @@ const unitTypeIcons: Record<UnitType, React.ReactNode> = {
   pack: <Package className="w-4 h-4" />,
 };
 
-export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defaultDay, monthKey, locations, onAddLocation }: SellModalProps) {
+export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defaultDay, monthKey, onMonthChange, locations, onAddLocation }: SellModalProps) {
   const [day, setDay] = useState(defaultDay);
   const [selectedId, setSelectedId] = useState<string>('');
   const [packs, setPacks] = useState<string>('1');
