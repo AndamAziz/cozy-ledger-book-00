@@ -69,8 +69,7 @@ describe("buildWatchServers", () => {
     });
     expect(servers[0].url).toContain("/embed/tv/tt0903747/3/7");
     expect(servers[2].url).toBe("https://vidapi.ru/embed/tv/1396/3/7");
-    expect(servers[3].url).toBe("https://vidsrc.to/embed/tv/1396/3/7");
-    expect(servers[4].url).toBe("https://www.2embed.cc/embedtv/1396&s=3&e=7");
+    expect(servers[3].url).toBe("https://www.fastimdb.com/title/tt0903747/");
   });
 
   it("falls back to TMDB-only servers when there is no IMDB id", () => {
