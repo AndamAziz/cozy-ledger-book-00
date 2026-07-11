@@ -153,6 +153,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
               onChange={setDay}
               maxDays={maxDays}
               monthKey={monthKey}
+              onMonthChange={onMonthChange}
             />
           </div>
 
