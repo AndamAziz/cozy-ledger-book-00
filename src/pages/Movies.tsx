@@ -13,6 +13,11 @@ import {
   nextEpisode,
   type TmdbDetails,
 } from "@/lib/tmdbDetails";
+import {
+  buildWatchServers,
+  nextAvailableServer,
+  clampIndex,
+} from "@/lib/playerFailover";
 
 // ====== Theme ======
 const C = {
