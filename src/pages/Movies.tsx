@@ -3561,9 +3561,11 @@ function PlayerOverlay({
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             referrerPolicy="origin"
-            // No `sandbox` attribute: several providers detect a sandboxed frame
-            // and refuse to play ("Playback blocked … use iframe without sandbox").
-            // Matches the standalone player that loads every provider correctly.
+            // Sandbox WITHOUT `allow-top-navigation`: playback still works
+            // (scripts + same-origin + popups escape for the real player), but
+            // ad frames can no longer redirect/hijack the whole app. This is the
+            // known-good state that passed the mobile regression checklist.
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
             onLoad={() => {
               loadedRef.current = true;
               setLoaded(true);
