@@ -13,6 +13,11 @@ import {
   nextEpisode,
   type TmdbDetails,
 } from "@/lib/tmdbDetails";
+import {
+  buildWatchServers,
+  nextAvailableServer,
+  clampIndex,
+} from "@/lib/playerFailover";
 
 // ====== Theme ======
 const C = {
@@ -65,11 +70,6 @@ const IMDB_DOMAINS: { host: string; label: string; name: string; accent: string 
   { host: "playimdb.com", label: "PlayIMDb ⚡", name: "PlayIMDb", accent: "#00BCD4" },
 ];
 
-const imdbPlayerUrl = (host: string, imdbId: string, media: "movie" | "tv", season = 1, episode = 1) => {
-  const kind = media === "tv" ? "tv" : "movie";
-  const path = media === "tv" ? `${kind}/${imdbId}/${season}/${episode}` : `${kind}/${imdbId}`;
-  return `https://www.${host}/embed/${path}`;
-};
 
 const imdbTitleUrl = (host: string, imdbId: string) => `https://www.${host}/title/${imdbId}/`;
 
@@ -3299,48 +3299,14 @@ function MovieModal({
           playerLabel={t.inAppPlayer}
           serversTitleLabel={t.serversLabel}
           autoSwitchLabel={t.autoSwitch}
-          servers={[
-            // Primary: IMDB embed hosts (/embed/movie|tv/...)
-            ...(imdbId
-              ? IMDB_DOMAINS.map((d) => ({
-                  name: d.name,
-                  url: imdbPlayerUrl(d.host, imdbId, movie.media, season, episode),
-                  accent: d.accent,
-                }))
-              : []),
-            // Fallback 1: TMDB-based providers (used automatically if /embed/ fails)
-            {
-              name: "VidAPI",
-              url: isTv
-                ? `https://vidapi.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
-                : `https://vidapi.ru/embed/movie/${movie.tmdb_id}`,
-              accent: "#00BCD4",
-            },
-            {
-              name: "VidSrc",
-              url: isTv
-                ? `https://vidsrc.to/embed/tv/${movie.tmdb_id}/${season}/${episode}`
-                : `https://vidsrc.to/embed/movie/${movie.tmdb_id}`,
-              accent: "#F59E0B",
-            },
-            {
-              name: "2Embed",
-              url: isTv
-                ? `https://www.2embed.cc/embedtv/${movie.tmdb_id}&s=${season}&e=${episode}`
-                : `https://www.2embed.cc/embed/${movie.tmdb_id}`,
-              accent: "#A855F7",
-            },
-            // Fallback 2: IMDB /title/ landing URL (last resort, if embed paths break)
-            ...(imdbId
-              ? [
-                  {
-                    name: "IMDb Title",
-                    url: imdbTitleUrl(IMDB_DOMAINS[0].host, imdbId),
-                    accent: "#EAB308",
-                  },
-                ]
-              : []),
-          ]}
+          servers={buildWatchServers({
+            imdbId,
+            tmdbId: movie.tmdb_id,
+            media: movie.media,
+            season,
+            episode,
+            imdbDomains: IMDB_DOMAINS,
+          })}
           onClose={() => setWatch(false)}
           closeLabel={t.close}
           hint={t.autoSwitchHint}
@@ -3397,7 +3363,7 @@ function PlayerOverlay({
   const videoRef = useRef<HTMLDivElement>(null);
   const list = servers && servers.length > 0 ? servers : [];
   // Clamp the index defensively so we never read an out-of-range server.
-  const safeActive = Math.min(Math.max(active, 0), Math.max(list.length - 1, 0));
+  const safeActive = clampIndex(active, list.length);
   const currentSrc = list.length > 0 ? list[safeActive]?.url ?? "" : src || "";
 
   // Mark the active server as failed and jump to the next server that hasn't
@@ -3406,14 +3372,7 @@ function PlayerOverlay({
   const failover = useCallback(() => {
     if (loadedRef.current || list.length <= 1) return;
     failedRef.current.add(safeActive);
-    let next = -1;
-    for (let step = 1; step <= list.length; step++) {
-      const idx = (safeActive + step) % list.length;
-      if (!failedRef.current.has(idx)) {
-        next = idx;
-        break;
-      }
-    }
+    const next = nextAvailableServer(safeActive, list.length, failedRef.current);
     setFailed(Array.from(failedRef.current));
     if (next >= 0) {
       setAutoTrying(true);
