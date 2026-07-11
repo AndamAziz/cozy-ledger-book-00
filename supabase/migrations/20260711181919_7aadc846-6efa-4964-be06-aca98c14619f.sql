@@ -1,0 +1,1 @@
+ALTER TYPE public.currency_code ADD VALUE IF NOT EXISTS 'USD';

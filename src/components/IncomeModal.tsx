@@ -18,11 +18,12 @@ interface IncomeModalProps {
   maxDays: number;
   defaultDay: number;
   monthKey: string;
+  onMonthChange?: (monthKey: string) => void;
   locations: Location[];
   onAddLocation: (name: string) => Promise<Location | null>;
 }
 
-export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays, defaultDay, monthKey, locations, onAddLocation }: IncomeModalProps) {
+export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays, defaultDay, monthKey, onMonthChange, locations, onAddLocation }: IncomeModalProps) {
   const [day, setDay] = useState(defaultDay);
   const [rows, setRows] = useState<AmountRow[]>([emptyRow('GBP')]);
   const [source, setSource] = useState('');
@@ -82,7 +83,7 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
             <Calendar className="h-4 w-4 text-primary" />
             {t('day')}
           </Label>
-          <DayPicker value={day} onChange={setDay} maxDays={maxDays} monthKey={monthKey} />
+          <DayPicker value={day} onChange={setDay} maxDays={maxDays} monthKey={monthKey} onMonthChange={onMonthChange} />
         </div>
 
         <div className="space-y-1.5">

@@ -1,4 +1,4 @@
-export type Currency = 'GBP' | 'IQD' | 'EUR';
+export type Currency = 'GBP' | 'USD' | 'IQD' | 'EUR';
 
 export interface Location {
   id: string;

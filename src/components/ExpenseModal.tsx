@@ -19,11 +19,12 @@ interface ExpenseModalProps {
   defaultDay: number;
   defaultExpenseType?: ExpenseType;
   monthKey: string;
+  onMonthChange?: (monthKey: string) => void;
   locations: Location[];
   onAddLocation: (name: string) => Promise<Location | null>;
 }
 
-export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDays, defaultDay, defaultExpenseType = 'cost', monthKey, locations, onAddLocation }: ExpenseModalProps) {
+export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDays, defaultDay, defaultExpenseType = 'cost', monthKey, onMonthChange, locations, onAddLocation }: ExpenseModalProps) {
   const [day, setDay] = useState(defaultDay);
   const [rows, setRows] = useState<AmountRow[]>([emptyRow('GBP')]);
   const [description, setDescription] = useState('');
@@ -112,7 +113,7 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
             <Calendar className="h-3.5 w-3.5 text-primary" />
             {t('day')}
           </Label>
-          <DayPicker value={day} onChange={setDay} maxDays={maxDays} monthKey={monthKey} />
+          <DayPicker value={day} onChange={setDay} maxDays={maxDays} monthKey={monthKey} onMonthChange={onMonthChange} />
         </div>
 
         <div className="space-y-1.5">
