@@ -1,21 +1,23 @@
 import { Currency } from '@/types/finance';
 
-export const CURRENCIES: Currency[] = ['GBP', 'IQD', 'EUR'];
+export const CURRENCIES: Currency[] = ['GBP', 'USD', 'IQD', 'EUR'];
 
 export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   GBP: '£',
+  USD: '$',
   IQD: 'د.ع',
   EUR: '€',
 };
 
 export const CURRENCY_LABELS: Record<Currency, string> = {
   GBP: 'GBP £',
+  USD: 'USD $',
   IQD: 'IQD د.ع',
   EUR: 'EUR €',
 };
 
 export function emptyTotals(): Record<Currency, number> {
-  return { GBP: 0, IQD: 0, EUR: 0 };
+  return { GBP: 0, USD: 0, IQD: 0, EUR: 0 };
 }
 
 /** Format a numeric value with the given currency symbol. */
