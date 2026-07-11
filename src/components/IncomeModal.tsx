@@ -83,7 +83,7 @@ export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays,
             <Calendar className="h-4 w-4 text-primary" />
             {t('day')}
           </Label>
-          <DayPicker value={day} onChange={setDay} maxDays={maxDays} monthKey={monthKey} />
+          <DayPicker value={day} onChange={setDay} maxDays={maxDays} monthKey={monthKey} onMonthChange={onMonthChange} />
         </div>
 
         <div className="space-y-1.5">
