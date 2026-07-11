@@ -155,6 +155,8 @@ export function SalesTab({
         maxDays={maxDays}
         defaultDay={defaultDay}
         monthKey={currentMonthKey}
+        locations={locations}
+        onAddLocation={onAddLocation}
       />
     </div>
   );
