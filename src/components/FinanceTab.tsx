@@ -233,35 +233,50 @@ export function FinanceTab({
           </div>
         ) : (
           <div className="space-y-2">
-            {incomeData.map((income, index) => {
+            {filteredIncome.map((income, index) => {
               const dateStr = formatDate(income.day, currentMonthKey);
+              const iLoc = locName(income.locationId);
               return (
                 <div
                   key={income.id}
                   className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-success/10 via-success/5 to-transparent border border-success/20 px-3 py-2.5 hover:border-success/40 hover:shadow-lg hover:shadow-success/10 active:scale-[0.99] transition-all duration-200"
                   style={{ animationDelay: `${index * 40}ms` }}
                 >
-                  {/* Single row: day badge + pills + total + actions */}
                   <div className="flex items-center gap-3">
-                    {/* Day badge — fixed circle, same on all devices */}
+                    {/* Day badge */}
                     <div className="w-9 h-9 flex-shrink-0 rounded-full bg-gradient-to-br from-success/30 to-success/10 border border-success/30 flex items-center justify-center shadow-sm">
                       <span className="text-success font-bold text-[13px] font-mono leading-none">{income.day}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      {/* Cash + Card pills — always stacked vertically for consistency */}
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-1 bg-success/10 px-1.5 py-0.5 rounded-md w-fit">
-                          <Banknote className="h-3 w-3 text-success flex-shrink-0" />
-                          <span className="text-success text-[11px] font-semibold font-mono">{formatCurrency(income.cash)}</span>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {/* Per-currency cash/card pills */}
+                      {income.amounts.map((a, ai) => (
+                        <div key={ai} className="flex flex-wrap items-center gap-1">
+                          <span className="text-[9px] font-bold text-muted-foreground bg-secondary/60 px-1 rounded">{a.currency}</span>
+                          {a.cash > 0 && (
+                            <span className="flex items-center gap-1 bg-success/10 px-1.5 py-0.5 rounded-md">
+                              <Banknote className="h-3 w-3 text-success" />
+                              <span className="text-success text-[11px] font-semibold font-mono">{formatCurrencyBy(a.cash, a.currency)}</span>
+                            </span>
+                          )}
+                          {a.card > 0 && (
+                            <span className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md">
+                              <CreditCard className="h-3 w-3 text-info" />
+                              <span className="text-info text-[11px] font-semibold font-mono">{formatCurrencyBy(a.card, a.currency)}</span>
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1 bg-info/10 px-1.5 py-0.5 rounded-md w-fit">
-                          <CreditCard className="h-3 w-3 text-info flex-shrink-0" />
-                          <span className="text-info text-[11px] font-semibold font-mono">{formatCurrency(income.card)}</span>
-                        </div>
+                      ))}
+                      {/* Meta: source + location + date */}
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <span className="font-mono">{dateStr}</span>
+                        {income.source && (
+                          <span className="flex items-center gap-0.5 text-primary"><Tag className="h-2.5 w-2.5" />{income.source}</span>
+                        )}
+                        {iLoc && (
+                          <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{iLoc}</span>
+                        )}
                       </div>
                     </div>
-                    {/* Total — fixed size, no responsive variants */}
-                    <div className="text-success font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(income.total)}</div>
                     {/* Actions */}
                     <div className="flex gap-1 flex-shrink-0">
                       <button
