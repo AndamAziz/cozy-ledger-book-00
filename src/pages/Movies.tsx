@@ -2640,7 +2640,7 @@ function MovieModal({
 
         {/* Action buttons */}
         <div style={{ display: "flex", gap: 8, padding: "14px 16px 0" }}>
-          <ActionBtn primary label={t.watch} onClick={() => setWatch(true)} />
+          <ActionBtn primary label={t.watch} ariaLabel="watch-now-player" onClick={() => setWatch(true)} />
           <ActionBtn
             label={trailerLoading ? "..." : t.trailer}
             onClick={loadTrailer}
@@ -2708,7 +2708,7 @@ function MovieModal({
             }}
           >
             {IMDB_DOMAINS.map((d) => {
-              const url = `https://www.${d.host}/title/${imdbId}/`;
+              const url = imdbTitleUrl(d.host, imdbId);
               return (
                 <div key={d.host} style={{ display: "flex", gap: 6 }}>
                   <button
