@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Income, Expense, Cigarette, Sale, Location, Currency, IncomeAmount, ExpenseAmount, MONTH_OPTIONS } from '@/types/finance';
-import { emptyTotals } from '@/lib/currency';
+import { emptyTotals, CURRENCIES } from '@/lib/currency';
 import { useAuth } from './useAuth';
 
 function parseMonthKey(monthKey: string) {
@@ -550,7 +550,7 @@ export function useFinanceData() {
     }
 
     const balanceByCcy = emptyTotals();
-    (['GBP', 'IQD', 'EUR'] as Currency[]).forEach((c) => {
+    CURRENCIES.forEach((c) => {
       balanceByCcy[c] = incomeByCcy[c] - expenseByCcy[c];
     });
 
