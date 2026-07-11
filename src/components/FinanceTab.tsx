@@ -220,10 +220,10 @@ export function FinanceTab({
           </div>
           <div>
             <span className="block">{t('dailyIncomeTitle')}</span>
-            <span className="text-xs font-normal text-muted-foreground">{incomeData.length} {t('records')}</span>
+            <span className="text-xs font-normal text-muted-foreground">{filteredIncome.length} {t('records')}</span>
           </div>
         </h3>
-        {incomeData.length === 0 ? (
+        {filteredIncome.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/80 to-secondary/40 flex items-center justify-center mx-auto mb-3 shadow-inner">
               <TrendingUp className="h-8 w-8 opacity-40" />
