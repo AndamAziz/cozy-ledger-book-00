@@ -79,8 +79,8 @@ describe("buildWatchServers", () => {
       media: "movie",
       imdbDomains: DOMAINS,
     });
-    // Only VidAPI + VidSrc + 2Embed, no IMDb Title (needs an imdb id)
-    expect(servers.map((s) => s.name)).toEqual(["VidAPI", "VidSrc", "2Embed"]);
+    // Only VidAPI, no IMDb Title (needs an imdb id)
+    expect(servers.map((s) => s.name)).toEqual(["VidAPI"]);
   });
 });
 
