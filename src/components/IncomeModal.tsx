@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Modal } from './Modal';
-import { Income } from '@/types/finance';
-import { Calendar, Wallet, CreditCard } from 'lucide-react';
+import { Income, Location } from '@/types/finance';
+import { Calendar, Wallet, MapPin, Tag } from 'lucide-react';
 import { DayPicker } from './DayPicker';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { NumericInput } from './NumericInput';
+import { CurrencyAmountRows, AmountRow, emptyRow } from './CurrencyAmountRows';
+import { LocationSelect } from './LocationSelect';
 
 interface IncomeModalProps {
   isOpen: boolean;
@@ -16,97 +18,98 @@ interface IncomeModalProps {
   maxDays: number;
   defaultDay: number;
   monthKey: string;
+  locations: Location[];
+  onAddLocation: (name: string) => Promise<Location | null>;
 }
 
-export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays, defaultDay, monthKey }: IncomeModalProps) {
+export function IncomeModal({ isOpen, onClose, onSubmit, editingIncome, maxDays, defaultDay, monthKey, locations, onAddLocation }: IncomeModalProps) {
   const [day, setDay] = useState(defaultDay);
-  const [cash, setCash] = useState('');
-  const [card, setCard] = useState('');
+  const [rows, setRows] = useState<AmountRow[]>([emptyRow('GBP')]);
+  const [source, setSource] = useState('');
+  const [locationId, setLocationId] = useState<string | null>(null);
   const { t } = useLanguage();
 
   useEffect(() => {
     if (editingIncome) {
       setDay(editingIncome.day);
-      setCash(editingIncome.cash.toString());
-      setCard(editingIncome.card.toString());
+      setRows(
+        editingIncome.amounts.length
+          ? editingIncome.amounts.map((a) => ({ currency: a.currency, cash: a.cash ? String(a.cash) : '', card: a.card ? String(a.card) : '', amount: '' }))
+          : [emptyRow('GBP')]
+      );
+      setSource(editingIncome.source || '');
+      setLocationId(editingIncome.locationId || null);
     } else {
       setDay(defaultDay);
-      setCash('');
-      setCard('');
+      setRows([emptyRow('GBP')]);
+      setSource('');
+      setLocationId(null);
     }
   }, [editingIncome, defaultDay]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const cashValue = parseFloat(cash) || 0;
-    const cardValue = parseFloat(card) || 0;
+    const amounts = rows
+      .map((r) => ({ currency: r.currency, cash: parseFloat(r.cash) || 0, card: parseFloat(r.card) || 0 }))
+      .filter((a) => a.cash > 0 || a.card > 0);
+    if (amounts.length === 0) {
+      amounts.push({ currency: rows[0].currency, cash: 0, card: 0 });
+    }
+    const gbp = amounts.find((a) => a.currency === 'GBP');
     onSubmit({
       day,
-      cash: cashValue,
-      card: cardValue,
-      total: cashValue + cardValue,
+      amounts,
+      source: source.trim() || undefined,
+      locationId,
+      cash: gbp?.cash || 0,
+      card: gbp?.card || 0,
+      total: (gbp?.cash || 0) + (gbp?.card || 0),
     });
     onClose();
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
       title={editingIncome ? t('editIncome') : t('addIncome')}
       icon={<Wallet className="h-6 w-6 text-white" />}
       variant="primary"
     >
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        <div className="space-y-2 sm:space-y-3">
-          <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
-            </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label className="text-foreground font-medium flex items-center gap-2 text-sm">
+            <Calendar className="h-4 w-4 text-primary" />
             {t('day')}
           </Label>
-          <DayPicker
-            value={day}
-            onChange={setDay}
-            maxDays={maxDays}
-            monthKey={monthKey}
+          <DayPicker value={day} onChange={setDay} maxDays={maxDays} monthKey={monthKey} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-foreground font-medium text-sm">{t('currency')}</Label>
+          <CurrencyAmountRows mode="income" rows={rows} onChange={setRows} accentClass="text-primary" />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-muted-foreground text-xs font-medium flex items-center gap-1.5">
+            <Tag className="h-3.5 w-3.5 text-primary" /> {t('source')}
+          </Label>
+          <Input
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            placeholder={t('sourcePlaceholder')}
+            className="h-10 bg-secondary/60 border-white/10 rounded-lg text-sm"
           />
         </div>
-        
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <div className="space-y-2 sm:space-y-3">
-            <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-success/20 flex items-center justify-center">
-                <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success" />
-              </div>
-              {t('cash')} £
-            </Label>
-            <NumericInput
-              value={cash}
-              onChange={setCash}
-              placeholder="0.00"
-              className="focus:border-success/50 focus:ring-2 focus:ring-success/20"
-              required
-            />
-          </div>
-          <div className="space-y-2 sm:space-y-3">
-            <Label className="text-foreground font-medium flex items-center gap-2 text-sm sm:text-base">
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-info/20 flex items-center justify-center">
-                <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info" />
-              </div>
-              {t('card')} £
-            </Label>
-            <NumericInput
-              value={card}
-              onChange={setCard}
-              placeholder="0.00"
-              className="focus:border-info/50 focus:ring-2 focus:ring-info/20"
-              required
-            />
-          </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-muted-foreground text-xs font-medium flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 text-primary" /> {t('location')}
+          </Label>
+          <LocationSelect locations={locations} value={locationId} onChange={setLocationId} onAddLocation={onAddLocation} />
         </div>
-        
-        <Button type="submit" className="w-full btn-gradient-primary py-5 sm:py-7 text-base sm:text-lg font-bold rounded-xl sm:rounded-2xl shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all">
+
+        <Button type="submit" className="w-full btn-gradient-primary py-5 text-base font-bold rounded-xl shadow-xl shadow-primary/30 active:scale-[0.98] transition-all">
           {editingIncome ? t('update') : t('add')}
         </Button>
       </form>
