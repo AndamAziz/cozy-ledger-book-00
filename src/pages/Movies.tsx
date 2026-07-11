@@ -3397,7 +3397,7 @@ function PlayerOverlay({
   const videoRef = useRef<HTMLDivElement>(null);
   const list = servers && servers.length > 0 ? servers : [];
   // Clamp the index defensively so we never read an out-of-range server.
-  const safeActive = Math.min(Math.max(active, 0), Math.max(list.length - 1, 0));
+  const safeActive = clampIndex(active, list.length);
   const currentSrc = list.length > 0 ? list[safeActive]?.url ?? "" : src || "";
 
   // Mark the active server as failed and jump to the next server that hasn't
@@ -3406,14 +3406,7 @@ function PlayerOverlay({
   const failover = useCallback(() => {
     if (loadedRef.current || list.length <= 1) return;
     failedRef.current.add(safeActive);
-    let next = -1;
-    for (let step = 1; step <= list.length; step++) {
-      const idx = (safeActive + step) % list.length;
-      if (!failedRef.current.has(idx)) {
-        next = idx;
-        break;
-      }
-    }
+    const next = nextAvailableServer(safeActive, list.length, failedRef.current);
     setFailed(Array.from(failedRef.current));
     if (next >= 0) {
       setAutoTrying(true);
