@@ -123,11 +123,15 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
         packPrice: packPriceNum,
         totalSale: total,
         profit: total - (packsNum * selectedCigarette.packPrice),
+        currency,
+        locationId,
       }, selectedCigarette.id);
 
       setSelectedId('');
       setPacks('1');
       setPackPrice('');
+      setCurrency('GBP');
+      setLocationId(null);
       onClose();
     }
   };
