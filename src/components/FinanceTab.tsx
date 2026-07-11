@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { SummaryCard } from './SummaryCard';
 import { IncomeModal } from './IncomeModal';
 import { ExpenseModal } from './ExpenseModal';
-import { Income, Expense, ExpenseType } from '@/types/finance';
-import { formatCurrency, formatDate } from '@/lib/format';
-import { Plus, Pencil, Trash2, ShoppingCart, Receipt, Banknote, CreditCard, TrendingUp } from 'lucide-react';
+import { LocationSelect } from './LocationSelect';
+import { Income, Expense, ExpenseType, Location, Currency } from '@/types/finance';
+import { formatDate } from '@/lib/format';
+import { formatCurrencyBy, totalsToLines, nonZeroCurrencies } from '@/lib/currency';
+import { Plus, Pencil, Trash2, ShoppingCart, Receipt, Banknote, CreditCard, TrendingUp, MapPin, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+type CurrencyTotals = Record<Currency, number>;
 
 interface FinanceTabProps {
   incomeData: Income[];
@@ -18,10 +21,21 @@ interface FinanceTabProps {
     totalIncome: number;
     totalExpense: number;
     balance: number;
+    cashByCcy: CurrencyTotals;
+    cardByCcy: CurrencyTotals;
+    incomeByCcy: CurrencyTotals;
+    expenseByCcy: CurrencyTotals;
+    purchaseByCcy: CurrencyTotals;
+    costByCcy: CurrencyTotals;
+    balanceByCcy: CurrencyTotals;
   };
   maxDays: number;
   defaultDay: number;
   currentMonthKey: string;
+  locations: Location[];
+  selectedLocationId: string | null;
+  onSelectLocation: (id: string | null) => void;
+  onAddLocation: (name: string) => Promise<Location | null>;
   onAddIncome: (income: Omit<Income, 'id'>) => void;
   onUpdateIncome: (id: string | number, income: Omit<Income, 'id'>) => void;
   onDeleteIncome: (id: string | number) => void;
@@ -38,6 +52,10 @@ export function FinanceTab({
   maxDays,
   defaultDay,
   currentMonthKey,
+  locations,
+  selectedLocationId,
+  onSelectLocation,
+  onAddLocation,
   onAddIncome,
   onUpdateIncome,
   onDeleteIncome,
@@ -54,12 +72,15 @@ export function FinanceTab({
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  // Separate expenses by type
-  const purchaseData = expenseData.filter(exp => exp.expenseType === 'purchase');
-  const costData = expenseData.filter(exp => exp.expenseType === 'cost' || !exp.expenseType);
+  const locMatch = (id?: string | null) => !selectedLocationId || id === selectedLocationId;
+  const locName = (id?: string | null) => locations.find((l) => l.id === id)?.name;
 
-  const totalPurchase = purchaseData.reduce((sum, exp) => sum + exp.amount, 0);
-  const totalCost = costData.reduce((sum, exp) => sum + exp.amount, 0);
+  // Separate expenses by type (respecting the location filter)
+  const purchaseData = expenseData.filter(exp => exp.expenseType === 'purchase' && locMatch(exp.locationId));
+  const costData = expenseData.filter(exp => (exp.expenseType === 'cost' || !exp.expenseType) && locMatch(exp.locationId));
+  const filteredIncome = incomeData.filter(inc => locMatch(inc.locationId));
+
+
 
 
   const handleIncomeSubmit = (income: Omit<Income, 'id'>) => {
