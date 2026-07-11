@@ -1,7 +1,10 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Income, Expense, Cigarette, Sale } from '@/types/finance';
+import { Income, Expense, Cigarette, Sale, Currency } from '@/types/finance';
 import { formatCurrentDate } from '@/lib/format';
+import { CURRENCIES } from '@/lib/currency';
+
+type CcyTotals = Record<Currency, number>;
 
 interface ReportData {
   monthLabel: string;
@@ -17,6 +20,12 @@ interface ReportData {
     balance: number;
     totalStockValue: number;
     cigaretteProfit: number;
+    cashByCcy?: CcyTotals;
+    cardByCcy?: CcyTotals;
+    incomeByCcy?: CcyTotals;
+    expenseByCcy?: CcyTotals;
+    balanceByCcy?: CcyTotals;
+    salesByCcy?: CcyTotals;
   };
 }
 
