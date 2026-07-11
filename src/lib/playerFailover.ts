@@ -72,20 +72,6 @@ export function buildWatchServers(opts: {
       : `https://vidapi.ru/embed/movie/${tmdbId}`,
     accent: "#00BCD4",
   });
-  servers.push({
-    name: "VidSrc",
-    url: isTv
-      ? `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}`
-      : `https://vidsrc.to/embed/movie/${tmdbId}`,
-    accent: "#F59E0B",
-  });
-  servers.push({
-    name: "2Embed",
-    url: isTv
-      ? `https://www.2embed.cc/embedtv/${tmdbId}&s=${season}&e=${episode}`
-      : `https://www.2embed.cc/embed/${tmdbId}`,
-    accent: "#A855F7",
-  });
 
   if (imdbId && imdbDomains.length > 0) {
     servers.push({
