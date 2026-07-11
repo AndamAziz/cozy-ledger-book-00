@@ -158,14 +158,18 @@ export function generatePDFReport(data: ReportData): void {
 
     autoTable(doc, {
       startY: yPos,
-      head: [['Date', 'Cash', 'Card', 'Total', 'Note']],
-      body: incomeData.map(inc => [
-        formatDayWithMonth(inc.day, monthLabel),
-        formatMoney(inc.cash),
-        formatMoney(inc.card),
-        formatMoney(inc.total),
-        inc.note || '-',
-      ]),
+      head: [['Date', 'Currency', 'Cash', 'Card', 'Total', 'Source']],
+      body: incomeData.flatMap(inc => {
+        const rows = (inc.amounts && inc.amounts.length ? inc.amounts : [{ currency: 'GBP', cash: inc.cash, card: inc.card }]);
+        return rows.map((a, idx) => [
+          idx === 0 ? formatDayWithMonth(inc.day, monthLabel) : '',
+          a.currency,
+          moneyByCcy(a.cash, a.currency),
+          moneyByCcy(a.card, a.currency),
+          moneyByCcy((Number(a.cash) || 0) + (Number(a.card) || 0), a.currency),
+          idx === 0 ? (inc.source || '-') : '',
+        ]);
+      }),
       theme: 'striped',
       headStyles: { 
         fillColor: [34, 197, 94],
