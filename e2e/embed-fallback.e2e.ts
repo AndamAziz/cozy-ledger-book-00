@@ -124,11 +124,23 @@ function assertFallbackChain(
   // At least three distinct servers were tried → multi-step fallback happened.
   expect(seq.length).toBeGreaterThanOrEqual(3);
 
-  // Every step targets the correct embed path for the media type (the /title/
-  // last-resort step is the only exception and is allowed).
+  // Media consistency across the whole chain. Providers use different URL
+  // schemes (IMDB hosts + VidAPI/VidSrc use `/embed/movie|tv/…`, while 2Embed
+  // uses `/embed/<id>` for movies and `/embedtv/<id>` for series), so we match
+  // the media type rather than a single literal path.
+  const isTvStep = (u: string) => u.includes("/embed/tv/") || u.includes("/embedtv/");
+  const isMovieStep = (u: string) =>
+    u.includes("/embed/movie/") || (u.includes("/embed/") && !isTvStep(u));
   const embedSteps = seq.filter((u) => !u.includes("/title/"));
-  for (const url of embedSteps) {
-    expect(url).toContain(`/embed/${media}/`);
+
+  // The primary server always uses the canonical `/embed/<media>/…` path.
+  expect(embedSteps[0]).toContain(`/embed/${media}/`);
+
+  if (media === "movie") {
+    for (const url of embedSteps) expect(isTvStep(url)).toBe(false);
+  } else {
+    for (const url of embedSteps) expect(isMovieStep(url)).toBe(false);
+    expect(embedSteps.some(isTvStep)).toBe(true);
   }
 
   // Steps must strictly advance through the canonical fallback order.
