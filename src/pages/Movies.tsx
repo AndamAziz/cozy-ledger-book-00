@@ -3561,11 +3561,11 @@ function PlayerOverlay({
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             referrerPolicy="origin"
-            // Sandbox WITHOUT `allow-top-navigation`: playback still works
-            // (scripts + same-origin + popups escape for the real player), but
-            // ad frames can no longer redirect/hijack the whole app. This is the
-            // known-good state that passed the mobile regression checklist.
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
+            // No `sandbox` attribute: these players (Fastimdb/Streamimdb/…)
+            // detect a sandboxed frame and refuse to play ("Playback blocked …
+            // use iframe without sandbox attribute"). Modern browsers still block
+            // automatic cross-origin top-navigation, so the app is not hijacked
+            // by auto-redirect ads while playback works normally.
             onLoad={() => {
               loadedRef.current = true;
               setLoaded(true);
