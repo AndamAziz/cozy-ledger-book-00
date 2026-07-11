@@ -3304,48 +3304,14 @@ function MovieModal({
           playerLabel={t.inAppPlayer}
           serversTitleLabel={t.serversLabel}
           autoSwitchLabel={t.autoSwitch}
-          servers={[
-            // Primary: IMDB embed hosts (/embed/movie|tv/...)
-            ...(imdbId
-              ? IMDB_DOMAINS.map((d) => ({
-                  name: d.name,
-                  url: imdbPlayerUrl(d.host, imdbId, movie.media, season, episode),
-                  accent: d.accent,
-                }))
-              : []),
-            // Fallback 1: TMDB-based providers (used automatically if /embed/ fails)
-            {
-              name: "VidAPI",
-              url: isTv
-                ? `https://vidapi.ru/embed/tv/${movie.tmdb_id}/${season}/${episode}`
-                : `https://vidapi.ru/embed/movie/${movie.tmdb_id}`,
-              accent: "#00BCD4",
-            },
-            {
-              name: "VidSrc",
-              url: isTv
-                ? `https://vidsrc.to/embed/tv/${movie.tmdb_id}/${season}/${episode}`
-                : `https://vidsrc.to/embed/movie/${movie.tmdb_id}`,
-              accent: "#F59E0B",
-            },
-            {
-              name: "2Embed",
-              url: isTv
-                ? `https://www.2embed.cc/embedtv/${movie.tmdb_id}&s=${season}&e=${episode}`
-                : `https://www.2embed.cc/embed/${movie.tmdb_id}`,
-              accent: "#A855F7",
-            },
-            // Fallback 2: IMDB /title/ landing URL (last resort, if embed paths break)
-            ...(imdbId
-              ? [
-                  {
-                    name: "IMDb Title",
-                    url: imdbTitleUrl(IMDB_DOMAINS[0].host, imdbId),
-                    accent: "#EAB308",
-                  },
-                ]
-              : []),
-          ]}
+          servers={buildWatchServers({
+            imdbId,
+            tmdbId: movie.tmdb_id,
+            media: movie.media,
+            season,
+            episode,
+            imdbDomains: IMDB_DOMAINS,
+          })}
           onClose={() => setWatch(false)}
           closeLabel={t.close}
           hint={t.autoSwitchHint}
