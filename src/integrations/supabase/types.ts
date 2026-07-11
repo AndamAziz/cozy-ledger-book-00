@@ -558,6 +558,38 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_amounts: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: Database["public"]["Enums"]["currency_code"]
+          expense_id: string
+          id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
+          expense_id: string
+          id?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
+          expense_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_amounts_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -566,6 +598,7 @@ export type Database = {
           description: string
           expense_type: string
           id: string
+          location_id: string | null
           month_key: string
           user_id: string
         }
@@ -576,6 +609,7 @@ export type Database = {
           description: string
           expense_type?: string
           id?: string
+          location_id?: string | null
           month_key: string
           user_id: string
         }
@@ -586,10 +620,54 @@ export type Database = {
           description?: string
           expense_type?: string
           id?: string
+          location_id?: string | null
           month_key?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "expenses_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      income_amounts: {
+        Row: {
+          card: number
+          cash: number
+          created_at: string
+          currency: Database["public"]["Enums"]["currency_code"]
+          id: string
+          income_id: string
+        }
+        Insert: {
+          card?: number
+          cash?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
+          id?: string
+          income_id: string
+        }
+        Update: {
+          card?: number
+          cash?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
+          id?: string
+          income_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_amounts_income_id_fkey"
+            columns: ["income_id"]
+            isOneToOne: false
+            referencedRelation: "incomes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       incomes: {
         Row: {
@@ -598,8 +676,10 @@ export type Database = {
           created_at: string
           day: number
           id: string
+          location_id: string | null
           month_key: string
           note: string | null
+          source: string | null
           user_id: string
         }
         Insert: {
@@ -608,8 +688,10 @@ export type Database = {
           created_at?: string
           day: number
           id?: string
+          location_id?: string | null
           month_key: string
           note?: string | null
+          source?: string | null
           user_id: string
         }
         Update: {
@@ -618,8 +700,45 @@ export type Database = {
           created_at?: string
           day?: number
           id?: string
+          location_id?: string | null
           month_key?: string
           note?: string | null
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incomes_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          created_at: string
+          id: string
+          is_archived: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          name?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -782,8 +901,10 @@ export type Database = {
           cigarette_id: string | null
           cigarette_name: string
           created_at: string
+          currency: Database["public"]["Enums"]["currency_code"]
           day: number
           id: string
+          location_id: string | null
           month_key: string
           pack_price: number
           packs: number
@@ -795,8 +916,10 @@ export type Database = {
           cigarette_id?: string | null
           cigarette_name: string
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
           day: number
           id?: string
+          location_id?: string | null
           month_key: string
           pack_price?: number
           packs?: number
@@ -808,8 +931,10 @@ export type Database = {
           cigarette_id?: string | null
           cigarette_name?: string
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
           day?: number
           id?: string
+          location_id?: string | null
           month_key?: string
           pack_price?: number
           packs?: number
@@ -823,6 +948,13 @@ export type Database = {
             columns: ["cigarette_id"]
             isOneToOne: false
             referencedRelation: "cigarettes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
@@ -1206,6 +1338,7 @@ export type Database = {
       app_role: "admin" | "user"
       bot_status: "idle" | "running" | "stopped"
       bot_strategy: "conservative" | "balanced" | "aggressive"
+      currency_code: "GBP" | "IQD" | "EUR"
       trade_close_reason: "tp" | "sl" | "manual"
       trade_direction: "buy" | "sell"
       trade_result: "win" | "loss"
@@ -1340,6 +1473,7 @@ export const Constants = {
       app_role: ["admin", "user"],
       bot_status: ["idle", "running", "stopped"],
       bot_strategy: ["conservative", "balanced", "aggressive"],
+      currency_code: ["GBP", "IQD", "EUR"],
       trade_close_reason: ["tp", "sl", "manual"],
       trade_direction: ["buy", "sell"],
       trade_result: ["win", "loss"],
