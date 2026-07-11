@@ -32,6 +32,7 @@ interface FinanceTabProps {
   maxDays: number;
   defaultDay: number;
   currentMonthKey: string;
+  onMonthChange?: (monthKey: string) => void;
   locations: Location[];
   selectedLocationId: string | null;
   onSelectLocation: (id: string | null) => void;
@@ -52,6 +53,7 @@ export function FinanceTab({
   maxDays,
   defaultDay,
   currentMonthKey,
+  onMonthChange,
   locations,
   selectedLocationId,
   onSelectLocation,
