@@ -215,7 +215,32 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
             />
           </div>
         </div>
-        
+
+        {/* Currency + Location */}
+        <div class="grid grid-cols-2 gap-3" className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs font-medium flex items-center gap-1.5">
+              <Coins className="h-3.5 w-3.5 text-primary" /> {t('currency')}
+            </Label>
+            <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)}>
+              <SelectTrigger className="bg-secondary/50 border-border h-11 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c} value={c}>{CURRENCY_LABELS[c]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground text-xs font-medium flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-primary" /> {t('location')}
+            </Label>
+            <LocationSelect locations={locations} value={locationId} onChange={setLocationId} onAddLocation={onAddLocation} />
+          </div>
+        </div>
+
         {/* Total */}
         <div className="bg-success/10 border border-success/20 px-4 py-3 rounded-xl flex items-center justify-between">
           <Label className="text-success text-xs font-medium">{t('total')}</Label>
@@ -223,6 +248,7 @@ export function SellModal({ isOpen, onClose, onSubmit, cigarettes, maxDays, defa
             {formatCurrency(total)}
           </div>
         </div>
+
         
         <Button type="submit" className="w-full btn-gradient-primary py-4 sm:py-5 text-base font-bold rounded-xl">
           {t('recordSale')}
