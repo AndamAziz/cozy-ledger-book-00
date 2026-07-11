@@ -113,7 +113,7 @@ export function ExpenseModal({ isOpen, onClose, onSubmit, editingExpense, maxDay
             <Calendar className="h-3.5 w-3.5 text-primary" />
             {t('day')}
           </Label>
-          <DayPicker value={day} onChange={setDay} maxDays={maxDays} monthKey={monthKey} />
+          <DayPicker value={day} onChange={setDay} maxDays={maxDays} monthKey={monthKey} onMonthChange={onMonthChange} />
         </div>
 
         <div className="space-y-1.5">
