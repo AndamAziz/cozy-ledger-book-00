@@ -20,6 +20,7 @@ interface SalesTabProps {
   maxDays: number;
   defaultDay: number;
   currentMonthKey: string;
+  onMonthChange?: (monthKey: string) => void;
   locations: Location[];
   onAddLocation: (name: string) => Promise<Location | null>;
   onAddSale: (sale: Omit<Sale, 'id'>, cigaretteId: string | number) => void;
@@ -33,6 +34,7 @@ export function SalesTab({
   maxDays,
   defaultDay,
   currentMonthKey,
+  onMonthChange,
   locations,
   onAddLocation,
   onAddSale,
@@ -155,6 +157,7 @@ export function SalesTab({
         maxDays={maxDays}
         defaultDay={defaultDay}
         monthKey={currentMonthKey}
+        onMonthChange={onMonthChange}
         locations={locations}
         onAddLocation={onAddLocation}
       />
