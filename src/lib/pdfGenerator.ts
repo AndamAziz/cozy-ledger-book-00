@@ -125,19 +125,39 @@ export function generatePDFReport(data: ReportData): void {
   
   yPos += 5;
 
+  // Build per-currency summary rows. Only show a currency when it has any activity.
+  const zero = { GBP: 0, USD: 0, IQD: 0, EUR: 0 } as CcyTotals;
+  const cashByCcy = summary.cashByCcy || { ...zero, GBP: summary.totalCash };
+  const cardByCcy = summary.cardByCcy || { ...zero, GBP: summary.totalCard };
+  const incomeByCcy = summary.incomeByCcy || { ...zero, GBP: summary.totalIncome };
+  const expenseByCcy = summary.expenseByCcy || { ...zero, GBP: summary.totalExpense };
+  const balanceByCcy = summary.balanceByCcy || { ...zero, GBP: summary.balance };
+
+  const activeCurrencies = CURRENCIES.filter((c) =>
+    Math.abs(cashByCcy[c]) > 0.0001 ||
+    Math.abs(cardByCcy[c]) > 0.0001 ||
+    Math.abs(incomeByCcy[c]) > 0.0001 ||
+    Math.abs(expenseByCcy[c]) > 0.0001 ||
+    Math.abs(balanceByCcy[c]) > 0.0001
+  );
+  const shownCurrencies = activeCurrencies.length ? activeCurrencies : (['GBP'] as Currency[]);
+
+  const summaryBody: string[][] = [];
+  for (const c of shownCurrencies) {
+    summaryBody.push([`Total Cash (${c})`, moneyByCcy(cashByCcy[c], c)]);
+    summaryBody.push([`Total Card (${c})`, moneyByCcy(cardByCcy[c], c)]);
+    summaryBody.push([`Total Income (${c})`, moneyByCcy(incomeByCcy[c], c)]);
+    summaryBody.push([`Total Expense (${c})`, moneyByCcy(expenseByCcy[c], c)]);
+    summaryBody.push([`Balance (${c})`, moneyByCcy(balanceByCcy[c], c)]);
+  }
+  summaryBody.push(['Cigarette Profit', formatMoney(summary.cigaretteProfit)]);
+  summaryBody.push(['Net Profit', formatMoney(netProfit)]);
+  summaryBody.push(['Stock Value', formatMoney(summary.totalStockValue)]);
+
   autoTable(doc, {
     startY: yPos,
     head: [['Item', 'Value']],
-    body: [
-      ['Total Cash', formatMoney(summary.totalCash)],
-      ['Total Card', formatMoney(summary.totalCard)],
-      ['Total Income', formatMoney(summary.totalIncome)],
-      ['Total Expense', formatMoney(summary.totalExpense)],
-      ['Balance', formatMoney(summary.balance)],
-      ['Cigarette Profit', formatMoney(summary.cigaretteProfit)],
-      ['Net Profit', formatMoney(netProfit)],
-      ['Stock Value', formatMoney(summary.totalStockValue)],
-    ],
+    body: summaryBody,
     theme: 'grid',
     headStyles: { 
       fillColor: [16, 185, 129],
