@@ -3561,10 +3561,9 @@ function PlayerOverlay({
             allowFullScreen
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             referrerPolicy="origin"
-            // Block the embed from redirecting/hijacking the whole app (the
-            // main cause of the player "crashing" the page) while still
-            // allowing the video, fullscreen and new-tab popups to work.
-            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox"
+            // No `sandbox` attribute: several providers detect a sandboxed frame
+            // and refuse to play ("Playback blocked … use iframe without sandbox").
+            // Matches the standalone player that loads every provider correctly.
             onLoad={() => {
               loadedRef.current = true;
               setLoaded(true);
