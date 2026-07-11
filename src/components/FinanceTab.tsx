@@ -335,14 +335,24 @@ export function FinanceTab({
                       <span className="text-accent font-bold text-[13px] font-mono leading-none">{expense.day}</span>
                     </div>
 
-                    {/* Description — two-line stacked */}
+                    {/* Description — stacked */}
                     <div className="flex-1 min-w-0">
                       <p className="text-foreground text-xs font-medium truncate">{expense.description}</p>
-                      <p className="text-muted-foreground text-[10px] mt-0.5 font-mono">{dateStr}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
+                        <span className="font-mono">{dateStr}</span>
+                        {locName(expense.locationId) && (
+                          <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{locName(expense.locationId)}</span>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Amount */}
-                    <div className="text-accent font-bold text-[13px] font-mono flex-shrink-0">{formatCurrency(expense.amount)}</div>
+                    {/* Amounts per currency */}
+                    <div className="text-accent font-bold text-[13px] font-mono flex-shrink-0 text-right space-y-0.5">
+                      {expense.amounts.map((a, ai) => (
+                        <div key={ai}>{formatCurrencyBy(a.amount, a.currency)}</div>
+                      ))}
+                    </div>
+
 
                     {/* Actions */}
                     <div className="flex gap-1 flex-shrink-0">
