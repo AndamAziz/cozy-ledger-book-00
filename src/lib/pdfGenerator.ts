@@ -75,6 +75,14 @@ function formatMoney(value: number | undefined | null): string {
   return `£${num.toFixed(2)}`;
 }
 
+// Currency-code-prefixed money for PDF (avoids non-latin symbols not in default font).
+function moneyByCcy(value: number | undefined | null, ccy: string): string {
+  const num = typeof value === 'number' && !isNaN(value) ? value : 0;
+  const digits = ccy === 'IQD' ? 0 : 2;
+  return `${ccy} ${num.toLocaleString('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+}
+
+
 export function generatePDFReport(data: ReportData): void {
   const { monthLabel, incomeData, expenseData, cigaretteData, salesData, summary } = data;
   
