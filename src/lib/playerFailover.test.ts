@@ -42,24 +42,20 @@ describe("buildWatchServers", () => {
       media: "movie",
       imdbDomains: DOMAINS,
     });
-    // 2 embed hosts + VidAPI + VidSrc + 2Embed + IMDb Title = 6
-    expect(servers).toHaveLength(6);
+    // 2 embed hosts + VidAPI + IMDb Title = 4
+    expect(servers).toHaveLength(4);
     expect(servers[0].url).toContain("/embed/movie/tt0111161");
     expect(servers[1].url).toContain("directimdb.com/embed/movie/tt0111161");
     expect(servers.map((s) => s.name)).toEqual([
       "Fastimdb",
       "Directimdb",
       "VidAPI",
-      "VidSrc",
-      "2Embed",
       "IMDb Title",
     ]);
     // TMDB fallbacks use the numeric tmdb id
     expect(servers[2].url).toBe("https://vidapi.ru/embed/movie/278");
-    expect(servers[3].url).toBe("https://vidsrc.to/embed/movie/278");
-    expect(servers[4].url).toBe("https://www.2embed.cc/embed/278");
     // last resort points at the /title/ landing page
-    expect(servers[5].url).toBe("https://www.fastimdb.com/title/tt0111161/");
+    expect(servers[3].url).toBe("https://www.fastimdb.com/title/tt0111161/");
   });
 
   it("uses tv paths with season/episode for series", () => {
@@ -73,8 +69,7 @@ describe("buildWatchServers", () => {
     });
     expect(servers[0].url).toContain("/embed/tv/tt0903747/3/7");
     expect(servers[2].url).toBe("https://vidapi.ru/embed/tv/1396/3/7");
-    expect(servers[3].url).toBe("https://vidsrc.to/embed/tv/1396/3/7");
-    expect(servers[4].url).toBe("https://www.2embed.cc/embedtv/1396&s=3&e=7");
+    expect(servers[3].url).toBe("https://www.fastimdb.com/title/tt0903747/");
   });
 
   it("falls back to TMDB-only servers when there is no IMDB id", () => {
@@ -84,8 +79,8 @@ describe("buildWatchServers", () => {
       media: "movie",
       imdbDomains: DOMAINS,
     });
-    // Only VidAPI + VidSrc + 2Embed, no IMDb Title (needs an imdb id)
-    expect(servers.map((s) => s.name)).toEqual(["VidAPI", "VidSrc", "2Embed"]);
+    // Only VidAPI, no IMDb Title (needs an imdb id)
+    expect(servers.map((s) => s.name)).toEqual(["VidAPI"]);
   });
 });
 
