@@ -463,6 +463,8 @@ export function FinanceTab({
         maxDays={maxDays}
         defaultDay={defaultDay}
         monthKey={currentMonthKey}
+        locations={locations}
+        onAddLocation={onAddLocation}
       />
       <ExpenseModal
         isOpen={expenseModalOpen}
@@ -473,6 +475,8 @@ export function FinanceTab({
         defaultDay={defaultDay}
         defaultExpenseType={defaultExpenseType}
         monthKey={currentMonthKey}
+        locations={locations}
+        onAddLocation={onAddLocation}
       />
     </div>
   );
