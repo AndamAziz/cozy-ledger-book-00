@@ -52,7 +52,7 @@
     "geomagnetism": "^0.2.0",
     "hls.js": "^1.6.16",
     "input-otp": "^1.4.2",
-    "jspdf": "^4.2.1",
+    "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.2",
     "lightweight-charts": "^5.1.0",
     "lucide-react": "^0.462.0",

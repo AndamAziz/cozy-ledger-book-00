@@ -27,7 +27,6 @@ import { Button } from '@/components/ui/button';
 import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
 import { Users, Sparkles, Tv, Film, Bitcoin, Moon, BookOpen, Radio } from 'lucide-react';
 import { SportLivePlayer } from '@/components/sport/SportLivePlayer';
-import { AdSenseStatus } from '@/components/AdSenseStatus';
 
 const PRAYER_LABEL: Record<string, string> = {
   en: 'Prayer Times & Qibla',
@@ -256,7 +255,6 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             >
               {reviewI18n.seeAll}
             </Button>
-            <AdSenseStatus />
           </div>
         </div>
       </div>
