@@ -78,9 +78,12 @@ export function LocationSelect({ locations, value, onChange, onAddLocation, incl
         {active.map((l) => (
           <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
         ))}
-        <SelectItem value="__add__">
-          <span className="flex items-center gap-1.5 text-primary"><Plus className="h-3.5 w-3.5" /> {t('addLocation')}</span>
-        </SelectItem>
+        {allowAdd && (
+          <SelectItem value="__add__">
+            <span className="flex items-center gap-1.5 text-primary"><Plus className="h-3.5 w-3.5" /> {t('addLocation')}</span>
+          </SelectItem>
+        )}
+
       </SelectContent>
     </Select>
   );
