@@ -84,11 +84,24 @@ function formatMoney(value: number | undefined | null): string {
   return `£${num.toFixed(2)}`;
 }
 
-// Currency-code-prefixed money for PDF (avoids non-latin symbols not in default font).
-function moneyByCcy(value: number | undefined | null, ccy: string): string {
+// PDF-safe currency symbols. The default jsPDF (helvetica/WinAnsi) font renders
+// £, $ and € correctly, but not the Arabic IQD glyph, so IQD uses its code.
+const PDF_CURRENCY_PREFIX: Record<Currency, string> = {
+  GBP: '£',
+  USD: '$',
+  IQD: 'IQD ',
+  EUR: '€',
+};
+
+// Consistent per-currency money formatting for the PDF:
+// correct symbol, IQD rounded to whole units, others to 2 decimals.
+function moneyByCcy(value: number | undefined | null, ccy: Currency | string): string {
   const num = typeof value === 'number' && !isNaN(value) ? value : 0;
-  const digits = ccy === 'IQD' ? 0 : 2;
-  return `${ccy} ${num.toLocaleString('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+  const code = (ccy as Currency);
+  const digits = code === 'IQD' ? 0 : 2;
+  const formatted = num.toLocaleString('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  const prefix = PDF_CURRENCY_PREFIX[code] ?? `${code} `;
+  return `${prefix}${formatted}`;
 }
 
 
