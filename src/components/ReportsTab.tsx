@@ -170,7 +170,9 @@ export function ReportsTab({
               onChange={setReportLocationId}
               onAddLocation={async () => null}
               includeAllOption
+              allowAdd={false}
             />
+
           </div>
 
           <div className="grid grid-cols-2 gap-3">
