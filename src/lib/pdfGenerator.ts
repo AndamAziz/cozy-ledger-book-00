@@ -447,6 +447,7 @@ export function generatePDFReport(data: ReportData): void {
   }
 
   // Download
+  const locPart = locationName ? `-${locationName.replace(/[^\w]+/g, '-')}` : '';
   const safeFileName = formattedMonth.replace(/\s/g, '-');
-  doc.save(`Financial-Report-${safeFileName}.pdf`);
+  doc.save(`Financial-Report-${safeFileName}${locPart}.pdf`);
 }
