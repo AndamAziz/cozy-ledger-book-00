@@ -8,6 +8,7 @@ type CcyTotals = Record<Currency, number>;
 
 interface ReportData {
   monthLabel: string;
+  locationName?: string | null;
   incomeData: Income[];
   expenseData: Expense[];
   cigaretteData: Cigarette[];
