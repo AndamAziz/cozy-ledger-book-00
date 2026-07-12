@@ -154,9 +154,25 @@ export function ReportsTab({
               <TrendingUp className="h-6 w-6 text-primary-foreground" />
             </div>
             <h2 className="text-xl font-bold bg-gradient-to-l from-primary to-foreground bg-clip-text text-transparent">
-              {t('reportOf')} {currentMonthLabel}
+              {t('reportOf')} {currentMonthLabel}{locationName ? ` - ${locationName}` : ''}
             </h2>
           </div>
+
+          {/* Location filter for the report */}
+          <div className="mb-4">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+              {t('selectLocation')}
+            </label>
+            <LocationSelect
+              locations={locations}
+              value={reportLocationId}
+              onChange={setReportLocationId}
+              onAddLocation={async () => null}
+              includeAllOption
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <Button 
               onClick={handleDownloadPDF} 
