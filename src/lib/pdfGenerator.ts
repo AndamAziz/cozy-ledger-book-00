@@ -129,7 +129,8 @@ export function generatePDFReport(data: ReportData): void {
   // Title
   doc.setFontSize(22);
   doc.setTextColor(16, 185, 129);
-  doc.text(`Financial Report - ${formattedMonth}`, 105, yPos, { align: 'center' });
+  doc.text(`Financial Report - ${formattedMonth}${titleSuffix}`, 105, yPos, { align: 'center' });
+
   
   yPos += 15;
 
