@@ -8,6 +8,7 @@ type CcyTotals = Record<Currency, number>;
 
 interface ReportData {
   monthLabel: string;
+  locationName?: string | null;
   incomeData: Income[];
   expenseData: Expense[];
   cigaretteData: Cigarette[];
@@ -106,7 +107,7 @@ function moneyByCcy(value: number | undefined | null, ccy: Currency | string): s
 
 
 export function generatePDFReport(data: ReportData): void {
-  const { monthLabel, incomeData, expenseData, cigaretteData, salesData, summary } = data;
+  const { monthLabel, locationName, incomeData, expenseData, cigaretteData, salesData, summary } = data;
   
   // Safely calculate values
   const safeBalance = typeof summary.balance === 'number' ? summary.balance : 0;
@@ -114,6 +115,7 @@ export function generatePDFReport(data: ReportData): void {
   const netProfit = safeBalance + safeCigProfit;
   
   const formattedMonth = formatMonthLabel(monthLabel);
+  const titleSuffix = locationName ? ` - ${locationName}` : '';
 
   // Create PDF
   const doc = new jsPDF({
@@ -127,7 +129,8 @@ export function generatePDFReport(data: ReportData): void {
   // Title
   doc.setFontSize(22);
   doc.setTextColor(16, 185, 129);
-  doc.text(`Financial Report - ${formattedMonth}`, 105, yPos, { align: 'center' });
+  doc.text(`Financial Report - ${formattedMonth}${titleSuffix}`, 105, yPos, { align: 'center' });
+
   
   yPos += 15;
 
@@ -444,6 +447,7 @@ export function generatePDFReport(data: ReportData): void {
   }
 
   // Download
+  const locPart = locationName ? `-${locationName.replace(/[^\w]+/g, '-')}` : '';
   const safeFileName = formattedMonth.replace(/\s/g, '-');
-  doc.save(`Financial-Report-${safeFileName}.pdf`);
+  doc.save(`Financial-Report-${safeFileName}${locPart}.pdf`);
 }

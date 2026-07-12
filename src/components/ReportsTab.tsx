@@ -1,50 +1,81 @@
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { SummaryCard } from './SummaryCard';
+import { LocationSelect } from './LocationSelect';
 import { DailyIncomeChart, SalesByProductChart, ProfitChart, IncomeExpenseComparison } from './Charts';
-import { Cigarette, Sale, Income, Expense } from '@/types/finance';
+import { Cigarette, Sale, Income, Expense, Location, Currency } from '@/types/finance';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { generatePDFReport } from '@/lib/pdfGenerator';
-import { FileDown, Share2, TrendingUp, Package, ShoppingCart, Wallet, Bitcoin } from 'lucide-react';
+import { FileDown, Share2, TrendingUp, Package, ShoppingCart, Wallet, Bitcoin, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+
+type CcyTotals = Record<Currency, number>;
+
+interface ReportSummary {
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  totalStockValue: number;
+  cigaretteProfit: number;
+  totalCash: number;
+  totalCard: number;
+  cashByCcy?: CcyTotals;
+  cardByCcy?: CcyTotals;
+  incomeByCcy?: CcyTotals;
+  expenseByCcy?: CcyTotals;
+  balanceByCcy?: CcyTotals;
+  salesByCcy?: CcyTotals;
+}
 
 interface ReportsTabProps {
   incomeData: Income[];
   expenseData: Expense[];
   cigaretteData: Cigarette[];
   salesData: Sale[];
-  summary: {
-    totalIncome: number;
-    totalExpense: number;
-    balance: number;
-    totalStockValue: number;
-    cigaretteProfit: number;
-    totalCash: number;
-    totalCard: number;
-  };
+  summary: ReportSummary;
   currentMonthLabel: string;
   currentMonthKey: string;
+  locations: Location[];
+  getSummary: (locationOverride?: string | null) => ReportSummary;
 }
 
 export function ReportsTab({
-  incomeData,
-  expenseData,
+  incomeData: allIncomeData,
+  expenseData: allExpenseData,
   cigaretteData,
-  salesData,
-  summary,
+  salesData: allSalesData,
+  summary: _summaryAll,
   currentMonthLabel,
   currentMonthKey,
+  locations,
+  getSummary,
 }: ReportsTabProps) {
   const { toast } = useToast();
   const { t } = useLanguage();
   const navigate = useNavigate();
+
+  // Reports-local location filter. null = All Locations (combined, current behavior).
+  const [reportLocationId, setReportLocationId] = useState<string | null>(null);
+
+  const locMatch = (locId?: string | null) => !reportLocationId || locId === reportLocationId;
+  const incomeData = useMemo(() => allIncomeData.filter((i) => locMatch(i.locationId)), [allIncomeData, reportLocationId]);
+  const expenseData = useMemo(() => allExpenseData.filter((e) => locMatch(e.locationId)), [allExpenseData, reportLocationId]);
+  const salesData = useMemo(() => allSalesData.filter((s) => locMatch(s.locationId)), [allSalesData, reportLocationId]);
+  const summary = useMemo(() => getSummary(reportLocationId), [getSummary, reportLocationId]);
+
+  const locationName = reportLocationId
+    ? locations.find((l) => l.id === reportLocationId)?.name ?? null
+    : null;
+
   const netProfit = summary.balance + summary.cigaretteProfit;
 
   const handleDownloadPDF = () => {
     try {
       generatePDFReport({
         monthLabel: currentMonthLabel,
+        locationName,
         incomeData,
         expenseData,
         cigaretteData,
@@ -123,9 +154,27 @@ export function ReportsTab({
               <TrendingUp className="h-6 w-6 text-primary-foreground" />
             </div>
             <h2 className="text-xl font-bold bg-gradient-to-l from-primary to-foreground bg-clip-text text-transparent">
-              {t('reportOf')} {currentMonthLabel}
+              {t('reportOf')} {currentMonthLabel}{locationName ? ` - ${locationName}` : ''}
             </h2>
           </div>
+
+          {/* Location filter for the report */}
+          <div className="mb-4">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+              {t('selectLocation')}
+            </label>
+            <LocationSelect
+              locations={locations}
+              value={reportLocationId}
+              onChange={setReportLocationId}
+              onAddLocation={async () => null}
+              includeAllOption
+              allowAdd={false}
+            />
+
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <Button 
               onClick={handleDownloadPDF} 

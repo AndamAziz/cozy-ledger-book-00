@@ -12,13 +12,14 @@ interface LocationSelectProps {
   onChange: (locationId: string | null) => void;
   onAddLocation: (name: string) => Promise<Location | null>;
   includeAllOption?: boolean;
+  allowAdd?: boolean;
   className?: string;
 }
 
 const NONE = '__none__';
 const ALL = '__all__';
 
-export function LocationSelect({ locations, value, onChange, onAddLocation, includeAllOption, className }: LocationSelectProps) {
+export function LocationSelect({ locations, value, onChange, onAddLocation, includeAllOption, allowAdd = true, className }: LocationSelectProps) {
   const { t } = useLanguage();
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -77,9 +78,12 @@ export function LocationSelect({ locations, value, onChange, onAddLocation, incl
         {active.map((l) => (
           <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
         ))}
-        <SelectItem value="__add__">
-          <span className="flex items-center gap-1.5 text-primary"><Plus className="h-3.5 w-3.5" /> {t('addLocation')}</span>
-        </SelectItem>
+        {allowAdd && (
+          <SelectItem value="__add__">
+            <span className="flex items-center gap-1.5 text-primary"><Plus className="h-3.5 w-3.5" /> {t('addLocation')}</span>
+          </SelectItem>
+        )}
+
       </SelectContent>
     </Select>
   );
