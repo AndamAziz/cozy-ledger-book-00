@@ -84,11 +84,24 @@ function formatMoney(value: number | undefined | null): string {
   return `£${num.toFixed(2)}`;
 }
 
-// Currency-code-prefixed money for PDF (avoids non-latin symbols not in default font).
-function moneyByCcy(value: number | undefined | null, ccy: string): string {
+// PDF-safe currency symbols. The default jsPDF (helvetica/WinAnsi) font renders
+// £, $ and € correctly, but not the Arabic IQD glyph, so IQD uses its code.
+const PDF_CURRENCY_PREFIX: Record<Currency, string> = {
+  GBP: '£',
+  USD: '$',
+  IQD: 'IQD ',
+  EUR: '€',
+};
+
+// Consistent per-currency money formatting for the PDF:
+// correct symbol, IQD rounded to whole units, others to 2 decimals.
+function moneyByCcy(value: number | undefined | null, ccy: Currency | string): string {
   const num = typeof value === 'number' && !isNaN(value) ? value : 0;
-  const digits = ccy === 'IQD' ? 0 : 2;
-  return `${ccy} ${num.toLocaleString('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+  const code = (ccy as Currency);
+  const digits = code === 'IQD' ? 0 : 2;
+  const formatted = num.toLocaleString('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  const prefix = PDF_CURRENCY_PREFIX[code] ?? `${code} `;
+  return `${prefix}${formatted}`;
 }
 
 
@@ -142,35 +155,61 @@ export function generatePDFReport(data: ReportData): void {
   );
   const shownCurrencies = activeCurrencies.length ? activeCurrencies : (['GBP'] as Currency[]);
 
-  const summaryBody: string[][] = [];
-  for (const c of shownCurrencies) {
-    summaryBody.push([`Total Cash (${c})`, moneyByCcy(cashByCcy[c], c)]);
-    summaryBody.push([`Total Card (${c})`, moneyByCcy(cardByCcy[c], c)]);
-    summaryBody.push([`Total Income (${c})`, moneyByCcy(incomeByCcy[c], c)]);
-    summaryBody.push([`Total Expense (${c})`, moneyByCcy(expenseByCcy[c], c)]);
-    summaryBody.push([`Balance (${c})`, moneyByCcy(balanceByCcy[c], c)]);
+  // Per-currency summary as a matrix: metric rows x currency columns.
+  // This adapts cleanly whether 1 or all 4 currencies are active.
+  const metrics: { label: string; totals: CcyTotals }[] = [
+    { label: 'Total Cash', totals: cashByCcy },
+    { label: 'Total Card', totals: cardByCcy },
+    { label: 'Total Income', totals: incomeByCcy },
+    { label: 'Total Expense', totals: expenseByCcy },
+    { label: 'Balance', totals: balanceByCcy },
+  ];
+
+  const summaryHead = [['Item', ...shownCurrencies]];
+  const summaryBody: string[][] = metrics.map((m) => [
+    m.label,
+    ...shownCurrencies.map((c) => moneyByCcy(m.totals[c], c)),
+  ]);
+
+  // Currency-agnostic (GBP-derived) figures span the full row.
+  const extraRows: [string, string][] = [
+    ['Cigarette Profit', formatMoney(summary.cigaretteProfit)],
+    ['Net Profit', formatMoney(netProfit)],
+    ['Stock Value', formatMoney(summary.totalStockValue)],
+  ];
+  for (const [label, value] of extraRows) {
+    summaryBody.push([label, value, ...Array(Math.max(0, shownCurrencies.length - 1)).fill('')]);
   }
-  summaryBody.push(['Cigarette Profit', formatMoney(summary.cigaretteProfit)]);
-  summaryBody.push(['Net Profit', formatMoney(netProfit)]);
-  summaryBody.push(['Stock Value', formatMoney(summary.totalStockValue)]);
+
+  // Distribute width: fixed label column + evenly split currency columns.
+  const labelWidth = 45;
+  const currencyColWidth = Math.min(45, (180 - labelWidth) / shownCurrencies.length);
+  const summaryColumnStyles: Record<number, { cellWidth: number; halign?: 'left' | 'right' }> = {
+    0: { cellWidth: labelWidth },
+  };
+  shownCurrencies.forEach((_, i) => {
+    summaryColumnStyles[i + 1] = { cellWidth: currencyColWidth, halign: 'right' };
+  });
 
   autoTable(doc, {
     startY: yPos,
-    head: [['Item', 'Value']],
+    head: summaryHead,
     body: summaryBody,
     theme: 'grid',
-    headStyles: { 
+    headStyles: {
       fillColor: [16, 185, 129],
-      halign: 'left',
+      halign: 'right',
       fontSize: 10,
     },
     bodyStyles: {
       halign: 'left',
       fontSize: 9,
     },
-    columnStyles: {
-      0: { cellWidth: 80 },
-      1: { cellWidth: 50 },
+    columnStyles: summaryColumnStyles,
+    didParseCell: (hookData) => {
+      if (hookData.section === 'head' && hookData.column.index === 0) {
+        hookData.cell.styles.halign = 'left';
+      }
     },
     margin: { left: 15 },
   });
