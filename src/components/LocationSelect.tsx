@@ -12,13 +12,14 @@ interface LocationSelectProps {
   onChange: (locationId: string | null) => void;
   onAddLocation: (name: string) => Promise<Location | null>;
   includeAllOption?: boolean;
+  allowAdd?: boolean;
   className?: string;
 }
 
 const NONE = '__none__';
 const ALL = '__all__';
 
-export function LocationSelect({ locations, value, onChange, onAddLocation, includeAllOption, className }: LocationSelectProps) {
+export function LocationSelect({ locations, value, onChange, onAddLocation, includeAllOption, allowAdd = true, className }: LocationSelectProps) {
   const { t } = useLanguage();
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
