@@ -514,9 +514,12 @@ export function useFinanceData() {
     setSalesData([]);
   }, [user, currentMonthKey]);
 
-  // Get summary (per-currency + legacy GBP scalars), filtered by selected location
-  const getSummary = useCallback(() => {
-    const locMatch = (locId?: string | null) => !selectedLocationId || locId === selectedLocationId;
+  // Get summary (per-currency + legacy GBP scalars), filtered by a location.
+  // Pass `undefined` to use the globally selected location, or an explicit
+  // locationId / null (= all locations) to compute an ad-hoc summary.
+  const getSummary = useCallback((locationOverride?: string | null) => {
+    const activeLoc = locationOverride === undefined ? selectedLocationId : locationOverride;
+    const locMatch = (locId?: string | null) => !activeLoc || locId === activeLoc;
 
     const incomes = incomeData.filter((i) => locMatch(i.locationId));
     const expenses = expenseData.filter((e) => locMatch(e.locationId));
