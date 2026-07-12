@@ -107,7 +107,7 @@ function moneyByCcy(value: number | undefined | null, ccy: Currency | string): s
 
 
 export function generatePDFReport(data: ReportData): void {
-  const { monthLabel, incomeData, expenseData, cigaretteData, salesData, summary } = data;
+  const { monthLabel, locationName, incomeData, expenseData, cigaretteData, salesData, summary } = data;
   
   // Safely calculate values
   const safeBalance = typeof summary.balance === 'number' ? summary.balance : 0;
@@ -115,6 +115,7 @@ export function generatePDFReport(data: ReportData): void {
   const netProfit = safeBalance + safeCigProfit;
   
   const formattedMonth = formatMonthLabel(monthLabel);
+  const titleSuffix = locationName ? ` - ${locationName}` : '';
 
   // Create PDF
   const doc = new jsPDF({
