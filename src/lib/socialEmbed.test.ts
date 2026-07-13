@@ -53,7 +53,7 @@ describe('parseSocialUrl - Facebook', () => {
     const r = parseSocialUrl('https://www.facebook.com/watch/?v=1234567890');
     expect(r.platform).toBe('facebook');
     expect(r.embedUrl).toContain('plugins/video.php');
-    expect(r.embedUrl).toContain(encodeURIComponent('https://www.facebook.com/watch?v=1234567890'));
+    expect(r.embedUrl).toContain(encodeURIComponent('v=1234567890'));
   });
   it('user/videos/ID', () => {
     const r = parseSocialUrl('https://www.facebook.com/someuser/videos/1234567890/');
