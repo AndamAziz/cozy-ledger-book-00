@@ -28,6 +28,7 @@ import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
 import { Users, Sparkles, Tv, Film, Bitcoin, Moon, BookOpen, Radio } from 'lucide-react';
 import { SportLivePlayer } from '@/components/sport/SportLivePlayer';
 import { AdSenseStatus } from '@/components/AdSenseStatus';
+import { SocialLinkPlayer } from '@/components/social/SocialLinkPlayer';
 
 const PRAYER_LABEL: Record<string, string> = {
   en: 'Prayer Times & Qibla',
@@ -168,8 +169,10 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             </button>
           </div>
 
-
-
+          {/* Paste & Play social link player */}
+          <div className="mb-3 sm:mb-5 no-print">
+            <SocialLinkPlayer />
+          </div>
 
           {/* Movies + Crypto Tracker (side by side) */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
