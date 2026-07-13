@@ -169,8 +169,10 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             </button>
           </div>
 
-
-
+          {/* Paste & Play social link player */}
+          <div className="mb-3 sm:mb-5 no-print">
+            <SocialLinkPlayer />
+          </div>
 
           {/* Movies + Crypto Tracker (side by side) */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
