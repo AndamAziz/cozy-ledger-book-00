@@ -863,27 +863,6 @@ export type Database = {
         }
         Relationships: []
       }
-      resolved_links: {
-        Row: {
-          created_at: string
-          id: string
-          resolved_url: string
-          short_url: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          resolved_url: string
-          short_url: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          resolved_url?: string
-          short_url?: string
-        }
-        Relationships: []
-      }
       reviews: {
         Row: {
           comment: string
