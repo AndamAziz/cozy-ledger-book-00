@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Radio, X, RefreshCw, Wifi, WifiOff, AlertTriangle, Loader2 } from 'lucide-react';
 import { useStreamServers, type StreamStatus, type StreamServer } from '@/hooks/useStreamServers';
-import { toSocialEmbed } from '@/lib/socialEmbed';
+import { toSocialEmbed, needsRedirectResolution } from '@/lib/socialEmbed';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SportLivePlayerProps {
   open: boolean;
@@ -269,7 +270,44 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   }, [refetch]);
 
   const activeServer = orderedServers.find((s) => s.id === activeId) ?? null;
-  const playbackMode = activeServer ? getPlaybackMode(activeServer.url) : 'iframe';
+
+  // Short / share links (vm.tiktok.com, fb.watch, facebook.com/share/…) carry no
+  // video id — resolve their redirect chain server-side, then embed the result.
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    if (!activeServer) {
+      setResolvedUrl(null);
+      return;
+    }
+    const raw = activeServer.url;
+    if (!needsRedirectResolution(raw)) {
+      setResolvedUrl(raw);
+      return;
+    }
+    let cancelled = false;
+    setResolving(true);
+    setResolvedUrl(null);
+    supabase.functions
+      .invoke('resolve-social-url', { body: { url: raw } })
+      .then(({ data }) => {
+        if (cancelled) return;
+        setResolvedUrl((data?.url as string) || raw);
+      })
+      .catch(() => {
+        if (!cancelled) setResolvedUrl(raw);
+      })
+      .finally(() => {
+        if (!cancelled) setResolving(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeServer, reloadNonce]);
+
+  const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
+  const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
 
   if (!open) return null;
 
@@ -311,11 +349,11 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
         <div className="mx-auto w-full max-w-5xl p-2 sm:p-4">
           <div className="relative w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_0_40px_hsl(var(--success)/0.15)] aspect-video">
             {/* The stream iframe */}
-            {activeServer && !allOffline && playbackMode === 'iframe' && (
+            {activeServer && !allOffline && !resolving && playbackMode === 'iframe' && (
               <iframe
                 key={`${activeServer.id}-${reloadNonce}`}
                 title="Sport Live"
-                src={resolvePlaybackUrl(activeServer.url)}
+                src={resolvePlaybackUrl(effectiveUrl)}
                 allowFullScreen
                 scrolling="no"
                 allow="fullscreen *; autoplay *; encrypted-media *; picture-in-picture *; web-share; clipboard-write; accelerometer; gyroscope"
@@ -333,10 +371,10 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
             )}
 
 
-            {activeServer && !allOffline && playbackMode !== 'iframe' && (
+            {activeServer && !allOffline && !resolving && playbackMode !== 'iframe' && (
               <DirectStreamVideo
                 key={`${activeServer.id}-${reloadNonce}`}
-                server={activeServer}
+                server={{ ...activeServer, url: effectiveUrl }}
                 mode={playbackMode}
                 onReady={handleIframeLoad}
                 onError={handleIframeError}
@@ -344,7 +382,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
             )}
 
             {/* Loading animation before first frame */}
-            {(iframeLoading || switching) && !allOffline && (
+            {(iframeLoading || switching || resolving) && !allOffline && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-background via-background/95 to-secondary/40">
                 <div className="relative">
                   <div className="w-14 h-14 rounded-full border-2 border-success/20" />
