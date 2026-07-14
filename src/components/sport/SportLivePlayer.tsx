@@ -315,7 +315,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
               <iframe
                 key={`${activeServer.id}-${reloadNonce}`}
                 title="Sport Live"
-                src={activeServer.url}
+                src={resolvePlaybackUrl(activeServer.url)}
                 allowFullScreen
                 scrolling="no"
                 allow="fullscreen *; autoplay *; encrypted-media *; picture-in-picture *; web-share; clipboard-write; accelerometer; gyroscope"
