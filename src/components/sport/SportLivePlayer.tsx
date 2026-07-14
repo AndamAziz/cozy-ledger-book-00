@@ -270,7 +270,44 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   }, [refetch]);
 
   const activeServer = orderedServers.find((s) => s.id === activeId) ?? null;
-  const playbackMode = activeServer ? getPlaybackMode(activeServer.url) : 'iframe';
+
+  // Short / share links (vm.tiktok.com, fb.watch, facebook.com/share/…) carry no
+  // video id — resolve their redirect chain server-side, then embed the result.
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    if (!activeServer) {
+      setResolvedUrl(null);
+      return;
+    }
+    const raw = activeServer.url;
+    if (!needsRedirectResolution(raw)) {
+      setResolvedUrl(raw);
+      return;
+    }
+    let cancelled = false;
+    setResolving(true);
+    setResolvedUrl(null);
+    supabase.functions
+      .invoke('resolve-social-url', { body: { url: raw } })
+      .then(({ data }) => {
+        if (cancelled) return;
+        setResolvedUrl((data?.url as string) || raw);
+      })
+      .catch(() => {
+        if (!cancelled) setResolvedUrl(raw);
+      })
+      .finally(() => {
+        if (!cancelled) setResolving(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeServer, reloadNonce]);
+
+  const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
+  const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
 
   if (!open) return null;
 
