@@ -34,9 +34,32 @@ function isDeadEnd(url: string): boolean {
   return /login\.php|\/login\/|consent|cookie|checkpoint/i.test(url);
 }
 
+// Facebook share links answer with HTTP 200 (not a 30x) and hide the real id in
+// a `refresh` header / meta-refresh / body (fb://fullscreen_video/<id>, /reel/<id>,
+// /videos/<id>). Build a clean, embeddable www.facebook.com URL from whatever we find.
+function extractFacebook(startUrl: string, refreshHeader: string | null, body: string): string | null {
+  const hay = `${refreshHeader ?? ''}\n${body}`;
+  const reel = hay.match(/\/reel\/(\d+)/);
+  if (reel) return `https://www.facebook.com/reel/${reel[1]}`;
+  const vid = hay.match(/\/videos\/(\d+)/);
+  if (vid) return `https://www.facebook.com/watch/?v=${vid[1]}`;
+  const fs = hay.match(/fullscreen_video\/(\d+)/);
+  const vparam = hay.match(/[?&]v=(\d+)/);
+  const id = fs?.[1] ?? vparam?.[1];
+  if (id) {
+    // share/r links are reels; share/v & watch links are standard videos.
+    const isReel = /\/share\/r\/|\/reel\//.test(startUrl);
+    return isReel
+      ? `https://www.facebook.com/reel/${id}`
+      : `https://www.facebook.com/watch/?v=${id}`;
+  }
+  return null;
+}
+
 async function resolveUrl(startUrl: string): Promise<string> {
   let current = startUrl;
   let lastContent: string | null = isContentUrl(startUrl) ? startUrl : null;
+  const isFacebook = /(^|\.)facebook\.com$|(^|\.)fb\.(watch|me)$/i;
 
   for (let i = 0; i < MAX_HOPS; i++) {
     const controller = new AbortController();
@@ -59,12 +82,21 @@ async function resolveUrl(startUrl: string): Promise<string> {
       clearTimeout(timer);
     }
 
-    // Not a redirect → this is the final page.
+    // Not a redirect → final page. Facebook hides the id here; try to extract it.
     if (res.status < 300 || res.status >= 400) {
-      try { await res.text(); } catch (_) { /* drain */ }
+      const refresh = res.headers.get('refresh');
+      let bodyText = '';
+      try { bodyText = (await res.text()).slice(0, 200000); } catch (_) { /* ignore */ }
+      let host = '';
+      try { host = new URL(current).hostname; } catch (_) { /* ignore */ }
+      if (isFacebook.test(host)) {
+        const fb = extractFacebook(current, refresh, bodyText);
+        if (fb) { lastContent = fb; break; }
+      }
       if (isContentUrl(current) && !isDeadEnd(current)) lastContent = current;
       break;
     }
+
 
     const location = res.headers.get('location');
     try { await res.body?.cancel(); } catch (_) { /* ignore */ }
