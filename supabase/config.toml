@@ -29,3 +29,5 @@ project_id = "jpatltcqhpclxenzvboa"
     verify_jwt = false
   [functions.account-provider-check]
     verify_jwt = false
+  [functions.resolve-social-url]
+    verify_jwt = false
