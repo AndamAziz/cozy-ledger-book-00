@@ -21,7 +21,19 @@ const STATUS_META: Record<StreamStatus, { label: string; dot: string; text: stri
 
 type PlaybackMode = 'iframe' | 'hls' | 'video';
 
+/**
+ * Resolve the actual URL to play. Social share links (YouTube, TikTok,
+ * Instagram, Facebook — copied from mobile or desktop) are converted to their
+ * embeddable player URL; everything else is used as-is.
+ */
+function resolvePlaybackUrl(url: string): string {
+  return toSocialEmbed(url)?.embedUrl ?? url;
+}
+
 function getPlaybackMode(url: string): PlaybackMode {
+  // Social embeds always play inside an iframe, regardless of any file
+  // extension that might appear in the original share link.
+  if (toSocialEmbed(url)) return 'iframe';
   const cleanUrl = url.split('?')[0].toLowerCase();
   if (cleanUrl.endsWith('.m3u8')) return 'hls';
   if (/\.(mp4|webm|ogg|ogv|mov|m4v|ts|mkv)$/.test(cleanUrl)) return 'video';
