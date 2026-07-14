@@ -80,9 +80,42 @@ function instagramEmbed(u: URL): string | null {
 function facebookEmbed(u: URL): string | null {
   const host = stripWww(u.hostname);
   if (!(host.endsWith('facebook.com') || host === 'fb.watch' || host === 'fb.me')) return null;
-  const href = encodeURIComponent(u.href);
-  // The video plugin also handles /watch, /reel, /share/v links and live videos.
+
+  // Normalise to a clean www.facebook.com URL and drop tracking params so the
+  // video plugin can resolve reels / videos reliably. Mobile (m.facebook.com)
+  // and share links otherwise confuse the plugin.
+  const clean = new URL(u.href);
+  clean.hostname = 'www.facebook.com';
+  clean.protocol = 'https:';
+  const videoId = clean.searchParams.get('v');
+  clean.search = videoId ? `?v=${videoId}` : '';
+  clean.hash = '';
+
+  const href = encodeURIComponent(clean.toString());
+  // The video plugin also handles /watch, /reel, /videos and live videos.
   return `https://www.facebook.com/plugins/video.php?href=${href}&autoplay=1&show_text=false`;
+}
+
+/**
+ * Short / share links (vm.tiktok.com, fb.watch, facebook.com/share/…) do NOT
+ * contain the video id — they 30x-redirect to the real URL. The browser cannot
+ * follow those cross-origin, so they must be resolved server-side first.
+ */
+export function needsRedirectResolution(raw: string): boolean {
+  const u = safeUrl(raw);
+  if (!u) return false;
+  const host = stripWww(u.hostname);
+  const path = u.pathname;
+
+  // TikTok short links: vm.tiktok.com/XXXX, vt.tiktok.com/XXXX, tiktok.com/t/XXXX
+  if (host === 'vm.tiktok.com' || host === 'vt.tiktok.com') return true;
+  if (host.endsWith('tiktok.com') && /^\/t\//.test(path)) return true;
+
+  // Facebook share / short links (no id in the URL).
+  if (host === 'fb.watch' || host === 'fb.me') return true;
+  if (host.endsWith('facebook.com') && /^\/share\//.test(path)) return true;
+
+  return false;
 }
 
 /**
