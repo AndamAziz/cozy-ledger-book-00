@@ -34,6 +34,7 @@ export function LanguageSwitcher() {
         <Button
           variant="outline"
           size="sm"
+          aria-label={`Select language (current: ${currentLang.label})`}
           className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-lg bg-info/15 hover:bg-info/25 border border-info/30 transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info" />

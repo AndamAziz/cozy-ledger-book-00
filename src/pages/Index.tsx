@@ -86,10 +86,12 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
     <>
       <Helmet>
         <title>{companyName ? `${companyName} - ` : ''}{t('financialManagement')} - {financeData.getCurrentMonthLabel()}</title>
-        <meta name="description" content={t('splashSubtitle')} />
+        <meta name="description" content="Manage expenses, income, inventory, and sales with multi-currency PDF reports — plus live markets, prayer times, Quran, movies, and sports in one hub." />
+        <link rel="canonical" href="https://ctp.kurdcloud.xyz/" />
+        <meta property="og:url" content="https://ctp.kurdcloud.xyz/" />
       </Helmet>
 
-      <div className="min-h-screen min-h-[100dvh] p-1.5 sm:p-3 md:p-6 safe-area-inset">
+      <main className="min-h-screen min-h-[100dvh] p-1.5 sm:p-3 md:p-6 safe-area-inset">
         <div className="max-w-5xl mx-auto">
           {/* Live price ticker */}
           <PriceTickerBar />
@@ -259,7 +261,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             <AdSenseStatus />
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Sport Live player with auto-failover + health monitoring */}
       <SportLivePlayer open={sportOpen} onClose={() => setSportOpen(false)} />

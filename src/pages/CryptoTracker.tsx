@@ -218,9 +218,14 @@ export default function CryptoTracker() {
   return (
     <DemoAccountProvider>
       <Helmet>
-        <title>{activeTab === 'crypto' ? bi('شوێنکەوتنی کریپتۆ', 'Crypto Tracker') : activeTab === 'forex' ? bi('نرخی دراو', 'Forex Rates') : bi('کانزا بەهادارەکان', 'Precious Metals')} - {bi('نرخی ڕاستەوخۆ', 'Live Prices')}</title>
-        <meta name="description" content="Real-time cryptocurrency and forex price tracker" />
+        <title>{activeTab === 'crypto' ? bi('شوێنکەوتنی کریپتۆ', 'Crypto Tracker') : activeTab === 'forex' ? bi('نرخی دراو', 'Forex Rates') : bi('کانزا بەهادارەکان', 'Precious Metals')} — {bi('نرخی ڕاستەوخۆ', 'Live Prices')} | Central Tech Platform</title>
+        <meta name="description" content="Live crypto, forex, and precious metals prices with real-time charts, technical indicators, and trading signals." />
+        <link rel="canonical" href="https://ctp.kurdcloud.xyz/crypto" />
+        <meta property="og:url" content="https://ctp.kurdcloud.xyz/crypto" />
+        <meta property="og:title" content="Market Tracker — Live Crypto, Forex & Metals | Central Tech Platform" />
+        <meta property="og:description" content="Real-time market data across crypto, forex, and precious metals with charts and trading signals." />
       </Helmet>
+      <h1 className="sr-only">Market Tracker — Live Crypto, Forex, and Precious Metals</h1>
 
 
       <div className="h-[100dvh] flex flex-col bg-[#0a0e17] text-white overflow-hidden">
