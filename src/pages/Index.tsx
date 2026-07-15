@@ -261,7 +261,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             <AdSenseStatus />
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Sport Live player with auto-failover + health monitoring */}
       <SportLivePlayer open={sportOpen} onClose={() => setSportOpen(false)} />
