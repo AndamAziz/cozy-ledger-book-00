@@ -184,13 +184,22 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
     }
   };
 
+  // If the user landed here from an OAuth consent redirect (?next=/…), send them
+  // back to that same-origin path after Google sign-in completes.
+  const getReturnUrl = () => {
+    if (typeof window === 'undefined') return `${window?.location?.origin ?? ''}/`;
+    const raw = new URLSearchParams(window.location.search).get('next');
+    const safe = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
+    return `${window.location.origin}${safe}`;
+  };
+
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: getReturnUrl(),
         },
       });
 
