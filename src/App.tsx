@@ -20,6 +20,7 @@ import Reviews from "./pages/Reviews";
 import ResetPassword from "./pages/ResetPassword";
 import EmailStatus from "./pages/EmailStatus";
 import Trust from "./pages/Trust";
+import OAuthConsent from "./pages/OAuthConsent";
 import NotFound from "./pages/NotFound";
 
 
