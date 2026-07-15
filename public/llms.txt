@@ -1,0 +1,19 @@
+# Central Tech Platform
+
+> All-in-one hub for business & finance management, live crypto/forex/metals market tracking, prayer times, Quran reader, movies, and live sports streaming.
+
+Central Tech Platform (CTP) combines business management tools (expenses, income, inventory, sales, reports) with real-time market data, Islamic utilities, and entertainment in a single multilingual (English, Kurdish, Arabic, Persian, Turkish) web app.
+
+## Pages
+
+- [Home](/): Financial management dashboard — expenses, income, inventory, sales, and PDF reports.
+- [Markets](/crypto): Live crypto, forex, and precious metals prices, charts, and signals.
+- [Movies](/movies): Movie discovery and streaming.
+- [Prayer Times](/prayer): Daily prayer times and Qibla compass.
+- [Quran](/quran): Full Quran reader with audio recitation and translations.
+- [Reviews](/reviews): User reviews and testimonials.
+- [Trust & Security](/trust): How we protect your data and account.
+
+## Optional
+
+- [Trading Bots](/bots): Automated trading bot dashboard (requires account).
