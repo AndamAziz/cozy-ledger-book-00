@@ -55,6 +55,7 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
               variant="ghost"
               onClick={onLogout}
               size="sm"
+              aria-label={t('logout') || 'Logout'}
               className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center gap-1 touch-manipulation"
             >
               <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
