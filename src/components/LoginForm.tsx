@@ -187,7 +187,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
   // If the user landed here from an OAuth consent redirect (?next=/…), send them
   // back to that same-origin path after Google sign-in completes.
   const getReturnUrl = () => {
-    if (typeof window === 'undefined') return `${window?.location?.origin ?? ''}/`;
+    if (typeof window === 'undefined') return '/';
     const raw = new URLSearchParams(window.location.search).get('next');
     const safe = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
     return `${window.location.origin}${safe}`;
