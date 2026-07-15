@@ -272,6 +272,15 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
 
 const ONBOARDING_SEEN_KEY = 'central-tech-platform-onboarding-seen';
 
+// Returns a safe same-origin relative path from ?next=..., or null.
+const readSafeNext = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const raw = new URLSearchParams(window.location.search).get('next');
+  if (!raw) return null;
+  if (!raw.startsWith('/') || raw.startsWith('//')) return null;
+  return raw;
+};
+
 const Index = () => {
   const { user, isAuthenticated, isLoading, login, signup, logout } = useAuth();
   const { isAdmin, approvalStatus, isLoading: roleLoading } = useUserRole(user);
@@ -285,6 +294,14 @@ const Index = () => {
     localStorage.setItem(ONBOARDING_SEEN_KEY, '1');
     setShowOnboarding(false);
   };
+
+  // If we came here from an OAuth consent redirect (?next=/.lovable/oauth/consent?...),
+  // send the user back to the original URL as soon as they're signed in.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const next = readSafeNext();
+    if (next) window.location.replace(next);
+  }, [isAuthenticated]);
 
   // Safety net: never leave the user stuck on an infinite splash screen.
   // If auth/role checks haven't resolved after 10s, show a retry option.
