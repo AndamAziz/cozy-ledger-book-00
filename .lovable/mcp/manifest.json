@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "sdk_version": "0.22.1",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://jpatltcqhpclxenzvboa.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "central-tech-platform-mcp",
+      "version": "0.1.0",
+      "title": "Central Tech Platform"
+    },
+    "tools": [
+      {
+        "name": "whoami",
+        "title": "Who am I",
+        "description": "Return the authenticated Central Tech Platform user (id, email) so the caller can confirm which account the MCP session is acting as.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_locations",
+        "title": "List locations",
+        "description": "List the signed-in user's business locations (branches) with their id, name, and address.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_expenses",
+        "title": "List expenses",
+        "description": "List the signed-in user's expenses for a given month (YYYY-MM), optionally filtered by location. Returns up to 500 rows sorted by day.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "month_key": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "description": "Month in YYYY-MM format, e.g. '2026-07'."
+            },
+            "location_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional location UUID to filter by."
+            }
+          },
+          "required": [
+            "month_key"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_incomes",
+        "title": "List incomes",
+        "description": "List the signed-in user's incomes for a given month (YYYY-MM), optionally filtered by location. Returns up to 500 rows sorted by day.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "month_key": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "description": "Month in YYYY-MM format, e.g. '2026-07'."
+            },
+            "location_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional location UUID to filter by."
+            }
+          },
+          "required": [
+            "month_key"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_sales",
+        "title": "List sales",
+        "description": "List the signed-in user's cigarette sales for a given month (YYYY-MM), optionally filtered by location. Returns up to 500 rows sorted by day.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "month_key": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "description": "Month in YYYY-MM format, e.g. '2026-07'."
+            },
+            "location_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional location UUID to filter by."
+            }
+          },
+          "required": [
+            "month_key"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
