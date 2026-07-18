@@ -19,7 +19,7 @@ async function callAI(messages: unknown[], maxTokens = 900): Promise<string> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-2.5-flash",
       messages,
       max_tokens: maxTokens,
     }),
