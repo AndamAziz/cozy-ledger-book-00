@@ -6,13 +6,54 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
-async function callAI(messages: unknown[], maxTokens = 900): Promise<string> {
+async function callGemini(
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number,
+): Promise<string> {
+  const systemMsg = messages.find((m) => m.role === "system")?.content ?? "";
+  const userMsgs = messages.filter((m) => m.role !== "system");
+
+  const body = {
+    contents: userMsgs.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    })),
+    ...(systemMsg
+      ? { systemInstruction: { parts: [{ text: systemMsg }] } }
+      : {}),
+    generationConfig: { maxOutputTokens: maxTokens },
+  };
+
+  const resp = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (resp.status === 429) throw new Error("RATE_LIMIT");
+  if (!resp.ok) {
+    const t = await resp.text();
+    throw new Error(`Gemini error ${resp.status}: ${t.slice(0, 200)}`);
+  }
+  const data = await resp.json();
+  const text =
+    data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+  return text.trim();
+}
+
+async function callLovable(
+  messages: unknown[],
+  maxTokens: number,
+): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-  const resp = await fetch(AI_URL, {
+  const resp = await fetch(LOVABLE_AI_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -31,9 +72,26 @@ async function callAI(messages: unknown[], maxTokens = 900): Promise<string> {
     const t = await resp.text();
     throw new Error(`AI error ${resp.status}: ${t.slice(0, 200)}`);
   }
-
   const data = await resp.json();
   return data?.choices?.[0]?.message?.content?.trim() ?? "";
+}
+
+async function callAI(
+  messages: Array<{ role: string; content: string }>,
+  maxTokens = 900,
+): Promise<string> {
+  const geminiKey = Deno.env.get("GEMINI_API_KEY");
+  // Prefer user's own Gemini key (free tier) to avoid workspace credits.
+  if (geminiKey) {
+    try {
+      return await callGemini(geminiKey, messages, maxTokens);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("Gemini failed, falling back to Lovable AI:", msg);
+      // fall through to Lovable
+    }
+  }
+  return await callLovable(messages, maxTokens);
 }
 
 serve(async (req) => {
@@ -109,8 +167,6 @@ serve(async (req) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     console.error("movies-ai error:", msg);
-    // Always return 200 with a soft error so the client can render a friendly
-    // message instead of a blank/failed screen.
     const info =
       msg === "CREDITS"
         ? "AI credits exhausted for this workspace. Please add credits to continue using AI info."
