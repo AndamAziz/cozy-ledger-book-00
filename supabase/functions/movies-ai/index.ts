@@ -108,10 +108,17 @@ serve(async (req) => {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
-    const status = msg === "RATE_LIMIT" ? 429 : msg === "CREDITS" ? 402 : 500;
     console.error("movies-ai error:", msg);
-    return new Response(JSON.stringify({ error: msg }), {
-      status,
+    // Always return 200 with a soft error so the client can render a friendly
+    // message instead of a blank/failed screen.
+    const info =
+      msg === "CREDITS"
+        ? "AI credits exhausted for this workspace. Please add credits to continue using AI info."
+        : msg === "RATE_LIMIT"
+          ? "AI is temporarily rate-limited. Please try again in a moment."
+          : "AI service is temporarily unavailable. Please try again later.";
+    return new Response(JSON.stringify({ info, soft_error: msg }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
