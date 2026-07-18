@@ -140,13 +140,13 @@ serve(async (req) => {
 
       const system =
         lang === "en"
-          ? "You are a cinema expert. Write all answers in clear, fluent English. Write in a clean, well-organized way: plot summary, genre, a short note about the director and main actors, and why the movie is worth watching. 3 to 5 paragraphs."
-          : "تۆ شارەزایەکی سینەماییت. هەموو وەڵامەکانت تەنها بە زمانی کوردیی سۆرانی بنووسە. ناوی فیلمەکان بە ئینگلیزی بهێڵەرەوە. بە شێوەیەکی جوان و ڕێکخراو بنووسە: کورتەی چیرۆک، جۆر، باسێکی کورت لەسەر دەرهێنەر و ئەکتەرە سەرەکییەکان، و بۆچی فیلمەکە جێگەی سەیرکردنە. ٣ تا ٥ پەرەگراف.";
+          ? "You are a cinema expert. Write all answers in clear, fluent English. STRICT NO-SPOILER RULE: never reveal the ending, twists, deaths, betrayals, secret identities, or any late-plot events. Only describe the setup and premise (roughly the first act). Structure: (1) a short spoiler-free premise, (2) genre and tone, (3) director and main cast, (4) why it is worth watching. 3 to 5 short paragraphs. If you are unsure about a fact, omit it rather than invent."
+          : "تۆ شارەزایەکی سینەماییت. هەموو وەڵامەکە تەنها بە زمانی کوردیی سۆرانی ڕەسەن بنووسە، بە ڕستەی ڕوون و ڕەوان. هیچ وشەیەکی ئینگلیزی مەخە ناو دەقەکەوە، تەنیا ناوی فیلم و کەسایەتییە ڕاستەقینەکان (دەرهێنەر و ئەکتەر) بە ئینگلیزی بهێڵەرەوە. یاسای گرنگ: هەرگیز سپۆیلەر مەکە — کۆتایی فیلم، سووڕدانەوەکان، مردنی کەسایەتی، خیانەت، ناسنامەی نهێنی، یان هیچ ڕووداوێکی نیوەی دواتری فیلم ئاشکرا مەکە. تەنها دەستپێک و کێشەی سەرەکی باس بکە. ڕێکخستن: (١) کورتەیەکی بێ سپۆیلەر لە چیرۆک، (٢) جۆر و کەشوهەوا، (٣) دەرهێنەر و ئەکتەرە سەرەکییەکان، (٤) بۆچی شایانی سەیرکردنە. ٣ تا ٥ پەرەگرافی کورت. ئەگەر لە زانیارییەک دڵنیا نیت، بەجێی هەڵبەستن، بەجێی بهێڵە.";
 
       const user =
         lang === "en"
-          ? `Give me full information about this movie in English: "${title}"${year ? ` (${year})` : ""}${genre ? ` — genre: ${genre}` : ""}.`
-          : `زانیاری تەواوم دەربارەی ئەم فیلمە بدەرێ بە کوردیی سۆرانی: "${title}"${year ? ` (${year})` : ""}${genre ? ` — جۆر: ${genre}` : ""}.`;
+          ? `Give me spoiler-free information about this movie in English: "${title}"${year ? ` (${year})` : ""}${genre ? ` — genre: ${genre}` : ""}. Do NOT reveal the ending or any twists.`
+          : `زانیاری بێ سپۆیلەرم دەربارەی ئەم فیلمە بدەرێ، تەنها بە کوردیی سۆرانی: "${title}"${year ? ` (${year})` : ""}${genre ? ` — جۆر: ${genre}` : ""}. کۆتایی فیلم یان هیچ سووڕدانەوەیەک ئاشکرا مەکە. هەموو دەقەکە دەبێت بە کوردیی سۆرانی بێت، نەک ئینگلیزی.`;
 
       const content = await callAI(
         [
