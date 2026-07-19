@@ -98,8 +98,14 @@ function isLikelyProperName(word: string): boolean {
 }
 
 export function checkKurdishPurity(text: string): LanguagePurityCheck {
-  const arabicChars = (text.match(new RegExp(ARABIC_SCRIPT, "g")) || []).length;
-  const latinChars = (text.match(/[A-Za-z]/g) || []).length;
+  // Strip allowed proper-name runs (e.g. "Christopher Nolan") so they don't
+  // pollute the arabic/latin ratio — proper names are permitted per the prompt.
+  const stripped = text.replace(
+    /\b[A-Z][a-zA-Z'’-]*(?:\s+[A-Z][a-zA-Z'’-]*)*\b/g,
+    "",
+  );
+  const arabicChars = (stripped.match(new RegExp(ARABIC_SCRIPT, "g")) || []).length;
+  const latinChars = (stripped.match(/[A-Za-z]/g) || []).length;
   const denom = arabicChars + latinChars || 1;
   const arabicRatio = arabicChars / denom;
 
