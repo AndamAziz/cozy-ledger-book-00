@@ -157,7 +157,7 @@ serve(async (req) => {
           { role: "system", content: system },
           { role: "user", content: user },
         ],
-        1100,
+        2048,
       );
       return new Response(JSON.stringify({ info: content }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
