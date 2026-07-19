@@ -26,7 +26,11 @@ async function callGemini(
     ...(systemMsg
       ? { systemInstruction: { parts: [{ text: systemMsg }] } }
       : {}),
-    generationConfig: { maxOutputTokens: maxTokens },
+    generationConfig: {
+      maxOutputTokens: Math.max(maxTokens, 2048),
+      temperature: 0.7,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   };
 
   const resp = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
@@ -153,7 +157,7 @@ serve(async (req) => {
           { role: "system", content: system },
           { role: "user", content: user },
         ],
-        1100,
+        2048,
       );
       return new Response(JSON.stringify({ info: content }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
