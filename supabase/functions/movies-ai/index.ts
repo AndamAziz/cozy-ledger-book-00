@@ -26,7 +26,11 @@ async function callGemini(
     ...(systemMsg
       ? { systemInstruction: { parts: [{ text: systemMsg }] } }
       : {}),
-    generationConfig: { maxOutputTokens: maxTokens },
+    generationConfig: {
+      maxOutputTokens: Math.max(maxTokens, 2048),
+      temperature: 0.7,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   };
 
   const resp = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
