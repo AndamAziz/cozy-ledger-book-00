@@ -41,6 +41,32 @@ function getPlaybackMode(url: string): PlaybackMode {
   return 'iframe';
 }
 
+/**
+ * Return the natural aspect ratio for a given source URL. Portrait-first
+ * social formats (TikTok, Instagram reels/posts, YouTube shorts, Facebook
+ * reels/share-r) use 9:16; everything else falls back to 16:9.
+ */
+function getAspectClass(rawUrl: string): string {
+  if (!rawUrl) return 'aspect-video';
+  let host = '';
+  let path = '';
+  try {
+    const u = new URL(rawUrl);
+    host = u.hostname.replace(/^(www\.|m\.)/, '').toLowerCase();
+    path = u.pathname.toLowerCase();
+  } catch {
+    return 'aspect-video';
+  }
+  if (host.endsWith('tiktok.com')) return 'aspect-[9/16]';
+  if (host.endsWith('instagram.com')) return 'aspect-[9/16]';
+  if ((host.endsWith('youtube.com') || host === 'youtu.be') && /\/shorts\//.test(path))
+    return 'aspect-[9/16]';
+  if (host.endsWith('facebook.com') && (/\/reel\//.test(path) || /\/share\/r\//.test(path)))
+    return 'aspect-[9/16]';
+  return 'aspect-video';
+}
+
+
 function DirectStreamVideo({
   server,
   mode,
@@ -347,8 +373,11 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
       {/* Player area */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto w-full max-w-5xl p-2 sm:p-4">
-          <div className="relative w-full overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_0_40px_hsl(var(--success)/0.15)] aspect-video">
-            {/* The stream iframe */}
+          {/* Aspect ratio adapts to the source (portrait for TikTok/Reels/Shorts). */}
+          <div className={`relative w-full mx-auto overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_0_40px_hsl(var(--success)/0.15)] ${getAspectClass(activeServer?.url ?? '')} ${
+            getAspectClass(activeServer?.url ?? '') === 'aspect-[9/16]' ? 'max-w-[min(100%,calc((100vh-8rem)*9/16))]' : ''
+          }`}>
+
             {activeServer && !allOffline && !resolving && playbackMode === 'iframe' && (
               <iframe
                 key={`${activeServer.id}-${reloadNonce}`}
