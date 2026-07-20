@@ -41,6 +41,32 @@ function getPlaybackMode(url: string): PlaybackMode {
   return 'iframe';
 }
 
+/**
+ * Return the natural aspect ratio for a given source URL. Portrait-first
+ * social formats (TikTok, Instagram reels/posts, YouTube shorts, Facebook
+ * reels/share-r) use 9:16; everything else falls back to 16:9.
+ */
+function getAspectClass(rawUrl: string): string {
+  if (!rawUrl) return 'aspect-video';
+  let host = '';
+  let path = '';
+  try {
+    const u = new URL(rawUrl);
+    host = u.hostname.replace(/^(www\.|m\.)/, '').toLowerCase();
+    path = u.pathname.toLowerCase();
+  } catch {
+    return 'aspect-video';
+  }
+  if (host.endsWith('tiktok.com')) return 'aspect-[9/16]';
+  if (host.endsWith('instagram.com')) return 'aspect-[9/16]';
+  if ((host.endsWith('youtube.com') || host === 'youtu.be') && /\/shorts\//.test(path))
+    return 'aspect-[9/16]';
+  if (host.endsWith('facebook.com') && (/\/reel\//.test(path) || /\/share\/r\//.test(path)))
+    return 'aspect-[9/16]';
+  return 'aspect-video';
+}
+
+
 function DirectStreamVideo({
   server,
   mode,
