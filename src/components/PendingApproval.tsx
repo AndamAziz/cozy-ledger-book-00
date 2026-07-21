@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Clock, MessageCircle, LogOut, Sparkles, Shield } from 'lucide-react';
+import { Clock, Send, LogOut, Sparkles, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PendingApprovalProps {
