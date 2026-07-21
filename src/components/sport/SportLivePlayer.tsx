@@ -180,8 +180,6 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const failoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptedRef = useRef<Set<string>>(new Set());
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
-  const playerAreaRef = useRef<HTMLDivElement | null>(null);
-  const lastOrientationRef = useRef<'portrait' | 'landscape' | null>(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [aspectChoice, setAspectChoice] = useState<AspectChoice>(() => {
@@ -193,62 +191,22 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
     if (typeof window === 'undefined') return true;
     return window.localStorage.getItem(AUTO_FIT_KEY) !== '0';
   });
-  const [areaPortrait, setAreaPortrait] = useState<boolean>(() => {
+  const [viewportPortrait, setViewportPortrait] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.innerHeight >= window.innerWidth;
   });
-  const [layoutNonce, setLayoutNonce] = useState(0);
   const [showAspectMenu, setShowAspectMenu] = useState(false);
 
-  // Observe the actual player area with ResizeObserver so aspect + iframe
-  // relayout follows device rotation, browser resize, split-screen changes,
-  // fullscreen toggles, and any container reflow — not just window events.
   useEffect(() => {
-    if (!open) return;
-    if (typeof window === 'undefined' || typeof ResizeObserver === 'undefined') return;
-    const el = playerAreaRef.current;
-    if (!el) return;
-
-    let rafId = 0;
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      const portrait = rect.height >= rect.width;
-      setAreaPortrait((prev) => (prev === portrait ? prev : portrait));
-      const orientation: 'portrait' | 'landscape' = portrait ? 'portrait' : 'landscape';
-      // Only force iframe relayout when orientation actually flips — resizing
-      // width alone shouldn't reload TikTok/YouTube embeds.
-      if (
-        lastOrientationRef.current !== null &&
-        lastOrientationRef.current !== orientation
-      ) {
-        setLayoutNonce((n) => n + 1);
-      }
-      lastOrientationRef.current = orientation;
-    };
-
-    // Initial measurement once mounted.
-    measure();
-
-    const observer = new ResizeObserver(() => {
-      // Coalesce bursts of resize events into a single frame.
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(measure);
-    });
-    observer.observe(el);
-
-    // Orientation change fires before layout settles on some mobile browsers.
-    const onOrientation = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(measure);
-    };
-    window.addEventListener('orientationchange', onOrientation);
-
+    if (typeof window === 'undefined') return;
+    const onResize = () => setViewportPortrait(window.innerHeight >= window.innerWidth);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
     return () => {
-      cancelAnimationFrame(rafId);
-      observer.disconnect();
-      window.removeEventListener('orientationchange', onOrientation);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
     };
-  }, [open]);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -484,13 +442,11 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   if (aspectChoice !== 'auto') {
     aspectClass = ASPECT_CLASS_MAP[aspectChoice];
   } else if (autoFit) {
-    // Auto-fit: pick the aspect that best fills the measured player area so
-    // TikTok LIVE and portrait videos never letterbox on rotate/resize.
-    if (sourceIsPortrait) {
-      aspectClass = 'aspect-[9/16]';
-    } else {
-      aspectClass = areaPortrait ? 'aspect-[9/16]' : 'aspect-video';
-    }
+    // Auto-fit: pick the aspect that best fills the current viewport so
+    // TikTok LIVE and portrait videos never letterbox on phones.
+    aspectClass = viewportPortrait
+      ? (sourceIsPortrait ? 'aspect-[9/16]' : 'aspect-video')
+      : (sourceIsPortrait ? 'aspect-[9/16]' : 'aspect-video');
   } else {
     aspectClass = detectedAspectClass;
   }
@@ -610,7 +566,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
       </div>
 
       {/* Player area */}
-      <div ref={playerAreaRef} className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto w-full max-w-5xl p-2 sm:p-4">
           {/* Aspect ratio adapts to the source (portrait for TikTok/Reels/Shorts). */}
           <div
@@ -623,7 +579,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
 
             {activeServer && !allOffline && !resolving && playbackMode === 'iframe' && (
               <iframe
-                key={`${activeServer.id}-${reloadNonce}-${layoutNonce}`}
+                key={`${activeServer.id}-${reloadNonce}`}
                 title="Sport Live"
                 src={resolvePlaybackUrl(effectiveUrl)}
                 allowFullScreen
@@ -645,7 +601,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
 
             {activeServer && !allOffline && !resolving && playbackMode !== 'iframe' && (
               <DirectStreamVideo
-                key={`${activeServer.id}-${reloadNonce}-${layoutNonce}`}
+                key={`${activeServer.id}-${reloadNonce}`}
                 server={{ ...activeServer, url: effectiveUrl }}
                 mode={playbackMode}
                 onReady={handleIframeLoad}
