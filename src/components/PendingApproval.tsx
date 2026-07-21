@@ -22,6 +22,8 @@ export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <TelegramPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} message={previewMessage} />
+
       {/* Background decorations */}
       <div className="absolute top-0 left-0 w-full h-full">
         <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-warning/20 blur-[100px] animate-pulse" />
