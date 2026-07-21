@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://ctp.kurdcloud.xyz/sitemap.xml
+Sitemap: https://andam.uk/sitemap.xml
