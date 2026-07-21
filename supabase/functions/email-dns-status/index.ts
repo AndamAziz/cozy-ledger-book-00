@@ -1,6 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 
-const EMAIL_DOMAIN = 'notify.ctp.kurdcloud.xyz'
+const EMAIL_DOMAIN = 'notify.andam.uk'
 const LOVABLE_NS = ['ns5.lovable.cloud', 'ns6.lovable.cloud']
 
 interface DohAnswer {

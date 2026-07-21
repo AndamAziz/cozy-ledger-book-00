@@ -37,9 +37,9 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 
 // Configuration
 const SITE_NAME = "cozy-ledger-book-00"
-const SENDER_DOMAIN = "notify.ctp.kurdcloud.xyz"
-const ROOT_DOMAIN = "ctp.kurdcloud.xyz"
-const FROM_DOMAIN = "ctp.kurdcloud.xyz" // Domain shown in From address (may be root or sender subdomain)
+const SENDER_DOMAIN = "notify.andam.uk"
+const ROOT_DOMAIN = "andam.uk"
+const FROM_DOMAIN = "andam.uk" // Domain shown in From address (may be root or sender subdomain)
 
 // Sample data for preview mode ONLY (not used in actual email sending).
 // URLs are baked in at scaffold time from the project's real data.
