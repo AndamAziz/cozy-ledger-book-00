@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, MessageCircle, LogOut, Calendar, Shield, Send, Copy, Check } from 'lucide-react';
+import { AlertTriangle, LogOut, Calendar, Shield, Send, Copy, Check } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -10,7 +10,7 @@ interface ExpiredSubscriptionProps {
   onLogout: () => void;
 }
 
-const CEO_TELEGRAM = 'ANDAMAZIZ';
+const CEO_TELEGRAM = 'AndamAziz';
 
 export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubscriptionProps) {
   const { t, language } = useLanguage();
@@ -92,10 +92,7 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
     window.open(`https://t.me/${CEO_TELEGRAM}`, '_blank');
   };
 
-  const handleWhatsAppContact = () => {
-    const message = encodeURIComponent(ceoMessage);
-    window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
-  };
+  // WhatsApp removed — Telegram-only contact.
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
@@ -176,23 +173,11 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
               </div>
             </Button>
 
-            <p className="text-center text-xs text-muted-foreground mb-4">
-              Telegram: <span dir="ltr" className="font-mono">@ANDAMAZIZ</span>
+            <p className="text-center text-xs text-muted-foreground mb-1">
+              Telegram: <span dir="ltr" className="font-mono">@AndamAziz</span>
             </p>
-
-            {/* WhatsApp Contact Button */}
-            <Button 
-              onClick={handleWhatsAppContact}
-              className="w-full py-7 text-lg font-bold rounded-xl shadow-xl bg-[#25D366] hover:bg-[#20BD5A] text-white hover:scale-[1.02] transition-all duration-300 mb-4"
-            >
-              <div className="flex items-center gap-3">
-                <MessageCircle className="h-6 w-6" />
-                {t('contactForRenewalBtn')}
-              </div>
-            </Button>
-
             <p className="text-center text-xs text-muted-foreground mb-6">
-              {t('phoneNumber')}: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
+              <span dir="ltr" className="font-mono">info@andam.uk</span>
             </p>
 
             {/* Logout Button */}

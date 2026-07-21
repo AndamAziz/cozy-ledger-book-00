@@ -10,15 +10,15 @@ interface DeactivatedAccountProps {
 export function DeactivatedAccount({ email, onLogout }: DeactivatedAccountProps) {
   const { t, language } = useLanguage();
   
-  const handleWhatsAppContact = () => {
+  const handleTelegramContact = () => {
     const messages = {
       ku: `سڵاو، من ${email} هەژمارەکەم ناچالاک کراوە، تکایە چالاکی بکەرەوە.`,
       en: `Hello, my account (${email}) has been deactivated. Please reactivate it.`,
       ar: `مرحباً، تم تعطيل حسابي (${email})، يرجى إعادة تفعيله.`,
       fa: `سلام، حساب من (${email}) غیرفعال شده است. لطفاً آن را مجدداً فعال کنید.`,
     };
-    const message = encodeURIComponent(messages[language]);
-    window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
+    try { navigator.clipboard.writeText(messages[language] ?? messages.en); } catch { /* noop */ }
+    window.open('https://t.me/AndamAziz', '_blank');
   };
 
   return (
@@ -83,19 +83,22 @@ export function DeactivatedAccount({ email, onLogout }: DeactivatedAccountProps)
               </div>
             </div>
 
-            {/* WhatsApp Contact Button */}
+            {/* Telegram Contact Button */}
             <Button 
-              onClick={handleWhatsAppContact}
-              className="w-full py-7 text-lg font-bold rounded-xl shadow-xl bg-[#25D366] hover:bg-[#20BD5A] text-white hover:scale-[1.02] transition-all duration-300 mb-4"
+              onClick={handleTelegramContact}
+              className="w-full py-7 text-lg font-bold rounded-xl shadow-xl bg-[#229ED9] hover:bg-[#1c8cc2] text-white hover:scale-[1.02] transition-all duration-300 mb-4"
             >
               <div className="flex items-center gap-3">
-                <MessageCircle className="h-6 w-6" />
+                <Send className="h-6 w-6" />
                 {t('contactViaWhatsApp')}
               </div>
             </Button>
 
+            <p className="text-center text-xs text-muted-foreground mb-1">
+              {t('phoneNumber')}: <span dir="ltr" className="font-mono">@AndamAziz</span>
+            </p>
             <p className="text-center text-xs text-muted-foreground mb-6">
-              {t('phoneNumber')}: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
+              <span dir="ltr" className="font-mono">info@andam.uk</span>
             </p>
 
             {/* Logout Button */}
