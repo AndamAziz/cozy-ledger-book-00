@@ -42,25 +42,32 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
     info: 'text-info',
   }[urgencyLevel];
 
+  const isRTL = language === 'ku' || language === 'ar' || language === 'fa';
+
   return (
-    <div className={`relative rounded-xl border p-4 mb-4 animate-fade-in ${bgColor}`}>
+    <div
+      dir={isRTL ? 'rtl' : 'ltr'}
+      className={`relative rounded-xl border p-4 mb-4 animate-fade-in ${bgColor} ${isRTL ? 'text-right' : 'text-left'}`}
+    >
       <button
         onClick={() => setIsDismissed(true)}
-        className="absolute top-2 left-2 p-1 rounded-full hover:bg-secondary/50 transition-colors"
+        className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'} p-1 rounded-full hover:bg-secondary/50 transition-colors`}
       >
         <X className="h-4 w-4 text-muted-foreground" />
       </button>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pr-6">
+      <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 ${isRTL ? 'pr-6' : 'pl-6'}`}>
         <div className={`flex-shrink-0 w-12 h-12 rounded-full bg-background/50 flex items-center justify-center ${iconColor}`}>
           <AlertTriangle className="h-6 w-6 animate-pulse" />
         </div>
-        
+
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-foreground mb-1">
-            {daysUntilExpiry === 1 
-              ? `⚠️ ${t('expiryTomorrow')}` 
-              : `${daysUntilExpiry} ${t('expiryWarning')}`
+            {daysUntilExpiry === 1
+              ? `⚠️ ${t('expiryTomorrow')}`
+              : isRTL
+                ? `${daysUntilExpiry} ${t('expiryWarning')}`
+                : `${t('expiryWarning')} ${daysUntilExpiry}`
             }
           </h3>
           <p className="text-sm text-muted-foreground">
@@ -73,7 +80,7 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
           size="sm"
           className="bg-[#229ED9] hover:bg-[#1c8cc2] text-white flex-shrink-0"
         >
-          <Send className="h-4 w-4 ml-2" />
+          <Send className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
           {t('contact')}
         </Button>
       </div>
