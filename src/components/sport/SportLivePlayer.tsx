@@ -496,6 +496,16 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   }
   const isPortraitSource = aspectClass === 'aspect-[9/16]';
 
+  // Detect TikTok LIVE so we can surface an "Open on TikTok" fallback — when
+  // the streamer is offline TikTok's embed renders "LIVE has ended" and users
+  // read that as our player being broken.
+  const tiktokLiveUser = useMemo(() => {
+    const raw = activeServer?.url ?? '';
+    if (!raw) return null;
+    const m = raw.match(/tiktok\.com\/@([A-Za-z0-9._-]+)\/live/i);
+    return m ? m[1] : null;
+  }, [activeServer?.url]);
+
   if (!open) return null;
 
   return (
@@ -651,6 +661,18 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
                 onReady={handleIframeLoad}
                 onError={handleIframeError}
               />
+            )}
+
+            {/* TikTok LIVE offline hint + open-on-TikTok fallback */}
+            {tiktokLiveUser && !iframeLoading && !switching && !resolving && !allOffline && (
+              <a
+                href={`https://www.tiktok.com/@${tiktokLiveUser}/live`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full bg-black/70 hover:bg-black/85 text-white text-xs font-semibold backdrop-blur-sm shadow-lg transition-colors"
+              >
+                Open @{tiktokLiveUser} on TikTok
+              </a>
             )}
 
             {/* Loading animation before first frame */}
