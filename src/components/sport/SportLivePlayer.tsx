@@ -179,10 +179,39 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const failoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptedRef = useRef<Set<string>>(new Set());
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
+  const aspectMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const fullscreenEnabled =
-    typeof document !== 'undefined' &&
+  const [aspectMenuOpen, setAspectMenuOpen] = useState(false);
+  const [manualAspect, setManualAspect] = useState<AspectChoice>(() => {
+    if (typeof window === 'undefined') return 'auto';
+    const v = window.localStorage.getItem(ASPECT_PREF_KEY);
+    return (v === '16:9' || v === '9:16' || v === '4:3' || v === '1:1' || v === 'auto') ? v : 'auto';
+  });
+  const [autoFit, setAutoFit] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return window.localStorage.getItem(AUTOFIT_PREF_KEY) !== '0';
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(ASPECT_PREF_KEY, manualAspect);
+  }, [manualAspect]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(AUTOFIT_PREF_KEY, autoFit ? '1' : '0');
+  }, [autoFit]);
+
+  useEffect(() => {
+    if (!aspectMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!aspectMenuRef.current) return;
+      if (!aspectMenuRef.current.contains(e.target as Node)) setAspectMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [aspectMenuOpen]);
+
     !!(document.fullscreenEnabled ||
       (document as unknown as { webkitFullscreenEnabled?: boolean }).webkitFullscreenEnabled);
 
