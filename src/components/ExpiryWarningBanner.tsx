@@ -1,4 +1,4 @@
-import { AlertTriangle, MessageCircle, X } from 'lucide-react';
+import { AlertTriangle, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -16,15 +16,15 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
     return null;
   }
 
-  const handleWhatsAppContact = () => {
+  const handleTelegramContact = () => {
     const messages = {
       ku: `سڵاو، کاتی بەکارهێنانی ئەکاونتم (${email}) لە Central Tech Platform ئەپ نزیکە لە بەسەرچوون و داوای درێژکردنەوەی دەکەم.`,
       en: `Hello, my subscription for account (${email}) on Central Tech Platform app is about to expire. I request a renewal.`,
       ar: `مرحباً، اشتراك حسابي (${email}) في تطبيق Central Tech Platform على وشك الانتهاء. أطلب التجديد.`,
       fa: `سلام، اشتراک حساب من (${email}) در اپلیکیشن Central Tech Platform در حال انقضا است. درخواست تمدید دارم.`,
     };
-    const message = encodeURIComponent(messages[language]);
-    window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
+    try { navigator.clipboard.writeText(messages[language] ?? messages.en); } catch { /* noop */ }
+    window.open('https://t.me/AndamAziz', '_blank');
   };
 
   const urgencyLevel = daysUntilExpiry <= 3 ? 'critical' : daysUntilExpiry <= 7 ? 'warning' : 'info';
@@ -68,11 +68,11 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
         </div>
 
         <Button
-          onClick={handleWhatsAppContact}
+          onClick={handleTelegramContact}
           size="sm"
-          className="bg-[#25D366] hover:bg-[#20BD5A] text-white flex-shrink-0"
+          className="bg-[#229ED9] hover:bg-[#1c8cc2] text-white flex-shrink-0"
         >
-          <MessageCircle className="h-4 w-4 ml-2" />
+          <Send className="h-4 w-4 ml-2" />
           {t('contact')}
         </Button>
       </div>

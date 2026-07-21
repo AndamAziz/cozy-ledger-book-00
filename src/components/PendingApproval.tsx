@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Clock, MessageCircle, LogOut, Sparkles, Shield } from 'lucide-react';
+import { Clock, Send, LogOut, Sparkles, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PendingApprovalProps {
@@ -10,15 +10,15 @@ interface PendingApprovalProps {
 export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
   const { t, language } = useLanguage();
   
-  const handleWhatsAppContact = () => {
+  const handleTelegramContact = () => {
     const messages = {
       ku: `سڵاو، من ${email} ئەکاونتم دروست کردووە لە Central Tech Platform ئەپ و داوای ئەپروڤکردن دەکەم.`,
       en: `Hello, I (${email}) have created an account on Central Tech Platform app and request approval.`,
       ar: `مرحباً، أنا ${email} أنشأت حساباً في تطبيق Central Tech Platform وأطلب الموافقة.`,
       fa: `سلام، من ${email} حسابی در اپلیکیشن Central Tech Platform ایجاد کردم و درخواست تأیید دارم.`,
     };
-    const message = encodeURIComponent(messages[language]);
-    window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
+    try { navigator.clipboard.writeText(messages[language] ?? messages.en); } catch { /* noop */ }
+    window.open('https://t.me/AndamAziz', '_blank');
   };
 
   return (
@@ -92,19 +92,22 @@ export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
               </div>
             </div>
 
-            {/* WhatsApp Contact Button */}
+            {/* Telegram Contact Button */}
             <Button 
-              onClick={handleWhatsAppContact}
-              className="w-full py-7 text-lg font-bold rounded-xl shadow-xl bg-[#25D366] hover:bg-[#20BD5A] text-white hover:scale-[1.02] transition-all duration-300 mb-4"
+              onClick={handleTelegramContact}
+              className="w-full py-7 text-lg font-bold rounded-xl shadow-xl bg-[#229ED9] hover:bg-[#1c8cc2] text-white hover:scale-[1.02] transition-all duration-300 mb-4"
             >
               <div className="flex items-center gap-3">
-                <MessageCircle className="h-6 w-6" />
+                <Send className="h-6 w-6" />
                 {t('contactViaWhatsApp')}
               </div>
             </Button>
 
+            <p className="text-center text-xs text-muted-foreground mb-1">
+              {t('phoneNumber')}: <span dir="ltr" className="font-mono">@AndamAziz</span>
+            </p>
             <p className="text-center text-xs text-muted-foreground mb-6">
-              {t('phoneNumber')}: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
+              <span dir="ltr" className="font-mono">info@andam.uk</span>
             </p>
 
             {/* Logout Button */}
