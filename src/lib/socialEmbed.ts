@@ -90,9 +90,31 @@ export function normalizeTikTokVideoId(raw: string): string | null {
   return null;
 }
 
+/**
+ * Detects TikTok LIVE URLs like:
+ *   https://www.tiktok.com/@username/live
+ *   https://www.tiktok.com/@username/live?...tracking...
+ * Returns the @username (without the @) or null.
+ */
+export function normalizeTikTokLiveUser(raw: string): string | null {
+  const u = safeUrl(raw.trim());
+  if (!u) return null;
+  const host = stripWww(u.hostname);
+  if (!host.endsWith('tiktok.com')) return null;
+  const m = u.pathname.match(/^\/@([A-Za-z0-9._-]+)\/live\/?$/);
+  return m ? m[1] : null;
+}
+
 function tiktokEmbed(u: URL): string | null {
   const host = stripWww(u.hostname);
   if (!host.endsWith('tiktok.com')) return null;
+
+  // LIVE stream: /@username/live → TikTok's official live embed player.
+  const liveUser = normalizeTikTokLiveUser(u.toString());
+  if (liveUser) {
+    return `https://www.tiktok.com/embed/live/@${liveUser}`;
+  }
+
   const id = normalizeTikTokVideoId(u.toString());
   if (!id) return null;
   // TikTok's official iframe player (player/v1) is more reliable than the
