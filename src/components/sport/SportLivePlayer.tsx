@@ -484,11 +484,13 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   if (aspectChoice !== 'auto') {
     aspectClass = ASPECT_CLASS_MAP[aspectChoice];
   } else if (autoFit) {
-    // Auto-fit: pick the aspect that best fills the current viewport so
-    // TikTok LIVE and portrait videos never letterbox on phones.
-    aspectClass = viewportPortrait
-      ? (sourceIsPortrait ? 'aspect-[9/16]' : 'aspect-video')
-      : (sourceIsPortrait ? 'aspect-[9/16]' : 'aspect-video');
+    // Auto-fit: pick the aspect that best fills the measured player area so
+    // TikTok LIVE and portrait videos never letterbox on rotate/resize.
+    if (sourceIsPortrait) {
+      aspectClass = 'aspect-[9/16]';
+    } else {
+      aspectClass = areaPortrait ? 'aspect-[9/16]' : 'aspect-video';
+    }
   } else {
     aspectClass = detectedAspectClass;
   }
