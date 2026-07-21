@@ -32,16 +32,14 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
     day: 'numeric',
   });
 
-  // Ready-made message the user copies and sends to the CEO on Telegram.
-  const templates: Record<keyof typeof localeMap, string> = {
-    ku: `سڵاو CEO 👋\nکاتی بەکارهێنانی ئەکاونتم بەسەرچووە و داوای نوێکردنەوەی دەکەم.\n\n📧 ئیمەیل: ${email}\n📅 بەرواری بەسەرچوون: ${expiredDate}\n\nتکایە ئەکاونتەکەم چالاک بکەرەوە. سوپاس 🙏`,
-    en: `Hello CEO 👋\nMy account subscription has expired and I would like to renew it.\n\n📧 Email: ${email}\n📅 Expiry date: ${expiredDate}\n\nPlease reactivate my account. Thank you 🙏`,
-    ar: `مرحباً CEO 👋\nانتهت صلاحية اشتراك حسابي وأرغب في تجديده.\n\n📧 البريد الإلكتروني: ${email}\n📅 تاريخ الانتهاء: ${expiredDate}\n\nيرجى إعادة تفعيل حسابي. شكراً 🙏`,
-    fa: `سلام CEO 👋\nاشتراک حساب من منقضی شده و می‌خواهم آن را تمدید کنم.\n\n📧 ایمیل: ${email}\n📅 تاریخ انقضا: ${expiredDate}\n\nلطفاً حساب من را دوباره فعال کنید. سپاس 🙏`,
-    tr: `Merhaba CEO 👋\nHesap aboneliğimin süresi doldu ve yenilemek istiyorum.\n\n📧 E-posta: ${email}\n📅 Bitiş tarihi: ${expiredDate}\n\nLütfen hesabımı yeniden etkinleştirin. Teşekkürler 🙏`,
-  };
+  // Ready-made per-reason message the user copies and sends to the CEO on Telegram.
+  const ceoMessage = buildTelegramMessage({
+    reason: 'expired',
+    language,
+    email,
+    expiredDate,
+  });
 
-  const ceoMessage = templates[lang];
 
   const copyHints: Record<keyof typeof localeMap, string> = {
     ku: 'پەیامەکە کۆپی کرا — لە تەلەگرام پەیستی بکە و بینێرە بۆ CEO',
