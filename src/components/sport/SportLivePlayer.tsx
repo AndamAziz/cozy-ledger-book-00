@@ -180,6 +180,8 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const failoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptedRef = useRef<Set<string>>(new Set());
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
+  const playerAreaRef = useRef<HTMLDivElement | null>(null);
+  const lastOrientationRef = useRef<'portrait' | 'landscape' | null>(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [aspectChoice, setAspectChoice] = useState<AspectChoice>(() => {
@@ -191,10 +193,11 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
     if (typeof window === 'undefined') return true;
     return window.localStorage.getItem(AUTO_FIT_KEY) !== '0';
   });
-  const [viewportPortrait, setViewportPortrait] = useState<boolean>(() => {
+  const [areaPortrait, setAreaPortrait] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.innerHeight >= window.innerWidth;
   });
+  const [layoutNonce, setLayoutNonce] = useState(0);
   const [showAspectMenu, setShowAspectMenu] = useState(false);
 
   useEffect(() => {
