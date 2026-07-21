@@ -431,8 +431,12 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
   const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
 
-  const aspectClass = getAspectClass(activeServer?.url ?? '');
+  const autoAspectClass = getAspectClass(activeServer?.url ?? '');
+  const aspectClass = manualAspect === 'auto'
+    ? (autoFit ? autoAspectClass : 'aspect-video')
+    : MANUAL_ASPECT_CLASSES[manualAspect];
   const isPortraitSource = aspectClass === 'aspect-[9/16]';
+
 
   if (!open) return null;
 
