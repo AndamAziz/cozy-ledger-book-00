@@ -2,6 +2,7 @@ import { AlertTriangle, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { buildTelegramMessage, openTelegramWithMessage } from '@/lib/telegramContact';
 
 interface ExpiryWarningBannerProps {
   daysUntilExpiry: number;
@@ -17,16 +18,15 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
   }
 
   const handleTelegramContact = () => {
-    const messages: Record<string, string> = {
-      ku: `سڵاو CEO 👋\nکاتی بەکارهێنانی ئەکاونتم (${email}) لە Central Tech Platform ئەپ نزیکە لە بەسەرچوون و داوای درێژکردنەوەی دەکەم.\n📧 ئیمەیل: ${email}\nسوپاس 🙏`,
-      en: `Hello CEO 👋\nMy account (${email}) on Central Tech Platform is about to expire. I would like to renew it.\n📧 Email: ${email}\nThank you 🙏`,
-      ar: `مرحباً CEO 👋\nاشتراك حسابي (${email}) في تطبيق Central Tech Platform على وشك الانتهاء. أرغب في تجديده.\n📧 البريد الإلكتروني: ${email}\nشكراً 🙏`,
-      fa: `سلام CEO 👋\nاشتراک حساب من (${email}) در Central Tech Platform در حال انقضا است. درخواست تمدید دارم.\n📧 ایمیل: ${email}\nسپاس 🙏`,
-      tr: `Merhaba CEO 👋\nHesabımın (${email}) Central Tech Platform aboneliği yakında sona eriyor, yenilemek istiyorum.\n📧 E-posta: ${email}\nTeşekkürler 🙏`,
-    };
-    try { navigator.clipboard.writeText(messages[language] ?? messages.en); } catch { /* noop */ }
-    window.open('https://t.me/AndamAziz', '_blank');
+    const message = buildTelegramMessage({
+      reason: 'expiring',
+      language,
+      email,
+      daysUntilExpiry,
+    });
+    void openTelegramWithMessage(message);
   };
+
 
   const urgencyLevel = daysUntilExpiry <= 3 ? 'critical' : daysUntilExpiry <= 7 ? 'warning' : 'info';
   
