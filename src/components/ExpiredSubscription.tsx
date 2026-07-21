@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, LogOut, Calendar, Shield, Send, Copy, Check } from 'lucide-react';
+import { AlertTriangle, LogOut, Calendar, Shield, Send, Copy, Check, Mail } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
 import { buildTelegramMessage, CEO_TELEGRAM_HANDLE } from '@/lib/telegramContact';
