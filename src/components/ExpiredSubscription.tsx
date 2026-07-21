@@ -12,7 +12,7 @@ interface ExpiredSubscriptionProps {
   onLogout: () => void;
 }
 
-const CEO_TELEGRAM = 'AndamAziz';
+const CEO_TELEGRAM = CEO_TELEGRAM_HANDLE;
 
 export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubscriptionProps) {
   const { t, language } = useLanguage();
