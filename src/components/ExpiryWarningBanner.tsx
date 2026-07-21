@@ -48,10 +48,13 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
   const isRTL = language === 'ku' || language === 'ar' || language === 'fa';
 
   return (
+    <>
+    <TelegramPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} message={previewMessage} />
     <div
       dir={isRTL ? 'rtl' : 'ltr'}
       className={`relative rounded-xl border p-4 mb-4 animate-fade-in ${bgColor} ${isRTL ? 'text-right' : 'text-left'}`}
     >
+
       <button
         onClick={() => setIsDismissed(true)}
         className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'} p-1 rounded-full hover:bg-secondary/50 transition-colors`}
