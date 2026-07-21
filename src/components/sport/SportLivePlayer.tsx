@@ -456,6 +456,67 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
           )}
         </div>
         <div className="flex items-center gap-1.5">
+          <div className="relative" ref={aspectMenuRef}>
+            <button
+              onClick={() => setAspectMenuOpen((v) => !v)}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors touch-manipulation active:scale-95 ${
+                aspectMenuOpen || manualAspect !== 'auto'
+                  ? 'bg-success/15 text-success'
+                  : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label="Aspect ratio"
+              aria-expanded={aspectMenuOpen}
+            >
+              <Frame className="h-4 w-4" />
+            </button>
+            {aspectMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-64 z-[110] rounded-2xl border border-white/10 bg-card/95 backdrop-blur-md p-3 shadow-2xl animate-fade-in">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                  Aspect ratio
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {ASPECT_OPTIONS.map((opt) => {
+                    const active = manualAspect === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setManualAspect(opt.value)}
+                        className={`px-2 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
+                          active
+                            ? 'bg-gradient-to-br from-success to-success/80 text-success-foreground shadow-[0_0_14px_hsl(var(--success)/0.35)]'
+                            : 'bg-secondary/50 text-foreground/80 hover:bg-secondary'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 pt-3 border-t border-white/10">
+                  <button
+                    onClick={() => setAutoFit((v) => !v)}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-secondary/40 hover:bg-secondary/60 transition-colors"
+                  >
+                    <span className="text-sm font-semibold text-foreground">Auto-fit screen</span>
+                    <span
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        autoFit ? 'bg-success' : 'bg-muted'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                          autoFit ? 'translate-x-5' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </span>
+                  </button>
+                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                    Auto-fit picks the best aspect for your screen so TikTok LIVE and portrait videos fill without letterboxing.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
           <button
             onClick={handleManualRetry}
             className="w-8 h-8 rounded-lg bg-secondary/60 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors touch-manipulation active:scale-95"
@@ -463,6 +524,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
           >
             <RefreshCw className="h-4 w-4" />
           </button>
+
           {fullscreenEnabled && (
             <button
               onClick={toggleFullscreen}
