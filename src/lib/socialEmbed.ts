@@ -55,12 +55,17 @@ function youtubeEmbed(u: URL): string | null {
 function tiktokEmbed(u: URL): string | null {
   const host = stripWww(u.hostname);
   if (!host.endsWith('tiktok.com')) return null;
-  // Desktop / mobile: /@user/video/ID  ·  short link vm.tiktok.com/XXXX (no id)
+  // TikTok's official iframe player (player/v1) is more reliable than the
+  // legacy /embed/v2/ page which frequently shows a "video unavailable" screen
+  // when embedded on third-party domains. player/v1 also supports autoplay.
+  const build = (id: string) =>
+    `https://www.tiktok.com/player/v1/${id}?autoplay=1&music_info=1&description=1&closed_caption=1`;
+  // Desktop / mobile: /@user/video/ID
   const match = u.pathname.match(/\/video\/(\d+)/);
-  if (match) return `https://www.tiktok.com/embed/v2/${match[1]}`;
-  // /embed/ID already
-  const embedMatch = u.pathname.match(/\/embed\/(?:v2\/)?(\d+)/);
-  if (embedMatch) return `https://www.tiktok.com/embed/v2/${embedMatch[1]}`;
+  if (match) return build(match[1]);
+  // /embed/ID or /embed/v2/ID or /player/v1/ID already
+  const embedMatch = u.pathname.match(/\/(?:embed|player)\/(?:v[12]\/)?(\d+)/);
+  if (embedMatch) return build(embedMatch[1]);
   return null;
 }
 
