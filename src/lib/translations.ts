@@ -307,9 +307,9 @@ export const translations = {
     expiryTomorrow: 'بەیانی کاتی بەکارهێنان بەسەردەچێت!',
     contactAdmin: 'تکایە پەیوەندی بە بەڕێوەبەرەوە بکە بۆ درێژکردنەوەی کاتی بەکارهێنانی ئەپەکە.',
     contact: 'پەیوەندی',
-    contactViaWhatsApp: 'پەیوەندی لەڕێی وەتسئەپ',
+    contactViaWhatsApp: 'پەیوەندی لەڕێی تەلەگرام',
     contactForRenewalBtn: 'پەیوەندی بۆ نوێکردنەوە',
-    phoneNumber: 'ژمارە',
+    phoneNumber: 'تەلەگرام',
     adminEmail: 'بەڕێوەبەری گشتی',
     
     // Pending/Deactivated/Expired
