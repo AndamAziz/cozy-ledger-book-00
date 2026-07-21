@@ -771,7 +771,7 @@ export const translations = {
     welcome: 'Welcome!',
     accountCreatedSuccess: 'Your account was created successfully',
     accountPending: 'Your account is pending approval',
-    accountPendingMessage: 'Your account needs approval from the administrator. Please send a message via WhatsApp for faster approval.',
+    accountPendingMessage: 'Your account needs approval from the administrator. Please send a message via Telegram for faster approval.',
     accountDeactivated: 'Account Deactivated',
     accountDeactivatedTitle: 'Your account has been deactivated',
     accountDeactivatedMessage: 'Please contact the administrator to reactivate your account. Your data is preserved and you can continue when reactivated.',
