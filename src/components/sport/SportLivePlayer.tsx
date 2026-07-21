@@ -200,16 +200,55 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const [layoutNonce, setLayoutNonce] = useState(0);
   const [showAspectMenu, setShowAspectMenu] = useState(false);
 
+  // Observe the actual player area with ResizeObserver so aspect + iframe
+  // relayout follows device rotation, browser resize, split-screen changes,
+  // fullscreen toggles, and any container reflow — not just window events.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onResize = () => setViewportPortrait(window.innerHeight >= window.innerWidth);
-    window.addEventListener('resize', onResize);
-    window.addEventListener('orientationchange', onResize);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('orientationchange', onResize);
+    if (!open) return;
+    if (typeof window === 'undefined' || typeof ResizeObserver === 'undefined') return;
+    const el = playerAreaRef.current;
+    if (!el) return;
+
+    let rafId = 0;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      const portrait = rect.height >= rect.width;
+      setAreaPortrait((prev) => (prev === portrait ? prev : portrait));
+      const orientation: 'portrait' | 'landscape' = portrait ? 'portrait' : 'landscape';
+      // Only force iframe relayout when orientation actually flips — resizing
+      // width alone shouldn't reload TikTok/YouTube embeds.
+      if (
+        lastOrientationRef.current !== null &&
+        lastOrientationRef.current !== orientation
+      ) {
+        setLayoutNonce((n) => n + 1);
+      }
+      lastOrientationRef.current = orientation;
     };
-  }, []);
+
+    // Initial measurement once mounted.
+    measure();
+
+    const observer = new ResizeObserver(() => {
+      // Coalesce bursts of resize events into a single frame.
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(measure);
+    });
+    observer.observe(el);
+
+    // Orientation change fires before layout settles on some mobile browsers.
+    const onOrientation = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(measure);
+    };
+    window.addEventListener('orientationchange', onOrientation);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+      window.removeEventListener('orientationchange', onOrientation);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
