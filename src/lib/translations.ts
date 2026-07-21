@@ -1217,9 +1217,9 @@ export const translations = {
     expiryTomorrow: 'ينتهي الاشتراك غداً!',
     contactAdmin: 'يرجى التواصل مع المسؤول لتمديد اشتراكك.',
     contact: 'تواصل',
-    contactViaWhatsApp: 'التواصل عبر واتساب',
+    contactViaWhatsApp: 'التواصل عبر تيليجرام',
     contactForRenewalBtn: 'تواصل للتجديد',
-    phoneNumber: 'الهاتف',
+    phoneNumber: 'تيليجرام',
     adminEmail: 'البريد الإلكتروني للمسؤول',
     
     // Pending/Deactivated/Expired
