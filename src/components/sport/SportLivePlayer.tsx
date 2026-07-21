@@ -12,6 +12,25 @@ interface SportLivePlayerProps {
 const STREAM_REVEAL_TIMEOUT_MS = 2500;
 const FAILOVER_DEBOUNCE_MS = 1200;
 const ACTIVE_SERVER_KEY = 'ctp-sport-active-server';
+const ASPECT_CHOICE_KEY = 'ctp-sport-aspect-choice';
+const AUTO_FIT_KEY = 'ctp-sport-auto-fit';
+
+type AspectChoice = 'auto' | '16:9' | '9:16' | '4:3' | '1:1';
+
+const ASPECT_CLASS_MAP: Record<Exclude<AspectChoice, 'auto'>, string> = {
+  '16:9': 'aspect-video',
+  '9:16': 'aspect-[9/16]',
+  '4:3': 'aspect-[4/3]',
+  '1:1': 'aspect-square',
+};
+
+const ASPECT_OPTIONS: { value: AspectChoice; label: string }[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: '16:9', label: '16:9' },
+  { value: '9:16', label: '9:16' },
+  { value: '4:3', label: '4:3' },
+  { value: '1:1', label: '1:1' },
+];
 
 const STATUS_META: Record<StreamStatus, { label: string; dot: string; text: string }> = {
   live: { label: 'Live', dot: 'bg-success', text: 'text-success' },
