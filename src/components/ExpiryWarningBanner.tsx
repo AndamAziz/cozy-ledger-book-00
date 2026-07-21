@@ -2,7 +2,8 @@ import { AlertTriangle, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { buildTelegramMessage, openTelegramWithMessage } from '@/lib/telegramContact';
+import { buildTelegramMessage } from '@/lib/telegramContact';
+import { TelegramPreviewDialog } from '@/components/TelegramPreviewDialog';
 
 interface ExpiryWarningBannerProps {
   daysUntilExpiry: number;
@@ -11,21 +12,23 @@ interface ExpiryWarningBannerProps {
 
 export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBannerProps) {
   const [isDismissed, setIsDismissed] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const { t, language } = useLanguage();
 
   if (isDismissed || daysUntilExpiry > 10) {
     return null;
   }
 
-  const handleTelegramContact = () => {
-    const message = buildTelegramMessage({
-      reason: 'expiring',
-      language,
-      email,
-      daysUntilExpiry,
-    });
-    void openTelegramWithMessage(message);
-  };
+  const previewMessage = buildTelegramMessage({
+    reason: 'expiring',
+    language,
+    email,
+    daysUntilExpiry,
+  });
+
+  const handleTelegramContact = () => setPreviewOpen(true);
+
+
 
 
   const urgencyLevel = daysUntilExpiry <= 3 ? 'critical' : daysUntilExpiry <= 7 ? 'warning' : 'info';
