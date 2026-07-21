@@ -430,6 +430,10 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
 
   const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
   const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
+  // TikTok LIVE (/@user/live) may be blocked by TikTok's domain whitelist when
+  // embedded on non-authorised hosts. Detect it and surface a "Watch Live on
+  // TikTok" CTA so viewers can always reach the real stream in a new tab.
+  const tiktokLiveUser = activeServer ? normalizeTikTokLiveUser(activeServer.url) : null;
 
   const autoAspectClass = getAspectClass(activeServer?.url ?? '');
   const aspectClass = manualAspect === 'auto'
