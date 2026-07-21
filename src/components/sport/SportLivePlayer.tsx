@@ -436,7 +436,20 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
   const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
 
-  const aspectClass = getAspectClass(activeServer?.url ?? '');
+  const detectedAspectClass = getAspectClass(activeServer?.url ?? '');
+  const sourceIsPortrait = detectedAspectClass === 'aspect-[9/16]';
+  let aspectClass: string;
+  if (aspectChoice !== 'auto') {
+    aspectClass = ASPECT_CLASS_MAP[aspectChoice];
+  } else if (autoFit) {
+    // Auto-fit: pick the aspect that best fills the current viewport so
+    // TikTok LIVE and portrait videos never letterbox on phones.
+    aspectClass = viewportPortrait
+      ? (sourceIsPortrait ? 'aspect-[9/16]' : 'aspect-video')
+      : (sourceIsPortrait ? 'aspect-[9/16]' : 'aspect-video');
+  } else {
+    aspectClass = detectedAspectClass;
+  }
   const isPortraitSource = aspectClass === 'aspect-[9/16]';
 
   if (!open) return null;
