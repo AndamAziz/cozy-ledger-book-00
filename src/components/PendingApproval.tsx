@@ -10,15 +10,15 @@ interface PendingApprovalProps {
 export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
   const { t, language } = useLanguage();
   
-  const handleWhatsAppContact = () => {
+  const handleTelegramContact = () => {
     const messages = {
       ku: `سڵاو، من ${email} ئەکاونتم دروست کردووە لە Central Tech Platform ئەپ و داوای ئەپروڤکردن دەکەم.`,
       en: `Hello, I (${email}) have created an account on Central Tech Platform app and request approval.`,
       ar: `مرحباً، أنا ${email} أنشأت حساباً في تطبيق Central Tech Platform وأطلب الموافقة.`,
       fa: `سلام، من ${email} حسابی در اپلیکیشن Central Tech Platform ایجاد کردم و درخواست تأیید دارم.`,
     };
-    const message = encodeURIComponent(messages[language]);
-    window.open(`https://wa.me/447482828237?text=${message}`, '_blank');
+    try { navigator.clipboard.writeText(messages[language] ?? messages.en); } catch { /* noop */ }
+    window.open('https://t.me/AndamAziz', '_blank');
   };
 
   return (
