@@ -610,7 +610,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
       </div>
 
       {/* Player area */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div ref={playerAreaRef} className="flex-1 min-h-0 overflow-y-auto">
         <div className="mx-auto w-full max-w-5xl p-2 sm:p-4">
           {/* Aspect ratio adapts to the source (portrait for TikTok/Reels/Shorts). */}
           <div
