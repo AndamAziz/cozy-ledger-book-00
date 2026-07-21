@@ -11,7 +11,7 @@ export interface EmailDnsStatus {
 }
 
 /**
- * Checks whether the password-reset sender domain (notify.ctp.kurdcloud.xyz)
+ * Checks whether the password-reset sender domain (notify.andam.uk)
  * is verified/active by inspecting its live DNS records via an edge function.
  */
 export async function fetchEmailDnsStatus(): Promise<EmailDnsStatus> {
