@@ -2127,9 +2127,9 @@ export const translations = {
     expiryTomorrow: 'Abonelik yarın sona eriyor!',
     contactAdmin: 'Aboneliğinizi uzatmak için lütfen yöneticiyle iletişime geçin.',
     contact: 'İletişim',
-    contactViaWhatsApp: 'WhatsApp ile iletişime geç',
+    contactViaWhatsApp: 'Telegram ile iletişime geç',
     contactForRenewalBtn: 'Yenileme için iletişime geç',
-    phoneNumber: 'Telefon',
+    phoneNumber: 'Telegram',
     adminEmail: 'Yönetici E-postası',
 
     // Pending/Deactivated/Expired
