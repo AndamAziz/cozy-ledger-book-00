@@ -336,12 +336,63 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
   const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
 
+  // Orientation-aware immersive layout ---------------------------------------
+  const orientation = useOrientation();
+  const aspectClass = getAspectClass(activeServer?.url ?? '');
+  const isPortraitSource = aspectClass === 'aspect-[9/16]';
+  // Only landscape (16:9) sources go fullscreen when the device is rotated.
+  const immersive = orientation === 'landscape' && !isPortraitSource && !!activeServer;
+  const playerContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const el = playerContainerRef.current;
+    if (!el) return;
+    const doc = typeof document !== 'undefined' ? document : null;
+    if (!doc) return;
+
+    const fsElement = () =>
+      doc.fullscreenElement ||
+      // Safari
+      (doc as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement ||
+      null;
+
+    if (immersive) {
+      if (!fsElement()) {
+        const req =
+          el.requestFullscreen ||
+          (el as unknown as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
+        try {
+          const p = req?.call(el);
+          // Swallow rejection — some browsers require a direct user gesture.
+          if (p && typeof (p as Promise<void>).catch === 'function') {
+            (p as Promise<void>).catch(() => {});
+          }
+        } catch {
+          /* ignore — CSS fallback still fills the viewport */
+        }
+      }
+    } else if (fsElement()) {
+      const exit =
+        doc.exitFullscreen ||
+        (doc as unknown as { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
+      try {
+        const p = exit?.call(doc);
+        if (p && typeof (p as Promise<void>).catch === 'function') {
+          (p as Promise<void>).catch(() => {});
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [immersive, open]);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex flex-col no-print">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/40">
+      <div className={`flex items-center justify-between px-3 py-2.5 border-b border-border/40 ${immersive ? 'hidden' : ''}`}>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-md bg-gradient-to-br from-success to-success/80 flex items-center justify-center shadow-[0_0_14px_hsl(var(--success)/0.5)]">
             <Radio className="h-4 w-4 text-success-foreground" />
@@ -372,12 +423,20 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
       </div>
 
       {/* Player area */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="mx-auto w-full max-w-5xl p-2 sm:p-4">
+      <div className={`flex-1 min-h-0 ${immersive ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <div className={immersive ? 'w-full h-[100dvh]' : 'mx-auto w-full max-w-5xl p-2 sm:p-4'}>
           {/* Aspect ratio adapts to the source (portrait for TikTok/Reels/Shorts). */}
-          <div className={`relative w-full mx-auto overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_0_40px_hsl(var(--success)/0.15)] ${getAspectClass(activeServer?.url ?? '')} ${
-            getAspectClass(activeServer?.url ?? '') === 'aspect-[9/16]' ? 'max-w-[min(100%,calc((100vh-8rem)*9/16))]' : ''
-          }`}>
+          <div
+            ref={playerContainerRef}
+            className={
+              immersive
+                ? 'relative w-full h-[100dvh] overflow-hidden bg-black'
+                : `relative w-full mx-auto overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_0_40px_hsl(var(--success)/0.15)] ${aspectClass} ${
+                    isPortraitSource ? 'max-w-[min(100%,calc((100vh-8rem)*9/16))]' : ''
+                  }`
+            }
+          >
+
 
             {activeServer && !allOffline && !resolving && playbackMode === 'iframe' && (
               <iframe
