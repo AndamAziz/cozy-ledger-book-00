@@ -3,7 +3,6 @@ import { Radio, X, RefreshCw, Wifi, WifiOff, AlertTriangle, Loader2 } from 'luci
 import { useStreamServers, type StreamStatus, type StreamServer } from '@/hooks/useStreamServers';
 import { toSocialEmbed, needsRedirectResolution } from '@/lib/socialEmbed';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrientation } from '@/hooks/useOrientation';
 
 interface SportLivePlayerProps {
   open: boolean;
