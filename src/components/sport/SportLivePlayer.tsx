@@ -430,6 +430,11 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
 
   const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
   const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
+  // TikTok LIVE embeds require domain whitelisting in TikTok's dev console,
+  // so on unwhitelisted domains the iframe renders an "Embed blocked" page.
+  // Detect the LIVE URL up-front and render a bilingual fallback card with a
+  // pulsing LIVE badge + a tap-through link to open the stream on TikTok.
+  const tiktokLiveUser = effectiveUrl ? normalizeTikTokLiveUser(effectiveUrl) : null;
 
   const autoAspectClass = getAspectClass(activeServer?.url ?? '');
   const aspectClass = manualAspect === 'auto'
