@@ -90,7 +90,7 @@ export function DeactivatedAccount({ email, onLogout }: DeactivatedAccountProps)
             >
               <div className="flex items-center gap-3">
                 <Send className="h-6 w-6" />
-                {t('contactViaWhatsApp')}
+                {t('contactViaTelegram')}
               </div>
             </Button>
 
