@@ -335,56 +335,8 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
   const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
 
-  // Orientation-aware immersive layout ---------------------------------------
-  const orientation = useOrientation();
   const aspectClass = getAspectClass(activeServer?.url ?? '');
   const isPortraitSource = aspectClass === 'aspect-[9/16]';
-  // Only landscape (16:9) sources go fullscreen when the device is rotated.
-  const immersive = orientation === 'landscape' && !isPortraitSource && !!activeServer;
-  const playerContainerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const el = playerContainerRef.current;
-    if (!el) return;
-    const doc = typeof document !== 'undefined' ? document : null;
-    if (!doc) return;
-
-    const fsElement = () =>
-      doc.fullscreenElement ||
-      // Safari
-      (doc as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement ||
-      null;
-
-    if (immersive) {
-      if (!fsElement()) {
-        const req =
-          el.requestFullscreen ||
-          (el as unknown as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
-        try {
-          const p = req?.call(el);
-          // Swallow rejection — some browsers require a direct user gesture.
-          if (p && typeof (p as Promise<void>).catch === 'function') {
-            (p as Promise<void>).catch(() => {});
-          }
-        } catch {
-          /* ignore — CSS fallback still fills the viewport */
-        }
-      }
-    } else if (fsElement()) {
-      const exit =
-        doc.exitFullscreen ||
-        (doc as unknown as { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
-      try {
-        const p = exit?.call(doc);
-        if (p && typeof (p as Promise<void>).catch === 'function') {
-          (p as Promise<void>).catch(() => {});
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-  }, [immersive, open]);
 
   if (!open) return null;
 
