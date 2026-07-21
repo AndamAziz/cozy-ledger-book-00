@@ -1681,7 +1681,7 @@ export const translations = {
     welcome: 'خوش آمدید!',
     accountCreatedSuccess: 'حساب شما با موفقیت ایجاد شد',
     accountPending: 'حساب شما در انتظار تأیید است',
-    accountPendingMessage: 'حساب شما نیاز به تأیید مدیر دارد. لطفاً برای تأیید سریع‌تر پیام واتساپ بفرستید.',
+    accountPendingMessage: 'حساب شما نیاز به تأیید مدیر دارد. لطفاً برای تأیید سریع‌تر پیام تلگرام بفرستید.',
     accountDeactivated: 'حساب غیرفعال',
     accountDeactivatedTitle: 'حساب شما غیرفعال شده است',
     accountDeactivatedMessage: 'لطفاً برای فعال‌سازی مجدد با مدیر تماس بگیرید. داده‌های شما حفظ شده و پس از فعال‌سازی می‌توانید ادامه دهید.',
