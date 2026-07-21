@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Ban, MessageCircle, LogOut, Shield } from 'lucide-react';
+import { Ban, Send, LogOut, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DeactivatedAccountProps {
