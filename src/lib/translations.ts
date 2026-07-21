@@ -762,9 +762,9 @@ export const translations = {
     expiryTomorrow: 'Subscription expires tomorrow!',
     contactAdmin: 'Please contact the administrator to extend your subscription.',
     contact: 'Contact',
-    contactViaWhatsApp: 'Contact via WhatsApp',
+    contactViaWhatsApp: 'Contact via Telegram',
     contactForRenewalBtn: 'Contact for Renewal',
-    phoneNumber: 'Phone',
+    phoneNumber: 'Telegram',
     adminEmail: 'Admin Email',
     
     // Pending/Deactivated/Expired
