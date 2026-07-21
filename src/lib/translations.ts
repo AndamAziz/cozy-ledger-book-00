@@ -1672,9 +1672,9 @@ export const translations = {
     expiryTomorrow: 'اشتراک فردا منقضی می‌شود!',
     contactAdmin: 'لطفاً برای تمدید اشتراک با مدیر تماس بگیرید.',
     contact: 'تماس',
-    contactViaWhatsApp: 'تماس از طریق واتساپ',
+    contactViaWhatsApp: 'تماس از طریق تلگرام',
     contactForRenewalBtn: 'تماس برای تمدید',
-    phoneNumber: 'تلفن',
+    phoneNumber: 'تلگرام',
     adminEmail: 'ایمیل مدیر',
     
     // Pending/Deactivated/Expired
