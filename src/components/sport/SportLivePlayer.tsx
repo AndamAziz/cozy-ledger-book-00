@@ -470,6 +470,75 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
           )}
         </div>
         <div className="flex items-center gap-1.5">
+          {/* Aspect ratio + auto-fit control */}
+          <div className="relative">
+            <button
+              onClick={() => setShowAspectMenu((v) => !v)}
+              className={`h-8 px-2 rounded-lg flex items-center gap-1 text-xs font-semibold transition-colors touch-manipulation active:scale-95 ${
+                showAspectMenu
+                  ? 'bg-success/15 text-success'
+                  : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label="Aspect ratio"
+              aria-expanded={showAspectMenu}
+            >
+              <Ratio className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {aspectChoice === 'auto' ? (autoFit ? 'Auto-fit' : 'Auto') : aspectChoice}
+              </span>
+            </button>
+            {showAspectMenu && (
+              <div
+                className="absolute right-0 top-9 z-50 w-44 rounded-xl border border-white/10 bg-background/95 backdrop-blur-md shadow-xl p-2 animate-fade-in"
+                onMouseLeave={() => setShowAspectMenu(false)}
+              >
+                <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">
+                  Aspect Ratio
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {ASPECT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setAspectChoice(opt.value)}
+                      className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                        aspectChoice === opt.value
+                          ? 'bg-success text-success-foreground'
+                          : 'bg-secondary/50 text-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setAutoFit((v) => !v)}
+                  disabled={aspectChoice !== 'auto'}
+                  className={`mt-2 w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                    aspectChoice !== 'auto'
+                      ? 'opacity-50 cursor-not-allowed bg-secondary/30 text-muted-foreground'
+                      : 'bg-secondary/50 text-foreground hover:bg-secondary'
+                  }`}
+                  aria-pressed={autoFit}
+                >
+                  <span>Auto-fit screen</span>
+                  <span
+                    className={`inline-block w-8 h-4 rounded-full relative transition-colors ${
+                      autoFit ? 'bg-success' : 'bg-muted'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${
+                        autoFit ? 'left-4' : 'left-0.5'
+                      }`}
+                    />
+                  </span>
+                </button>
+                <p className="mt-1.5 px-2 text-[10px] leading-snug text-muted-foreground">
+                  Auto-fit picks the best aspect for your screen so TikTok LIVE and portrait videos fill without letterboxing.
+                </p>
+              </div>
+            )}
+          </div>
           <button
             onClick={handleManualRetry}
             className="w-8 h-8 rounded-lg bg-secondary/60 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors touch-manipulation active:scale-95"
