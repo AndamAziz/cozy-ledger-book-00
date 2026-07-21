@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Clock, Send, LogOut, Sparkles, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { buildTelegramMessage, openTelegramWithMessage } from '@/lib/telegramContact';
 
 interface PendingApprovalProps {
   email: string;
@@ -9,17 +10,12 @@ interface PendingApprovalProps {
 
 export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
   const { t, language } = useLanguage();
-  
+
   const handleTelegramContact = () => {
-    const messages = {
-      ku: `سڵاو، من ${email} ئەکاونتم دروست کردووە لە Central Tech Platform ئەپ و داوای ئەپروڤکردن دەکەم.`,
-      en: `Hello, I (${email}) have created an account on Central Tech Platform app and request approval.`,
-      ar: `مرحباً، أنا ${email} أنشأت حساباً في تطبيق Central Tech Platform وأطلب الموافقة.`,
-      fa: `سلام، من ${email} حسابی در اپلیکیشن Central Tech Platform ایجاد کردم و درخواست تأیید دارم.`,
-    };
-    try { navigator.clipboard.writeText(messages[language] ?? messages.en); } catch { /* noop */ }
-    window.open('https://t.me/AndamAziz', '_blank');
+    const message = buildTelegramMessage({ reason: 'pending', language, email });
+    void openTelegramWithMessage(message);
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
