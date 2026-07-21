@@ -79,13 +79,13 @@ test.describe("TikTok LIVE embed loads in a real iframe", () => {
       browserName,
     }) => {
       const embedUrl = toSocialEmbed(url)?.embedUrl;
-      expect(embedUrl).toBe(`https://www.tiktok.com/embed/live/@${user}`);
+      expect(embedUrl).toBe(`https://www.tiktok.com/embed/@${user}`);
 
       // Capture the top-level iframe navigation response so we can assert on the
       // real HTTP status TikTok returns for this embed URL.
       const embedResponsePromise = page.waitForResponse(
         (res) =>
-          res.url().startsWith(`https://www.tiktok.com/embed/live/@${user}`) &&
+          res.url().startsWith(`https://www.tiktok.com/embed/@${user}`) &&
           res.request().resourceType() === "document",
         { timeout: 20_000 },
       );
