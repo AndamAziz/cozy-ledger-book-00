@@ -160,6 +160,52 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptedRef = useRef<Set<string>>(new Set());
+  const playerContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const fullscreenEnabled =
+    typeof document !== 'undefined' &&
+    !!(document.fullscreenEnabled ||
+      (document as unknown as { webkitFullscreenEnabled?: boolean }).webkitFullscreenEnabled);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onChange = () => {
+      const active =
+        !!document.fullscreenElement ||
+        !!(document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement;
+      setIsFullscreen(active);
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = playerContainerRef.current;
+    if (!el) return;
+    const active =
+      !!document.fullscreenElement ||
+      !!(document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement;
+    try {
+      if (active) {
+        const exit =
+          document.exitFullscreen ||
+          (document as unknown as { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
+        exit?.call(document)?.catch(() => {});
+      } else {
+        const req =
+          el.requestFullscreen ||
+          (el as unknown as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
+        req?.call(el)?.catch(() => {});
+      }
+    } catch {
+      // Fullscreen may be blocked or unavailable on this device/browser.
+    }
+  }, []);
 
   const orderedServers = useMemo(
     () => [...servers].sort((a, b) => a.priority - b.priority),
