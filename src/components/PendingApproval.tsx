@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Clock, Send, LogOut, Sparkles, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { buildTelegramMessage, openTelegramWithMessage } from '@/lib/telegramContact';
+import { buildTelegramMessage } from '@/lib/telegramContact';
+import { TelegramPreviewDialog } from '@/components/TelegramPreviewDialog';
 
 interface PendingApprovalProps {
   email: string;
@@ -10,15 +12,18 @@ interface PendingApprovalProps {
 
 export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
   const { t, language } = useLanguage();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const previewMessage = buildTelegramMessage({ reason: 'pending', language, email });
 
-  const handleTelegramContact = () => {
-    const message = buildTelegramMessage({ reason: 'pending', language, email });
-    void openTelegramWithMessage(message);
-  };
+  const handleTelegramContact = () => setPreviewOpen(true);
+
+
 
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <TelegramPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} message={previewMessage} />
+
       {/* Background decorations */}
       <div className="absolute top-0 left-0 w-full h-full">
         <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-warning/20 blur-[100px] animate-pulse" />
