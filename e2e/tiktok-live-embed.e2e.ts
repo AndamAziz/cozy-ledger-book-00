@@ -58,12 +58,12 @@ const HARD_ERROR_TEXT = /Video unavailable|Couldn['’]t find this account|Page 
 
 test.describe("TikTok LIVE embed transform", () => {
   for (const { label, url, user } of LIVE_INPUTS) {
-    test(`normalises ${label} → /embed/live/@${user}`, () => {
+    test(`normalises ${label} → /embed/@${user}`, () => {
       expect(normalizeTikTokLiveUser(url)).toBe(user);
       const embed = toSocialEmbed(url);
       expect(embed).toEqual({
         platform: "tiktok",
-        embedUrl: `https://www.tiktok.com/embed/live/@${user}`,
+        embedUrl: `https://www.tiktok.com/embed/@${user}`,
       });
     });
   }
@@ -79,13 +79,13 @@ test.describe("TikTok LIVE embed loads in a real iframe", () => {
       browserName,
     }) => {
       const embedUrl = toSocialEmbed(url)?.embedUrl;
-      expect(embedUrl).toBe(`https://www.tiktok.com/embed/live/@${user}`);
+      expect(embedUrl).toBe(`https://www.tiktok.com/embed/@${user}`);
 
       // Capture the top-level iframe navigation response so we can assert on the
       // real HTTP status TikTok returns for this embed URL.
       const embedResponsePromise = page.waitForResponse(
         (res) =>
-          res.url().startsWith(`https://www.tiktok.com/embed/live/@${user}`) &&
+          res.url().startsWith(`https://www.tiktok.com/embed/@${user}`) &&
           res.request().resourceType() === "document",
         { timeout: 20_000 },
       );
