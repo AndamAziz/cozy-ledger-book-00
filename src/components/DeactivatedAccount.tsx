@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Ban, Send, LogOut, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { buildTelegramMessage, openTelegramWithMessage } from '@/lib/telegramContact';
 
 interface DeactivatedAccountProps {
   email: string;
@@ -9,17 +10,12 @@ interface DeactivatedAccountProps {
 
 export function DeactivatedAccount({ email, onLogout }: DeactivatedAccountProps) {
   const { t, language } = useLanguage();
-  
+
   const handleTelegramContact = () => {
-    const messages = {
-      ku: `سڵاو، من ${email} هەژمارەکەم ناچالاک کراوە، تکایە چالاکی بکەرەوە.`,
-      en: `Hello, my account (${email}) has been deactivated. Please reactivate it.`,
-      ar: `مرحباً، تم تعطيل حسابي (${email})، يرجى إعادة تفعيله.`,
-      fa: `سلام، حساب من (${email}) غیرفعال شده است. لطفاً آن را مجدداً فعال کنید.`,
-    };
-    try { navigator.clipboard.writeText(messages[language] ?? messages.en); } catch { /* noop */ }
-    window.open('https://t.me/AndamAziz', '_blank');
+    const message = buildTelegramMessage({ reason: 'deactivated', language, email });
+    void openTelegramWithMessage(message);
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
