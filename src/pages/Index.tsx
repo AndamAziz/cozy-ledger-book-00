@@ -87,8 +87,8 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
       <Helmet>
         <title>{companyName ? `${companyName} - ` : ''}{t('financialManagement')} - {financeData.getCurrentMonthLabel()}</title>
         <meta name="description" content="Manage expenses, income, inventory, and sales with multi-currency PDF reports — plus live markets, prayer times, Quran, movies, and sports in one hub." />
-        <link rel="canonical" href="https://ctp.kurdcloud.xyz/" />
-        <meta property="og:url" content="https://ctp.kurdcloud.xyz/" />
+        <link rel="canonical" href="https://andam.uk/" />
+        <meta property="og:url" content="https://andam.uk/" />
       </Helmet>
 
       <main className="min-h-screen min-h-[100dvh] p-1.5 sm:p-3 md:p-6 safe-area-inset">

@@ -220,8 +220,8 @@ export default function CryptoTracker() {
       <Helmet>
         <title>{activeTab === 'crypto' ? bi('شوێنکەوتنی کریپتۆ', 'Crypto Tracker') : activeTab === 'forex' ? bi('نرخی دراو', 'Forex Rates') : bi('کانزا بەهادارەکان', 'Precious Metals')} — {bi('نرخی ڕاستەوخۆ', 'Live Prices')} | Central Tech Platform</title>
         <meta name="description" content="Live crypto, forex, and precious metals prices with real-time charts, technical indicators, and trading signals." />
-        <link rel="canonical" href="https://ctp.kurdcloud.xyz/crypto" />
-        <meta property="og:url" content="https://ctp.kurdcloud.xyz/crypto" />
+        <link rel="canonical" href="https://andam.uk/crypto" />
+        <meta property="og:url" content="https://andam.uk/crypto" />
         <meta property="og:title" content="Market Tracker — Live Crypto, Forex & Metals | Central Tech Platform" />
         <meta property="og:description" content="Real-time market data across crypto, forex, and precious metals with charts and trading signals." />
       </Helmet>
@@ -607,7 +607,7 @@ export default function CryptoTracker() {
         <BottomNav
           activeTab={activeTab}
           onTab={(tab) => { setShowSidebar(false); setActiveTab(tab); }}
-          onHome={() => window.location.href = 'https://ctp.kurdcloud.xyz'}
+          onHome={() => window.location.href = 'https://andam.uk'}
           onNews={() => setShowNews(true)}
           onVerify={() => setShowVerify(true)}
           onBot={() => navigate('/bots')}
