@@ -433,6 +433,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
         <div className="mx-auto w-full max-w-5xl p-2 sm:p-4">
           {/* Aspect ratio adapts to the source (portrait for TikTok/Reels/Shorts). */}
           <div
+            ref={playerContainerRef}
             className={`relative w-full mx-auto overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_0_40px_hsl(var(--success)/0.15)] ${aspectClass} ${
               isPortraitSource ? 'max-w-[min(100%,calc((100vh-8rem)*9/16))]' : ''
             }`}
