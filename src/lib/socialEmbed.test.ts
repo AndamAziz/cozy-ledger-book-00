@@ -6,7 +6,7 @@ import {
 } from './socialEmbed';
 
 describe('TikTok LIVE support', () => {
-  const LIVE_EMBED = 'https://www.tiktok.com/embed/live/@aminheyasi';
+  const LIVE_EMBED = 'https://www.tiktok.com/embed/@aminheyasi';
 
   it('extracts username from bare /@user/live', () => {
     expect(normalizeTikTokLiveUser('https://www.tiktok.com/@aminheyasi/live')).toBe(
