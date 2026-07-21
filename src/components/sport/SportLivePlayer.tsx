@@ -654,7 +654,25 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
               </a>
             )}
 
-            {activeServer && !allOffline && !resolving && !tiktokLiveUser && playbackMode === 'iframe' && (
+            {/* Instagram inline native playback (extracts mp4 from og:video). */}
+            {activeServer && !allOffline && !resolving && instagramMedia && igVideoUrl && !igFallback && (
+              <video
+                key={`${activeServer.id}-ig-${reloadNonce}`}
+                src={igVideoUrl}
+                poster={igPoster ?? undefined}
+                controls
+                autoPlay
+                playsInline
+                preload="auto"
+                crossOrigin="anonymous"
+                onCanPlay={handleIframeLoad}
+                onPlaying={handleIframeLoad}
+                onError={() => setIgFallback(true)}
+                className="absolute inset-0 h-full w-full bg-black object-contain"
+              />
+            )}
+
+            {activeServer && !allOffline && !resolving && !tiktokLiveUser && playbackMode === 'iframe' && !(instagramMedia && igVideoUrl && !igFallback) && !(instagramMedia && igLoading) && (
               <iframe
                 key={`${activeServer.id}-${reloadNonce}`}
                 title="Sport Live"
