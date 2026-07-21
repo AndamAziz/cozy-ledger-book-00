@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Radio, X, RefreshCw, Wifi, WifiOff, AlertTriangle, Loader2 } from 'lucide-react';
+import { Radio, X, RefreshCw, Wifi, WifiOff, AlertTriangle, Loader2, Maximize, Minimize } from 'lucide-react';
 import { useStreamServers, type StreamStatus, type StreamServer } from '@/hooks/useStreamServers';
 import { toSocialEmbed, needsRedirectResolution } from '@/lib/socialEmbed';
 import { supabase } from '@/integrations/supabase/client';
@@ -160,6 +160,52 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptedRef = useRef<Set<string>>(new Set());
+  const playerContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const fullscreenEnabled =
+    typeof document !== 'undefined' &&
+    !!(document.fullscreenEnabled ||
+      (document as unknown as { webkitFullscreenEnabled?: boolean }).webkitFullscreenEnabled);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onChange = () => {
+      const active =
+        !!document.fullscreenElement ||
+        !!(document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement;
+      setIsFullscreen(active);
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = playerContainerRef.current;
+    if (!el) return;
+    const active =
+      !!document.fullscreenElement ||
+      !!(document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement;
+    try {
+      if (active) {
+        const exit =
+          document.exitFullscreen ||
+          (document as unknown as { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
+        exit?.call(document)?.catch(() => {});
+      } else {
+        const req =
+          el.requestFullscreen ||
+          (el as unknown as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen;
+        req?.call(el)?.catch(() => {});
+      }
+    } catch {
+      // Fullscreen may be blocked or unavailable on this device/browser.
+    }
+  }, []);
 
   const orderedServers = useMemo(
     () => [...servers].sort((a, b) => a.priority - b.priority),
@@ -363,6 +409,15 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
           >
             <RefreshCw className="h-4 w-4" />
           </button>
+          {fullscreenEnabled && (
+            <button
+              onClick={toggleFullscreen}
+              className="w-8 h-8 rounded-lg bg-secondary/60 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors touch-manipulation active:scale-95"
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+            </button>
+          )}
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-colors touch-manipulation active:scale-95"
@@ -378,6 +433,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
         <div className="mx-auto w-full max-w-5xl p-2 sm:p-4">
           {/* Aspect ratio adapts to the source (portrait for TikTok/Reels/Shorts). */}
           <div
+            ref={playerContainerRef}
             className={`relative w-full mx-auto overflow-hidden rounded-xl border border-white/10 bg-black shadow-[0_0_40px_hsl(var(--success)/0.15)] ${aspectClass} ${
               isPortraitSource ? 'max-w-[min(100%,calc((100vh-8rem)*9/16))]' : ''
             }`}
