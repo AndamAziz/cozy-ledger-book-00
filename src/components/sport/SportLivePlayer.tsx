@@ -663,6 +663,18 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
               />
             )}
 
+            {/* TikTok LIVE offline hint + open-on-TikTok fallback */}
+            {tiktokLiveUser && !iframeLoading && !switching && !resolving && !allOffline && (
+              <a
+                href={`https://www.tiktok.com/@${tiktokLiveUser}/live`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full bg-black/70 hover:bg-black/85 text-white text-xs font-semibold backdrop-blur-sm shadow-lg transition-colors"
+              >
+                Open @{tiktokLiveUser} on TikTok
+              </a>
+            )}
+
             {/* Loading animation before first frame */}
             {(iframeLoading || switching || resolving) && !allOffline && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-background via-background/95 to-secondary/40">
