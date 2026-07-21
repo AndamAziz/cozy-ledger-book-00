@@ -182,6 +182,42 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [aspectChoice, setAspectChoice] = useState<AspectChoice>(() => {
+    if (typeof window === 'undefined') return 'auto';
+    const v = window.localStorage.getItem(ASPECT_CHOICE_KEY);
+    return (v && ['auto', '16:9', '9:16', '4:3', '1:1'].includes(v) ? v : 'auto') as AspectChoice;
+  });
+  const [autoFit, setAutoFit] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return window.localStorage.getItem(AUTO_FIT_KEY) !== '0';
+  });
+  const [viewportPortrait, setViewportPortrait] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerHeight >= window.innerWidth;
+  });
+  const [showAspectMenu, setShowAspectMenu] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onResize = () => setViewportPortrait(window.innerHeight >= window.innerWidth);
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(ASPECT_CHOICE_KEY, aspectChoice);
+  }, [aspectChoice]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(AUTO_FIT_KEY, autoFit ? '1' : '0');
+  }, [autoFit]);
+
   const fullscreenEnabled =
     typeof document !== 'undefined' &&
     !!(document.fullscreenEnabled ||
