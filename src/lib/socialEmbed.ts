@@ -109,15 +109,14 @@ function tiktokEmbed(u: URL): string | null {
   const host = stripWww(u.hostname);
   if (!host.endsWith('tiktok.com')) return null;
 
-  // LIVE stream: /@username/live → TikTok's creator profile embed.
-  // NOTE: TikTok's dedicated `/embed/live/@user` endpoint requires the host
-  // domain to be whitelisted in TikTok's developer console ("Embed blocked:
-  // This embed is not authorized on this domain"). The profile embed
-  // (`/embed/@user`) is domain-agnostic and surfaces the creator's active
-  // LIVE stream at the top with a "LIVE" badge, so viewers can tap through.
+  // LIVE stream: /@username/live → TikTok's official live embed player.
+  // NOTE: `/embed/live/@user` may show a domain-authorization notice on some
+  // hosts. SportLivePlayer overlays a "Watch Live on TikTok" CTA that opens
+  // the real live URL in a new tab, so viewers can always reach the stream
+  // even if TikTok blocks the inline embed on this domain.
   const liveUser = normalizeTikTokLiveUser(u.toString());
   if (liveUser) {
-    return `https://www.tiktok.com/embed/@${liveUser}`;
+    return `https://www.tiktok.com/embed/live/@${liveUser}`;
   }
 
   const id = normalizeTikTokVideoId(u.toString());

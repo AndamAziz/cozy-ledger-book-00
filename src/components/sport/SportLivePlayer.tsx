@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Radio, X, RefreshCw, Wifi, WifiOff, AlertTriangle, Loader2, Maximize, Minimize, Frame } from 'lucide-react';
 import { useStreamServers, type StreamStatus, type StreamServer } from '@/hooks/useStreamServers';
-import { toSocialEmbed, needsRedirectResolution } from '@/lib/socialEmbed';
+import { toSocialEmbed, needsRedirectResolution, normalizeTikTokLiveUser } from '@/lib/socialEmbed';
 import { supabase } from '@/integrations/supabase/client';
 
 interface SportLivePlayerProps {
@@ -430,6 +430,10 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
 
   const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
   const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
+  // TikTok LIVE (/@user/live) may be blocked by TikTok's domain whitelist when
+  // embedded on non-authorised hosts. Detect it and surface a "Watch Live on
+  // TikTok" CTA so viewers can always reach the real stream in a new tab.
+  const tiktokLiveUser = activeServer ? normalizeTikTokLiveUser(activeServer.url) : null;
 
   const autoAspectClass = getAspectClass(activeServer?.url ?? '');
   const aspectClass = manualAspect === 'auto'
@@ -577,6 +581,18 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
               />
             )}
 
+
+            {tiktokLiveUser && !iframeLoading && !switching && !allOffline && (
+              <a
+                href={`https://www.tiktok.com/@${tiktokLiveUser}/live`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-2 rounded-full bg-[hsl(346_87%_53%)] px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-black/40 hover:brightness-110 transition"
+              >
+                <Radio className="h-3.5 w-3.5" />
+                Watch LIVE on TikTok ↗
+              </a>
+            )}
 
             {activeServer && !allOffline && !resolving && playbackMode !== 'iframe' && (
               <DirectStreamVideo
