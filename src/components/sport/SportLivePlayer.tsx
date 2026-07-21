@@ -561,7 +561,50 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
           >
 
 
-            {activeServer && !allOffline && !resolving && playbackMode === 'iframe' && (
+            {activeServer && !allOffline && !resolving && tiktokLiveUser && (
+              <a
+                href={`https://www.tiktok.com/@${tiktokLiveUser}/live`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Open TikTok LIVE @${tiktokLiveUser} in a new tab`}
+                className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-black via-[#1a0a1f] to-[#25101d] text-white px-6 text-center overflow-hidden"
+              >
+                {/* Animated glow */}
+                <div className="pointer-events-none absolute inset-0 opacity-60">
+                  <div className="absolute -top-1/3 left-1/2 -translate-x-1/2 w-[140%] aspect-square rounded-full bg-[radial-gradient(circle_at_center,#fe2c55_0%,transparent_60%)] blur-3xl animate-pulse" />
+                </div>
+
+                {/* LIVE badge */}
+                <div className="relative flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#fe2c55] shadow-[0_0_30px_rgba(254,44,85,0.7)]">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+                  </span>
+                  <span className="text-xs font-black tracking-[0.2em]">LIVE</span>
+                </div>
+
+                {/* Avatar + username */}
+                <div className="relative flex flex-col items-center gap-2">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-[#25f4ee] via-white to-[#fe2c55] p-[3px] shadow-[0_0_40px_rgba(37,244,238,0.4)]">
+                    <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-3xl font-black">
+                      {tiktokLiveUser.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <p className="text-lg sm:text-xl font-bold">@{tiktokLiveUser}</p>
+                  <p className="text-xs sm:text-sm text-white/70 max-w-xs">
+                    TikTok LIVE cannot embed on this domain. Tap to watch the stream on TikTok.
+                  </p>
+                </div>
+
+                {/* CTA */}
+                <div className="relative mt-1 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black text-sm font-bold shadow-lg active:scale-95 transition-transform">
+                  <Radio className="h-4 w-4 text-[#fe2c55]" />
+                  Watch on TikTok
+                </div>
+              </a>
+            )}
+
+            {activeServer && !allOffline && !resolving && !tiktokLiveUser && playbackMode === 'iframe' && (
               <iframe
                 key={`${activeServer.id}-${reloadNonce}`}
                 title="Sport Live"
