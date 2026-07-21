@@ -52,21 +52,53 @@ function youtubeEmbed(u: URL): string | null {
 }
 
 // ---- TikTok --------------------------------------------------------------
+const TIKTOK_ID_RE = /^\d{6,25}$/;
+
+/**
+ * Extracts the numeric TikTok video ID from any supported URL/string format:
+ *   - https://www.tiktok.com/@user/video/1234567890?_r=1&_t=...
+ *   - https://m.tiktok.com/v/1234567890.html
+ *   - https://www.tiktok.com/embed/1234567890
+ *   - https://www.tiktok.com/embed/v2/1234567890
+ *   - https://www.tiktok.com/player/v1/1234567890
+ *   - a bare numeric ID: "1234567890"
+ *
+ * Returns null for short/share links (vm.tiktok.com, /t/…) — those must be
+ * resolved server-side via needsRedirectResolution() first.
+ */
+export function normalizeTikTokVideoId(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (TIKTOK_ID_RE.test(trimmed)) return trimmed;
+
+  const u = safeUrl(trimmed);
+  if (!u) return null;
+  const host = stripWww(u.hostname);
+  if (!host.endsWith('tiktok.com')) return null;
+  const path = u.pathname;
+
+  // Try, in order: /video/ID, /v/ID(.html), /embed[/v2]/ID, /player/v1/ID
+  const patterns: RegExp[] = [
+    /\/video\/(\d{6,25})/,
+    /\/v\/(\d{6,25})(?:\.html?)?/,
+    /\/(?:embed|player)\/(?:v[12]\/)?(\d{6,25})/,
+  ];
+  for (const re of patterns) {
+    const m = path.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
 function tiktokEmbed(u: URL): string | null {
   const host = stripWww(u.hostname);
   if (!host.endsWith('tiktok.com')) return null;
+  const id = normalizeTikTokVideoId(u.toString());
+  if (!id) return null;
   // TikTok's official iframe player (player/v1) is more reliable than the
   // legacy /embed/v2/ page which frequently shows a "video unavailable" screen
   // when embedded on third-party domains. player/v1 also supports autoplay.
-  const build = (id: string) =>
-    `https://www.tiktok.com/player/v1/${id}?autoplay=1&music_info=1&description=1&closed_caption=1`;
-  // Desktop / mobile: /@user/video/ID
-  const match = u.pathname.match(/\/video\/(\d+)/);
-  if (match) return build(match[1]);
-  // /embed/ID or /embed/v2/ID or /player/v1/ID already
-  const embedMatch = u.pathname.match(/\/(?:embed|player)\/(?:v[12]\/)?(\d+)/);
-  if (embedMatch) return build(embedMatch[1]);
-  return null;
+  return `https://www.tiktok.com/player/v1/${id}?autoplay=1&music_info=1&description=1&closed_caption=1`;
 }
 
 // ---- Instagram -----------------------------------------------------------
@@ -128,6 +160,15 @@ export function needsRedirectResolution(raw: string): boolean {
  * not a recognised YouTube / TikTok / Instagram / Facebook link.
  */
 export function toSocialEmbed(raw: string): SocialEmbed | null {
+  // Bare TikTok numeric ID (e.g. pasted from a copied "video ID").
+  const bareId = normalizeTikTokVideoId(raw);
+  if (bareId && !safeUrl(raw)) {
+    return {
+      platform: 'tiktok',
+      embedUrl: `https://www.tiktok.com/player/v1/${bareId}?autoplay=1&music_info=1&description=1&closed_caption=1`,
+    };
+  }
+
   const u = safeUrl(raw);
   if (!u) return null;
 
