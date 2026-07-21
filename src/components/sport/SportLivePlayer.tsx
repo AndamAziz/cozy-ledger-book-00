@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Radio, X, RefreshCw, Wifi, WifiOff, AlertTriangle, Loader2, Maximize, Minimize, Frame } from 'lucide-react';
 import { useStreamServers, type StreamStatus, type StreamServer } from '@/hooks/useStreamServers';
-import { toSocialEmbed, needsRedirectResolution } from '@/lib/socialEmbed';
+import { toSocialEmbed, needsRedirectResolution, normalizeTikTokLiveUser } from '@/lib/socialEmbed';
 import { supabase } from '@/integrations/supabase/client';
 
 interface SportLivePlayerProps {
