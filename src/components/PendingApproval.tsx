@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Clock, Send, LogOut, Sparkles, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { buildTelegramMessage, openTelegramWithMessage } from '@/lib/telegramContact';
+import { buildTelegramMessage } from '@/lib/telegramContact';
+import { TelegramPreviewDialog } from '@/components/TelegramPreviewDialog';
 
 interface PendingApprovalProps {
   email: string;
@@ -10,11 +12,12 @@ interface PendingApprovalProps {
 
 export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
   const { t, language } = useLanguage();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const previewMessage = buildTelegramMessage({ reason: 'pending', language, email });
 
-  const handleTelegramContact = () => {
-    const message = buildTelegramMessage({ reason: 'pending', language, email });
-    void openTelegramWithMessage(message);
-  };
+  const handleTelegramContact = () => setPreviewOpen(true);
+
+
 
 
   return (
