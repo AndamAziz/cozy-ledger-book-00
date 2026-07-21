@@ -91,5 +91,7 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
         </Button>
       </div>
     </div>
+    </>
   );
+
 }
