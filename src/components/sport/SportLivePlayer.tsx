@@ -212,8 +212,11 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
     return () => document.removeEventListener('mousedown', onDoc);
   }, [aspectMenuOpen]);
 
+  const fullscreenEnabled =
+    typeof document !== 'undefined' &&
     !!(document.fullscreenEnabled ||
       (document as unknown as { webkitFullscreenEnabled?: boolean }).webkitFullscreenEnabled);
+
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
