@@ -92,19 +92,22 @@ export function PendingApproval({ email, onLogout }: PendingApprovalProps) {
               </div>
             </div>
 
-            {/* WhatsApp Contact Button */}
+            {/* Telegram Contact Button */}
             <Button 
-              onClick={handleWhatsAppContact}
-              className="w-full py-7 text-lg font-bold rounded-xl shadow-xl bg-[#25D366] hover:bg-[#20BD5A] text-white hover:scale-[1.02] transition-all duration-300 mb-4"
+              onClick={handleTelegramContact}
+              className="w-full py-7 text-lg font-bold rounded-xl shadow-xl bg-[#229ED9] hover:bg-[#1c8cc2] text-white hover:scale-[1.02] transition-all duration-300 mb-4"
             >
               <div className="flex items-center gap-3">
-                <MessageCircle className="h-6 w-6" />
+                <Send className="h-6 w-6" />
                 {t('contactViaWhatsApp')}
               </div>
             </Button>
 
+            <p className="text-center text-xs text-muted-foreground mb-1">
+              {t('phoneNumber')}: <span dir="ltr" className="font-mono">@AndamAziz</span>
+            </p>
             <p className="text-center text-xs text-muted-foreground mb-6">
-              {t('phoneNumber')}: <span dir="ltr" className="font-mono">+44 7482 828 237</span>
+              <span dir="ltr" className="font-mono">info@andam.uk</span>
             </p>
 
             {/* Logout Button */}
