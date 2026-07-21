@@ -66,7 +66,7 @@ export default function EmailStatus() {
                 {t('emailStatusTitle')}
               </h1>
               <p className="text-slate-400 text-sm break-all">
-                {status?.domain ?? 'notify.andam.uk'}
+                {status?.domain ?? 'notify.ctp.kurdcloud.xyz'}
               </p>
             </div>
 

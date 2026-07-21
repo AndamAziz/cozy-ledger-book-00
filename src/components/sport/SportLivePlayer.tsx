@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Radio, X, RefreshCw, Wifi, WifiOff, AlertTriangle, Loader2, Maximize, Minimize, Frame } from 'lucide-react';
+import { Radio, X, RefreshCw, Wifi, WifiOff, AlertTriangle, Loader2, Maximize, Minimize } from 'lucide-react';
 import { useStreamServers, type StreamStatus, type StreamServer } from '@/hooks/useStreamServers';
 import { toSocialEmbed, needsRedirectResolution } from '@/lib/socialEmbed';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,24 +12,6 @@ interface SportLivePlayerProps {
 const STREAM_REVEAL_TIMEOUT_MS = 2500;
 const FAILOVER_DEBOUNCE_MS = 1200;
 const ACTIVE_SERVER_KEY = 'ctp-sport-active-server';
-const ASPECT_PREF_KEY = 'ctp-sport-aspect-pref';
-const AUTOFIT_PREF_KEY = 'ctp-sport-autofit-pref';
-
-type AspectChoice = 'auto' | '16:9' | '9:16' | '4:3' | '1:1';
-const ASPECT_OPTIONS: { value: AspectChoice; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: '16:9', label: '16:9' },
-  { value: '9:16', label: '9:16' },
-  { value: '4:3', label: '4:3' },
-  { value: '1:1', label: '1:1' },
-];
-const MANUAL_ASPECT_CLASSES: Record<Exclude<AspectChoice, 'auto'>, string> = {
-  '16:9': 'aspect-video',
-  '9:16': 'aspect-[9/16]',
-  '4:3': 'aspect-[4/3]',
-  '1:1': 'aspect-square',
-};
-
 
 const STATUS_META: Record<StreamStatus, { label: string; dot: string; text: string }> = {
   live: { label: 'Live', dot: 'bg-success', text: 'text-success' },
@@ -179,44 +161,12 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const failoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptedRef = useRef<Set<string>>(new Set());
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
-  const aspectMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [aspectMenuOpen, setAspectMenuOpen] = useState(false);
-  const [manualAspect, setManualAspect] = useState<AspectChoice>(() => {
-    if (typeof window === 'undefined') return 'auto';
-    const v = window.localStorage.getItem(ASPECT_PREF_KEY);
-    return (v === '16:9' || v === '9:16' || v === '4:3' || v === '1:1' || v === 'auto') ? v : 'auto';
-  });
-  const [autoFit, setAutoFit] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    return window.localStorage.getItem(AUTOFIT_PREF_KEY) !== '0';
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(ASPECT_PREF_KEY, manualAspect);
-  }, [manualAspect]);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(AUTOFIT_PREF_KEY, autoFit ? '1' : '0');
-  }, [autoFit]);
-
-  useEffect(() => {
-    if (!aspectMenuOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!aspectMenuRef.current) return;
-      if (!aspectMenuRef.current.contains(e.target as Node)) setAspectMenuOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [aspectMenuOpen]);
-
   const fullscreenEnabled =
     typeof document !== 'undefined' &&
     !!(document.fullscreenEnabled ||
       (document as unknown as { webkitFullscreenEnabled?: boolean }).webkitFullscreenEnabled);
-
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -431,12 +381,8 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
   const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
 
-  const autoAspectClass = getAspectClass(activeServer?.url ?? '');
-  const aspectClass = manualAspect === 'auto'
-    ? (autoFit ? autoAspectClass : 'aspect-video')
-    : MANUAL_ASPECT_CLASSES[manualAspect];
+  const aspectClass = getAspectClass(activeServer?.url ?? '');
   const isPortraitSource = aspectClass === 'aspect-[9/16]';
-
 
   if (!open) return null;
 
@@ -456,67 +402,6 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="relative" ref={aspectMenuRef}>
-            <button
-              onClick={() => setAspectMenuOpen((v) => !v)}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors touch-manipulation active:scale-95 ${
-                aspectMenuOpen || manualAspect !== 'auto'
-                  ? 'bg-success/15 text-success'
-                  : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
-              }`}
-              aria-label="Aspect ratio"
-              aria-expanded={aspectMenuOpen}
-            >
-              <Frame className="h-4 w-4" />
-            </button>
-            {aspectMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-64 z-[110] rounded-2xl border border-white/10 bg-card/95 backdrop-blur-md p-3 shadow-2xl animate-fade-in">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                  Aspect ratio
-                </p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {ASPECT_OPTIONS.map((opt) => {
-                    const active = manualAspect === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        onClick={() => setManualAspect(opt.value)}
-                        className={`px-2 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                          active
-                            ? 'bg-gradient-to-br from-success to-success/80 text-success-foreground shadow-[0_0_14px_hsl(var(--success)/0.35)]'
-                            : 'bg-secondary/50 text-foreground/80 hover:bg-secondary'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 pt-3 border-t border-white/10">
-                  <button
-                    onClick={() => setAutoFit((v) => !v)}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-secondary/40 hover:bg-secondary/60 transition-colors"
-                  >
-                    <span className="text-sm font-semibold text-foreground">Auto-fit screen</span>
-                    <span
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        autoFit ? 'bg-success' : 'bg-muted'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                          autoFit ? 'translate-x-5' : 'translate-x-0.5'
-                        }`}
-                      />
-                    </span>
-                  </button>
-                  <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-                    Auto-fit picks the best aspect for your screen so TikTok LIVE and portrait videos fill without letterboxing.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
           <button
             onClick={handleManualRetry}
             className="w-8 h-8 rounded-lg bg-secondary/60 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors touch-manipulation active:scale-95"
@@ -524,7 +409,6 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
           >
             <RefreshCw className="h-4 w-4" />
           </button>
-
           {fullscreenEnabled && (
             <button
               onClick={toggleFullscreen}
