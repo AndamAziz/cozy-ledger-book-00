@@ -34,7 +34,7 @@ const L = {
     tr: 'Bu mesaj panoya kopyalanacak ve Telegram açılacak.',
   },
   copy: {
-    ku: 'کۆپیکردنی پەیام',
+    ku: 'کۆپی بکە',
     en: 'Copy message',
     ar: 'نسخ الرسالة',
     fa: 'کپی پیام',
