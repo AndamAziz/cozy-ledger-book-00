@@ -2136,7 +2136,7 @@ export const translations = {
     welcome: 'Hoş geldiniz!',
     accountCreatedSuccess: 'Hesabınız başarıyla oluşturuldu',
     accountPending: 'Hesabınız onay bekliyor',
-    accountPendingMessage: 'Hesabınızın yönetici onayına ihtiyacı var. Daha hızlı onay için lütfen WhatsApp üzerinden mesaj gönderin.',
+    accountPendingMessage: 'Hesabınızın yönetici onayına ihtiyacı var. Daha hızlı onay için lütfen Telegram üzerinden mesaj gönderin.',
     accountDeactivated: 'Hesap Devre Dışı',
     accountDeactivatedTitle: 'Hesabınız devre dışı bırakıldı',
     accountDeactivatedMessage: 'Hesabınızı yeniden etkinleştirmek için lütfen yöneticiyle iletişime geçin. Verileriniz korunur ve yeniden etkinleştirildiğinde devam edebilirsiniz.',
