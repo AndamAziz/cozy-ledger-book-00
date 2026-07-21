@@ -1226,7 +1226,7 @@ export const translations = {
     welcome: 'مرحباً!',
     accountCreatedSuccess: 'تم إنشاء حسابك بنجاح',
     accountPending: 'حسابك بانتظار الموافقة',
-    accountPendingMessage: 'حسابك يحتاج إلى موافقة المسؤول. يرجى إرسال رسالة عبر واتساب للموافقة بشكل أسرع.',
+    accountPendingMessage: 'حسابك يحتاج إلى موافقة المسؤول. يرجى إرسال رسالة عبر تيليجرام للموافقة بشكل أسرع.',
     accountDeactivated: 'الحساب معطل',
     accountDeactivatedTitle: 'تم تعطيل حسابك',
     accountDeactivatedMessage: 'يرجى التواصل مع المسؤول لإعادة تفعيل حسابك. بياناتك محفوظة ويمكنك المتابعة عند إعادة التفعيل.',
