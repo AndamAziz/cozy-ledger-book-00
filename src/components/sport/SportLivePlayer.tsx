@@ -623,7 +623,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
 
             {activeServer && !allOffline && !resolving && playbackMode === 'iframe' && (
               <iframe
-                key={`${activeServer.id}-${reloadNonce}`}
+                key={`${activeServer.id}-${reloadNonce}-${layoutNonce}`}
                 title="Sport Live"
                 src={resolvePlaybackUrl(effectiveUrl)}
                 allowFullScreen
@@ -645,7 +645,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
 
             {activeServer && !allOffline && !resolving && playbackMode !== 'iframe' && (
               <DirectStreamVideo
-                key={`${activeServer.id}-${reloadNonce}`}
+                key={`${activeServer.id}-${reloadNonce}-${layoutNonce}`}
                 server={{ ...activeServer, url: effectiveUrl }}
                 mode={playbackMode}
                 onReady={handleIframeLoad}
