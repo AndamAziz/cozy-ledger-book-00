@@ -129,15 +129,33 @@ function tiktokEmbed(u: URL): string | null {
 }
 
 // ---- Instagram -----------------------------------------------------------
-function instagramEmbed(u: URL): string | null {
+/**
+ * Returns the reel/post/tv code from any Instagram media URL, or null.
+ * Handles /p/CODE, /reel/CODE, /reels/CODE, /tv/CODE (with or without trailing
+ * slash / tracking params).
+ */
+export function normalizeInstagramMedia(
+  raw: string,
+): { kind: 'p' | 'reel' | 'tv'; code: string } | null {
+  const u = safeUrl(raw);
+  if (!u) return null;
   const host = stripWww(u.hostname);
   if (!host.endsWith('instagram.com')) return null;
   const parts = u.pathname.split('/').filter(Boolean);
   const idx = parts.findIndex((p) => ['p', 'reel', 'reels', 'tv'].includes(p));
   if (idx === -1 || !parts[idx + 1]) return null;
-  const kind = parts[idx] === 'reels' ? 'reel' : parts[idx];
-  const code = parts[idx + 1];
-  return `https://www.instagram.com/${kind}/${code}/embed`;
+  const raw2 = parts[idx];
+  const kind: 'p' | 'reel' | 'tv' =
+    raw2 === 'reels' ? 'reel' : (raw2 as 'p' | 'reel' | 'tv');
+  return { kind, code: parts[idx + 1] };
+}
+
+function instagramEmbed(u: URL): string | null {
+  const host = stripWww(u.hostname);
+  if (!host.endsWith('instagram.com')) return null;
+  const media = normalizeInstagramMedia(u.toString());
+  if (!media) return null;
+  return `https://www.instagram.com/${media.kind}/${media.code}/embed`;
 }
 
 // ---- Facebook ------------------------------------------------------------
