@@ -173,12 +173,27 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
               </div>
             </Button>
 
-            <p className="text-center text-xs text-muted-foreground mb-1">
-              Telegram: <span dir="ltr" className="font-mono">@AndamAziz</span>
-            </p>
-            <p className="text-center text-xs text-muted-foreground mb-6">
-              <span dir="ltr" className="font-mono">info@andam.uk</span>
-            </p>
+            {/* Contact card */}
+            <div className="mb-6 rounded-2xl border border-border/40 bg-secondary/30 backdrop-blur-sm p-4 space-y-3">
+              <div className="flex items-center gap-3" dir="ltr">
+                <div className="w-9 h-9 rounded-lg bg-[#229ED9]/15 flex items-center justify-center flex-shrink-0">
+                  <Send className="h-4 w-4 text-[#229ED9]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Telegram</p>
+                  <p className="text-sm font-mono text-foreground truncate">@AndamAziz</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3" dir="ltr">
+                <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+                  <Mail className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Email</p>
+                  <p className="text-sm font-mono text-foreground truncate">info@andam.uk</p>
+                </div>
+              </div>
+            </div>
 
             {/* Logout Button */}
             <Button 
@@ -191,13 +206,6 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
                 {t('logout')}
               </div>
             </Button>
-
-            {/* Footer */}
-            <div className="mt-8 pt-6 border-t border-border/30 text-center">
-              <p className="text-xs text-muted-foreground">
-                {t('adminEmail')}: andam@outlook.com
-              </p>
-            </div>
           </div>
         </div>
       </div>
