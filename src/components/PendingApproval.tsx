@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Clock, Send, LogOut, Sparkles, Shield } from 'lucide-react';
+import { Clock, Send, LogOut, Sparkles, Shield, Mail } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { buildTelegramMessage } from '@/lib/telegramContact';
 import { TelegramPreviewDialog } from '@/components/TelegramPreviewDialog';
