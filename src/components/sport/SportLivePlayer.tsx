@@ -637,7 +637,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
             )}
 
             {/* Loading animation before first frame */}
-            {(iframeLoading || switching || resolving) && !allOffline && (
+            {(iframeLoading || switching || resolving) && !allOffline && !tiktokLiveUser && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-background via-background/95 to-secondary/40">
                 <div className="relative">
                   <div className="w-14 h-14 rounded-full border-2 border-success/20" />
