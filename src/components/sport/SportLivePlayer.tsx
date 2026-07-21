@@ -409,6 +409,15 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
           >
             <RefreshCw className="h-4 w-4" />
           </button>
+          {fullscreenEnabled && (
+            <button
+              onClick={toggleFullscreen}
+              className="w-8 h-8 rounded-lg bg-secondary/60 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors touch-manipulation active:scale-95"
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+            </button>
+          )}
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-colors touch-manipulation active:scale-95"
