@@ -2739,30 +2739,52 @@ function MovieModal({
                   </button>
                   <button
                     onClick={async () => {
-                      const copyWithFallback = async (text: string) => {
+                      const copyWithFallback = async (text: string): Promise<boolean> => {
+                        // 1) Modern Clipboard API (try even without isSecureContext check)
                         try {
-                          if (navigator.clipboard && window.isSecureContext) {
+                          if (navigator.clipboard?.writeText) {
                             await navigator.clipboard.writeText(text);
                             return true;
                           }
                         } catch {
-                          /* fall through to legacy path */
+                          /* fall through */
                         }
+                        // 2) Legacy execCommand with contentEditable (works better on mobile / in iframes)
                         try {
-                          const ta = document.createElement("textarea");
-                          ta.value = text;
-                          ta.setAttribute("readonly", "");
-                          ta.style.position = "fixed";
-                          ta.style.top = "0";
-                          ta.style.left = "0";
-                          ta.style.opacity = "0";
-                          document.body.appendChild(ta);
-                          ta.focus();
-                          ta.select();
-                          ta.setSelectionRange(0, text.length);
+                          const el = document.createElement("textarea");
+                          el.value = text;
+                          el.contentEditable = "true";
+                          el.readOnly = false;
+                          el.style.position = "fixed";
+                          el.style.top = "50%";
+                          el.style.left = "50%";
+                          el.style.width = "1px";
+                          el.style.height = "1px";
+                          el.style.padding = "0";
+                          el.style.border = "0";
+                          el.style.opacity = "0";
+                          document.body.appendChild(el);
+                          const range = document.createRange();
+                          range.selectNodeContents(el);
+                          const sel = window.getSelection();
+                          sel?.removeAllRanges();
+                          sel?.addRange(range);
+                          el.setSelectionRange(0, text.length);
+                          el.focus();
                           const ok = document.execCommand("copy");
-                          document.body.removeChild(ta);
-                          return ok;
+                          sel?.removeAllRanges();
+                          document.body.removeChild(el);
+                          if (ok) return true;
+                        } catch {
+                          /* fall through */
+                        }
+                        // 3) Last resort: window.prompt so user can copy manually
+                        try {
+                          window.prompt(
+                            lang === "ku" ? "کۆپی بکە:" : "Copy this link:",
+                            text,
+                          );
+                          return true;
                         } catch {
                           return false;
                         }
