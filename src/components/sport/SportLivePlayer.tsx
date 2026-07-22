@@ -438,6 +438,7 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
   const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
   const socialPlatform = effectiveUrl ? getSocialPlatform(effectiveUrl) : null;
+  const isInstagramEmbed = socialPlatform === 'instagram';
   const iframeSandbox = socialPlatform === 'instagram'
     ? 'allow-scripts allow-same-origin allow-forms allow-presentation'
     : undefined;
@@ -591,6 +592,13 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
                 className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${
                   iframeLoading || switching ? 'opacity-0' : 'opacity-100'
                 }`}
+              />
+            )}
+
+            {isInstagramEmbed && !iframeLoading && !switching && !resolving && !allOffline && (
+              <div
+                aria-hidden="true"
+                className="absolute left-1/2 top-[56%] z-10 h-12 w-[74%] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-md bg-background/80 backdrop-blur-md"
               />
             )}
 
