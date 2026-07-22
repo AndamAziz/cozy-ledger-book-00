@@ -436,6 +436,13 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   // pulsing LIVE badge + a tap-through link to open the stream on TikTok.
   const tiktokLiveUser = effectiveUrl ? normalizeTikTokLiveUser(effectiveUrl) : null;
 
+  // Instagram note: since 2023 Instagram no longer exposes og:video / video_url
+  // / any mp4 CDN URL in the public HTML of reels/posts/IGTV — the video is
+  // fetched dynamically through authenticated GraphQL/DASH calls, so inline
+  // native <video> playback is not technically achievable on any third-party
+  // domain. The official /embed iframe (preview + tap-through) is the only
+  // viable rendering path and is used by the iframe branch below.
+
   const autoAspectClass = getAspectClass(activeServer?.url ?? '');
   const aspectClass = manualAspect === 'auto'
     ? (autoFit ? autoAspectClass : 'aspect-video')
