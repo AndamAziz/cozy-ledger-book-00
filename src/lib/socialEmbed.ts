@@ -114,10 +114,10 @@ function tiktokEmbed(u: URL): string | null {
   // domain to be whitelisted in TikTok's developer console ("Embed blocked:
   // This embed is not authorized on this domain"). The profile embed
   // (`/embed/@user`) is domain-agnostic and surfaces the creator's active
-  // LIVE stream at the top with a "LIVE" badge, so viewers can tap through.
+  // LIVE stream without rendering our own fallback/CTA layer.
   const liveUser = normalizeTikTokLiveUser(u.toString());
   if (liveUser) {
-    return `https://www.tiktok.com/embed/@${liveUser}`;
+    return `https://www.tiktok.com/embed/@${liveUser}?autoplay=1&playsinline=1`;
   }
 
   const id = normalizeTikTokVideoId(u.toString());
@@ -125,7 +125,7 @@ function tiktokEmbed(u: URL): string | null {
   // TikTok's official iframe player (player/v1) is more reliable than the
   // legacy /embed/v2/ page which frequently shows a "video unavailable" screen
   // when embedded on third-party domains. player/v1 also supports autoplay.
-  return `https://www.tiktok.com/player/v1/${id}?autoplay=1&music_info=1&description=1&closed_caption=1`;
+  return `https://www.tiktok.com/player/v1/${id}?autoplay=1&playsinline=1&music_info=1&description=1&closed_caption=1`;
 }
 
 // ---- Instagram -----------------------------------------------------------
@@ -155,7 +155,7 @@ function instagramEmbed(u: URL): string | null {
   if (!host.endsWith('instagram.com')) return null;
   const media = normalizeInstagramMedia(u.toString());
   if (!media) return null;
-  return `https://www.instagram.com/${media.kind}/${media.code}/embed`;
+  return `https://www.instagram.com/${media.kind}/${media.code}/embed?autoplay=1&muted=1&playsinline=1`;
 }
 
 // ---- Facebook ------------------------------------------------------------
@@ -210,7 +210,7 @@ export function toSocialEmbed(raw: string): SocialEmbed | null {
   if (bareId && !safeUrl(raw)) {
     return {
       platform: 'tiktok',
-      embedUrl: `https://www.tiktok.com/player/v1/${bareId}?autoplay=1&music_info=1&description=1&closed_caption=1`,
+      embedUrl: `https://www.tiktok.com/player/v1/${bareId}?autoplay=1&playsinline=1&music_info=1&description=1&closed_caption=1`,
     };
   }
 
