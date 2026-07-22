@@ -595,12 +595,6 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
               />
             )}
 
-            {isInstagramEmbed && !iframeLoading && !switching && !resolving && !allOffline && (
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute left-1/2 top-[56%] z-10 h-12 w-[74%] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-md bg-background/80 backdrop-blur-md"
-              />
-            )}
 
 
             {activeServer && !allOffline && !resolving && playbackMode !== 'iframe' && (
