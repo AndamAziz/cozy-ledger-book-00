@@ -10,7 +10,7 @@ import { toSocialEmbed, normalizeTikTokLiveUser } from "../src/lib/socialEmbed";
  * ------------------
  * 1. For each LIVE input (bare, trailing slash, with pc_share tracking params,
  *    tiktok short-host, uppercase host), we assert the URL transform lands on
- *    TikTok's official live embed player: `/embed/live/@<user>`.
+ *    TikTok's profile embed player: `/embed/@<user>?autoplay=1&playsinline=1`.
  * 2. We then load that embed URL inside an iframe on a Playwright-controlled
  *    origin (`about:blank` served via `page.setContent`, so the iframe is a
  *    real cross-origin embed just like it will be on the deployed domains).
@@ -58,12 +58,12 @@ const HARD_ERROR_TEXT = /Video unavailable|Couldn['’]t find this account|Page 
 
 test.describe("TikTok LIVE embed transform", () => {
   for (const { label, url, user } of LIVE_INPUTS) {
-    test(`normalises ${label} → /embed/live/@${user}`, () => {
+    test(`normalises ${label} → /embed/@${user}`, () => {
       expect(normalizeTikTokLiveUser(url)).toBe(user);
       const embed = toSocialEmbed(url);
       expect(embed).toEqual({
         platform: "tiktok",
-        embedUrl: `https://www.tiktok.com/embed/live/@${user}`,
+        embedUrl: `https://www.tiktok.com/embed/@${user}?autoplay=1&playsinline=1`,
       });
     });
   }
@@ -79,7 +79,7 @@ test.describe("TikTok LIVE embed loads in a real iframe", () => {
       browserName,
     }) => {
       const embedUrl = toSocialEmbed(url)?.embedUrl;
-      expect(embedUrl).toBe(`https://www.tiktok.com/embed/live/@${user}`);
+      expect(embedUrl).toBe(`https://www.tiktok.com/embed/@${user}?autoplay=1&playsinline=1`);
 
       // Capture the top-level iframe navigation response so we can assert on the
       // real HTTP status TikTok returns for this embed URL.

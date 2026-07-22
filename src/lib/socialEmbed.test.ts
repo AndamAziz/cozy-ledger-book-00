@@ -6,7 +6,7 @@ import {
 } from './socialEmbed';
 
 describe('TikTok LIVE support', () => {
-  const LIVE_EMBED = 'https://www.tiktok.com/embed/@aminheyasi';
+  const LIVE_EMBED = 'https://www.tiktok.com/embed/@aminheyasi?autoplay=1&playsinline=1';
 
   it('extracts username from bare /@user/live', () => {
     expect(normalizeTikTokLiveUser('https://www.tiktok.com/@aminheyasi/live')).toBe(
@@ -65,12 +65,24 @@ describe('TikTok LIVE support', () => {
     ).toBe(false);
   });
 
-  it('regular TikTok video URL still uses player/v1', () => {
+  it('regular TikTok video URL still uses player/v1 with autoplay enabled', () => {
     const res = toSocialEmbed(
       'https://www.tiktok.com/@pluschannel11/video/7206187236755361029?_r=1',
     );
     expect(res?.embedUrl).toMatch(
       /^https:\/\/www\.tiktok\.com\/player\/v1\/7206187236755361029\?/,
     );
+    expect(res?.embedUrl).toContain('autoplay=1');
+    expect(res?.embedUrl).toContain('playsinline=1');
+  });
+});
+
+describe('Instagram embed support', () => {
+  it('normalises reels to the official embed with best-effort autoplay params', () => {
+    const res = toSocialEmbed('https://www.instagram.com/reel/DbEf01Yo3mK/');
+    expect(res).toEqual({
+      platform: 'instagram',
+      embedUrl: 'https://www.instagram.com/reel/DbEf01Yo3mK/embed?autoplay=1&muted=1&playsinline=1',
+    });
   });
 });
