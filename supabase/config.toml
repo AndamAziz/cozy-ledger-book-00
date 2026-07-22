@@ -31,5 +31,3 @@ project_id = "jpatltcqhpclxenzvboa"
     verify_jwt = false
   [functions.resolve-social-url]
     verify_jwt = false
-  [functions.resolve-instagram-video]
-    verify_jwt = false
