@@ -155,7 +155,7 @@ function instagramEmbed(u: URL): string | null {
   if (!host.endsWith('instagram.com')) return null;
   const media = normalizeInstagramMedia(u.toString());
   if (!media) return null;
-  return `https://www.instagram.com/${media.kind}/${media.code}/embed?autoplay=1&muted=1&playsinline=1`;
+  return `https://www.instagram.com/${media.kind}/${media.code}/embed`;
 }
 
 // ---- Facebook ------------------------------------------------------------
