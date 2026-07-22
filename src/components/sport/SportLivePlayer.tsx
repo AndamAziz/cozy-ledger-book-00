@@ -107,7 +107,10 @@ function DirectStreamVideo({
 
     const playQuietly = () => {
       video.play().catch(() => {
-        // Browser autoplay rules may require the user to tap play; keep controls visible.
+        video.muted = true;
+        video.play().catch(() => {
+          // Browser / provider autoplay policy blocked playback completely.
+        });
       });
     };
 
