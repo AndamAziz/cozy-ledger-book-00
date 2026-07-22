@@ -82,7 +82,17 @@ describe('Instagram embed support', () => {
     const res = toSocialEmbed('https://www.instagram.com/reel/DbEf01Yo3mK/');
     expect(res).toEqual({
       platform: 'instagram',
-      embedUrl: 'https://www.instagram.com/reel/DbEf01Yo3mK/embed',
+      embedUrl: 'https://www.instagram.com/reel/DbEf01Yo3mK/embed/',
+    });
+  });
+
+  it('strips tracking params from shared Instagram reels', () => {
+    const res = toSocialEmbed(
+      'https://www.instagram.com/reel/DbDp7T4olyC/?igsh=MXBqc3o0M2lqeWh1Yg==',
+    );
+    expect(res).toEqual({
+      platform: 'instagram',
+      embedUrl: 'https://www.instagram.com/reel/DbDp7T4olyC/embed/',
     });
   });
 });

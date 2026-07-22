@@ -49,6 +49,10 @@ function resolvePlaybackUrl(url: string): string {
   return toSocialEmbed(url)?.embedUrl ?? url;
 }
 
+function getSocialPlatform(url: string) {
+  return toSocialEmbed(url)?.platform ?? null;
+}
+
 function getPlaybackMode(url: string): PlaybackMode {
   // Social embeds always play inside an iframe, regardless of any file
   // extension that might appear in the original share link.
@@ -433,6 +437,10 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
 
   const effectiveUrl = resolvedUrl ?? activeServer?.url ?? '';
   const playbackMode = effectiveUrl ? getPlaybackMode(effectiveUrl) : 'iframe';
+  const socialPlatform = effectiveUrl ? getSocialPlatform(effectiveUrl) : null;
+  const iframeSandbox = socialPlatform === 'instagram'
+    ? 'allow-scripts allow-same-origin allow-forms allow-presentation'
+    : undefined;
   // Instagram note: since 2023 Instagram no longer exposes og:video / video_url
   // / any mp4 CDN URL in the public HTML of reels/posts/IGTV — the video is
   // fetched dynamically through authenticated GraphQL/DASH calls, so inline
@@ -574,10 +582,10 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
                 scrolling="no"
                 allow="fullscreen *; autoplay *; encrypted-media *; picture-in-picture *; web-share; clipboard-write; accelerometer; gyroscope"
                 referrerPolicy="no-referrer-when-downgrade"
-                // No `sandbox` attribute: matches the standalone player that loads every
-                // provider (fastimdb, alba-player, HLS embeds, etc.). A sandbox breaks
-                // many stream/movie hosts because their players need unrestricted
-                // same-origin script + storage access to start playback.
+                sandbox={iframeSandbox}
+                // Only Instagram is sandboxed so its built-in "View more / View profile"
+                // links cannot pop the user out of the platform. Other providers remain
+                // unsandboxed because stream hosts often refuse sandboxed playback.
                 onLoad={handleIframeLoad}
                 onError={handleIframeError}
                 className={`absolute inset-0 w-full h-full transition-opacity duration-500 ${
