@@ -436,55 +436,13 @@ export function SportLivePlayer({ open, onClose }: SportLivePlayerProps) {
   // pulsing LIVE badge + a tap-through link to open the stream on TikTok.
   const tiktokLiveUser = effectiveUrl ? normalizeTikTokLiveUser(effectiveUrl) : null;
 
-  // Instagram refuses inline playback in its official iframe embed (it renders
-  // a preview card with a "Watch on Instagram" tap-through). To actually play
-  // reels/posts/IGTV on-platform we call an edge function that extracts the
-  // direct mp4 URL from Instagram's public og:video meta tags and stream it
-  // through a native <video> element.
+  // Instagram: since 2023 Instagram has stopped exposing og:video / video_url /
+  // any mp4 CDN URL in the public HTML of reels/posts/IGTV — the video is
+  // fetched dynamically through authenticated GraphQL/DASH calls. This means
+  // inline native playback via <video> is not technically achievable on any
+  // third-party domain. We keep the official /embed iframe as the only viable
+  // rendering path, which shows a preview + tap-through to Instagram.
   const instagramMedia = effectiveUrl ? normalizeInstagramMedia(effectiveUrl) : null;
-  const [igVideoUrl, setIgVideoUrl] = useState<string | null>(null);
-  const [igPoster, setIgPoster] = useState<string | null>(null);
-  const [igLoading, setIgLoading] = useState(false);
-  const [igFallback, setIgFallback] = useState(false);
-
-  useEffect(() => {
-    if (!instagramMedia) {
-      setIgVideoUrl(null);
-      setIgPoster(null);
-      setIgFallback(false);
-      setIgLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setIgLoading(true);
-    setIgFallback(false);
-    setIgVideoUrl(null);
-    setIgPoster(null);
-    supabase.functions
-      .invoke('resolve-instagram-video', { body: { url: effectiveUrl } })
-      .then(({ data }) => {
-        if (cancelled) return;
-        const mp4 = typeof data?.videoUrl === 'string' ? data.videoUrl : null;
-        const poster = typeof data?.poster === 'string' ? data.poster : null;
-        setIgPoster(poster);
-        if (mp4) {
-          setIgVideoUrl(mp4);
-        } else {
-          // Public reel with no mp4 (photo carousel or extraction failed) →
-          // fall back to Instagram's official preview iframe.
-          setIgFallback(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setIgFallback(true);
-      })
-      .finally(() => {
-        if (!cancelled) setIgLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [instagramMedia?.kind, instagramMedia?.code, effectiveUrl, reloadNonce]);
 
   const autoAspectClass = getAspectClass(activeServer?.url ?? '');
   const aspectClass = manualAspect === 'auto'
