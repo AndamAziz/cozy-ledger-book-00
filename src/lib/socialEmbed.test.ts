@@ -82,7 +82,7 @@ describe('Instagram embed support', () => {
     const res = toSocialEmbed('https://www.instagram.com/reel/DbEf01Yo3mK/');
     expect(res).toEqual({
       platform: 'instagram',
-      embedUrl: 'https://www.instagram.com/reel/DbEf01Yo3mK/embed?autoplay=1&muted=1&playsinline=1',
+      embedUrl: 'https://www.instagram.com/reel/DbEf01Yo3mK/embed',
     });
   });
 });
