@@ -1081,45 +1081,63 @@ export function MarketNewsModal({ open, onClose }: Props) {
               })()}
 
               <div className="relative px-1">
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar motion-reduce:overflow-x-visible">
+                  {/* Live XAU/USD price ticker */}
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-red-500/10 text-red-400 whitespace-nowrap transition-all ${
+                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 whitespace-nowrap tabular-nums border transition-colors duration-500 motion-reduce:transition-none ${
+                      tickFlash === 'up'
+                        ? 'bg-red-500/20 text-red-300 border-red-500/50'
+                        : tickFlash === 'down'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                          : 'bg-[#1a1e2e] text-[#f0b90b] border-[#f0b90b]/30'
+                    }`}
+                    aria-label="XAU/USD live price"
+                  >
+                    <span className="text-[9px] opacity-70">XAU/USD</span>
+                    {goldPrice > 0 ? `$${goldPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                    {tickFlash === 'up' && <TrendingUp className="h-3 w-3" />}
+                    {tickFlash === 'down' && <TrendingDown className="h-3 w-3" />}
+                  </span>
+
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-red-500/10 text-red-400 whitespace-nowrap tabular-nums transition-all motion-reduce:transition-none motion-reduce:animate-none ${
                       liveGoldDir === 'up' ? 'ring-1 ring-red-500/60 animate-pulse shadow-[0_0_10px_rgba(246,70,93,0.35)]' : 'opacity-60'
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full bg-red-500 ${liveGoldDir === 'up' ? 'animate-pulse' : ''}`} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                     <TrendingUp className="h-3 w-3" />
-                    {bi('زێڕ', 'Gold')}
-                    {liveGoldDir === 'up' && goldLive && (
-                      <span className="tabular-nums">+{goldPct.toFixed(2)}%</span>
-                    )}
+                    {bi('زێڕ', 'Gold')} {goldLive ? `${goldPct >= 0 ? '+' : ''}${goldPct.toFixed(2)}%` : ''}
                   </span>
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-emerald-500/10 text-emerald-400 whitespace-nowrap transition-all ${
+                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-emerald-500/10 text-emerald-400 whitespace-nowrap tabular-nums transition-all motion-reduce:transition-none motion-reduce:animate-none ${
                       liveGoldDir === 'down' ? 'ring-1 ring-emerald-500/60 animate-pulse shadow-[0_0_10px_rgba(14,203,129,0.35)]' : 'opacity-60'
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full bg-emerald-500 ${liveGoldDir === 'down' ? 'animate-pulse' : ''}`} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                     <TrendingDown className="h-3 w-3" />
-                    {bi('زێڕ', 'Gold')}
-                    {liveGoldDir === 'down' && goldLive && (
-                      <span className="tabular-nums">{goldPct.toFixed(2)}%</span>
-                    )}
+                    {bi('زێڕ', 'Gold')} {goldLive ? `${goldPct.toFixed(2)}%` : ''}
                   </span>
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-400 whitespace-nowrap transition-all ${
+                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-400 whitespace-nowrap tabular-nums transition-all motion-reduce:transition-none motion-reduce:animate-none ${
                       liveGoldDir === 'impact' ? 'ring-1 ring-amber-500/60 animate-pulse shadow-[0_0_10px_rgba(240,185,11,0.35)]' : 'opacity-60'
                     }`}
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                    {bi('ئاستی کاریگەری', 'Impact')}
+                    {bi('کاریگەری', 'Impact')} {todayHighCount}
                   </span>
                   <button
-                    onClick={() => setLegendInfoOpen((o) => !o)}
+                    onClick={() => { setLegendInfoOpen((o) => !o); setLegendSettingsOpen(false); }}
                     aria-label={bi('زانیاری زیاتر', 'More info')}
                     className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[#848e9c] hover:text-white hover:bg-[#1a1e2e] transition-colors shrink-0"
                   >
                     <Info className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => { setLegendSettingsOpen((o) => !o); setLegendInfoOpen(false); }}
+                    aria-label={bi('ڕێکخستنی فلاش', 'Flash settings')}
+                    className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[#848e9c] hover:text-white hover:bg-[#1a1e2e] transition-colors shrink-0"
+                  >
+                    <Settings className="h-3.5 w-3.5" />
                   </button>
                 </div>
                 {legendInfoOpen && (
@@ -1133,7 +1151,28 @@ export function MarketNewsModal({ open, onClose }: Props) {
                     </div>
                   </>
                 )}
+                {legendSettingsOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setLegendSettingsOpen(false)} />
+                    <div className="absolute end-1 mt-1 z-50 w-64 rounded-xl border bg-slate-900 border-slate-700 shadow-xl p-3 text-[11px] leading-relaxed text-slate-200 space-y-1.5">
+                      <div className="font-bold text-slate-100 flex items-center gap-1.5">
+                        <Settings className="h-3 w-3" />
+                        {bi('ڕێکخستنی فلاش', 'Flash trigger')}
+                      </div>
+                      <div>
+                        {bi(
+                          `فلاش دەکات کاتێک نرخ بجوڵێت ≥${FLASH_THRESHOLD_PCT}% لە پەنجەرەی ٢٤ کاتژمێر`,
+                          `Flashes when XAU/USD moves ≥${FLASH_THRESHOLD_PCT}% over the tracked 24h window`
+                        )}
+                      </div>
+                      <div className="text-slate-400">
+                        {bi('نرخی کارت لە هەر تیکێکدا بۆ ماوەیەکی کورت گەش دەبێت.', 'Price chip briefly flashes on every tick (green up / red down).')}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
+
 
               {/* Pinned high-impact USD event */}
               {pinnedEvent && (
