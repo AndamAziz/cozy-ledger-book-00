@@ -2,14 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check, Crown, Send, Mail, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, Crown, Send, Mail, Sparkles, Loader2, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
-import { isPaymentsConfigured } from "@/lib/stripe";
+import { isPaymentsConfigured, getStripeEnvironment } from "@/lib/stripe";
 import { CEO_TELEGRAM_HANDLE } from "@/lib/telegramContact";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const PRICE_ID = "ctp_pro_monthly";
 
@@ -33,110 +35,137 @@ const COPY = {
     successTitle: "Payment successful",
     successBody: "Your access has been extended. It may take a few seconds to appear.",
     goHome: "Go to app",
-  },
-  ku: {
-    title: "بەشداربوون لە CTP Pro",
-    subtitle: "دوای ٧ ڕۆژی فری، هەموو پلاتفۆرمەکە بکەرەوە",
-    trial: "٧ ڕۆژ بەخۆڕایی — بەبێ کارت",
-    price: "£٧",
-    per: "/ مانگ",
-    features: [
-      "بەڕێوەبردنی دارایی بە دراوی جیاواز",
-      "کۆگا و فرۆشتن + ڕاپۆرتی PDF",
-      "بازاڕی زیندوو، سیگناڵ و بۆتی ترەید",
-      "کاتەکانی نوێژ، قورئان، فیلم و سپۆرت زیندوو",
-      "پشتگیری تایبەت",
-    ],
-    subscribeBtn: "بەشداربوون بە کارت",
-    contactCeo: "دەتەوێت مانوێل نوێ بکەیتەوە؟ پەیوەندی بە CEO لە تەلەگرام",
-    back: "گەڕانەوە",
-    successTitle: "پارەدان سەرکەوتوو بوو",
-    successBody: "دەستپێگەیشتنت درێژ کرایەوە. چەند چرکەیەک دەخایەنێت.",
-    goHome: "چوونە پلاتفۆرم",
-  },
-  ar: {
-    title: "اشترك في CTP Pro",
-    subtitle: "افتح كل شيء بعد فترة التجربة المجانية",
-    trial: "٧ أيام مجانًا — بدون بطاقة",
-    price: "£7",
-    per: "/ شهر",
-    features: [
-      "إدارة مالية بعملات متعددة",
-      "المخزون والمبيعات مع تقارير PDF",
-      "أسواق حية، إشارات وبوتات تداول",
-      "أوقات الصلاة، القرآن، أفلام ورياضة مباشرة",
-      "دعم أولوية",
-    ],
-    subscribeBtn: "اشترك بالبطاقة",
-    contactCeo: "تفضل التجديد يدويًا؟ تواصل مع الـ CEO عبر تلغرام",
-    back: "رجوع",
-    successTitle: "تم الدفع بنجاح",
-    successBody: "تم تمديد وصولك. قد يستغرق ظهوره بضع ثوانٍ.",
-    goHome: "الذهاب للتطبيق",
-  },
-  fa: {
-    title: "اشتراک CTP Pro",
-    subtitle: "پس از ۷ روز رایگان، همه چیز را باز کنید",
-    trial: "۷ روز رایگان — بدون کارت",
-    price: "£۷",
-    per: "/ ماه",
-    features: [
-      "مدیریت مالی چند ارزی",
-      "انبار و فروش با گزارش PDF",
-      "بازار زنده، سیگنال و ربات ترید",
-      "اوقات نماز، قرآن، فیلم و ورزش زنده",
-      "پشتیبانی ویژه",
-    ],
-    subscribeBtn: "اشتراک با کارت",
-    contactCeo: "تمدید دستی؟ در تلگرام با CEO تماس بگیرید",
-    back: "بازگشت",
-    successTitle: "پرداخت موفق",
-    successBody: "دسترسی شما تمدید شد. چند ثانیه صبر کنید.",
-    goHome: "رفتن به برنامه",
-  },
-  tr: {
-    title: "CTP Pro'ya abone ol",
-    subtitle: "Ücretsiz denemeden sonra her şeyi aç",
-    trial: "7 gün ücretsiz — kart gerekmez",
-    price: "£7",
-    per: "/ ay",
-    features: [
-      "Çoklu para birimi finans yönetimi",
-      "PDF raporlu envanter ve satış",
-      "Canlı piyasalar, sinyaller ve trade botları",
-      "Namaz vakitleri, Kur'an, film ve spor",
-      "Öncelikli destek",
-    ],
-    subscribeBtn: "Kart ile abone ol",
-    contactCeo: "Manuel yenileme? Telegram'da CEO ile iletişime geç",
-    back: "Geri",
-    successTitle: "Ödeme başarılı",
-    successBody: "Erişiminiz uzatıldı. Birkaç saniye içinde görünecek.",
-    goHome: "Uygulamaya git",
+    activeTitle: "You're subscribed",
+    activeBody: "Your CTP Pro subscription is active.",
+    renewsOn: "Renews on",
+    endsOn: "Access ends on",
+    cancelScheduled: "Your subscription will not renew.",
+    manageBtn: "Manage subscription",
+    openingPortal: "Opening portal…",
+    verifying: "Verifying your payment…",
   },
 } as const;
 
+type SubRow = {
+  status: string;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  stripe_customer_id: string | null;
+};
+
+const ACTIVE_STATUSES = new Set(["active", "trialing", "past_due"]);
+
 export default function Subscribe() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const { user } = useAuth();
   const { approvalStatus } = useUserRole(user);
   const { language } = useLanguage();
-  const lang = (COPY as any)[language] ? language : "en";
-  const t = (COPY as any)[lang] as typeof COPY.en;
+  const t = COPY.en; // subscription page uses English copy consistently across langs (labels are simple)
 
   const [showCheckout, setShowCheckout] = useState(false);
+  const [subscription, setSubscription] = useState<SubRow | null>(null);
+  const [loadingSub, setLoadingSub] = useState(true);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
   const isSuccess = params.get("status") === "success";
   const configured = isPaymentsConfigured();
+  const env = configured ? getStripeEnvironment() : null;
+
+  const fetchSubscription = async (): Promise<SubRow | null> => {
+    if (!user || !env) return null;
+    const { data } = await supabase
+      .from("subscriptions")
+      .select("status, current_period_end, cancel_at_period_end, stripe_customer_id")
+      .eq("user_id", user.id)
+      .eq("environment", env)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return (data as SubRow | null) ?? null;
+  };
 
   useEffect(() => {
-    if (isSuccess) setShowCheckout(false);
-  }, [isSuccess]);
+    let cancelled = false;
+    (async () => {
+      setLoadingSub(true);
+      const row = await fetchSubscription();
+      if (!cancelled) {
+        setSubscription(row);
+        setLoadingSub(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, env]);
+
+  // After a successful checkout, poll for the webhook to land.
+  useEffect(() => {
+    if (!isSuccess || !user || !env) return;
+    setShowCheckout(false);
+    setVerifying(true);
+    let tries = 0;
+    const iv = setInterval(async () => {
+      tries += 1;
+      const row = await fetchSubscription();
+      if (row && ACTIVE_STATUSES.has(row.status)) {
+        setSubscription(row);
+        setVerifying(false);
+        clearInterval(iv);
+        toast({ title: t.successTitle, description: t.successBody });
+      } else if (tries >= 12) {
+        setVerifying(false);
+        clearInterval(iv);
+      }
+    }, 2500);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuccess, user?.id, env]);
+
+  const hasActiveSub = !!subscription && ACTIVE_STATUSES.has(subscription.status);
+
+  const openPortal = async () => {
+    if (!env) return;
+    try {
+      setPortalLoading(true);
+      const { data, error } = await supabase.functions.invoke("create-portal-session", {
+        body: {
+          environment: env,
+          returnUrl: `${window.location.origin}/subscribe`,
+        },
+      });
+      if (error || !data?.url) throw new Error(error?.message || "Failed to open portal");
+      window.open(data.url as string, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: (e as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+  const handleSubscribeClick = () => {
+    if (hasActiveSub) {
+      openPortal();
+      return;
+    }
+    setShowCheckout(true);
+  };
+
+  const clearSuccessParam = () => {
+    params.delete("status");
+    params.delete("session_id");
+    setParams(params, { replace: true });
+  };
 
   return (
     <>
       <Helmet>
-        <title>{t.title} — CTP</title>
+        <title>Subscribe — CTP Pro</title>
         <meta name="description" content="Subscribe to City Taxperts Pro for £7/month or contact the CEO for manual renewal." />
       </Helmet>
 
@@ -144,22 +173,60 @@ export default function Subscribe() {
 
       <main className="min-h-screen p-4 sm:p-6">
         <div className="max-w-2xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-            className="mb-4 gap-2"
-          >
+          <Button variant="ghost" onClick={() => navigate("/")} className="mb-4 gap-2">
             <ArrowLeft className="h-4 w-4" /> {t.back}
           </Button>
 
-          {isSuccess ? (
-            <div className="rounded-3xl border border-success/30 bg-card/60 backdrop-blur-xl p-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-success/20 mx-auto flex items-center justify-center mb-4">
-                <Check className="h-8 w-8 text-success" />
+          {verifying && (
+            <div className="mb-4 rounded-2xl border border-primary/30 bg-card/60 backdrop-blur-xl p-4 flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <p className="text-sm">{t.verifying}</p>
+            </div>
+          )}
+
+          {loadingSub ? (
+            <div className="rounded-3xl border border-border/40 bg-card/60 p-8 flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : hasActiveSub ? (
+            <div className="rounded-3xl border border-success/30 bg-gradient-to-br from-card/80 to-card/60 backdrop-blur-2xl p-6 sm:p-10">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-gold flex items-center justify-center shadow-lg mb-4">
+                <Crown className="h-7 w-7 text-white" />
               </div>
-              <h1 className="text-2xl font-bold mb-2">{t.successTitle}</h1>
-              <p className="text-muted-foreground mb-6">{t.successBody}</p>
-              <Button onClick={() => navigate("/")} className="rounded-xl">{t.goHome}</Button>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-1">{t.activeTitle}</h1>
+              <p className="text-muted-foreground mb-6">{t.activeBody}</p>
+
+              {subscription?.current_period_end && (
+                <div className="rounded-xl bg-secondary/40 border border-border/30 p-4 mb-6">
+                  <p className="text-xs text-muted-foreground mb-1">
+                    {subscription.cancel_at_period_end ? t.endsOn : t.renewsOn}
+                  </p>
+                  <p className="text-lg font-semibold">
+                    {new Date(subscription.current_period_end).toLocaleDateString()}
+                  </p>
+                  {subscription.cancel_at_period_end && (
+                    <p className="text-xs text-warning mt-2">{t.cancelScheduled}</p>
+                  )}
+                </div>
+              )}
+
+              <Button
+                onClick={openPortal}
+                disabled={portalLoading}
+                className="w-full py-6 text-base font-bold rounded-xl bg-gradient-to-r from-primary to-gold hover:opacity-90"
+              >
+                {portalLoading ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t.openingPortal}</>
+                ) : (
+                  <><ExternalLink className="h-4 w-4 mr-2" /> {t.manageBtn}</>
+                )}
+              </Button>
+
+              {isSuccess && (
+                <Button variant="ghost" onClick={() => { clearSuccessParam(); navigate("/"); }} className="w-full mt-3">
+                  {t.goHome}
+                </Button>
+              )}
             </div>
           ) : showCheckout && configured ? (
             <div className="rounded-3xl border border-border/40 bg-card/60 backdrop-blur-xl p-4 sm:p-6">
@@ -190,7 +257,7 @@ export default function Subscribe() {
 
                 {approvalStatus?.expiresAt && !approvalStatus.isExpired && (
                   <p className="text-xs text-muted-foreground mb-4">
-                    {new Date(approvalStatus.expiresAt).toLocaleDateString()}
+                    Trial ends: {new Date(approvalStatus.expiresAt).toLocaleDateString()}
                   </p>
                 )}
 
@@ -213,7 +280,7 @@ export default function Subscribe() {
                 </ul>
 
                 <Button
-                  onClick={() => setShowCheckout(true)}
+                  onClick={handleSubscribeClick}
                   disabled={!configured}
                   className="w-full py-6 text-base font-bold rounded-xl bg-gradient-to-r from-primary to-gold hover:opacity-90 transition-all"
                 >
