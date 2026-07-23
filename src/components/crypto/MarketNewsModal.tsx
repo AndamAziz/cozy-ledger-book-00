@@ -308,18 +308,22 @@ export function MarketNewsModal({ open, onClose }: Props) {
   const [legendSettingsOpen, setLegendSettingsOpen] = useState(false);
   const { metals: liveMetals } = useMetalsData();
   const goldLive = liveMetals.find((m) => m.code === 'XAU');
-  const goldPct = goldLive?.change ?? 0;
   const goldPrice = goldLive?.price ?? 0;
   // Flash-trigger threshold for the direction chips
   const FLASH_THRESHOLD_PCT = 0.1;
-  // Which legend chip should pulse to reflect current market bias
-  const liveGoldDir: 'up' | 'down' | 'impact' =
-    goldPct > FLASH_THRESHOLD_PCT ? 'up' : goldPct < -FLASH_THRESHOLD_PCT ? 'down' : 'impact';
+  // Rolling % baseline captured on the first non-zero tick this session,
+  // so all three chips (price + Gold ↑ + Gold ↓) share the SAME live source
+  // instead of the always-~0% consecutive-tick delta from the metals API.
+  const sessionBaselineRef = useRef<number>(0);
+  const [goldPct, setGoldPct] = useState<number>(0);
   // Track price-tick direction for the XAU/USD chip flash
   const prevGoldPriceRef = useRef<number>(0);
   const [tickFlash, setTickFlash] = useState<'up' | 'down' | null>(null);
   useEffect(() => {
     if (!goldPrice) return;
+    if (!sessionBaselineRef.current) sessionBaselineRef.current = goldPrice;
+    const baseline = sessionBaselineRef.current;
+    if (baseline > 0) setGoldPct(((goldPrice - baseline) / baseline) * 100);
     const prev = prevGoldPriceRef.current;
     if (prev && goldPrice !== prev) {
       setTickFlash(goldPrice > prev ? 'up' : 'down');
@@ -329,6 +333,8 @@ export function MarketNewsModal({ open, onClose }: Props) {
     }
     prevGoldPriceRef.current = goldPrice;
   }, [goldPrice]);
+  const liveGoldDir: 'up' | 'down' | 'impact' =
+    goldPct > FLASH_THRESHOLD_PCT ? 'up' : goldPct < -FLASH_THRESHOLD_PCT ? 'down' : 'impact';
 
   // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
   const [currency, setCurrency] = useState<string>('All');
