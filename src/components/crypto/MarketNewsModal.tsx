@@ -305,6 +305,12 @@ export function MarketNewsModal({ open, onClose }: Props) {
   const { tz, setTz } = useTimezone();
   const [tzMenuOpen, setTzMenuOpen] = useState(false);
   const [legendInfoOpen, setLegendInfoOpen] = useState(false);
+  const { metals: liveMetals } = useMetalsData();
+  const goldLive = liveMetals.find((m) => m.code === 'XAU');
+  const goldPct = goldLive?.change ?? 0;
+  // Which legend chip should pulse to reflect current market bias
+  const liveGoldDir: 'up' | 'down' | 'impact' =
+    goldPct > 0.1 ? 'up' : goldPct < -0.1 ? 'down' : 'impact';
 
   // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
   const [currency, setCurrency] = useState<string>('All');
