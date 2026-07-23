@@ -1,6 +1,7 @@
-import { AlertTriangle, Send, X } from 'lucide-react';
+import { AlertTriangle, Send, X, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { buildTelegramMessage } from '@/lib/telegramContact';
 import { TelegramPreviewDialog } from '@/components/TelegramPreviewDialog';
@@ -14,6 +15,7 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
   const [isDismissed, setIsDismissed] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
 
   if (isDismissed || daysUntilExpiry > 10) {
     return null;
@@ -81,14 +83,25 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
           </p>
         </div>
 
-        <Button
-          onClick={handleTelegramContact}
-          size="sm"
-          className="bg-[#229ED9] hover:bg-[#1c8cc2] text-white flex-shrink-0"
-        >
-          <Send className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-          {t('contact')}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0 w-full sm:w-auto">
+          <Button
+            onClick={() => navigate('/subscribe')}
+            size="sm"
+            className="bg-gradient-to-r from-primary to-gold hover:opacity-90 text-white"
+          >
+            <Crown className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+            £7/mo
+          </Button>
+          <Button
+            onClick={handleTelegramContact}
+            size="sm"
+            variant="outline"
+            className="border-[#229ED9]/40 text-[#229ED9] hover:bg-[#229ED9]/10"
+          >
+            <Send className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+            {t('contact')}
+          </Button>
+        </div>
       </div>
     </div>
     </>
