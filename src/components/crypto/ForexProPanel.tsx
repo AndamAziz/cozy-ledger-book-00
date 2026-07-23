@@ -212,7 +212,7 @@ export function ForexProPanel({ code, name, flag, rate }: Props) {
         </p>
       </div>
 
-      <PriceAlerts storeKey={`USD${code}`} label={`USD/${code}`} price={rate} decimals={dec} />
+      {false && <PriceAlerts storeKey={`USD${code}`} label={`USD/${code}`} price={rate} decimals={dec} />}
       {false && <SignalHistory storeKey={`USD${code}`} action={signal.action} confidence={signal.confidence} price={rate} decimals={dec} />}
 
       <DxyWidget dxy={dxy} goldBias={fxBias} loading={loadingMacro} asset="forex" />

@@ -190,7 +190,7 @@ export function CryptoProPanel({ candles, price, symbol }: Props) {
         </p>
       </div>
 
-      <PriceAlerts storeKey={`${symbol}USD`} label={`${symbol}/USD`} price={price} decimals={dec} />
+      {false && <PriceAlerts storeKey={`${symbol}USD`} label={`${symbol}/USD`} price={price} decimals={dec} />}
       {false && <SignalHistory storeKey={`${symbol}USD`} action={signal.action} confidence={signal.confidence} price={price} decimals={dec} />}
 
       <SentimentGauge sentiment={sentiment} loading={loadingMacro} asset="crypto" />
