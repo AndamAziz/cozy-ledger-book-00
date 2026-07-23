@@ -1055,16 +1055,40 @@ export function MarketNewsModal({ open, onClose }: Props) {
                 );
               })()}
 
-              <p className="text-[10px] px-1 leading-relaxed">
-                <span style={{ color: C_DOWN }} className="font-bold">{bi('سور = زێڕ بەرز (دۆلار نزم)', 'Red card = Gold up (USD down)')}</span>
-                {' · '}
-                <span style={{ color: C_UP }} className="font-bold">{bi('سەوز = زێڕ نزم (دۆلار بەرز)', 'Green card = Gold down (USD up)')}</span>
-              </p>
-              <p className="text-[10px] text-[#848e9c] px-1 leading-relaxed">
-                <span className="text-[#d4af37] font-bold">{bi('سنووری زێڕین = دراوی پەیوەست بە زێڕ (USD/CHF/GBP/JPY)', 'Gold border = gold-relevant currency (USD/CHF/GBP/JPY)')}</span>
-                {' · '}
-                <span className="text-[#f0b90b]">🟡 {bi('= ئاستی کاریگەری زێڕ', '= gold impact score')}</span>
-              </p>
+              <div className="relative px-1">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                  <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-red-500/10 text-red-400 whitespace-nowrap">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    {bi('زێڕ ↑', 'Gold ↑')}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-emerald-500/10 text-emerald-400 whitespace-nowrap">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    {bi('زێڕ ↓', 'Gold ↓')}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-400 whitespace-nowrap">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    {bi('ئاستی کاریگەری', 'Impact score')}
+                  </span>
+                  <button
+                    onClick={() => setLegendInfoOpen((o) => !o)}
+                    aria-label={bi('زانیاری زیاتر', 'More info')}
+                    className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[#848e9c] hover:text-white hover:bg-[#1a1e2e] transition-colors shrink-0"
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {legendInfoOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setLegendInfoOpen(false)} />
+                    <div className="absolute end-1 mt-1 z-50 w-64 rounded-xl border bg-slate-900 border-slate-700 shadow-xl p-3 text-[11px] leading-relaxed text-slate-200">
+                      {bi(
+                        'کارتی سور = ئەگەری بەرزبوونەوەی زێڕ و دابەزینی دۆلار. کارتی سەوز = ئەگەری دابەزینی زێڕ و بەرزبوونەوەی دۆلار. کارتی سنووری زێڕین = دراوی پەیوەست بە زێڕ (USD, CHF, GBP, JPY). خاڵی کاڵ = ئاستی کاریگەری زێڕ.',
+                        'Red card = Gold likely up, USD down. Green card = Gold likely down, USD up. Gold-bordered cards = gold-relevant currency (USD, CHF, GBP, JPY). Amber dot = gold impact score.'
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* Pinned high-impact USD event */}
               {pinnedEvent && (
