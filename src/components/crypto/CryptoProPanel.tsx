@@ -7,7 +7,7 @@ import { DxyWidget } from '@/components/crypto/DxyWidget';
 import { SentimentGauge } from '@/components/crypto/SentimentGauge';
 import { useMacro } from '@/hooks/useMacro';
 import { TechnicalSignals } from '@/components/crypto/TechnicalSignals';
-import { RiskCalculator } from '@/components/crypto/RiskCalculator';
+
 import { EventAlertBanner, CalendarEvent } from '@/components/crypto/EventAlertBanner';
 import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { SignalHistory } from '@/components/crypto/SignalHistory';
@@ -197,15 +197,6 @@ export function CryptoProPanel({ candles, price, symbol }: Props) {
       <DxyWidget dxy={dxy} goldBias={cryptoBias} loading={loadingMacro} asset="crypto" />
       <TechnicalSignals candles={candles} price={price} />
       <EventAlertBanner events={events} loading={loadingEvents} />
-      <RiskCalculator
-        defaultEntry={price}
-        contractSize={1}
-        pipSize={1}
-        priceDecimals={dec}
-        showPips={false}
-        sizeLabel={{ ku: 'قەبارەی پۆزیشن', en: 'Position Size' }}
-        unitLabel={{ ku: `بڕ (${symbol})`, en: `Units (${symbol})` }}
-      />
     </div>
   );
 }
