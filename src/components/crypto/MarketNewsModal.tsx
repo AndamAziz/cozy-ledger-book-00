@@ -877,7 +877,31 @@ export function MarketNewsModal({ open, onClose }: Props) {
                   </span>
                 </button>
                 {tzMenuOpen && (
-...
+                  <>
+                    <div className="fixed inset-0 z-[70]" onClick={() => setTzMenuOpen(false)} />
+                    <div
+                      className="absolute end-0 mt-1 z-[80] w-48 rounded-xl border bg-[#0f1421] border-[#1a1e2e] shadow-xl overflow-hidden py-1"
+                    >
+                      <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-wide text-[#848e9c]">
+                        {bi('کاتی ناوچەیی', 'Timezone')}
+                      </div>
+                      {TZ_OPTIONS.map((o) => (
+                        <button
+                          key={o.id}
+                          onClick={() => { setTz(o.id); setTzMenuOpen(false); }}
+                          className={`flex items-center gap-2 w-full px-3 py-2 text-left transition-colors hover:bg-[#1a1e2e] ${
+                            tz === o.id ? 'text-[#f0b90b]' : 'text-white'
+                          }`}
+                        >
+                          <span className="text-base">{o.flag}</span>
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-xs font-bold leading-tight">{o.city}</span>
+                            <span className="block text-[9px] text-[#848e9c] leading-tight">{o.hint}</span>
+                          </span>
+                          {tz === o.id && <Check className="h-3.5 w-3.5 shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
                   </>
                 )}
               </div>
