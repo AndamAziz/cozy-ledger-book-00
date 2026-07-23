@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, Building2, Calendar } from 'lucide-react';
+import { LogOut, Building2, Calendar, Crown } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -16,6 +17,7 @@ interface HeaderProps {
 export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout, companyName }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -51,16 +53,27 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
             <h1 className="text-sm sm:text-base md:text-lg font-bold text-foreground truncate">
               {t('financialManagement')}
             </h1>
-            <Button
-              variant="ghost"
-              onClick={onLogout}
-              size="sm"
-              aria-label={t('logout') || 'Logout'}
-              className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center gap-1 touch-manipulation"
-            >
-              <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              <span className="text-[10px] sm:text-xs font-medium hidden xs:inline">{t('logout')}</span>
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/subscribe')}
+                size="sm"
+                aria-label="Subscribe / Manage billing"
+                className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg bg-gradient-to-r from-primary/15 to-gold/15 text-primary hover:from-primary/25 hover:to-gold/25 transition-colors flex items-center gap-1 touch-manipulation"
+              >
+                <Crown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={onLogout}
+                size="sm"
+                aria-label={t('logout') || 'Logout'}
+                className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors flex items-center gap-1 touch-manipulation"
+              >
+                <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="text-[10px] sm:text-xs font-medium hidden xs:inline">{t('logout')}</span>
+              </Button>
+            </div>
           </div>
 
           {/* Date + Controls row */}
