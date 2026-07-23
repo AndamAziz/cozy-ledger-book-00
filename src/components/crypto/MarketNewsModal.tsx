@@ -1087,10 +1087,10 @@ export function MarketNewsModal({ open, onClose }: Props) {
               })()}
 
               <div className="relative px-1">
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar motion-reduce:overflow-x-visible">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-nowrap">
                   {/* Live XAU/USD price ticker */}
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 whitespace-nowrap tabular-nums border transition-colors duration-500 motion-reduce:transition-none ${
+                    className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-1 whitespace-nowrap tabular-nums border transition-colors duration-500 motion-reduce:transition-none ${
                       tickFlash === 'up'
                         ? 'bg-red-500/20 text-red-300 border-red-500/50'
                         : tickFlash === 'down'
@@ -1099,32 +1099,30 @@ export function MarketNewsModal({ open, onClose }: Props) {
                     }`}
                     aria-label="XAU/USD live price"
                   >
-                    <span className="text-[9px] opacity-70">XAU/USD</span>
+                    <span className="text-[9px] opacity-70">XAU</span>
                     {goldPrice > 0 ? `$${goldPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                     {tickFlash === 'up' && <TrendingUp className="h-3 w-3" />}
                     {tickFlash === 'down' && <TrendingDown className="h-3 w-3" />}
                   </span>
 
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-red-500/10 text-red-400 whitespace-nowrap tabular-nums transition-all motion-reduce:transition-none motion-reduce:animate-none ${
+                    className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-1 bg-red-500/10 text-red-400 whitespace-nowrap tabular-nums transition-all motion-reduce:transition-none motion-reduce:animate-none ${
                       liveGoldDir === 'up' ? 'ring-1 ring-red-500/60 animate-pulse shadow-[0_0_10px_rgba(246,70,93,0.35)]' : 'opacity-60'
                     }`}
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                     <TrendingUp className="h-3 w-3" />
-                    {bi('زێڕ', 'Gold')} {goldLive ? `${goldPct >= 0 ? '+' : ''}${goldPct.toFixed(2)}%` : ''}
+                    {bi('زێڕ', 'Gold')} {goldPrice > 0 ? `${goldPct >= 0 ? '+' : ''}${goldPct.toFixed(2)}%` : ''}
                   </span>
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-emerald-500/10 text-emerald-400 whitespace-nowrap tabular-nums transition-all motion-reduce:transition-none motion-reduce:animate-none ${
+                    className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-1 bg-emerald-500/10 text-emerald-400 whitespace-nowrap tabular-nums transition-all motion-reduce:transition-none motion-reduce:animate-none ${
                       liveGoldDir === 'down' ? 'ring-1 ring-emerald-500/60 animate-pulse shadow-[0_0_10px_rgba(14,203,129,0.35)]' : 'opacity-60'
                     }`}
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                     <TrendingDown className="h-3 w-3" />
-                    {bi('زێڕ', 'Gold')} {goldLive ? `${goldPct.toFixed(2)}%` : ''}
+                    {bi('زێڕ', 'Gold')} {goldPrice > 0 ? `${goldPct.toFixed(2)}%` : ''}
                   </span>
                   <span
-                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-400 whitespace-nowrap tabular-nums transition-all motion-reduce:transition-none motion-reduce:animate-none ${
+                    className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold rounded-full px-2 py-1 bg-amber-500/10 text-amber-400 whitespace-nowrap tabular-nums transition-all motion-reduce:transition-none motion-reduce:animate-none ${
                       liveGoldDir === 'impact' ? 'ring-1 ring-amber-500/60 animate-pulse shadow-[0_0_10px_rgba(240,185,11,0.35)]' : 'opacity-60'
                     }`}
                   >
@@ -1134,14 +1132,14 @@ export function MarketNewsModal({ open, onClose }: Props) {
                   <button
                     onClick={() => { setLegendInfoOpen((o) => !o); setLegendSettingsOpen(false); }}
                     aria-label={bi('زانیاری زیاتر', 'More info')}
-                    className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[#848e9c] hover:text-white hover:bg-[#1a1e2e] transition-colors shrink-0"
+                    className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full text-[#848e9c] hover:text-white hover:bg-[#1a1e2e] transition-colors"
                   >
                     <Info className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => { setLegendSettingsOpen((o) => !o); setLegendInfoOpen(false); }}
                     aria-label={bi('ڕێکخستنی فلاش', 'Flash settings')}
-                    className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[#848e9c] hover:text-white hover:bg-[#1a1e2e] transition-colors shrink-0"
+                    className="shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-full text-[#848e9c] hover:text-white hover:bg-[#1a1e2e] transition-colors"
                   >
                     <Settings className="h-3.5 w-3.5" />
                   </button>
