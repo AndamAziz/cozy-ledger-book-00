@@ -1069,7 +1069,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
                       liveGoldDir === 'up' ? 'ring-1 ring-red-500/60 animate-pulse shadow-[0_0_10px_rgba(246,70,93,0.35)]' : 'opacity-60'
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full bg-red-500 ${liveGoldDir === 'up' ? 'animate-ping-slow' : ''}`} />
+                    <span className={`h-1.5 w-1.5 rounded-full bg-red-500 ${liveGoldDir === 'up' ? 'animate-pulse' : ''}`} />
                     <TrendingUp className="h-3 w-3" />
                     {bi('زێڕ', 'Gold')}
                     {liveGoldDir === 'up' && goldLive && (
@@ -1081,7 +1081,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
                       liveGoldDir === 'down' ? 'ring-1 ring-emerald-500/60 animate-pulse shadow-[0_0_10px_rgba(14,203,129,0.35)]' : 'opacity-60'
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full bg-emerald-500 ${liveGoldDir === 'down' ? 'animate-ping-slow' : ''}`} />
+                    <span className={`h-1.5 w-1.5 rounded-full bg-emerald-500 ${liveGoldDir === 'down' ? 'animate-pulse' : ''}`} />
                     <TrendingDown className="h-3 w-3" />
                     {bi('زێڕ', 'Gold')}
                     {liveGoldDir === 'down' && goldLive && (
