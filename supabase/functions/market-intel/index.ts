@@ -1172,6 +1172,15 @@ async function evaluatePrices(): Promise<{ signalAlerts: SignalMsg[]; outcomeAle
       trend: q.changePct >= 0 ? "up" : "down", signal: sig, updated_at: new Date().toISOString(),
     });
 
+    // Signals are broadcast ONLY for Gold, Oil and Bitcoin. Other quotes
+    // (silver, forex, ETH/SOL/XRP/BNB) still update the dashboard snapshot
+    // above but never generate Telegram signals / outcomes.
+    if (q.symbol !== "XAU/USD" && q.symbol !== "WTI/USD" && q.symbol !== "BTC/USD") {
+      continue;
+    }
+
+
+
     // Migrate any legacy single-object open position to the new per-leg array.
     const rawOpen = openState[q.symbol];
     let legs: OpenLeg[] = [];
