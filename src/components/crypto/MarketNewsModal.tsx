@@ -859,18 +859,21 @@ export function MarketNewsModal({ open, onClose }: Props) {
           <SheetTitle className="flex items-center gap-2 text-white">
             <Newspaper className="h-5 w-5 text-[#f0b90b]" />
             {bi('هەواڵی بازاڕ', 'Market News')}
-            <div className="ms-auto flex items-center gap-1">
+            <div className="ms-auto flex items-center gap-2 sm:gap-3 me-8">
               {/* Timezone selector */}
               <div className="relative">
                 <button
                   onClick={() => setTzMenuOpen((o) => !o)}
-                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
+                  className="inline-flex items-center justify-center gap-1 min-w-[44px] min-h-[44px] px-2 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
                   aria-label={bi('کاتی ناوچەیی', 'Timezone')}
                   title={bi('هەڵبژاردنی کاتی ناوچەیی', 'Select timezone')}
                 >
                   <Globe className="h-4 w-4" />
-                  <span className="text-[10px] font-bold">
+                  <span className="text-[10px] font-bold hidden min-[380px]:inline">
                     {TZ_OPTIONS.find((o) => o.id === tz)?.flag} {TZ_OPTIONS.find((o) => o.id === tz)?.city}
+                  </span>
+                  <span className="text-[10px] font-bold min-[380px]:hidden">
+                    {TZ_OPTIONS.find((o) => o.id === tz)?.flag}
                   </span>
                 </button>
                 {tzMenuOpen && (
@@ -902,30 +905,36 @@ export function MarketNewsModal({ open, onClose }: Props) {
                   </>
                 )}
               </div>
-              <button
-                onClick={toggleSound}
-                className={`p-1.5 rounded-lg hover:bg-[#1a1e2e] transition-colors ${soundOn ? 'text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'}`}
-                aria-label={bi('ئاگادارکردنەوەی دەنگ', 'Sound alerts')}
-                title={soundOn ? bi('دەنگ چالاکە', 'Sound on') : bi('دەنگ ناچالاکە', 'Sound off')}
-              >
-                <Bell className="h-4 w-4" />
-              </button>
-              <button
-                onClick={toggleTheme}
-                className="p-1.5 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
-                aria-label={bi('گۆڕینی ڕووکار', 'Toggle theme')}
-                title={light ? bi('دۆخی تاریک', 'Dark mode') : bi('دۆخی ڕووناک', 'Light mode')}
-              >
-                {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-              </button>
-              <button
-                onClick={load}
-                disabled={loading}
-                className="p-1.5 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors disabled:opacity-50"
-                aria-label={bi('نوێکردنەوە', 'Refresh')}
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              </button>
+
+              {/* Divider between region selector and utility actions */}
+              <span aria-hidden="true" className="h-6 w-px bg-[#1a1e2e]" />
+
+              <div className="flex items-center gap-1 sm:gap-2">
+                <button
+                  onClick={toggleSound}
+                  className={`inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-[#1a1e2e] transition-colors ${soundOn ? 'text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'}`}
+                  aria-label={bi('ئاگادارکردنەوەی دەنگ', 'Sound alerts')}
+                  title={soundOn ? bi('دەنگ چالاکە', 'Sound on') : bi('دەنگ ناچالاکە', 'Sound off')}
+                >
+                  <Bell className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
+                  aria-label={bi('گۆڕینی ڕووکار', 'Toggle theme')}
+                  title={light ? bi('دۆخی تاریک', 'Dark mode') : bi('دۆخی ڕووناک', 'Light mode')}
+                >
+                  {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                </button>
+                <button
+                  onClick={load}
+                  disabled={loading}
+                  className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors disabled:opacity-50"
+                  aria-label={bi('نوێکردنەوە', 'Refresh')}
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
           </SheetTitle>
         </SheetHeader>
