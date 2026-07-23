@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Newspaper, CalendarClock, Loader2, RefreshCw, ExternalLink, AlertCircle, TrendingUp, TrendingDown, Pin, Clock, Share2, Sun, Moon, X, Bell, Globe, Check, Info } from 'lucide-react';
 import { useTimezone, formatInTimezone, formatDayInTimezone, TZ_OPTIONS } from '@/hooks/useTimezone';
+import { useMetalsData } from '@/hooks/useMetalsData';
 
 
 interface CalendarEvent {
