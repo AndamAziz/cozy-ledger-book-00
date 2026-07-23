@@ -154,6 +154,17 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
               </div>
             </div>
 
+            {/* Subscribe with card (Stripe) */}
+            <Button
+              onClick={() => navigate('/subscribe')}
+              className="w-full py-6 text-base font-bold rounded-xl shadow-xl bg-gradient-to-r from-primary to-gold hover:opacity-90 text-white transition-all duration-300 mb-4"
+            >
+              <div className="flex items-center gap-3">
+                <Crown className="h-5 w-5" />
+                {subscribeLabels[lang] || subscribeLabels.en}
+              </div>
+            </Button>
+
             {/* CEO message template */}
             <div className="bg-secondary/40 rounded-2xl p-4 mb-4 border border-border/50">
               <p className="text-sm font-semibold text-foreground mb-2">{templateTitles[lang]}</p>
