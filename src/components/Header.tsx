@@ -17,6 +17,7 @@ interface HeaderProps {
 export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout, companyName }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setInterval(() => {
