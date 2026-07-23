@@ -13,7 +13,7 @@ import { CEO_TELEGRAM_HANDLE } from "@/lib/telegramContact";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-const PRICE_ID = "ctp_pro_monthly";
+const PRICE_ID = "ctp_pro_monthly_2gbp";
 
 const COPY = {
   en: {
