@@ -13,14 +13,14 @@ import { CEO_TELEGRAM_HANDLE } from "@/lib/telegramContact";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-const PRICE_ID = "ctp_pro_monthly";
+const PRICE_ID = "ctp_pro_monthly_2gbp";
 
 const COPY = {
   en: {
     title: "Subscribe to CTP Pro",
     subtitle: "Unlock everything after your free trial",
     trial: "7 days free — no card required",
-    price: "£7",
+    price: "£2",
     per: "/ month",
     features: [
       "Full financial management (multi-currency)",
@@ -166,7 +166,7 @@ export default function Subscribe() {
     <>
       <Helmet>
         <title>Subscribe — CTP Pro</title>
-        <meta name="description" content="Subscribe to City Taxperts Pro for £7/month or contact the CEO for manual renewal." />
+        <meta name="description" content="Subscribe to City Taxperts Pro for £2/month or contact the CEO for manual renewal." />
       </Helmet>
 
       <PaymentTestModeBanner />
