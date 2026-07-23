@@ -305,12 +305,30 @@ export function MarketNewsModal({ open, onClose }: Props) {
   const { tz, setTz } = useTimezone();
   const [tzMenuOpen, setTzMenuOpen] = useState(false);
   const [legendInfoOpen, setLegendInfoOpen] = useState(false);
+  const [legendSettingsOpen, setLegendSettingsOpen] = useState(false);
   const { metals: liveMetals } = useMetalsData();
   const goldLive = liveMetals.find((m) => m.code === 'XAU');
   const goldPct = goldLive?.change ?? 0;
+  const goldPrice = goldLive?.price ?? 0;
+  // Flash-trigger threshold for the direction chips
+  const FLASH_THRESHOLD_PCT = 0.1;
   // Which legend chip should pulse to reflect current market bias
   const liveGoldDir: 'up' | 'down' | 'impact' =
-    goldPct > 0.1 ? 'up' : goldPct < -0.1 ? 'down' : 'impact';
+    goldPct > FLASH_THRESHOLD_PCT ? 'up' : goldPct < -FLASH_THRESHOLD_PCT ? 'down' : 'impact';
+  // Track price-tick direction for the XAU/USD chip flash
+  const prevGoldPriceRef = useRef<number>(0);
+  const [tickFlash, setTickFlash] = useState<'up' | 'down' | null>(null);
+  useEffect(() => {
+    if (!goldPrice) return;
+    const prev = prevGoldPriceRef.current;
+    if (prev && goldPrice !== prev) {
+      setTickFlash(goldPrice > prev ? 'up' : 'down');
+      const t = window.setTimeout(() => setTickFlash(null), 700);
+      prevGoldPriceRef.current = goldPrice;
+      return () => window.clearTimeout(t);
+    }
+    prevGoldPriceRef.current = goldPrice;
+  }, [goldPrice]);
 
   // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
   const [currency, setCurrency] = useState<string>('All');
