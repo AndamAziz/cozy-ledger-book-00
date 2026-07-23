@@ -856,7 +856,6 @@ export function MarketNewsModal({ open, onClose }: Props) {
         side="right"
         className="w-full sm:max-w-md p-0 bg-[#0a0e17] border-[#1a1e2e] text-white flex flex-col"
       >
-        <SheetHeader className="px-4 py-3 border-b border-[#1a1e2e] shrink-0 flex flex-row items-center justify-between space-y-0">
         <SheetHeader className="border-b border-[#1a1e2e] shrink-0 space-y-0 p-0">
           {/* Row 1: title + (built-in close X on the far right) */}
           <div className="flex items-center px-4 pt-3 pb-2 pe-12">
