@@ -90,7 +90,7 @@ export function ExpiryWarningBanner({ daysUntilExpiry, email }: ExpiryWarningBan
             className="bg-gradient-to-r from-primary to-gold hover:opacity-90 text-white"
           >
             <Crown className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-            £7/mo
+            £2/mo
           </Button>
           <Button
             onClick={handleTelegramContact}

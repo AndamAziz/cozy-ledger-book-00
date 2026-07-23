@@ -22,10 +22,10 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
 
   const subscribeLabels: Record<string, string> = {
     ku: '💳 بەشداربوون بە £٧ / مانگ',
-    en: '💳 Subscribe for £7 / month',
-    ar: '💳 اشترك بـ £7 / شهر',
+    en: '💳 Subscribe for £2 / month',
+    ar: '💳 اشترك بـ £2 / شهر',
     fa: '💳 اشتراک £۷ / ماه',
-    tr: '💳 £7 / ay abone ol',
+    tr: '💳 £2 / ay abone ol',
   };
 
   const localeMap = {

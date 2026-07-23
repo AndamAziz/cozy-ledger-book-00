@@ -166,7 +166,7 @@ export default function Subscribe() {
     <>
       <Helmet>
         <title>Subscribe — CTP Pro</title>
-        <meta name="description" content="Subscribe to City Taxperts Pro for £7/month or contact the CEO for manual renewal." />
+        <meta name="description" content="Subscribe to City Taxperts Pro for £2/month or contact the CEO for manual renewal." />
       </Helmet>
 
       <PaymentTestModeBanner />
