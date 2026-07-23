@@ -31,3 +31,7 @@ project_id = "jpatltcqhpclxenzvboa"
     verify_jwt = false
   [functions.resolve-social-url]
     verify_jwt = false
+  [functions.create-checkout]
+    verify_jwt = false
+  [functions.payments-webhook]
+    verify_jwt = false

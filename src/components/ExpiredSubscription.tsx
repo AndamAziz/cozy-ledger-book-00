@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, LogOut, Calendar, Shield, Send, Copy, Check, Mail } from 'lucide-react';
+import { AlertTriangle, LogOut, Calendar, Shield, Send, Copy, Check, Mail, Crown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
 import { buildTelegramMessage, CEO_TELEGRAM_HANDLE } from '@/lib/telegramContact';
@@ -16,7 +17,16 @@ const CEO_TELEGRAM = CEO_TELEGRAM_HANDLE;
 
 export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubscriptionProps) {
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+
+  const subscribeLabels: Record<string, string> = {
+    ku: '💳 بەشداربوون بە £٧ / مانگ',
+    en: '💳 Subscribe for £7 / month',
+    ar: '💳 اشترك بـ £7 / شهر',
+    fa: '💳 اشتراک £۷ / ماه',
+    tr: '💳 £7 / ay abone ol',
+  };
 
   const localeMap = {
     ku: 'ku-Arab',
@@ -143,6 +153,17 @@ export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubsc
                 </div>
               </div>
             </div>
+
+            {/* Subscribe with card (Stripe) */}
+            <Button
+              onClick={() => navigate('/subscribe')}
+              className="w-full py-6 text-base font-bold rounded-xl shadow-xl bg-gradient-to-r from-primary to-gold hover:opacity-90 text-white transition-all duration-300 mb-4"
+            >
+              <div className="flex items-center gap-3">
+                <Crown className="h-5 w-5" />
+                {subscribeLabels[lang] || subscribeLabels.en}
+              </div>
+            </Button>
 
             {/* CEO message template */}
             <div className="bg-secondary/40 rounded-2xl p-4 mb-4 border border-border/50">
