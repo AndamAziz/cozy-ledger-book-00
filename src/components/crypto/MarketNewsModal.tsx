@@ -1086,16 +1086,17 @@ export function MarketNewsModal({ open, onClose }: Props) {
                 );
               })()}
 
-              <LegendChipRow
-                goldPrice={goldPrice}
-                goldPct={goldPct}
-                tickFlash={tickFlash}
-                liveGoldDir={liveGoldDir}
-                todayHighCount={todayHighCount}
-                bi={bi}
-                onToggleInfo={() => { setLegendInfoOpen((o) => !o); setLegendSettingsOpen(false); }}
-                onToggleSettings={() => { setLegendSettingsOpen((o) => !o); setLegendInfoOpen(false); }}
-              />
+              <div className="relative px-1">
+                <LegendChipRow
+                  goldPrice={goldPrice}
+                  goldPct={goldPct}
+                  tickFlash={tickFlash}
+                  liveGoldDir={liveGoldDir}
+                  todayHighCount={todayHighCount}
+                  bi={bi}
+                  onToggleInfo={() => { setLegendInfoOpen((o) => !o); setLegendSettingsOpen(false); }}
+                  onToggleSettings={() => { setLegendSettingsOpen((o) => !o); setLegendInfoOpen(false); }}
+                />
                 {legendInfoOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setLegendInfoOpen(false)} />
