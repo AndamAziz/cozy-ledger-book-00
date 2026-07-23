@@ -7,7 +7,7 @@ import { DxyWidget } from '@/components/crypto/DxyWidget';
 import { SentimentGauge } from '@/components/crypto/SentimentGauge';
 import { useMacro } from '@/hooks/useMacro';
 import { TechnicalSignals } from '@/components/crypto/TechnicalSignals';
-import { RiskCalculator } from '@/components/crypto/RiskCalculator';
+
 import { EventAlertBanner, CalendarEvent } from '@/components/crypto/EventAlertBanner';
 import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { SignalHistory } from '@/components/crypto/SignalHistory';
@@ -219,14 +219,6 @@ export function ForexProPanel({ code, name, flag, rate }: Props) {
       <SentimentGauge sentiment={sentiment} loading={loadingMacro} asset="gold" />
       <TechnicalSignals candles={candlesForInd} price={rate} />
       <EventAlertBanner events={events} loading={loadingEvents} />
-      <RiskCalculator
-        defaultEntry={rate}
-        contractSize={100000}
-        pipSize={dec >= 4 ? 0.0001 : 0.01}
-        priceDecimals={dec}
-        unitLabel={{ ku: `بڕ (${code})`, en: `Units (${code})` }}
-        sizeLabel={{ ku: 'قەبارەی Lot', en: 'Position Size' }}
-      />
     </div>
   );
 }

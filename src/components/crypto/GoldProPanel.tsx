@@ -4,7 +4,7 @@ import type { OHLCCandle } from '@/lib/krakenApi';
 import { DxyWidget } from '@/components/crypto/DxyWidget';
 import { SentimentGauge } from '@/components/crypto/SentimentGauge';
 import { TechnicalSignals } from '@/components/crypto/TechnicalSignals';
-import { RiskCalculator } from '@/components/crypto/RiskCalculator';
+
 import { EventAlertBanner, CalendarEvent } from '@/components/crypto/EventAlertBanner';
 import { GoldSignalPanel } from '@/components/crypto/GoldSignalPanel';
 import { PriceAlerts } from '@/components/crypto/PriceAlerts';
@@ -191,7 +191,7 @@ export function GoldProPanel({ candles, price, stepSeconds }: Props) {
       <SentimentGauge sentiment={sentiment} loading={loadingMacro} />
       <TechnicalSignals candles={candles} price={price} stepSeconds={stepSeconds} />
       <EventAlertBanner events={events} loading={loadingEvents} />
-      <RiskCalculator defaultEntry={price} />
+      
     </div>
   );
 }
