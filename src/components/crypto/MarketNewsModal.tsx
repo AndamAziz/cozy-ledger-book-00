@@ -857,35 +857,34 @@ export function MarketNewsModal({ open, onClose }: Props) {
         className="w-full sm:max-w-md p-0 bg-[#0a0e17] border-[#1a1e2e] text-white flex flex-col"
       >
         <SheetHeader className="px-4 py-3 border-b border-[#1a1e2e] shrink-0 flex flex-row items-center justify-between space-y-0">
-          <SheetTitle className="flex items-center gap-2 text-white text-lg sm:text-2xl min-w-0">
-            <Newspaper className="h-5 w-5 text-[#f0b90b] shrink-0" />
-            <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-              {bi('هەواڵی بازاڕ', 'Market News')}
-            </span>
-          </SheetTitle>
-          <div className="flex items-center gap-2 sm:gap-3 me-8 flex-shrink-0">
+        <SheetHeader className="border-b border-[#1a1e2e] shrink-0 space-y-0 p-0">
+          {/* Row 1: title + (built-in close X on the far right) */}
+          <div className="flex items-center px-4 pt-3 pb-2 pe-12">
+            <SheetTitle className="flex items-center gap-2 text-white text-lg font-bold">
+              <Newspaper className="h-5 w-5 text-[#f0b90b] shrink-0" />
+              <span>{bi('هەواڵی بازاڕ', 'Market News')}</span>
+            </SheetTitle>
+          </div>
+
+          {/* Row 2: region selector | divider | utility icons */}
+          <div className="flex items-center px-4 py-2 border-t border-[#1a1e2e]/60 bg-white/[0.02]">
             {/* Timezone selector */}
             <div className="relative">
               <button
                 onClick={() => setTzMenuOpen((o) => !o)}
-                className="inline-flex items-center justify-center gap-1 min-w-[44px] min-h-[44px] px-2 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
                 aria-label={bi('کاتی ناوچەیی', 'Timezone')}
                 title={bi('هەڵبژاردنی کاتی ناوچەیی', 'Select timezone')}
               >
                 <Globe className="h-4 w-4" />
-                <span className="text-[10px] font-bold hidden min-[380px]:inline">
+                <span className="text-[11px] font-bold">
                   {TZ_OPTIONS.find((o) => o.id === tz)?.flag} {TZ_OPTIONS.find((o) => o.id === tz)?.city}
-                </span>
-                <span className="text-[10px] font-bold min-[380px]:hidden">
-                  {TZ_OPTIONS.find((o) => o.id === tz)?.flag}
                 </span>
               </button>
               {tzMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setTzMenuOpen(false)} />
-                  <div
-                    className="absolute end-0 mt-1 z-50 w-48 rounded-xl border bg-slate-900 border-slate-700 shadow-xl overflow-hidden py-1"
-                  >
+                  <div className="absolute start-0 mt-1 z-50 w-48 rounded-xl border bg-slate-900 border-slate-700 shadow-xl overflow-hidden py-1">
                     <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-wide text-[#848e9c]">
                       {bi('کاتی ناوچەیی', 'Timezone')}
                     </div>
@@ -910,10 +909,11 @@ export function MarketNewsModal({ open, onClose }: Props) {
               )}
             </div>
 
-            {/* Divider between region selector and utility actions */}
-            <span aria-hidden="true" className="self-stretch w-px bg-[#1a1e2e]" />
+            {/* Divider */}
+            <span aria-hidden="true" className="mx-2 h-6 w-px bg-[#1a1e2e]" />
 
-            <div className="flex items-center gap-1 sm:gap-2">
+            {/* Utility icons — right-aligned */}
+            <div className="ms-auto flex items-center gap-3">
               <button
                 onClick={toggleSound}
                 className={`inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-[#1a1e2e] transition-colors ${soundOn ? 'text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'}`}
