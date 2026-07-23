@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, LogOut, Calendar, Shield, Send, Copy, Check, Mail } from 'lucide-react';
+import { AlertTriangle, LogOut, Calendar, Shield, Send, Copy, Check, Mail, Crown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
 import { buildTelegramMessage, CEO_TELEGRAM_HANDLE } from '@/lib/telegramContact';
@@ -16,7 +17,16 @@ const CEO_TELEGRAM = CEO_TELEGRAM_HANDLE;
 
 export function ExpiredSubscription({ email, expiresAt, onLogout }: ExpiredSubscriptionProps) {
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+
+  const subscribeLabels: Record<string, string> = {
+    ku: '💳 بەشداربوون بە £٧ / مانگ',
+    en: '💳 Subscribe for £7 / month',
+    ar: '💳 اشترك بـ £7 / شهر',
+    fa: '💳 اشتراک £۷ / ماه',
+    tr: '💳 £7 / ay abone ol',
+  };
 
   const localeMap = {
     ku: 'ku-Arab',
