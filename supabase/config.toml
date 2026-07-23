@@ -37,3 +37,5 @@ project_id = "jpatltcqhpclxenzvboa"
     verify_jwt = false
   [functions.create-portal-session]
     verify_jwt = false
+  [functions._debug-price]
+    verify_jwt = false
