@@ -1064,17 +1064,37 @@ export function MarketNewsModal({ open, onClose }: Props) {
 
               <div className="relative px-1">
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                  <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-red-500/10 text-red-400 whitespace-nowrap">
-                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                    {bi('زێڕ ↑', 'Gold ↑')}
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-red-500/10 text-red-400 whitespace-nowrap transition-all ${
+                      liveGoldDir === 'up' ? 'ring-1 ring-red-500/60 animate-pulse shadow-[0_0_10px_rgba(246,70,93,0.35)]' : 'opacity-60'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full bg-red-500 ${liveGoldDir === 'up' ? 'animate-ping-slow' : ''}`} />
+                    <TrendingUp className="h-3 w-3" />
+                    {bi('زێڕ', 'Gold')}
+                    {liveGoldDir === 'up' && goldLive && (
+                      <span className="tabular-nums">+{goldPct.toFixed(2)}%</span>
+                    )}
                   </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-emerald-500/10 text-emerald-400 whitespace-nowrap">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    {bi('زێڕ ↓', 'Gold ↓')}
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-emerald-500/10 text-emerald-400 whitespace-nowrap transition-all ${
+                      liveGoldDir === 'down' ? 'ring-1 ring-emerald-500/60 animate-pulse shadow-[0_0_10px_rgba(14,203,129,0.35)]' : 'opacity-60'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full bg-emerald-500 ${liveGoldDir === 'down' ? 'animate-ping-slow' : ''}`} />
+                    <TrendingDown className="h-3 w-3" />
+                    {bi('زێڕ', 'Gold')}
+                    {liveGoldDir === 'down' && goldLive && (
+                      <span className="tabular-nums">{goldPct.toFixed(2)}%</span>
+                    )}
                   </span>
-                  <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-400 whitespace-nowrap">
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-400 whitespace-nowrap transition-all ${
+                      liveGoldDir === 'impact' ? 'ring-1 ring-amber-500/60 animate-pulse shadow-[0_0_10px_rgba(240,185,11,0.35)]' : 'opacity-60'
+                    }`}
+                  >
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                    {bi('ئاستی کاریگەری', 'Impact score')}
+                    {bi('ئاستی کاریگەری', 'Impact')}
                   </span>
                   <button
                     onClick={() => setLegendInfoOpen((o) => !o)}
