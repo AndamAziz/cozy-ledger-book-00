@@ -303,6 +303,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
   // User-selected timezone (persisted in localStorage) + selector menu state
   const { tz, setTz } = useTimezone();
   const [tzMenuOpen, setTzMenuOpen] = useState(false);
+  const [legendInfoOpen, setLegendInfoOpen] = useState(false);
 
   // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
   const [currency, setCurrency] = useState<string>('All');
