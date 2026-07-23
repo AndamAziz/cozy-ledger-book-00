@@ -20,7 +20,7 @@ const COPY = {
     title: "Subscribe to CTP Pro",
     subtitle: "Unlock everything after your free trial",
     trial: "7 days free — no card required",
-    price: "£7",
+    price: "£2",
     per: "/ month",
     features: [
       "Full financial management (multi-currency)",
