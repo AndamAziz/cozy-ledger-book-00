@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo, type ReactNode } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Newspaper, CalendarClock, Loader2, RefreshCw, ExternalLink, AlertCircle, TrendingUp, TrendingDown, Pin, Clock, Share2, Sun, Moon, X, Bell, Globe, Check } from 'lucide-react';
+import { Newspaper, CalendarClock, Loader2, RefreshCw, ExternalLink, AlertCircle, TrendingUp, TrendingDown, Pin, Clock, Share2, Sun, Moon, X, Bell, Globe, Check, Info } from 'lucide-react';
 import { useTimezone, formatInTimezone, formatDayInTimezone, TZ_OPTIONS } from '@/hooks/useTimezone';
 
 
@@ -303,6 +303,7 @@ export function MarketNewsModal({ open, onClose }: Props) {
   // User-selected timezone (persisted in localStorage) + selector menu state
   const { tz, setTz } = useTimezone();
   const [tzMenuOpen, setTzMenuOpen] = useState(false);
+  const [legendInfoOpen, setLegendInfoOpen] = useState(false);
 
   // Filter tab (currency), dismissed events, calendar theme, sound toggle, share toast
   const [currency, setCurrency] = useState<string>('All');
@@ -855,36 +856,34 @@ export function MarketNewsModal({ open, onClose }: Props) {
         side="right"
         className="w-full sm:max-w-md p-0 bg-[#0a0e17] border-[#1a1e2e] text-white flex flex-col"
       >
-        <SheetHeader className="px-4 py-3 border-b border-[#1a1e2e] shrink-0 flex flex-row items-center justify-between space-y-0">
-          <SheetTitle className="flex items-center gap-2 text-white text-lg sm:text-2xl min-w-0">
-            <Newspaper className="h-5 w-5 text-[#f0b90b] shrink-0" />
-            <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-              {bi('هەواڵی بازاڕ', 'Market News')}
-            </span>
-          </SheetTitle>
-          <div className="flex items-center gap-2 sm:gap-3 me-8 flex-shrink-0">
+        <SheetHeader className="border-b border-[#1a1e2e] shrink-0 space-y-0 p-0">
+          {/* Row 1: title + (built-in close X on the far right) */}
+          <div className="flex items-center px-4 pt-3 pb-2 pe-12">
+            <SheetTitle className="flex items-center gap-2 text-white text-lg font-bold">
+              <Newspaper className="h-5 w-5 text-[#f0b90b] shrink-0" />
+              <span>{bi('هەواڵی بازاڕ', 'Market News')}</span>
+            </SheetTitle>
+          </div>
+
+          {/* Row 2: region selector | divider | utility icons */}
+          <div className="flex items-center px-4 py-2 border-t border-[#1a1e2e]/60 bg-white/[0.02]">
             {/* Timezone selector */}
             <div className="relative">
               <button
                 onClick={() => setTzMenuOpen((o) => !o)}
-                className="inline-flex items-center justify-center gap-1 min-w-[44px] min-h-[44px] px-2 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-lg hover:bg-[#1a1e2e] text-[#848e9c] hover:text-white transition-colors"
                 aria-label={bi('کاتی ناوچەیی', 'Timezone')}
                 title={bi('هەڵبژاردنی کاتی ناوچەیی', 'Select timezone')}
               >
                 <Globe className="h-4 w-4" />
-                <span className="text-[10px] font-bold hidden min-[380px]:inline">
+                <span className="text-[11px] font-bold">
                   {TZ_OPTIONS.find((o) => o.id === tz)?.flag} {TZ_OPTIONS.find((o) => o.id === tz)?.city}
-                </span>
-                <span className="text-[10px] font-bold min-[380px]:hidden">
-                  {TZ_OPTIONS.find((o) => o.id === tz)?.flag}
                 </span>
               </button>
               {tzMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setTzMenuOpen(false)} />
-                  <div
-                    className="absolute end-0 mt-1 z-50 w-48 rounded-xl border bg-slate-900 border-slate-700 shadow-xl overflow-hidden py-1"
-                  >
+                  <div className="absolute start-0 mt-1 z-50 w-48 rounded-xl border bg-slate-900 border-slate-700 shadow-xl overflow-hidden py-1">
                     <div className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-wide text-[#848e9c]">
                       {bi('کاتی ناوچەیی', 'Timezone')}
                     </div>
@@ -909,10 +908,11 @@ export function MarketNewsModal({ open, onClose }: Props) {
               )}
             </div>
 
-            {/* Divider between region selector and utility actions */}
-            <span aria-hidden="true" className="self-stretch w-px bg-[#1a1e2e]" />
+            {/* Divider */}
+            <span aria-hidden="true" className="mx-2 h-6 w-px bg-[#1a1e2e]" />
 
-            <div className="flex items-center gap-1 sm:gap-2">
+            {/* Utility icons — right-aligned */}
+            <div className="ms-auto flex items-center gap-3">
               <button
                 onClick={toggleSound}
                 className={`inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg hover:bg-[#1a1e2e] transition-colors ${soundOn ? 'text-[#f0b90b]' : 'text-[#848e9c] hover:text-white'}`}
@@ -1055,16 +1055,40 @@ export function MarketNewsModal({ open, onClose }: Props) {
                 );
               })()}
 
-              <p className="text-[10px] px-1 leading-relaxed">
-                <span style={{ color: C_DOWN }} className="font-bold">{bi('سور = زێڕ بەرز (دۆلار نزم)', 'Red card = Gold up (USD down)')}</span>
-                {' · '}
-                <span style={{ color: C_UP }} className="font-bold">{bi('سەوز = زێڕ نزم (دۆلار بەرز)', 'Green card = Gold down (USD up)')}</span>
-              </p>
-              <p className="text-[10px] text-[#848e9c] px-1 leading-relaxed">
-                <span className="text-[#d4af37] font-bold">{bi('سنووری زێڕین = دراوی پەیوەست بە زێڕ (USD/CHF/GBP/JPY)', 'Gold border = gold-relevant currency (USD/CHF/GBP/JPY)')}</span>
-                {' · '}
-                <span className="text-[#f0b90b]">🟡 {bi('= ئاستی کاریگەری زێڕ', '= gold impact score')}</span>
-              </p>
+              <div className="relative px-1">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                  <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-red-500/10 text-red-400 whitespace-nowrap">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    {bi('زێڕ ↑', 'Gold ↑')}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-emerald-500/10 text-emerald-400 whitespace-nowrap">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    {bi('زێڕ ↓', 'Gold ↓')}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-400 whitespace-nowrap">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    {bi('ئاستی کاریگەری', 'Impact score')}
+                  </span>
+                  <button
+                    onClick={() => setLegendInfoOpen((o) => !o)}
+                    aria-label={bi('زانیاری زیاتر', 'More info')}
+                    className="inline-flex items-center justify-center h-6 w-6 rounded-full text-[#848e9c] hover:text-white hover:bg-[#1a1e2e] transition-colors shrink-0"
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {legendInfoOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setLegendInfoOpen(false)} />
+                    <div className="absolute end-1 mt-1 z-50 w-64 rounded-xl border bg-slate-900 border-slate-700 shadow-xl p-3 text-[11px] leading-relaxed text-slate-200">
+                      {bi(
+                        'کارتی سور = ئەگەری بەرزبوونەوەی زێڕ و دابەزینی دۆلار. کارتی سەوز = ئەگەری دابەزینی زێڕ و بەرزبوونەوەی دۆلار. کارتی سنووری زێڕین = دراوی پەیوەست بە زێڕ (USD, CHF, GBP, JPY). خاڵی کاڵ = ئاستی کاریگەری زێڕ.',
+                        'Red card = Gold likely up, USD down. Green card = Gold likely down, USD up. Gold-bordered cards = gold-relevant currency (USD, CHF, GBP, JPY). Amber dot = gold impact score.'
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* Pinned high-impact USD event */}
               {pinnedEvent && (
