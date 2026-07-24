@@ -142,7 +142,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-primary flex items-center justify-center shadow-md shadow-gold/30 flex-shrink-0">
                 <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">📖 {QURAN_LABEL[language] || QURAN_LABEL.en}</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">📖 {QURAN_LABEL[language] || QURAN_LABEL.en}</span>
             </button>
           </div>
 
@@ -157,7 +157,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-md shadow-info/30 flex-shrink-0">
                 <Tv className="h-4 w-4 sm:h-5 sm:w-5 text-info-foreground" />
               </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">TV</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">TV</span>
             </a>
             <button
               onClick={() => setSportOpen(true)}
@@ -166,7 +166,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-success to-success/80 flex items-center justify-center shadow-md shadow-success/30 flex-shrink-0">
                 <Radio className="h-4 w-4 sm:h-5 sm:w-5 text-success-foreground" />
               </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">Sport Live</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">Sport Live</span>
             </button>
           </div>
 
@@ -179,7 +179,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-accent to-amber-400 flex items-center justify-center shadow-md shadow-accent/30 flex-shrink-0">
                 <Film className="h-4 w-4 sm:h-5 sm:w-5 text-accent-foreground" />
               </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">Movies 🎬</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">Movies 🎬</span>
             </button>
             <button
               onClick={() => navigate('/crypto')}
@@ -188,7 +188,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-[#f0b90b] to-[#f0b90b]/80 flex items-center justify-center shadow-md shadow-[#f0b90b]/30 flex-shrink-0">
                 <Bitcoin className="h-4 w-4 sm:h-5 sm:w-5 text-black" />
               </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">{t('cryptoTracker')}</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">{t('cryptoTracker')}</span>
             </button>
           </div>
 
