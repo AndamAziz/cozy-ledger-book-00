@@ -111,7 +111,7 @@ export function PushPriceAlerts() {
       if (!sub) {
         sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_KEY),
+          applicationServerKey: urlBase64ToUint8Array(VAPID_KEY).buffer as ArrayBuffer,
         });
       }
       const p256dh = arrayBufferToBase64(sub.getKey('p256dh'));
