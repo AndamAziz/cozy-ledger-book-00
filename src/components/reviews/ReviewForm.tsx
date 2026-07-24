@@ -89,12 +89,12 @@ export const ReviewForm = ({ user, reviewerName, onSubmitted }: ReviewFormProps)
 
   if (done) {
     return (
-      <div className="glass-card p-2.5 sm:p-3 text-center">
-        <div className="w-10 h-10 mx-auto rounded-full bg-gradient-to-br from-primary to-success flex items-center justify-center shadow-lg shadow-primary/30 mb-1.5">
-          <CheckCircle2 className="w-5 h-5 text-background" />
+      <div className="glass-card p-2 text-center">
+        <div className="w-8 h-8 mx-auto rounded-full bg-gradient-to-br from-primary to-success flex items-center justify-center shadow-lg shadow-primary/30 mb-1">
+          <CheckCircle2 className="w-4 h-4 text-background" />
         </div>
-        <p className="text-sm text-foreground font-medium">{i18n.thankYou}</p>
-        <Button variant="ghost" size="sm" className="mt-1.5 h-7" onClick={() => setDone(false)}>
+        <p className="text-xs text-foreground font-medium">{i18n.thankYou}</p>
+        <Button variant="ghost" size="sm" className="mt-1 h-6 text-xs" onClick={() => setDone(false)}>
           {i18n.writeReview}
         </Button>
       </div>
@@ -102,36 +102,32 @@ export const ReviewForm = ({ user, reviewerName, onSubmitted }: ReviewFormProps)
   }
 
   return (
-    <div className="glass-card p-2.5 sm:p-3">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-6 h-6 rounded-md bg-gradient-to-br from-gold to-amber-500 flex items-center justify-center shadow-md shadow-gold/30">
-          <Star className="w-3.5 h-3.5 text-background fill-background" />
+    <div className="glass-card p-2">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <div className="w-5 h-5 rounded-md bg-gradient-to-br from-gold to-amber-500 flex items-center justify-center shadow-md shadow-gold/30">
+          <Star className="w-3 h-3 text-background fill-background" />
         </div>
-        <h3 className="font-bold text-foreground text-sm">{i18n.writeReview}</h3>
+        <h3 className="font-bold text-foreground text-xs">{i18n.writeReview}</h3>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <div>
-          <Label className="text-xs text-muted-foreground mb-1 block">{i18n.yourRating}</Label>
-          <StarRating value={rating} onChange={setRating} size={20} ariaLabel={i18n.yourRating} />
+          <StarRating value={rating} onChange={setRating} size={16} ariaLabel={i18n.yourRating} />
         </div>
 
         <div>
-          <Label htmlFor="review-comment" className="text-xs text-muted-foreground mb-1 block">
-            {i18n.yourReview}
-          </Label>
           <Textarea
             id="review-comment"
             value={comment}
             maxLength={REVIEW_COMMENT_MAX}
             onChange={(e) => setComment(e.target.value)}
             placeholder={i18n.commentPlaceholder}
-            rows={2}
-            className="resize-none bg-secondary/30 text-sm min-h-[48px]"
+            rows={1}
+            className="resize-none bg-secondary/30 text-xs min-h-[36px] py-1.5"
           />
           <div className="flex justify-end mt-0.5">
             <span
-              className={`text-[11px] ${
+              className={`text-[10px] ${
                 charCount < REVIEW_COMMENT_MIN || charCount > REVIEW_COMMENT_MAX
                   ? 'text-destructive'
                   : 'text-muted-foreground'
@@ -145,7 +141,7 @@ export const ReviewForm = ({ user, reviewerName, onSubmitted }: ReviewFormProps)
         <Button
           onClick={handleSubmit}
           disabled={submitting}
-          className="btn-gradient-primary w-full h-8 rounded-xl font-bold text-sm"
+          className="btn-gradient-primary w-full h-7 rounded-lg font-bold text-xs"
         >
           {submitting ? i18n.submitting : i18n.submit}
         </Button>
