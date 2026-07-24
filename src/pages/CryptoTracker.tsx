@@ -30,6 +30,7 @@ import { SignalsPanel } from '@/components/crypto/SignalsPanel';
 import { DROPDOWN_ASSETS, DropdownAssetKey } from '@/lib/signalData';
 import { IndicatorVerify } from '@/components/crypto/IndicatorVerify';
 import { BottomNav } from '@/components/crypto/BottomNav';
+import { PushAlertsFab } from '@/components/crypto/PushAlertsFab';
 
 
 type TrackerTab = 'crypto' | 'forex' | 'metals' | 'ai';
@@ -626,6 +627,7 @@ export default function CryptoTracker() {
 
       <MarketNewsModal open={showNews} onClose={() => setShowNews(false)} />
       {showVerify && <IndicatorVerify onClose={() => setShowVerify(false)} />}
+      <PushAlertsFab />
     </DemoAccountProvider>
 
   );
