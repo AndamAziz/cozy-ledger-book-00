@@ -182,7 +182,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             </button>
           </div>
 
-          {/* Prayer Times & Qibla + Holy Quran */}
+          {/* Prayer Times & Qibla + Financial Management */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
             <button
               onClick={() => navigate('/prayer')}
@@ -194,8 +194,25 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <span className="font-bold text-foreground text-[10px] sm:text-xs whitespace-normal">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
             </button>
             <button
+              onClick={() => setFinanceOpen((v) => !v)}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:border-success/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
+              aria-expanded={financeOpen}
+            >
+              <span className="absolute top-1 start-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-success/60 text-success bg-success/10">
+                NEW
+              </span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-success to-emerald-400 flex items-center justify-center shadow-md shadow-success/30 flex-shrink-0">
+                <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-success-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs whitespace-normal">💳 {t('financialManagement')}</span>
+            </button>
+          </div>
+
+          {/* The Holy Quran */}
+          <div className="grid grid-cols-1 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
+            <button
               onClick={() => navigate('/quran')}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-gold/20 via-primary/10 to-transparent border border-gold/30 hover:border-gold/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-gold/20 via-primary/10 to-transparent border border-gold/30 hover:border-gold/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-2.5 sm:gap-3 w-full"
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-primary flex items-center justify-center shadow-md shadow-gold/30 flex-shrink-0">
                 <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
