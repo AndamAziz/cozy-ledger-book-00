@@ -101,3 +101,44 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// Web Push: show OS-level notification when a push arrives.
+self.addEventListener('push', (event) => {
+  let data = { title: 'Price Alert', body: '', url: '/crypto' };
+  try {
+    if (event.data) {
+      const parsed = event.data.json();
+      data = { ...data, ...parsed };
+    }
+  } catch {
+    try { data.body = event.data ? event.data.text() : ''; } catch { /* noop */ }
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Price Alert', {
+      body: data.body || '',
+      icon: '/app-icon-192.png',
+      badge: '/app-icon-192.png',
+      data: { url: data.url || '/crypto' },
+      tag: data.tag || 'price-alert',
+      renotify: true,
+    })
+  );
+});
+
+// Focus/open the Trading page when a notification is clicked.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/crypto';
+  event.waitUntil((async () => {
+    const clientsArr = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clientsArr) {
+      try {
+        const u = new URL(client.url);
+        if (u.pathname === targetUrl || u.pathname.startsWith(targetUrl)) {
+          return client.focus();
+        }
+      } catch { /* noop */ }
+    }
+    if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+  })());
+});
