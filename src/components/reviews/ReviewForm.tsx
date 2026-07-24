@@ -89,12 +89,12 @@ export const ReviewForm = ({ user, reviewerName, onSubmitted }: ReviewFormProps)
 
   if (done) {
     return (
-      <div className="glass-card p-6 text-center">
-        <div className="w-14 h-14 mx-auto rounded-full bg-gradient-to-br from-primary to-success flex items-center justify-center shadow-lg shadow-primary/30 mb-3">
-          <CheckCircle2 className="w-7 h-7 text-background" />
+      <div className="glass-card p-4 text-center">
+        <div className="w-12 h-12 mx-auto rounded-full bg-gradient-to-br from-primary to-success flex items-center justify-center shadow-lg shadow-primary/30 mb-2">
+          <CheckCircle2 className="w-6 h-6 text-background" />
         </div>
         <p className="text-sm text-foreground font-medium">{i18n.thankYou}</p>
-        <Button variant="ghost" size="sm" className="mt-3" onClick={() => setDone(false)}>
+        <Button variant="ghost" size="sm" className="mt-2 h-8" onClick={() => setDone(false)}>
           {i18n.writeReview}
         </Button>
       </div>
@@ -102,22 +102,22 @@ export const ReviewForm = ({ user, reviewerName, onSubmitted }: ReviewFormProps)
   }
 
   return (
-    <div className="glass-card p-5 sm:p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-gold to-amber-500 flex items-center justify-center shadow-md shadow-gold/30">
-          <Star className="w-5 h-5 text-background fill-background" />
+    <div className="glass-card p-3 sm:p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-gold to-amber-500 flex items-center justify-center shadow-md shadow-gold/30">
+          <Star className="w-4 h-4 text-background fill-background" />
         </div>
-        <h3 className="font-bold text-foreground">{i18n.writeReview}</h3>
+        <h3 className="font-bold text-foreground text-sm">{i18n.writeReview}</h3>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div>
-          <Label className="text-xs text-muted-foreground mb-1.5 block">{i18n.yourRating}</Label>
-          <StarRating value={rating} onChange={setRating} size={30} ariaLabel={i18n.yourRating} />
+          <Label className="text-xs text-muted-foreground mb-1 block">{i18n.yourRating}</Label>
+          <StarRating value={rating} onChange={setRating} size={24} ariaLabel={i18n.yourRating} />
         </div>
 
         <div>
-          <Label htmlFor="review-comment" className="text-xs text-muted-foreground mb-1.5 block">
+          <Label htmlFor="review-comment" className="text-xs text-muted-foreground mb-1 block">
             {i18n.yourReview}
           </Label>
           <Textarea
@@ -126,8 +126,8 @@ export const ReviewForm = ({ user, reviewerName, onSubmitted }: ReviewFormProps)
             maxLength={REVIEW_COMMENT_MAX}
             onChange={(e) => setComment(e.target.value)}
             placeholder={i18n.commentPlaceholder}
-            rows={4}
-            className="resize-none bg-secondary/30"
+            rows={3}
+            className="resize-none bg-secondary/30 text-sm"
           />
           <div className="flex justify-end mt-1">
             <span
@@ -145,7 +145,7 @@ export const ReviewForm = ({ user, reviewerName, onSubmitted }: ReviewFormProps)
         <Button
           onClick={handleSubmit}
           disabled={submitting}
-          className="btn-gradient-primary w-full h-11 rounded-xl font-bold"
+          className="btn-gradient-primary w-full h-9 rounded-xl font-bold text-sm"
         >
           {submitting ? i18n.submitting : i18n.submit}
         </Button>

@@ -133,52 +133,62 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           <AlertBox lowStockItems={lowStockItems} />
 
 
-          {/* TV + Sport Live (compact) */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print items-stretch">
+          {/* The Holy Quran — always first */}
+          <div className="grid grid-cols-1 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
+            <button
+              onClick={() => navigate('/quran')}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-gold/20 via-primary/10 to-transparent border border-gold/30 hover:border-gold/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-2.5 sm:gap-3 w-full min-h-[58px] sm:min-h-[64px]"
+            >
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-primary flex items-center justify-center shadow-md shadow-gold/30 flex-shrink-0">
+                <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">📖 {QURAN_LABEL[language] || QURAN_LABEL.en}</span>
+            </button>
+          </div>
+
+          {/* TV + Sport Live */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
             <a
               href="https://famelack.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 px-2 py-2 sm:px-2.5 sm:py-2.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 w-full h-full min-h-[44px] sm:min-h-[48px]"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-2.5 sm:gap-3 w-full min-h-[58px] sm:min-h-[64px]"
             >
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-sm shadow-info/30 flex-shrink-0">
-                <Tv className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-info-foreground" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-md shadow-info/30 flex-shrink-0">
+                <Tv className="h-4 w-4 sm:h-5 sm:w-5 text-info-foreground" />
               </div>
-              <span className="font-bold text-foreground text-[11px] sm:text-xs truncate">TV</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">TV</span>
             </a>
             <button
               onClick={() => setSportOpen(true)}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:border-success/50 px-2 py-2 sm:px-2.5 sm:py-2.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-1.5 sm:gap-2 w-full h-full min-h-[44px] sm:min-h-[48px]"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:border-success/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-2.5 sm:gap-3 w-full min-h-[58px] sm:min-h-[64px]"
             >
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-md bg-gradient-to-br from-success to-success/80 flex items-center justify-center shadow-sm shadow-success/30 flex-shrink-0">
-                <Radio className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success-foreground" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-success to-success/80 flex items-center justify-center shadow-md shadow-success/30 flex-shrink-0">
+                <Radio className="h-4 w-4 sm:h-5 sm:w-5 text-success-foreground" />
               </div>
-              <span className="font-bold text-foreground text-[11px] sm:text-xs truncate">Sport Live</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">Sport Live</span>
             </button>
           </div>
 
-
-
-
-          {/* Movies + Crypto Tracker (side by side) */}
+          {/* Movies + Crypto Tracker */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
             <button
               onClick={() => navigate('/movies')}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-accent/20 via-accent/10 to-transparent border border-accent/30 hover:border-accent/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-accent/20 via-accent/10 to-transparent border border-accent/30 hover:border-accent/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-2.5 sm:gap-3 w-full min-h-[58px] sm:min-h-[64px]"
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-accent to-amber-400 flex items-center justify-center shadow-md shadow-accent/30 flex-shrink-0">
                 <Film className="h-4 w-4 sm:h-5 sm:w-5 text-accent-foreground" />
               </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">Movies 🎬</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">Movies 🎬</span>
             </button>
             <button
               onClick={() => navigate('/crypto')}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#f0b90b]/20 via-[#f0b90b]/10 to-transparent border border-[#f0b90b]/30 hover:border-[#f0b90b]/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#f0b90b]/20 via-[#f0b90b]/10 to-transparent border border-[#f0b90b]/30 hover:border-[#f0b90b]/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-2.5 sm:gap-3 w-full min-h-[58px] sm:min-h-[64px]"
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-[#f0b90b] to-[#f0b90b]/80 flex items-center justify-center shadow-md shadow-[#f0b90b]/30 flex-shrink-0">
                 <Bitcoin className="h-4 w-4 sm:h-5 sm:w-5 text-black" />
               </div>
-              <span className="font-bold text-foreground text-xs sm:text-sm truncate">{t('cryptoTracker')}</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">{t('cryptoTracker')}</span>
             </button>
           </div>
 
@@ -186,38 +196,25 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
             <button
               onClick={() => navigate('/prayer')}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-gold/10 to-transparent border border-primary/30 hover:border-gold/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-gold/10 to-transparent border border-primary/30 hover:border-gold/50 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-2.5 sm:gap-3 w-full min-h-[58px] sm:min-h-[64px]"
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary to-gold flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0">
                 <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
-              <span className="font-bold text-foreground text-[10px] sm:text-xs whitespace-normal">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
             </button>
             <button
               onClick={() => setFinanceOpen((v) => !v)}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:border-success/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:border-success/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-2.5 sm:gap-3 w-full min-h-[58px] sm:min-h-[64px]"
               aria-expanded={financeOpen}
             >
-              <span className="absolute top-1 start-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-success/60 text-success bg-success/10">
+              <span className="absolute top-1.5 start-1.5 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-success/60 text-success bg-success/10">
                 NEW
               </span>
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-success to-emerald-400 flex items-center justify-center shadow-md shadow-success/30 flex-shrink-0">
                 <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-success-foreground" />
               </div>
-              <span className="font-bold text-foreground text-[10px] sm:text-xs whitespace-normal">💳 {t('financialManagement')}</span>
-            </button>
-          </div>
-
-          {/* The Holy Quran */}
-          <div className="grid grid-cols-1 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
-            <button
-              onClick={() => navigate('/quran')}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-gold/20 via-primary/10 to-transparent border border-gold/30 hover:border-gold/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-2.5 sm:gap-3 w-full"
-            >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-primary flex items-center justify-center shadow-md shadow-gold/30 flex-shrink-0">
-                <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-              </div>
-              <span className="font-bold text-foreground text-[10px] sm:text-xs whitespace-normal">📖 {QURAN_LABEL[language] || QURAN_LABEL.en}</span>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">💳 {t('financialManagement')}</span>
             </button>
           </div>
 
