@@ -138,12 +138,12 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             {/* The Holy Quran — always first, full width */}
             <button
               onClick={() => navigate('/quran')}
-              className="col-span-2 sm:col-span-3 lg:col-span-4 group relative overflow-hidden rounded-xl bg-gradient-to-br from-gold/20 via-primary/10 to-transparent border border-gold/30 hover:from-gold/30 hover:via-primary/20 hover:border-gold/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-gold/30 active:via-primary/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-2.5 sm:gap-3 min-h-[58px] sm:min-h-[64px]"
+              className="col-span-2 sm:col-span-3 lg:col-span-4 group relative overflow-hidden rounded-xl bg-gradient-to-br from-gold/20 via-primary/10 to-transparent border border-gold/30 hover:from-gold/30 hover:via-primary/20 hover:border-gold/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-gold/30 active:via-primary/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-3 sm:gap-4 min-h-[66px] sm:min-h-[72px]"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-primary flex items-center justify-center shadow-md shadow-gold/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-gold/40 transition-all duration-200">
-                <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-gold to-primary flex items-center justify-center shadow-md shadow-gold/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-gold/40 transition-all duration-200">
+                <BookOpen className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">📖 {QURAN_LABEL[language] || QURAN_LABEL.en}</span>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">📖 {QURAN_LABEL[language] || QURAN_LABEL.en}</span>
             </button>
 
             {/* TV */}
@@ -151,71 +151,71 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               href="https://famelack.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:from-info/30 hover:via-info/20 hover:border-info/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-info/30 active:via-info/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-2.5 sm:gap-3 min-h-[58px] sm:min-h-[64px]"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:from-info/30 hover:via-info/20 hover:border-info/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-info/30 active:via-info/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-3 sm:gap-4 min-h-[66px] sm:min-h-[72px]"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-md shadow-info/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-info/40 transition-all duration-200">
-                <Tv className="h-4 w-4 sm:h-5 sm:w-5 text-info-foreground" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-md shadow-info/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-info/40 transition-all duration-200">
+                <Tv className="h-5 w-5 sm:h-6 sm:w-6 text-info-foreground" />
               </div>
-              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">TV</span>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">TV</span>
             </a>
 
             {/* Sport Live */}
             <button
               onClick={() => setSportOpen(true)}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:from-success/30 hover:via-success/20 hover:border-success/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-success/30 active:via-success/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-2.5 sm:gap-3 min-h-[58px] sm:min-h-[64px]"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:from-success/30 hover:via-success/20 hover:border-success/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-success/30 active:via-success/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-3 sm:gap-4 min-h-[66px] sm:min-h-[72px]"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-success to-success/80 flex items-center justify-center shadow-md shadow-success/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-success/40 transition-all duration-200">
-                <Radio className="h-4 w-4 sm:h-5 sm:w-5 text-success-foreground" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-success to-success/80 flex items-center justify-center shadow-md shadow-success/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-success/40 transition-all duration-200">
+                <Radio className="h-5 w-5 sm:h-6 sm:w-6 text-success-foreground" />
               </div>
-              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">Sport Live</span>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">Sport Live</span>
             </button>
 
             {/* Movies */}
             <button
               onClick={() => navigate('/movies')}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-accent/20 via-accent/10 to-transparent border border-accent/30 hover:from-accent/30 hover:via-accent/20 hover:border-accent/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-accent/30 active:via-accent/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-2.5 sm:gap-3 min-h-[58px] sm:min-h-[64px]"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-accent/20 via-accent/10 to-transparent border border-accent/30 hover:from-accent/30 hover:via-accent/20 hover:border-accent/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-accent/30 active:via-accent/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-3 sm:gap-4 min-h-[66px] sm:min-h-[72px]"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-accent to-amber-400 flex items-center justify-center shadow-md shadow-accent/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-accent/40 transition-all duration-200">
-                <Film className="h-4 w-4 sm:h-5 sm:w-5 text-accent-foreground" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-accent to-amber-400 flex items-center justify-center shadow-md shadow-accent/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-accent/40 transition-all duration-200">
+                <Film className="h-5 w-5 sm:h-6 sm:w-6 text-accent-foreground" />
               </div>
-              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">Movies 🎬</span>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">Movies 🎬</span>
             </button>
 
             {/* Crypto Tracker */}
             <button
               onClick={() => navigate('/crypto')}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#f0b90b]/20 via-[#f0b90b]/10 to-transparent border border-[#f0b90b]/30 hover:from-[#f0b90b]/30 hover:via-[#f0b90b]/20 hover:border-[#f0b90b]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f0b90b]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-[#f0b90b]/30 active:via-[#f0b90b]/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-2.5 sm:gap-3 min-h-[58px] sm:min-h-[64px]"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#f0b90b]/20 via-[#f0b90b]/10 to-transparent border border-[#f0b90b]/30 hover:from-[#f0b90b]/30 hover:via-[#f0b90b]/20 hover:border-[#f0b90b]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f0b90b]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-[#f0b90b]/30 active:via-[#f0b90b]/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-3 sm:gap-4 min-h-[66px] sm:min-h-[72px]"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-[#f0b90b] to-[#f0b90b]/80 flex items-center justify-center shadow-md shadow-[#f0b90b]/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-[#f0b90b]/40 transition-all duration-200">
-                <Bitcoin className="h-4 w-4 sm:h-5 sm:w-5 text-black" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-[#f0b90b] to-[#f0b90b]/80 flex items-center justify-center shadow-md shadow-[#f0b90b]/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-[#f0b90b]/40 transition-all duration-200">
+                <Bitcoin className="h-5 w-5 sm:h-6 sm:w-6 text-black" />
               </div>
-              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">{t('cryptoTracker')}</span>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">{t('cryptoTracker')}</span>
             </button>
 
             {/* Prayer Times & Qibla */}
             <button
               onClick={() => navigate('/prayer')}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-gold/10 to-transparent border border-primary/30 hover:from-primary/30 hover:via-gold/20 hover:border-gold/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-primary/30 active:via-gold/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-2.5 sm:gap-3 min-h-[58px] sm:min-h-[64px]"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-gold/10 to-transparent border border-primary/30 hover:from-primary/30 hover:via-gold/20 hover:border-gold/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-primary/30 active:via-gold/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-3 sm:gap-4 min-h-[66px] sm:min-h-[72px]"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-primary to-gold flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-gold/40 transition-all duration-200">
-                <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-gold flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-gold/40 transition-all duration-200">
+                <Moon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
             </button>
 
             {/* Financial Management */}
             <button
               onClick={() => setFinanceOpen((v) => !v)}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:from-success/30 hover:via-success/20 hover:border-success/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-success/30 active:via-success/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-2.5 sm:gap-3 min-h-[58px] sm:min-h-[64px]"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:from-success/30 hover:via-success/20 hover:border-success/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-success/30 active:via-success/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-3 sm:gap-4 min-h-[66px] sm:min-h-[72px]"
               aria-expanded={financeOpen}
             >
               <span className="absolute top-1.5 start-1.5 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-success/60 text-success bg-success/10">
                 NEW
               </span>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-success to-emerald-400 flex items-center justify-center shadow-md shadow-success/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-success/40 transition-all duration-200">
-                <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-success-foreground" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-success to-emerald-400 flex items-center justify-center shadow-md shadow-success/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-success/40 transition-all duration-200">
+                <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-success-foreground" />
               </div>
-              <span className="font-bold text-foreground text-[10px] sm:text-xs truncate">💳 {t('financialManagement')}</span>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">💳 {t('financialManagement')}</span>
             </button>
           </div>
 
