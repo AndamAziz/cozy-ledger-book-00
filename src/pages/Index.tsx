@@ -266,7 +266,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             >
               {reviewI18n.seeAll}
             </Button>
-            <AdSenseStatus />
+            
           </div>
         </div>
       </main>
