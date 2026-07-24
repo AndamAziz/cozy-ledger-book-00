@@ -25,7 +25,7 @@ import { REVIEWS_I18N, getReviewLang } from '@/lib/reviews';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
-import { Users, Tv, Film, Bitcoin, Moon, BookOpen, Radio } from 'lucide-react';
+import { Users, Tv, Film, Bitcoin, Moon, BookOpen, Radio, Wallet } from 'lucide-react';
 import { SportLivePlayer } from '@/components/sport/SportLivePlayer';
 import { AdSenseStatus } from '@/components/AdSenseStatus';
 
