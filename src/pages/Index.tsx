@@ -63,6 +63,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
+  const [financeOpen, setFinanceOpen] = useState(false);
   const [sportOpen, setSportOpen] = useState(() => {
     if (typeof window === 'undefined') return false;
     // Restore the Sport Live view if an ad hijacked the tab / forced a reload.
