@@ -25,7 +25,7 @@ import { REVIEWS_I18N, getReviewLang } from '@/lib/reviews';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
-import { Users, Tv, Film, Bitcoin, Moon, BookOpen, Radio } from 'lucide-react';
+import { Users, Tv, Film, Bitcoin, Moon, BookOpen, Radio, Wallet } from 'lucide-react';
 import { SportLivePlayer } from '@/components/sport/SportLivePlayer';
 import { AdSenseStatus } from '@/components/AdSenseStatus';
 
@@ -63,6 +63,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
   const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('finance');
+  const [financeOpen, setFinanceOpen] = useState(false);
   const [sportOpen, setSportOpen] = useState(() => {
     if (typeof window === 'undefined') return false;
     // Restore the Sport Live view if an ad hijacked the tab / forced a reload.
@@ -181,7 +182,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             </button>
           </div>
 
-          {/* Prayer Times & Qibla + Holy Quran */}
+          {/* Prayer Times & Qibla + Financial Management */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
             <button
               onClick={() => navigate('/prayer')}
@@ -193,8 +194,25 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <span className="font-bold text-foreground text-[10px] sm:text-xs whitespace-normal">🕌 {PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
             </button>
             <button
+              onClick={() => setFinanceOpen((v) => !v)}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-transparent border border-success/30 hover:border-success/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
+              aria-expanded={financeOpen}
+            >
+              <span className="absolute top-1 start-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-success/60 text-success bg-success/10">
+                NEW
+              </span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-success to-emerald-400 flex items-center justify-center shadow-md shadow-success/30 flex-shrink-0">
+                <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-success-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-[10px] sm:text-xs whitespace-normal">💳 {t('financialManagement')}</span>
+            </button>
+          </div>
+
+          {/* The Holy Quran */}
+          <div className="grid grid-cols-1 gap-2 sm:gap-3 mb-3 sm:mb-5 no-print">
+            <button
               onClick={() => navigate('/quran')}
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-gold/20 via-primary/10 to-transparent border border-gold/30 hover:border-gold/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center gap-2.5 sm:gap-3 w-full"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-gold/20 via-primary/10 to-transparent border border-gold/30 hover:border-gold/60 p-2.5 sm:p-3.5 transition-all duration-200 touch-manipulation active:scale-95 flex items-center justify-center gap-2.5 sm:gap-3 w-full"
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-gold to-primary flex items-center justify-center shadow-md shadow-gold/30 flex-shrink-0">
                 <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
@@ -210,28 +228,32 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
 
 
 
-          {/* Tab Navigation */}
-          <div className="relative mb-3 sm:mb-5 md:mb-7 no-print">
-            <div className="grid grid-cols-5 gap-1 sm:gap-1.5 md:gap-2.5 p-1.5 sm:p-2 md:p-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 shadow-xl shadow-black/10">
-              <TabButton active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon="💰" label={t('finance')} />
-              <TabButton active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon="📦" label={t('inventory')} />
-              <TabButton active={activeTab === 'sales'} onClick={() => setActiveTab('sales')} icon="🛒" label={t('sales')} />
-              <TabButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon="📊" label={t('reports')} />
-              <HelpGuide />
-            </div>
-          </div>
+          {financeOpen && (
+            <>
+              {/* Tab Navigation */}
+              <div className="relative mb-3 sm:mb-5 md:mb-7 no-print">
+                <div className="grid grid-cols-5 gap-1 sm:gap-1.5 md:gap-2.5 p-1.5 sm:p-2 md:p-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl border border-white/10 shadow-xl shadow-black/10">
+                  <TabButton active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} icon="💰" label={t('finance')} />
+                  <TabButton active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon="📦" label={t('inventory')} />
+                  <TabButton active={activeTab === 'sales'} onClick={() => setActiveTab('sales')} icon="🛒" label={t('sales')} />
+                  <TabButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon="📊" label={t('reports')} />
+                  <HelpGuide />
+                </div>
+              </div>
 
-          {activeTab === 'finance' && (
-            <FinanceTab incomeData={financeData.incomeData} expenseData={financeData.expenseData} summary={summary} maxDays={financeData.getMaxDays()} defaultDay={financeData.getDefaultDay()} currentMonthKey={financeData.currentMonthKey} onMonthChange={financeData.changeMonth} locations={financeData.locations} selectedLocationId={financeData.selectedLocationId} onSelectLocation={financeData.setSelectedLocationId} onAddLocation={financeData.addLocation} onAddIncome={financeData.addIncome} onUpdateIncome={financeData.updateIncome} onDeleteIncome={financeData.deleteIncome} onAddExpense={financeData.addExpense} onUpdateExpense={financeData.updateExpense} onDeleteExpense={financeData.deleteExpense} onClearAll={financeData.clearAllData} />
-          )}
-          {activeTab === 'inventory' && (
-            <InventoryTab cigaretteData={financeData.cigaretteData} summary={summary} onAddCigarette={financeData.addCigarette} onUpdateCigarette={financeData.updateCigarette} onDeleteCigarette={financeData.deleteCigarette} onAddStock={financeData.addStock} onUpdateStock={financeData.updateStock} />
-          )}
-          {activeTab === 'sales' && (
-            <SalesTab salesData={financeData.salesData} cigaretteData={financeData.cigaretteData} summary={summary} maxDays={financeData.getMaxDays()} defaultDay={financeData.getDefaultDay()} currentMonthKey={financeData.currentMonthKey} onMonthChange={financeData.changeMonth} locations={financeData.locations} onAddLocation={financeData.addLocation} onAddSale={financeData.addSale} onDeleteSale={financeData.deleteSale} />
-          )}
-          {activeTab === 'reports' && (
-            <ReportsTab incomeData={financeData.incomeData} expenseData={financeData.expenseData} cigaretteData={financeData.cigaretteData} salesData={financeData.salesData} summary={summary} currentMonthLabel={financeData.getCurrentMonthLabel()} currentMonthKey={financeData.currentMonthKey} locations={financeData.locations} getSummary={financeData.getSummary} />
+              {activeTab === 'finance' && (
+                <FinanceTab incomeData={financeData.incomeData} expenseData={financeData.expenseData} summary={summary} maxDays={financeData.getMaxDays()} defaultDay={financeData.getDefaultDay()} currentMonthKey={financeData.currentMonthKey} onMonthChange={financeData.changeMonth} locations={financeData.locations} selectedLocationId={financeData.selectedLocationId} onSelectLocation={financeData.setSelectedLocationId} onAddLocation={financeData.addLocation} onAddIncome={financeData.addIncome} onUpdateIncome={financeData.updateIncome} onDeleteIncome={financeData.deleteIncome} onAddExpense={financeData.addExpense} onUpdateExpense={financeData.updateExpense} onDeleteExpense={financeData.deleteExpense} onClearAll={financeData.clearAllData} />
+              )}
+              {activeTab === 'inventory' && (
+                <InventoryTab cigaretteData={financeData.cigaretteData} summary={summary} onAddCigarette={financeData.addCigarette} onUpdateCigarette={financeData.updateCigarette} onDeleteCigarette={financeData.deleteCigarette} onAddStock={financeData.addStock} onUpdateStock={financeData.updateStock} />
+              )}
+              {activeTab === 'sales' && (
+                <SalesTab salesData={financeData.salesData} cigaretteData={financeData.cigaretteData} summary={summary} maxDays={financeData.getMaxDays()} defaultDay={financeData.getDefaultDay()} currentMonthKey={financeData.currentMonthKey} onMonthChange={financeData.changeMonth} locations={financeData.locations} onAddLocation={financeData.addLocation} onAddSale={financeData.addSale} onDeleteSale={financeData.deleteSale} />
+              )}
+              {activeTab === 'reports' && (
+                <ReportsTab incomeData={financeData.incomeData} expenseData={financeData.expenseData} cigaretteData={financeData.cigaretteData} salesData={financeData.salesData} summary={summary} currentMonthLabel={financeData.getCurrentMonthLabel()} currentMonthKey={financeData.currentMonthKey} locations={financeData.locations} getSummary={financeData.getSummary} />
+              )}
+            </>
           )}
 
           {/* Customer reviews */}
