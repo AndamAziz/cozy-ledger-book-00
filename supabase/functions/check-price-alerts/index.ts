@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as webpush from "https://esm.sh/@negrel/webpush@0.3.0";
+import * as webpush from "jsr:@negrel/webpush@^0.3.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
