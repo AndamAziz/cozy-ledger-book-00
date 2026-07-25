@@ -2481,12 +2481,15 @@ function MovieModal({
         position: "fixed",
         inset: 0,
         zIndex: 100,
-        background: "rgba(0,0,0,.8)",
-        backdropFilter: "blur(8px)",
+        background: "rgba(0,0,0,.85)",
+        // Note: backdrop-filter blur is very expensive on iOS Safari and can
+        // make the whole modal freeze while scrolling. Solid overlay only.
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
         overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        height: "100dvh",
         padding: "20px 12px",
       }}
     >
