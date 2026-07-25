@@ -39,6 +39,14 @@ async function fetchPrices(symbols: string[]): Promise<Record<string, number>> {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Public endpoint: frontend fetches the VAPID public key to subscribe with.
+  if (req.method === "GET") {
+    return new Response(
+      JSON.stringify({ publicKey: Deno.env.get("VAPID_PUBLIC_KEY") || "" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
