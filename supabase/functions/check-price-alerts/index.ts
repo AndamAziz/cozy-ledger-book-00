@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as webpush from "jsr:@negrel/webpush@^0.3.0";
+import webpush from "npm:web-push@3.6.7";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,17 +61,9 @@ serve(async (req) => {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
 
-    // Load VAPID keypair for the negrel/webpush library.
-    const appServer = await webpush.ApplicationServer.new({
-      contactInformation: vapidSubject,
-      vapidKeys: await webpush.importVapidKeys(
-        { publicKey: vapidPublic, privateKey: vapidPrivate },
-        { extractable: false },
-      ),
-    });
-
-    // Fetch active alerts.
+    // Fetch active alerts (service role bypasses RLS).
     const { data: alerts, error: alertsErr } = await supabase
       .from("price_alerts")
       .select("id, user_id, symbol, condition, target_price")
@@ -98,7 +90,6 @@ serve(async (req) => {
       if (!hit) continue;
       matched++;
 
-      // Look up all push subscriptions for this user.
       const { data: subs } = await supabase
         .from("push_subscriptions")
         .select("id, endpoint, p256dh, auth_key")
@@ -113,24 +104,23 @@ serve(async (req) => {
 
       for (const s of subs || []) {
         try {
-          const subscriber = appServer.subscribe({
-            endpoint: s.endpoint,
-            keys: { p256dh: s.p256dh, auth: s.auth_key },
-          });
-          await subscriber.pushTextMessage(payload, {});
+          await webpush.sendNotification(
+            { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth_key } },
+            payload,
+            { TTL: 60 },
+          );
           sent++;
         } catch (e) {
-          const msg = String(e?.message || e);
-          // Purge expired subscriptions.
-          if (msg.includes("404") || msg.includes("410")) {
+          const status = (e as { statusCode?: number })?.statusCode;
+          if (status === 404 || status === 410) {
             await supabase.from("push_subscriptions").delete().eq("id", s.id);
           } else {
-            console.error("push send failed", msg);
+            console.error("push send failed", status, String((e as Error)?.message || e));
           }
         }
       }
 
-      // Mark alert as triggered (one-shot).
+      // One-shot: mark alert as triggered.
       await supabase
         .from("price_alerts")
         .update({ is_active: false, triggered_at: new Date().toISOString() })
@@ -142,7 +132,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("check-price-alerts error", e);
-    return new Response(JSON.stringify({ error: String(e?.message || e) }), {
+    return new Response(JSON.stringify({ error: String((e as Error)?.message || e) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
