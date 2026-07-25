@@ -45,7 +45,16 @@ export function PushPriceAlerts() {
   const [condition, setCondition] = useState<'above' | 'below'>('above');
   const [target, setTarget] = useState('');
 
-  const VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+  const [vapidKey, setVapidKey] = useState<string>('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase.functions.invoke('check-price-alerts', { method: 'GET' });
+        if (data?.publicKey) setVapidKey(data.publicKey);
+      } catch { /* noop */ }
+    })();
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
