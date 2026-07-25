@@ -100,7 +100,7 @@ export function PushPriceAlerts() {
       toast.error('Push notifications are not supported on this browser');
       return;
     }
-    if (!VAPID_KEY) {
+    if (!vapidKey) {
       toast.error('Push notifications not configured yet. Please try again shortly.');
       return;
     }
@@ -120,7 +120,7 @@ export function PushPriceAlerts() {
       if (!sub) {
         sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_KEY).buffer as ArrayBuffer,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey).buffer as ArrayBuffer,
         });
       }
       const p256dh = arrayBufferToBase64(sub.getKey('p256dh'));
