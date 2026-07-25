@@ -3558,6 +3558,9 @@ function PlayerOverlay({
         alignItems: "center",
         justifyContent: "center",
         padding: 12,
+        // dvh handles iOS Safari's dynamic URL bar; vh is the fallback.
+        height: "100dvh",
+        WebkitOverflowScrolling: "touch",
       }}
     >
       <div
@@ -3565,12 +3568,13 @@ function PlayerOverlay({
         style={{
           width: "100%",
           maxWidth: 980,
-          maxHeight: "94vh",
+          maxHeight: "94dvh",
           overflowY: "auto",
           background: C.bg,
           borderRadius: 18,
           border: `1px solid ${C.border}`,
           overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {/* Header */}
