@@ -2481,12 +2481,15 @@ function MovieModal({
         position: "fixed",
         inset: 0,
         zIndex: 100,
-        background: "rgba(0,0,0,.8)",
-        backdropFilter: "blur(8px)",
+        background: "rgba(0,0,0,.85)",
+        // Note: backdrop-filter blur is very expensive on iOS Safari and can
+        // make the whole modal freeze while scrolling. Solid overlay only.
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
         overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        height: "100dvh",
         padding: "20px 12px",
       }}
     >
@@ -3440,11 +3443,42 @@ function PlayerOverlay({
     if (list.length === 0) return;
     loadedRef.current = false;
     setLoaded(false);
-    const timer = setTimeout(() => {
-      if (!loadedRef.current) failover();
-    }, 8000);
+    // Shorter watchdog on iOS Safari because cross-origin iframe `onError`
+    // rarely fires there — we need to fail over on time alone.
+    const isIOS =
+      typeof navigator !== "undefined" &&
+      (/iP(hone|ad|od)/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && (navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints! > 1));
+    const timer = setTimeout(
+      () => {
+        if (!loadedRef.current) failover();
+      },
+      isIOS ? 5000 : 8000,
+    );
     return () => clearTimeout(timer);
   }, [safeActive, currentSrc, reloadKey, list.length, failover]);
+
+  // Lock body scroll while the overlay is open (fixes iOS Safari where the
+  // page underneath can still scroll behind a fixed modal).
+  useEffect(() => {
+    const { body } = document;
+    const prevOverflow = body.style.overflow;
+    const prevPosition = body.style.position;
+    const prevWidth = body.style.width;
+    const prevTop = body.style.top;
+    const scrollY = window.scrollY;
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.width = "100%";
+    body.style.top = `-${scrollY}px`;
+    return () => {
+      body.style.overflow = prevOverflow;
+      body.style.position = prevPosition;
+      body.style.width = prevWidth;
+      body.style.top = prevTop;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
 
   // User manually selects a server: clear its failed flag so it can be retried,
   // reset load tracking, and keep automatic failover active.
@@ -3527,6 +3561,9 @@ function PlayerOverlay({
         alignItems: "center",
         justifyContent: "center",
         padding: 12,
+        // dvh handles iOS Safari's dynamic URL bar; vh is the fallback.
+        height: "100dvh",
+        WebkitOverflowScrolling: "touch",
       }}
     >
       <div
@@ -3534,12 +3571,13 @@ function PlayerOverlay({
         style={{
           width: "100%",
           maxWidth: 980,
-          maxHeight: "94vh",
+          maxHeight: "94dvh",
           overflowY: "auto",
           background: C.bg,
           borderRadius: 18,
           border: `1px solid ${C.border}`,
           overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {/* Header */}
