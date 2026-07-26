@@ -4,6 +4,24 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
 
+/* Kurdish (Sorani) UI font */
+@font-face {
+  font-family: 'NRT Bold';
+  src: url('/__l5e/assets-v1/4d64d5b5-f213-4796-9846-ce1ddbd9361e/NRT-Bold.ttf') format('truetype');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Applied when the active language is Kurdish */
+html[lang='ckb'] body,
+html[lang='ckb'] button,
+html[lang='ckb'] input,
+html[lang='ckb'] select,
+html[lang='ckb'] textarea {
+  font-family: 'NRT Bold', 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+}
+
 @layer base {
   :root {
     --background: 222 47% 6%;

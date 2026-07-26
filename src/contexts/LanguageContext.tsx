@@ -48,7 +48,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = langAttr;
 
     // Update font family based on language
-    if (language === 'en' || language === 'tr') {
+    if (language === 'ku') {
+      // Kurdish UI uses the NRT Bold typeface
+      document.body.style.fontFamily = "'NRT Bold', 'Noto Sans Arabic', sans-serif";
+    } else if (language === 'en' || language === 'tr') {
       document.body.style.fontFamily = "'Inter', 'Segoe UI', sans-serif";
     } else {
       document.body.style.fontFamily = "'Noto Sans Arabic', sans-serif";
