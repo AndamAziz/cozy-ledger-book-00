@@ -2240,8 +2240,35 @@ function MovieModal({
   const isTv = movie.media === "tv";
   const mediaPath = isTv ? "tv" : "movie";
   const [seasons, setSeasons] = useState<{ season_number: number; episode_count: number; name: string }[]>([]);
-  const [season, setSeason] = useState(1);
-  const [episode, setEpisode] = useState(1);
+  // Last watched season/episode is remembered per title in localStorage.
+  const progressKey = `mv-progress:${movie.media}:${movie.tmdb_id}`;
+  const savedProgress = useMemo(() => {
+    if (!isTv) return null;
+    try {
+      const raw = localStorage.getItem(progressKey);
+      if (!raw) return null;
+      const p = JSON.parse(raw) as { season?: number; episode?: number };
+      const s = Number(p?.season);
+      const e = Number(p?.episode);
+      if (!Number.isFinite(s) || !Number.isFinite(e) || s < 1 || e < 1) return null;
+      return { season: s, episode: e };
+    } catch {
+      return null;
+    }
+  }, [progressKey, isTv]);
+  const [season, setSeason] = useState(savedProgress?.season ?? 1);
+  const [episode, setEpisode] = useState(savedProgress?.episode ?? 1);
+
+  // Persist the current season/episode so it is restored on the next visit.
+  useEffect(() => {
+    if (!isTv) return;
+    try {
+      localStorage.setItem(progressKey, JSON.stringify({ season, episode, at: Date.now() }));
+    } catch {
+      /* ignore quota / private mode errors */
+    }
+  }, [isTv, progressKey, season, episode]);
+
 
   // ---- Episode navigation (next/previous across season boundaries) ----
   const episodeCountOf = useCallback(
