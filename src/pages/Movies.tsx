@@ -3429,8 +3429,12 @@ function PlayerOverlay({
   const iframeServers = list.filter((s) => !s.external);
 
   // Clamp the index defensively so we never read an out-of-range server.
-  const safeActive = clampIndex(active, list.length);
-  const currentSrc = list.length > 0 ? list[safeActive]?.url ?? "" : src || "";
+  // Only iframe servers participate in the embedded player; external links open
+  // in a new tab and are skipped from active/failover logic.
+  const iframeSafeActive = clampIndex(active, iframeServers.length);
+  const currentSrc =
+    iframeServers.length > 0 ? iframeServers[iframeSafeActive]?.url ?? "" : src || "";
+
 
   // Mark the active server as failed and jump to the next server that hasn't
   // failed yet, searching forward and wrapping around the list. Applies even
