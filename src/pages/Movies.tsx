@@ -3412,7 +3412,15 @@ function PlayerOverlay({
   const loadedRef = useRef(false);
   const failedRef = useRef<Set<number>>(new Set());
   const videoRef = useRef<HTMLDivElement>(null);
-  const list = servers && servers.length > 0 ? servers : [];
+  const baseServers = servers && servers.length > 0 ? servers : [];
+  const plusChannel = title
+    ? {
+        name: "PLUSCHANNEL",
+        url: `https://mv.andam.uk/search?q=${encodeURIComponent(title).replace(/%20/g, "+")}`,
+        accent: "#DC2626",
+      }
+    : null;
+  const list = plusChannel ? [...baseServers, plusChannel] : baseServers;
   // Clamp the index defensively so we never read an out-of-range server.
   const safeActive = clampIndex(active, list.length);
   const currentSrc = list.length > 0 ? list[safeActive]?.url ?? "" : src || "";
