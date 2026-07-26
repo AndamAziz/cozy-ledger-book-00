@@ -152,6 +152,11 @@ const T = {
     episode: "ئەلقە",
     selectEpisode: "وەرز و ئەلقە هەڵبژێرە",
     episodesCount: "ئەلقە",
+    nextEp: "ئەلقەی دواتر",
+    prevEp: "ئەلقەی پێشوو",
+    autoNextIn: "ئەلقەی دواتر دەست پێدەکات لە",
+    cancelAutoNext: "هەڵوەشاندنەوە",
+    playNext: "ئێستا پلەی بکە",
     play: "▶ سەیرکردن",
     details: "زانیاری",
     featured: "تایبەت",
@@ -273,6 +278,11 @@ const T = {
     episode: "Episode",
     selectEpisode: "Choose season & episode",
     episodesCount: "episodes",
+    nextEp: "Next episode",
+    prevEp: "Previous episode",
+    autoNextIn: "Next episode in",
+    cancelAutoNext: "Cancel",
+    playNext: "Play now",
     play: "▶ Watch",
     details: "Details",
     featured: "Featured",
@@ -2233,6 +2243,47 @@ function MovieModal({
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
 
+  // ---- Episode navigation (next/previous across season boundaries) ----
+  const episodeCountOf = useCallback(
+    (s: number) => seasons.find((x) => x.season_number === s)?.episode_count || 0,
+    [seasons],
+  );
+  const nextEpisodeOf = useCallback(
+    (s: number, e: number): { season: number; episode: number } | null => {
+      if (e < episodeCountOf(s)) return { season: s, episode: e + 1 };
+      const idx = seasons.findIndex((x) => x.season_number === s);
+      const nextSeason = idx >= 0 ? seasons[idx + 1] : undefined;
+      if (nextSeason && nextSeason.episode_count > 0)
+        return { season: nextSeason.season_number, episode: 1 };
+      return null;
+    },
+    [seasons, episodeCountOf],
+  );
+  const prevEpisodeOf = useCallback(
+    (s: number, e: number): { season: number; episode: number } | null => {
+      if (e > 1) return { season: s, episode: e - 1 };
+      const idx = seasons.findIndex((x) => x.season_number === s);
+      const prevSeason = idx > 0 ? seasons[idx - 1] : undefined;
+      if (prevSeason && prevSeason.episode_count > 0)
+        return { season: prevSeason.season_number, episode: prevSeason.episode_count };
+      return null;
+    },
+    [seasons],
+  );
+  const goNextEpisode = useCallback(() => {
+    const nx = nextEpisodeOf(season, episode);
+    if (!nx) return;
+    setSeason(nx.season);
+    setEpisode(nx.episode);
+  }, [nextEpisodeOf, season, episode]);
+  const goPrevEpisode = useCallback(() => {
+    const pv = prevEpisodeOf(season, episode);
+    if (!pv) return;
+    setSeason(pv.season);
+    setEpisode(pv.episode);
+  }, [prevEpisodeOf, season, episode]);
+
+
   const rating = parseFloat(movie.rating) || 0;
 
   useEffect(() => {
@@ -3219,11 +3270,30 @@ function MovieModal({
             season,
             episode,
           })}
+          episodeNav={
+            isTv && seasons.length > 0
+              ? {
+                  label: `${t.season} ${season} · ${t.episode} ${episode}`,
+                  hasNext: !!nextEpisodeOf(season, episode),
+                  hasPrev: !!prevEpisodeOf(season, episode),
+                  onNext: goNextEpisode,
+                  onPrev: goPrevEpisode,
+                  labels: {
+                    next: t.nextEp,
+                    prev: t.prevEp,
+                    autoNextIn: t.autoNextIn,
+                    cancel: t.cancelAutoNext,
+                    playNow: t.playNext,
+                  },
+                }
+              : undefined
+          }
           onClose={() => setWatch(false)}
           closeLabel={t.close}
           hint={t.autoSwitchHint}
         />
       )}
+
       {/* Trailer player */}
       {trailerOpen && trailer && trailer !== "none" && (
         <PlayerOverlay
@@ -3249,6 +3319,7 @@ function PlayerOverlay({
   playerLabel,
   serversTitleLabel,
   autoSwitchLabel,
+  episodeNav,
 }: {
   src?: string;
   servers?: { name: string; url: string; accent?: string; external?: boolean }[];
@@ -3261,6 +3332,14 @@ function PlayerOverlay({
   playerLabel?: string;
   serversTitleLabel?: string;
   autoSwitchLabel?: string;
+  episodeNav?: {
+    label: string;
+    hasNext: boolean;
+    hasPrev: boolean;
+    onNext: () => void;
+    onPrev: () => void;
+    labels: { next: string; prev: string; autoNextIn: string; cancel: string; playNow: string };
+  };
 }) {
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -3271,6 +3350,9 @@ function PlayerOverlay({
   const [failed, setFailed] = useState<number[]>([]);
   const [allFailed, setAllFailed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Countdown (seconds) before auto-advancing to the next episode.
+  const [autoNext, setAutoNext] = useState<number | null>(null);
+
   const loadedRef = useRef(false);
   const failedRef = useRef<Set<number>>(new Set());
   const videoRef = useRef<HTMLDivElement>(null);
@@ -3424,6 +3506,66 @@ function PlayerOverlay({
       document.removeEventListener("webkitfullscreenchange", onChange);
     };
   }, []);
+
+  // Auto-advance: embedded players post a message when playback finishes.
+  // Different providers use different shapes, so accept any "ended/complete"
+  // style event and start a short countdown to the next episode.
+  const canAutoNext = !!episodeNav?.hasNext;
+  useEffect(() => {
+    if (!canAutoNext) return;
+    const looksEnded = (data: unknown): boolean => {
+      const check = (v: unknown) =>
+        typeof v === "string" && /^(ended|complete[d]?|finish(ed)?|video[-_]?end(ed)?)$/i.test(v.trim());
+      if (check(data)) return true;
+      if (data && typeof data === "object") {
+        const o = data as Record<string, unknown>;
+        if (check(o.event) || check(o.type) || check(o.action) || check(o.state)) return true;
+        if (o.info && typeof o.info === "object") {
+          const st = (o.info as Record<string, unknown>).playerState;
+          if (st === 0) return true; // YouTube: ENDED
+        }
+      }
+      return false;
+    };
+    const onMessage = (e: MessageEvent) => {
+      let payload: unknown = e.data;
+      if (typeof payload === "string" && payload.trim().startsWith("{")) {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          /* keep raw string */
+        }
+      }
+      if (looksEnded(payload)) setAutoNext((c) => (c === null ? 8 : c));
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [canAutoNext]);
+
+  // Countdown ticker → fire the episode change at zero.
+  useEffect(() => {
+    if (autoNext === null) return;
+    if (autoNext <= 0) {
+      setAutoNext(null);
+      episodeNav?.onNext();
+      return;
+    }
+    const id = setTimeout(() => setAutoNext((c) => (c === null ? null : c - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [autoNext, episodeNav]);
+
+  // Reset the countdown whenever the episode (source) changes.
+  useEffect(() => {
+    setAutoNext(null);
+  }, [currentSrc]);
+
+  const goEpisode = (dir: "next" | "prev") => {
+    setAutoNext(null);
+    if (dir === "next") episodeNav?.onNext();
+    else episodeNav?.onPrev();
+  };
+
+
 
 
   const circleBtnStyle: React.CSSProperties = {
@@ -3641,6 +3783,119 @@ function PlayerOverlay({
             </div>
           )}
         </div>
+
+        {/* Episode navigation (series only): manual prev/next + auto-next countdown */}
+        {episodeNav && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 9,
+              flexWrap: "wrap",
+              padding: "12px 16px 0",
+            }}
+          >
+            <button
+              onClick={() => goEpisode("prev")}
+              disabled={!episodeNav.hasPrev}
+              aria-label="prev-episode"
+              style={{
+                background: C.panel2,
+                border: `1px solid ${C.border}`,
+                color: C.text,
+                borderRadius: 10,
+                padding: "9px 13px",
+                fontWeight: 800,
+                fontSize: 12.5,
+                cursor: episodeNav.hasPrev ? "pointer" : "not-allowed",
+                opacity: episodeNav.hasPrev ? 1 : 0.45,
+              }}
+            >
+              ‹ {episodeNav.labels.prev}
+            </button>
+            <div
+              style={{
+                flex: 1,
+                minWidth: 90,
+                textAlign: "center",
+                fontSize: 12.5,
+                fontWeight: 700,
+                color: C.muted,
+              }}
+            >
+              {episodeNav.label}
+            </div>
+            <button
+              onClick={() => goEpisode("next")}
+              disabled={!episodeNav.hasNext}
+              aria-label="next-episode"
+              style={{
+                background: episodeNav.hasNext ? C.gold : C.panel2,
+                border: `1px solid ${episodeNav.hasNext ? C.gold : C.border}`,
+                color: episodeNav.hasNext ? "#0A0A0F" : C.text,
+                borderRadius: 10,
+                padding: "9px 13px",
+                fontWeight: 800,
+                fontSize: 12.5,
+                cursor: episodeNav.hasNext ? "pointer" : "not-allowed",
+                opacity: episodeNav.hasNext ? 1 : 0.45,
+              }}
+            >
+              {episodeNav.labels.next} ›
+            </button>
+            {autoNext !== null && (
+              <div
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  flexWrap: "wrap",
+                  background: `linear-gradient(135deg, ${C.goldDim}, ${C.panel2})`,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 12,
+                  padding: "10px 12px",
+                }}
+              >
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: C.text }}>
+                  {episodeNav.labels.autoNextIn} {autoNext}s
+                </span>
+                <button
+                  onClick={() => goEpisode("next")}
+                  style={{
+                    background: C.gold,
+                    border: "none",
+                    color: "#0A0A0F",
+                    borderRadius: 9,
+                    padding: "7px 12px",
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  {episodeNav.labels.playNow}
+                </button>
+                <button
+                  onClick={() => setAutoNext(null)}
+                  style={{
+                    background: "transparent",
+                    border: `1px solid ${C.border}`,
+                    color: C.muted,
+                    borderRadius: 9,
+                    padding: "7px 12px",
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  {episodeNav.labels.cancel}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+
 
 
         {/* server selector */}
