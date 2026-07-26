@@ -3440,25 +3440,30 @@ function PlayerOverlay({
 
 
 
-  // Mark the active server as failed and jump to the next server that hasn't
-  // failed yet, searching forward and wrapping around the list. Applies even
-  // after a manual pick: if the chosen server dies we still fail over.
+  // Mark the active server as failed and jump to the next *iframe* server that
+  // hasn't failed yet, searching forward and wrapping around the list. External
+  // link servers (e.g. PLUSCHANNEL) are skipped because they play in a new tab.
   const failover = useCallback(() => {
-    if (loadedRef.current || list.length <= 1) return;
-    failedRef.current.add(safeActive);
-    const next = nextAvailableServer(safeActive, list.length, failedRef.current);
+    if (loadedRef.current || iframeServers.length <= 1) return;
+    const iframeActive = iframeServers.findIndex((s) => s === list[safeActive]);
+    const startIndex = iframeActive >= 0 ? iframeActive : 0;
+    failedRef.current.add(startIndex);
+    const next = nextAvailableServer(startIndex, iframeServers.length, failedRef.current);
     setFailed(Array.from(failedRef.current));
     if (next >= 0) {
       setAutoTrying(true);
       loadedRef.current = false;
       setLoaded(false);
-      setActive(next);
+      // Translate the iframe-only index back to the full list index for active.
+      const nextServer = iframeServers[next];
+      setActive(list.indexOf(nextServer));
     } else {
-      // Every server failed — stop trying and surface the error state.
+      // Every iframe server failed — stop trying and surface the error state.
       setAutoTrying(false);
       setAllFailed(true);
     }
-  }, [list.length, safeActive]);
+  }, [iframeServers, list, safeActive]);
+
 
   // Watchdog: if the active server doesn't load within a few seconds (blocked /
   // X-Frame-Options / network stall), trigger automatic failover.
