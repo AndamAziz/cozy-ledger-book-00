@@ -3420,9 +3420,14 @@ function PlayerOverlay({
         name: "PLUSCHANNEL",
         url: buildPlusChannelUrl(title),
         accent: "#DC2626",
+        external: true,
       }
     : null;
   const list = plusChannel ? [...baseServers, plusChannel] : baseServers;
+  // External-link servers (e.g. PLUSCHANNEL) are not loaded inside the iframe;
+  // they open in a new tab instead. Keep iframe-only logic separate.
+  const iframeServers = list.filter((s) => !s.external);
+
   // Clamp the index defensively so we never read an out-of-range server.
   const safeActive = clampIndex(active, list.length);
   const currentSrc = list.length > 0 ? list[safeActive]?.url ?? "" : src || "";
