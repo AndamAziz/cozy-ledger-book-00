@@ -2244,15 +2244,34 @@ function MovieModal({
   const progressKey = `mv-progress:${movie.media}:${movie.tmdb_id}`;
   const savedProgress = useMemo(() => {
     if (!isTv) return null;
+    // Anything unparsable / out of range is discarded so the UI always starts valid.
+    const toIndex = (v: unknown): number | null => {
+      const n = typeof v === "string" ? Number.parseInt(v.trim(), 10) : Number(v);
+      if (!Number.isFinite(n)) return null;
+      const i = Math.trunc(n);
+      if (i < 1 || i > 10000) return null;
+      return i;
+    };
+    let raw: string | null = null;
     try {
-      const raw = localStorage.getItem(progressKey);
-      if (!raw) return null;
-      const p = JSON.parse(raw) as { season?: number; episode?: number };
-      const s = Number(p?.season);
-      const e = Number(p?.episode);
-      if (!Number.isFinite(s) || !Number.isFinite(e) || s < 1 || e < 1) return null;
+      raw = localStorage.getItem(progressKey);
+    } catch {
+      return null; // storage blocked (private mode)
+    }
+    if (!raw) return null;
+    try {
+      const p: unknown = JSON.parse(raw);
+      if (!p || typeof p !== "object" || Array.isArray(p)) throw new Error("bad shape");
+      const s = toIndex((p as Record<string, unknown>).season);
+      const e = toIndex((p as Record<string, unknown>).episode);
+      if (s === null || e === null) throw new Error("bad numbers");
       return { season: s, episode: e };
     } catch {
+      try {
+        localStorage.removeItem(progressKey); // drop corrupted entry
+      } catch {
+        /* ignore */
+      }
       return null;
     }
   }, [progressKey, isTv]);
@@ -2262,12 +2281,16 @@ function MovieModal({
   // Persist the current season/episode so it is restored on the next visit.
   useEffect(() => {
     if (!isTv) return;
+    const s = Math.trunc(Number(season));
+    const e = Math.trunc(Number(episode));
+    if (!Number.isFinite(s) || !Number.isFinite(e) || s < 1 || e < 1) return;
     try {
-      localStorage.setItem(progressKey, JSON.stringify({ season, episode, at: Date.now() }));
+      localStorage.setItem(progressKey, JSON.stringify({ season: s, episode: e, at: Date.now() }));
     } catch {
       /* ignore quota / private mode errors */
     }
   }, [isTv, progressKey, season, episode]);
+
 
 
   // ---- Episode navigation (next/previous across season boundaries) ----
@@ -2337,10 +2360,18 @@ function MovieModal({
         if (dirCrew) setDirector(dirCrew.name);
         if (!isTv && Array.isArray(d.credits?.cast)) setCast(d.credits.cast.slice(0, 18));
         if (isTv && Array.isArray(d.seasons)) {
-          const ss = d.seasons.filter(
-            (s: { season_number: number; episode_count: number }) =>
-              s.season_number > 0 && s.episode_count > 0,
-          );
+          const ss = d.seasons
+            .filter(
+              (s: { season_number: unknown; episode_count: unknown }) =>
+                Number.isFinite(Number(s?.season_number)) &&
+                Number(s.season_number) > 0 &&
+                Number(s?.episode_count) > 0,
+            )
+            .map((s: { season_number: number; episode_count: number; name?: string }) => ({
+              ...s,
+              season_number: Math.trunc(Number(s.season_number)),
+              episode_count: Math.trunc(Number(s.episode_count)),
+            }));
           setSeasons(ss);
           if (ss.length > 0) {
             // Restore the saved season when it still exists, else use the first.
@@ -2348,15 +2379,13 @@ function MovieModal({
             const match = saved
               ? ss.find((s: { season_number: number }) => s.season_number === saved)
               : undefined;
-            if (match) {
-              setSeason(match.season_number);
-              const maxEp = match.episode_count || 1;
-              setEpisode(Math.min(savedProgress?.episode || 1, maxEp));
-            } else {
-              setSeason(ss[0].season_number);
-              setEpisode(1);
-            }
+            const target = match ?? ss[0];
+            const maxEp = Math.max(1, target.episode_count || 1);
+            const wanted = match ? savedProgress?.episode ?? 1 : 1;
+            setSeason(target.season_number);
+            setEpisode(Math.min(Math.max(1, wanted), maxEp));
           }
+
         }
 
       } catch {
