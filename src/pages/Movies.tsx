@@ -3229,11 +3229,30 @@ function MovieModal({
             season,
             episode,
           })}
+          episodeNav={
+            isTv && seasons.length > 0
+              ? {
+                  label: `${t.season} ${season} · ${t.episode} ${episode}`,
+                  hasNext: !!nextEpisodeOf(season, episode),
+                  hasPrev: !!prevEpisodeOf(season, episode),
+                  onNext: goNextEpisode,
+                  onPrev: goPrevEpisode,
+                  labels: {
+                    next: t.nextEp,
+                    prev: t.prevEp,
+                    autoNextIn: t.autoNextIn,
+                    cancel: t.cancelAutoNext,
+                    playNow: t.playNext,
+                  },
+                }
+              : undefined
+          }
           onClose={() => setWatch(false)}
           closeLabel={t.close}
           hint={t.autoSwitchHint}
         />
       )}
+
       {/* Trailer player */}
       {trailerOpen && trailer && trailer !== "none" && (
         <PlayerOverlay
