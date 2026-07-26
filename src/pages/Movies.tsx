@@ -3476,8 +3476,22 @@ function PlayerOverlay({
     hasPrev: boolean;
     onNext: () => void;
     onPrev: () => void;
-    labels: { next: string; prev: string; autoNextIn: string; cancel: string; playNow: string };
+    seasons: { season_number: number; episode_count?: number }[];
+    season: number;
+    episode: number;
+    onSeason: (n: number) => void;
+    onEpisode: (n: number) => void;
+    labels: {
+      next: string;
+      prev: string;
+      autoNextIn: string;
+      cancel: string;
+      playNow: string;
+      season: string;
+      episode: string;
+    };
   };
+
 }) {
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState(false);
