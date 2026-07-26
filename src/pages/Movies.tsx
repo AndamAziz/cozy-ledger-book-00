@@ -2244,15 +2244,34 @@ function MovieModal({
   const progressKey = `mv-progress:${movie.media}:${movie.tmdb_id}`;
   const savedProgress = useMemo(() => {
     if (!isTv) return null;
+    // Anything unparsable / out of range is discarded so the UI always starts valid.
+    const toIndex = (v: unknown): number | null => {
+      const n = typeof v === "string" ? Number.parseInt(v.trim(), 10) : Number(v);
+      if (!Number.isFinite(n)) return null;
+      const i = Math.trunc(n);
+      if (i < 1 || i > 10000) return null;
+      return i;
+    };
+    let raw: string | null = null;
     try {
-      const raw = localStorage.getItem(progressKey);
-      if (!raw) return null;
-      const p = JSON.parse(raw) as { season?: number; episode?: number };
-      const s = Number(p?.season);
-      const e = Number(p?.episode);
-      if (!Number.isFinite(s) || !Number.isFinite(e) || s < 1 || e < 1) return null;
+      raw = localStorage.getItem(progressKey);
+    } catch {
+      return null; // storage blocked (private mode)
+    }
+    if (!raw) return null;
+    try {
+      const p: unknown = JSON.parse(raw);
+      if (!p || typeof p !== "object" || Array.isArray(p)) throw new Error("bad shape");
+      const s = toIndex((p as Record<string, unknown>).season);
+      const e = toIndex((p as Record<string, unknown>).episode);
+      if (s === null || e === null) throw new Error("bad numbers");
       return { season: s, episode: e };
     } catch {
+      try {
+        localStorage.removeItem(progressKey); // drop corrupted entry
+      } catch {
+        /* ignore */
+      }
       return null;
     }
   }, [progressKey, isTv]);
@@ -2262,12 +2281,16 @@ function MovieModal({
   // Persist the current season/episode so it is restored on the next visit.
   useEffect(() => {
     if (!isTv) return;
+    const s = Math.trunc(Number(season));
+    const e = Math.trunc(Number(episode));
+    if (!Number.isFinite(s) || !Number.isFinite(e) || s < 1 || e < 1) return;
     try {
-      localStorage.setItem(progressKey, JSON.stringify({ season, episode, at: Date.now() }));
+      localStorage.setItem(progressKey, JSON.stringify({ season: s, episode: e, at: Date.now() }));
     } catch {
       /* ignore quota / private mode errors */
     }
   }, [isTv, progressKey, season, episode]);
+
 
 
   // ---- Episode navigation (next/previous across season boundaries) ----
