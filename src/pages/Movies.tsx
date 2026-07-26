@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -2240,8 +2240,35 @@ function MovieModal({
   const isTv = movie.media === "tv";
   const mediaPath = isTv ? "tv" : "movie";
   const [seasons, setSeasons] = useState<{ season_number: number; episode_count: number; name: string }[]>([]);
-  const [season, setSeason] = useState(1);
-  const [episode, setEpisode] = useState(1);
+  // Last watched season/episode is remembered per title in localStorage.
+  const progressKey = `mv-progress:${movie.media}:${movie.tmdb_id}`;
+  const savedProgress = useMemo(() => {
+    if (!isTv) return null;
+    try {
+      const raw = localStorage.getItem(progressKey);
+      if (!raw) return null;
+      const p = JSON.parse(raw) as { season?: number; episode?: number };
+      const s = Number(p?.season);
+      const e = Number(p?.episode);
+      if (!Number.isFinite(s) || !Number.isFinite(e) || s < 1 || e < 1) return null;
+      return { season: s, episode: e };
+    } catch {
+      return null;
+    }
+  }, [progressKey, isTv]);
+  const [season, setSeason] = useState(savedProgress?.season ?? 1);
+  const [episode, setEpisode] = useState(savedProgress?.episode ?? 1);
+
+  // Persist the current season/episode so it is restored on the next visit.
+  useEffect(() => {
+    if (!isTv) return;
+    try {
+      localStorage.setItem(progressKey, JSON.stringify({ season, episode, at: Date.now() }));
+    } catch {
+      /* ignore quota / private mode errors */
+    }
+  }, [isTv, progressKey, season, episode]);
+
 
   // ---- Episode navigation (next/previous across season boundaries) ----
   const episodeCountOf = useCallback(
@@ -2315,8 +2342,23 @@ function MovieModal({
               s.season_number > 0 && s.episode_count > 0,
           );
           setSeasons(ss);
-          if (ss.length > 0) setSeason(ss[0].season_number);
+          if (ss.length > 0) {
+            // Restore the saved season when it still exists, else use the first.
+            const saved = savedProgress?.season;
+            const match = saved
+              ? ss.find((s: { season_number: number }) => s.season_number === saved)
+              : undefined;
+            if (match) {
+              setSeason(match.season_number);
+              const maxEp = match.episode_count || 1;
+              setEpisode(Math.min(savedProgress?.episode || 1, maxEp));
+            } else {
+              setSeason(ss[0].season_number);
+              setEpisode(1);
+            }
+          }
         }
+
       } catch {
         /* ignore */
       }
@@ -2324,7 +2366,7 @@ function MovieModal({
     return () => {
       alive = false;
     };
-  }, [movie.tmdb_id, mediaPath, isTv]);
+  }, [movie.tmdb_id, mediaPath, isTv, savedProgress]);
 
   // TV: fetch the cast from the aggregate credits (uses series-level credits)
   useEffect(() => {
