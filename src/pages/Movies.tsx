@@ -3828,7 +3828,7 @@ function PlayerOverlay({
                   e.currentTarget.style.background = "transparent";
                 }}
               >
-                <ChevronLeft size={17} strokeWidth={2.5} />
+                <ChevronLeft size={16} strokeWidth={2.5} />
                 <span>{episodeNav.labels.prev}</span>
               </button>
 
