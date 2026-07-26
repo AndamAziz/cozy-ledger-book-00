@@ -3891,7 +3891,7 @@ function PlayerOverlay({
                 }}
               >
                 <span>{episodeNav.labels.next}</span>
-                <ChevronRight size={17} strokeWidth={2.5} />
+                <ChevronRight size={16} strokeWidth={2.5} />
               </button>
             </div>
 
