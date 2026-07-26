@@ -3841,28 +3841,29 @@ function PlayerOverlay({
               >
                 <div
                   style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: 1.2,
-                    textTransform: "uppercase",
-                    color: C.gold,
-                    opacity: 0.9,
-                    marginBottom: 2,
-                  }}
-                >
-                  {t.episode}
-                </div>
-                <div
-                  style={{
                     fontSize: 13,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     color: C.text,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
+                    letterSpacing: 0.3,
                   }}
                 >
                   {episodeNav.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: 1,
+                    textTransform: "uppercase",
+                    color: C.gold,
+                    opacity: 0.85,
+                    marginTop: 2,
+                  }}
+                >
+                  {episodeNav.hasNext ? "Up next ready" : "Last episode"}
                 </div>
               </div>
 
