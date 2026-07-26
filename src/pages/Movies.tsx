@@ -3794,7 +3794,8 @@ function PlayerOverlay({
                 background: C.panel,
                 border: `1px solid ${C.border}`,
                 borderRadius: 999,
-                padding: 4,
+                padding: 2,
+                gap: 2,
                 boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
               }}
             >
@@ -3805,19 +3806,22 @@ function PlayerOverlay({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 5,
+                  gap: 4,
                   background: "transparent",
                   border: "none",
                   color: episodeNav.hasPrev ? C.text : C.muted,
                   borderRadius: 999,
-                  padding: "8px 12px",
+                  padding: "6px 10px",
                   fontWeight: 700,
-                  fontSize: 12,
+                  fontSize: 11.5,
                   cursor: episodeNav.hasPrev ? "pointer" : "not-allowed",
                   opacity: episodeNav.hasPrev ? 1 : 0.45,
                   transition: "all 0.2s ease",
                   whiteSpace: "nowrap",
-                  flex: "0 0 auto",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  flex: "0 1 auto",
+                  minWidth: 0,
                 }}
                 onMouseEnter={(e) => {
                   if (episodeNav.hasPrev) {
@@ -3828,21 +3832,21 @@ function PlayerOverlay({
                   e.currentTarget.style.background = "transparent";
                 }}
               >
-                <ChevronLeft size={16} strokeWidth={2.5} />
+                <ChevronLeft size={15} strokeWidth={2.5} />
                 <span>{episodeNav.labels.prev}</span>
               </button>
 
               <div
                 style={{
-                  flex: "1 1 auto",
+                  flex: "1 0 auto",
                   minWidth: 0,
                   textAlign: "center",
-                  padding: "0 6px",
+                  padding: "0 4px",
                 }}
               >
                 <div
                   style={{
-                    fontSize: 12.5,
+                    fontSize: 11.5,
                     fontWeight: 700,
                     color: C.text,
                     whiteSpace: "nowrap",
