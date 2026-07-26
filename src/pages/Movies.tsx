@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize, Minimize, Heart } from "lucide-react";
+import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize, Minimize, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFavorite, useFavoritesList } from "@/lib/movieFavorites";
 import { buildPlusChannelUrl } from "@/lib/searchQuery";
