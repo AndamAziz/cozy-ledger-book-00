@@ -3509,8 +3509,10 @@ function PlayerOverlay({
   }, []);
 
   // User manually selects a server: clear its failed flag so it can be retried,
-  // reset load tracking, and keep automatic failover active.
+  // reset load tracking, and keep automatic failover active. External-link
+  // servers never become the active iframe source.
   const pickServer = (i: number) => {
+    if (list[i]?.external) return;
     failedRef.current.delete(i);
     setFailed(Array.from(failedRef.current));
     setAllFailed(false);
@@ -3519,6 +3521,7 @@ function PlayerOverlay({
     setLoaded(false);
     setActive(i);
   };
+
 
   const reload = () => {
     failedRef.current.delete(safeActive);
