@@ -3862,18 +3862,19 @@ function PlayerOverlay({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 7,
+                  gap: 6,
                   background: episodeNav.hasNext ? C.gold : "transparent",
                   border: "none",
                   color: episodeNav.hasNext ? "#0A0A0F" : C.muted,
                   borderRadius: 999,
-                  padding: "10px 16px",
+                  padding: "9px 14px",
                   fontWeight: 800,
-                  fontSize: 13,
+                  fontSize: 12.5,
                   cursor: episodeNav.hasNext ? "pointer" : "not-allowed",
                   opacity: episodeNav.hasNext ? 1 : 0.45,
                   transition: "all 0.2s ease",
                   whiteSpace: "nowrap",
+                  flex: "0 0 auto",
                   boxShadow: episodeNav.hasNext
                     ? "0 4px 18px rgba(245,197,24,0.22)"
                     : "none",
@@ -3890,7 +3891,7 @@ function PlayerOverlay({
                 }}
               >
                 <span>{episodeNav.labels.next}</span>
-                <ChevronRight size={18} strokeWidth={2.5} />
+                <ChevronRight size={17} strokeWidth={2.5} />
               </button>
             </div>
 
