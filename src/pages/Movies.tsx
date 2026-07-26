@@ -3833,15 +3833,15 @@ function PlayerOverlay({
 
               <div
                 style={{
-                  flex: 1,
-                  minWidth: 80,
+                  flex: "1 1 auto",
+                  minWidth: 0,
                   textAlign: "center",
-                  padding: "0 8px",
+                  padding: "0 6px",
                 }}
               >
                 <div
                   style={{
-                    fontSize: 13,
+                    fontSize: 12.5,
                     fontWeight: 700,
                     color: C.text,
                     whiteSpace: "nowrap",
