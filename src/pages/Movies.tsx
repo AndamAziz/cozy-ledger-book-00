@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize, Minimize, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFavorite, useFavoritesList } from "@/lib/movieFavorites";
+import { buildPlusChannelUrl } from "@/lib/searchQuery";
 import {
   pickRuntime,
   pickReleaseDate,
@@ -3416,7 +3417,7 @@ function PlayerOverlay({
   const plusChannel = title
     ? {
         name: "PLUSCHANNEL",
-        url: `https://mv.andam.uk/search?q=${encodeURIComponent(title).replace(/%20/g, "+")}`,
+        url: buildPlusChannelUrl(title),
         accent: "#DC2626",
       }
     : null;
