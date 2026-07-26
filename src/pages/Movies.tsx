@@ -3805,7 +3805,7 @@ function PlayerOverlay({
                 gap: 9,
               }}
             >
-              {servers.map((s, i) => {
+              {list.map((s, i) => {
                 const on = i === safeActive;
                 const accent = s.accent || C.gold;
                 const isFailed = failed.includes(i) && !on;
