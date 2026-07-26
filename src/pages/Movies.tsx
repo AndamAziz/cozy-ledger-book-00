@@ -3805,18 +3805,19 @@ function PlayerOverlay({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 7,
+                  gap: 6,
                   background: "transparent",
                   border: "none",
                   color: episodeNav.hasPrev ? C.text : C.muted,
                   borderRadius: 999,
-                  padding: "10px 16px",
+                  padding: "9px 14px",
                   fontWeight: 700,
-                  fontSize: 13,
+                  fontSize: 12.5,
                   cursor: episodeNav.hasPrev ? "pointer" : "not-allowed",
                   opacity: episodeNav.hasPrev ? 1 : 0.45,
                   transition: "all 0.2s ease",
                   whiteSpace: "nowrap",
+                  flex: "0 0 auto",
                 }}
                 onMouseEnter={(e) => {
                   if (episodeNav.hasPrev) {
@@ -3827,7 +3828,7 @@ function PlayerOverlay({
                   e.currentTarget.style.background = "transparent";
                 }}
               >
-                <ChevronLeft size={18} strokeWidth={2.5} />
+                <ChevronLeft size={17} strokeWidth={2.5} />
                 <span>{episodeNav.labels.prev}</span>
               </button>
 
