@@ -3829,32 +3829,74 @@ function PlayerOverlay({
               }}
             >
               {list.map((s, i) => {
-                const on = i === safeActive;
+                const on = i === safeActive && !s.external;
                 const accent = s.accent || C.gold;
                 const isFailed = failed.includes(i) && !on;
+                const baseStyle: React.CSSProperties = {
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: `linear-gradient(135deg, ${accent}22, ${C.panel2})`,
+                  color: C.text,
+                  border: `1.5px solid ${on ? accent : `${accent}40`}`,
+                  borderRadius: 11,
+                  padding: "9px 11px",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  transition: "all .15s",
+                  opacity: isFailed ? 0.4 : 1,
+                  boxShadow: on ? `0 0 0 1px ${accent}, 0 4px 12px ${accent}33` : "none",
+                  textDecoration: "none",
+                };
+                const label = serverLabel ? `${serverLabel} ${i + 1}` : s.name;
+                const dot = on && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      insetInlineEnd: -4,
+                      width: 11,
+                      height: 11,
+                      borderRadius: "50%",
+                      background: accent,
+                      border: `2px solid ${C.bg}`,
+                    }}
+                  />
+                );
+                if (s.external) {
+                  return (
+                    <a
+                      key={s.name}
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${label} (opens in new tab)`}
+                      style={baseStyle}
+                    >
+                      <Play size={14} color={accent} fill={accent} style={{ flexShrink: 0 }} />
+                      <span
+                        style={{
+                          flex: 1,
+                          textAlign: "center",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {label}
+                      </span>
+                      {dot}
+                    </a>
+                  );
+                }
                 return (
                   <button
                     key={s.name}
                     onClick={() => pickServer(i)}
-                    style={{
-                      position: "relative",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      background: `linear-gradient(135deg, ${accent}22, ${C.panel2})`,
-                      color: C.text,
-                      border: `1.5px solid ${on ? accent : `${accent}40`}`,
-                      borderRadius: 11,
-                      padding: "9px 11px",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      cursor: "pointer",
-                      transition: "all .15s",
-                      opacity: isFailed ? 0.4 : 1,
-                      boxShadow: on ? `0 0 0 1px ${accent}, 0 4px 12px ${accent}33` : "none",
-                    }}
+                    style={baseStyle}
                   >
-
                     <Play size={14} color={accent} fill={accent} style={{ flexShrink: 0 }} />
                     <span
                       style={{
@@ -3865,25 +3907,13 @@ function PlayerOverlay({
                         textOverflow: "ellipsis",
                       }}
                     >
-                      {serverLabel ? `${serverLabel} ${i + 1}` : s.name}
+                      {label}
                     </span>
-                    {on && (
-                      <span
-                        style={{
-                          position: "absolute",
-                          top: -4,
-                          insetInlineEnd: -4,
-                          width: 11,
-                          height: 11,
-                          borderRadius: "50%",
-                          background: accent,
-                          border: `2px solid ${C.bg}`,
-                        }}
-                      />
-                    )}
+                    {dot}
                   </button>
                 );
               })}
+
             </div>
 
 
