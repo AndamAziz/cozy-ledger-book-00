@@ -2360,10 +2360,18 @@ function MovieModal({
         if (dirCrew) setDirector(dirCrew.name);
         if (!isTv && Array.isArray(d.credits?.cast)) setCast(d.credits.cast.slice(0, 18));
         if (isTv && Array.isArray(d.seasons)) {
-          const ss = d.seasons.filter(
-            (s: { season_number: number; episode_count: number }) =>
-              s.season_number > 0 && s.episode_count > 0,
-          );
+          const ss = d.seasons
+            .filter(
+              (s: { season_number: unknown; episode_count: unknown }) =>
+                Number.isFinite(Number(s?.season_number)) &&
+                Number(s.season_number) > 0 &&
+                Number(s?.episode_count) > 0,
+            )
+            .map((s: { season_number: number; episode_count: number; name?: string }) => ({
+              ...s,
+              season_number: Math.trunc(Number(s.season_number)),
+              episode_count: Math.trunc(Number(s.episode_count)),
+            }));
           setSeasons(ss);
           if (ss.length > 0) {
             // Restore the saved season when it still exists, else use the first.
@@ -2371,15 +2379,13 @@ function MovieModal({
             const match = saved
               ? ss.find((s: { season_number: number }) => s.season_number === saved)
               : undefined;
-            if (match) {
-              setSeason(match.season_number);
-              const maxEp = match.episode_count || 1;
-              setEpisode(Math.min(savedProgress?.episode || 1, maxEp));
-            } else {
-              setSeason(ss[0].season_number);
-              setEpisode(1);
-            }
+            const target = match ?? ss[0];
+            const maxEp = Math.max(1, target.episode_count || 1);
+            const wanted = match ? savedProgress?.episode ?? 1 : 1;
+            setSeason(target.season_number);
+            setEpisode(Math.min(Math.max(1, wanted), maxEp));
           }
+
         }
 
       } catch {
