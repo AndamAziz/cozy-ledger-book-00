@@ -3319,6 +3319,7 @@ function PlayerOverlay({
   playerLabel,
   serversTitleLabel,
   autoSwitchLabel,
+  episodeNav,
 }: {
   src?: string;
   servers?: { name: string; url: string; accent?: string; external?: boolean }[];
@@ -3331,6 +3332,14 @@ function PlayerOverlay({
   playerLabel?: string;
   serversTitleLabel?: string;
   autoSwitchLabel?: string;
+  episodeNav?: {
+    label: string;
+    hasNext: boolean;
+    hasPrev: boolean;
+    onNext: () => void;
+    onPrev: () => void;
+    labels: { next: string; prev: string; autoNextIn: string; cancel: string; playNow: string };
+  };
 }) {
   const [active, setActive] = useState(0);
   const [loaded, setLoaded] = useState(false);
@@ -3341,6 +3350,9 @@ function PlayerOverlay({
   const [failed, setFailed] = useState<number[]>([]);
   const [allFailed, setAllFailed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Countdown (seconds) before auto-advancing to the next episode.
+  const [autoNext, setAutoNext] = useState<number | null>(null);
+
   const loadedRef = useRef(false);
   const failedRef = useRef<Set<number>>(new Set());
   const videoRef = useRef<HTMLDivElement>(null);
