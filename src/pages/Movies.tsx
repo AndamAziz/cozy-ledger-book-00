@@ -3416,14 +3416,25 @@ function MovieModal({
                   hasPrev: !!prevEpisodeOf(season, episode),
                   onNext: goNextEpisode,
                   onPrev: goPrevEpisode,
+                  seasons,
+                  season,
+                  episode,
+                  onSeason: (n: number) => {
+                    setSeason(n);
+                    setEpisode(1);
+                  },
+                  onEpisode: (n: number) => setEpisode(n),
                   labels: {
                     next: t.nextEp,
                     prev: t.prevEp,
                     autoNextIn: t.autoNextIn,
                     cancel: t.cancelAutoNext,
                     playNow: t.playNext,
+                    season: t.season,
+                    episode: t.episode,
                   },
                 }
+
               : undefined
           }
           onClose={() => setWatch(false)}
