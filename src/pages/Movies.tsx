@@ -3416,7 +3416,7 @@ function PlayerOverlay({
   const plusChannel = title
     ? {
         name: "PLUSCHANNEL",
-        url: `https://mv.andam.uk/search?q=${encodeURIComponent(title).replace(/%20/g, "+")}`,
+        url: buildPlusChannelUrl(title),
         accent: "#DC2626",
       }
     : null;
