@@ -37,7 +37,7 @@ describe("encodeSearchQuery", () => {
   });
 
   it("encodes non-latin titles as UTF-8", () => {
-    expect(encodeSearchQuery("ژیان")).toBe("%D8%98%DB%8C%D8%A7%D9%86");
+    expect(encodeSearchQuery("ژیان")).toBe("%DA%98%DB%8C%D8%A7%D9%86");
     expect(encodeSearchQuery("千と千尋")).toBe(
       "%E5%8D%83%E3%81%A8%E5%8D%83%E5%B0%8B",
     );
