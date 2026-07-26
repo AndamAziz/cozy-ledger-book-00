@@ -63,16 +63,6 @@ async function tmdbFetch(
 // IMDb streaming domains. Use the direct /embed route for the in-app player;
 // /title redirects through extra landing/ad frames and is less reliable on
 // mobile Safari/Firefox.
-const IMDB_DOMAINS: { host: string; label: string; name: string; accent: string }[] = [
-  { host: "fastimdb.com", label: "FastIMDb", name: "Fastimdb", accent: "#F97316" },
-  { host: "directimdb.com", label: "DirectIMDb", name: "Directimdb", accent: "#22C55E" },
-  { host: "streamimdb.com", label: "StreamIMDb", name: "Streamimdb", accent: "#EC4899" },
-  { host: "runimdb.com", label: "RunIMDb", name: "Runimdb", accent: "#8B5CF6" },
-  { host: "playimdb.com", label: "PlayIMDb ⚡", name: "PlayIMDb", accent: "#00BCD4" },
-];
-
-
-const imdbTitleUrl = (host: string, imdbId: string) => `https://www.${host}/title/${imdbId}/`;
 
 const selectStyle: React.CSSProperties = {
   background: C.panel2,
