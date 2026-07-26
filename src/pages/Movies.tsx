@@ -3391,7 +3391,8 @@ function PlayerOverlay({
   autoSwitchLabel,
 }: {
   src?: string;
-  servers?: { name: string; url: string; accent?: string }[];
+  servers?: { name: string; url: string; accent?: string; external?: boolean }[];
+
   onClose: () => void;
   closeLabel: string;
   serverLabel?: string;
@@ -3419,32 +3420,50 @@ function PlayerOverlay({
         name: "PLUSCHANNEL",
         url: buildPlusChannelUrl(title),
         accent: "#DC2626",
+        external: true,
       }
     : null;
   const list = plusChannel ? [...baseServers, plusChannel] : baseServers;
+  // External-link servers (e.g. PLUSCHANNEL) are not loaded inside the iframe;
+  // they open in a new tab instead. Keep iframe-only logic separate.
+  const iframeServers = list.filter((s) => !s.external);
+
   // Clamp the index defensively so we never read an out-of-range server.
   const safeActive = clampIndex(active, list.length);
-  const currentSrc = list.length > 0 ? list[safeActive]?.url ?? "" : src || "";
+  // External-link servers (e.g. PLUSCHANNEL) are not loaded inside the iframe;
+  // they open in a new tab instead. If the active index happens to point to an
+  // external server, fall back to the first iframe server.
+  const currentSrc =
+    iframeServers.length > 0
+      ? (list[safeActive]?.external ? iframeServers[0] : list[safeActive])?.url ?? ""
+      : src || "";
 
-  // Mark the active server as failed and jump to the next server that hasn't
-  // failed yet, searching forward and wrapping around the list. Applies even
-  // after a manual pick: if the chosen server dies we still fail over.
+
+
+  // Mark the active server as failed and jump to the next *iframe* server that
+  // hasn't failed yet, searching forward and wrapping around the list. External
+  // link servers (e.g. PLUSCHANNEL) are skipped because they play in a new tab.
   const failover = useCallback(() => {
-    if (loadedRef.current || list.length <= 1) return;
-    failedRef.current.add(safeActive);
-    const next = nextAvailableServer(safeActive, list.length, failedRef.current);
+    if (loadedRef.current || iframeServers.length <= 1) return;
+    const iframeActive = iframeServers.findIndex((s) => s === list[safeActive]);
+    const startIndex = iframeActive >= 0 ? iframeActive : 0;
+    failedRef.current.add(startIndex);
+    const next = nextAvailableServer(startIndex, iframeServers.length, failedRef.current);
     setFailed(Array.from(failedRef.current));
     if (next >= 0) {
       setAutoTrying(true);
       loadedRef.current = false;
       setLoaded(false);
-      setActive(next);
+      // Translate the iframe-only index back to the full list index for active.
+      const nextServer = iframeServers[next];
+      setActive(list.indexOf(nextServer));
     } else {
-      // Every server failed — stop trying and surface the error state.
+      // Every iframe server failed — stop trying and surface the error state.
       setAutoTrying(false);
       setAllFailed(true);
     }
-  }, [list.length, safeActive]);
+  }, [iframeServers, list, safeActive]);
+
 
   // Watchdog: if the active server doesn't load within a few seconds (blocked /
   // X-Frame-Options / network stall), trigger automatic failover.
@@ -3490,8 +3509,10 @@ function PlayerOverlay({
   }, []);
 
   // User manually selects a server: clear its failed flag so it can be retried,
-  // reset load tracking, and keep automatic failover active.
+  // reset load tracking, and keep automatic failover active. External-link
+  // servers never become the active iframe source.
   const pickServer = (i: number) => {
+    if (list[i]?.external) return;
     failedRef.current.delete(i);
     setFailed(Array.from(failedRef.current));
     setAllFailed(false);
@@ -3500,6 +3521,7 @@ function PlayerOverlay({
     setLoaded(false);
     setActive(i);
   };
+
 
   const reload = () => {
     failedRef.current.delete(safeActive);
@@ -3716,7 +3738,7 @@ function PlayerOverlay({
                   borderTopColor: C.gold,
                 }}
               />
-              {list.length > 0 ? `Trying ${list[safeActive]?.name ?? ""}…` : "Trying next server…"}
+              {iframeServers.length > 0 ? `Trying ${iframeServers[clampIndex(active, iframeServers.length)]?.name ?? ""}…` : "Trying next server…"}
             </div>
           )}
           {allFailed && !loaded && (
@@ -3807,32 +3829,74 @@ function PlayerOverlay({
               }}
             >
               {list.map((s, i) => {
-                const on = i === safeActive;
+                const on = i === safeActive && !s.external;
                 const accent = s.accent || C.gold;
                 const isFailed = failed.includes(i) && !on;
+                const baseStyle: React.CSSProperties = {
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: `linear-gradient(135deg, ${accent}22, ${C.panel2})`,
+                  color: C.text,
+                  border: `1.5px solid ${on ? accent : `${accent}40`}`,
+                  borderRadius: 11,
+                  padding: "9px 11px",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  transition: "all .15s",
+                  opacity: isFailed ? 0.4 : 1,
+                  boxShadow: on ? `0 0 0 1px ${accent}, 0 4px 12px ${accent}33` : "none",
+                  textDecoration: "none",
+                };
+                const label = serverLabel ? `${serverLabel} ${i + 1}` : s.name;
+                const dot = on && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      insetInlineEnd: -4,
+                      width: 11,
+                      height: 11,
+                      borderRadius: "50%",
+                      background: accent,
+                      border: `2px solid ${C.bg}`,
+                    }}
+                  />
+                );
+                if (s.external) {
+                  return (
+                    <a
+                      key={s.name}
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${label} (opens in new tab)`}
+                      style={baseStyle}
+                    >
+                      <Play size={14} color={accent} fill={accent} style={{ flexShrink: 0 }} />
+                      <span
+                        style={{
+                          flex: 1,
+                          textAlign: "center",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {label}
+                      </span>
+                      {dot}
+                    </a>
+                  );
+                }
                 return (
                   <button
                     key={s.name}
                     onClick={() => pickServer(i)}
-                    style={{
-                      position: "relative",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      background: `linear-gradient(135deg, ${accent}22, ${C.panel2})`,
-                      color: C.text,
-                      border: `1.5px solid ${on ? accent : `${accent}40`}`,
-                      borderRadius: 11,
-                      padding: "9px 11px",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      cursor: "pointer",
-                      transition: "all .15s",
-                      opacity: isFailed ? 0.4 : 1,
-                      boxShadow: on ? `0 0 0 1px ${accent}, 0 4px 12px ${accent}33` : "none",
-                    }}
+                    style={baseStyle}
                   >
-
                     <Play size={14} color={accent} fill={accent} style={{ flexShrink: 0 }} />
                     <span
                       style={{
@@ -3843,25 +3907,13 @@ function PlayerOverlay({
                         textOverflow: "ellipsis",
                       }}
                     >
-                      {serverLabel ? `${serverLabel} ${i + 1}` : s.name}
+                      {label}
                     </span>
-                    {on && (
-                      <span
-                        style={{
-                          position: "absolute",
-                          top: -4,
-                          insetInlineEnd: -4,
-                          width: 11,
-                          height: 11,
-                          borderRadius: "50%",
-                          background: accent,
-                          border: `2px solid ${C.bg}`,
-                        }}
-                      />
-                    )}
+                    {dot}
                   </button>
                 );
               })}
+
             </div>
 
 
