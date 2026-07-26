@@ -2700,45 +2700,183 @@ function MovieModal({
           <div
             className="mv-fade"
             style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "center",
               padding: "12px 16px 0",
             }}
           >
-            <span style={{ fontSize: 13, color: C.muted, fontWeight: 700 }}>
-              📺 {t.selectEpisode}:
-            </span>
-            <select
-              value={season}
-              onChange={(e) => {
-                setSeason(Number(e.target.value));
-                setEpisode(1);
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 8,
+                color: C.muted,
+                fontSize: 12,
+                fontWeight: 700,
               }}
-              style={selectStyle}
             >
-              {seasons.map((s) => (
-                <option key={s.season_number} value={s.season_number}>
-                  {t.season} {s.season_number}
-                  {s.episode_count ? ` (${s.episode_count} ${t.episodesCount})` : ""}
-                </option>
-              ))}
-            </select>
-            <select
-              value={episode}
-              onChange={(e) => setEpisode(Number(e.target.value))}
-              style={selectStyle}
-            >
-              {Array.from(
-                { length: seasons.find((s) => s.season_number === season)?.episode_count || 1 },
-                (_, i) => i + 1,
-              ).map((ep) => (
-                <option key={ep} value={ep}>
-                  {t.episode} {ep}
-                </option>
-              ))}
-            </select>
+              <span>📺</span>
+              <span>{t.selectEpisode}</span>
+            </div>
+
+            <div style={{ position: "relative" }}>
+              {/* subtle glow */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: -1,
+                  borderRadius: 16,
+                  background: `linear-gradient(135deg, ${C.gold}20, ${C.gold}08)`,
+                  opacity: 0.45,
+                  zIndex: 0,
+                }}
+              />
+              <div
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "stretch",
+                  background: `${C.panel2}CC`,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 15,
+                  overflow: "hidden",
+                  boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
+                }}
+              >
+                {/* Season selector */}
+                <div style={{ flex: 1, position: "relative" }}>
+                  <label
+                    style={{
+                      position: "absolute",
+                      top: 7,
+                      insetInlineStart: 14,
+                      fontSize: 9.5,
+                      fontWeight: 700,
+                      color: C.muted,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.6,
+                      zIndex: 1,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {t.season}
+                  </label>
+                  <select
+                    value={season}
+                    onChange={(e) => {
+                      setSeason(Number(e.target.value));
+                      setEpisode(1);
+                    }}
+                    style={{
+                      width: "100%",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      background: "transparent",
+                      border: "none",
+                      color: C.text,
+                      padding: "24px 34px 10px 14px",
+                      paddingInlineEnd: 34,
+                      paddingInlineStart: 14,
+                      fontSize: 14,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    {seasons.map((s) => (
+                      <option key={s.season_number} value={s.season_number}>
+                        {t.season} {s.season_number}
+                        {s.episode_count ? ` (${s.episode_count} ${t.episodesCount})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      insetInlineEnd: 10,
+                      transform: "translateY(-50%)",
+                      pointerEvents: "none",
+                      color: C.gold,
+                      marginTop: 4,
+                    }}
+                  >
+                    <ChevronDown size={16} strokeWidth={2.5} />
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div
+                  style={{
+                    width: 1,
+                    alignSelf: "stretch",
+                    background: `linear-gradient(to bottom, transparent, ${C.border}, transparent)`,
+                    margin: "10px 0",
+                    flexShrink: 0,
+                  }}
+                />
+
+                {/* Episode selector */}
+                <div style={{ flex: 1, position: "relative" }}>
+                  <label
+                    style={{
+                      position: "absolute",
+                      top: 7,
+                      insetInlineStart: 14,
+                      fontSize: 9.5,
+                      fontWeight: 700,
+                      color: C.muted,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.6,
+                      zIndex: 1,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {t.episode}
+                  </label>
+                  <select
+                    value={episode}
+                    onChange={(e) => setEpisode(Number(e.target.value))}
+                    style={{
+                      width: "100%",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      background: "transparent",
+                      border: "none",
+                      color: C.text,
+                      padding: "24px 34px 10px 14px",
+                      paddingInlineEnd: 34,
+                      paddingInlineStart: 14,
+                      fontSize: 14,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    {Array.from(
+                      { length: seasons.find((s) => s.season_number === season)?.episode_count || 1 },
+                      (_, i) => i + 1,
+                    ).map((ep) => (
+                      <option key={ep} value={ep}>
+                        {t.episode} {ep}
+                      </option>
+                    ))}
+                  </select>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      insetInlineEnd: 10,
+                      transform: "translateY(-50%)",
+                      pointerEvents: "none",
+                      color: C.gold,
+                      marginTop: 4,
+                    }}
+                  >
+                    <ChevronDown size={16} strokeWidth={2.5} />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
