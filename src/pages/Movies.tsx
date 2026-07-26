@@ -2691,134 +2691,6 @@ function MovieModal({
           </div>
         )}
 
-        {/* IMDb mirror buttons — one Open + one Copy per server */}
-        {imdbId && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              padding: "10px 16px 0",
-            }}
-          >
-            {IMDB_DOMAINS.map((d) => {
-              const url = imdbTitleUrl(d.host, imdbId);
-              return (
-                <div key={d.host} style={{ display: "flex", gap: 6 }}>
-                  <button
-                    onClick={() => window.open(url, "_blank")}
-                    style={{
-                      flex: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 7,
-                      background: `linear-gradient(135deg, ${d.accent}22, ${C.panel2})`,
-                      color: C.text,
-                      border: `1.5px solid ${d.accent}66`,
-                      borderRadius: 10,
-                      padding: "9px 10px",
-                      cursor: "pointer",
-                      fontWeight: 700,
-                      fontSize: 13,
-                      transition: "transform .15s",
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                  >
-                    <Play size={14} color={d.accent} fill={d.accent} style={{ flexShrink: 0 }} />
-                    <span>
-                      {t.openOn} {d.name}
-                    </span>
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const copyWithFallback = async (text: string): Promise<boolean> => {
-                        // 1) Modern Clipboard API (try even without isSecureContext check)
-                        try {
-                          if (navigator.clipboard?.writeText) {
-                            await navigator.clipboard.writeText(text);
-                            return true;
-                          }
-                        } catch {
-                          /* fall through */
-                        }
-                        // 2) Legacy execCommand with contentEditable (works better on mobile / in iframes)
-                        try {
-                          const el = document.createElement("textarea");
-                          el.value = text;
-                          el.contentEditable = "true";
-                          el.readOnly = false;
-                          el.style.position = "fixed";
-                          el.style.top = "50%";
-                          el.style.left = "50%";
-                          el.style.width = "1px";
-                          el.style.height = "1px";
-                          el.style.padding = "0";
-                          el.style.border = "0";
-                          el.style.opacity = "0";
-                          document.body.appendChild(el);
-                          const range = document.createRange();
-                          range.selectNodeContents(el);
-                          const sel = window.getSelection();
-                          sel?.removeAllRanges();
-                          sel?.addRange(range);
-                          el.setSelectionRange(0, text.length);
-                          el.focus();
-                          const ok = document.execCommand("copy");
-                          sel?.removeAllRanges();
-                          document.body.removeChild(el);
-                          if (ok) return true;
-                        } catch {
-                          /* fall through */
-                        }
-                        // 3) Last resort: window.prompt so user can copy manually
-                        try {
-                          window.prompt(
-                            lang === "ku" ? "کۆپی بکە:" : "Copy this link:",
-                            text,
-                          );
-                          return true;
-                        } catch {
-                          return false;
-                        }
-                      };
-                      const ok = await copyWithFallback(url);
-                      if (ok) toast.success(t.linkCopied);
-                      else
-                        toast.error(
-                          lang === "ku" ? "کۆپی کردن سەرکەوتوو نەبوو" : "Copy failed",
-                        );
-                    }}
-                    title={`${t.copy} ${d.name}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 5,
-                      minWidth: 78,
-                      background: C.panel2,
-                      color: d.accent,
-                      border: `1px solid ${d.accent}55`,
-                      borderRadius: 10,
-                      padding: "9px 8px",
-                      cursor: "pointer",
-                      fontWeight: 700,
-                      fontSize: 12,
-                      transition: "transform .15s",
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                  >
-                    <span>📋</span>
-                    <span>{t.copy}</span>
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-
-        )}
         {trailer === "none" && (
           <div style={{ padding: "8px 16px 0", fontSize: 12.5, color: C.muted }}>
             {t.noTrailer}
@@ -3342,12 +3214,10 @@ function MovieModal({
           serversTitleLabel={t.serversLabel}
           autoSwitchLabel={t.autoSwitch}
           servers={buildWatchServers({
-            imdbId,
             tmdbId: movie.tmdb_id,
             media: movie.media,
             season,
             episode,
-            imdbDomains: IMDB_DOMAINS,
           })}
           onClose={() => setWatch(false)}
           closeLabel={t.close}
