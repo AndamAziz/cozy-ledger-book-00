@@ -3391,7 +3391,8 @@ function PlayerOverlay({
   autoSwitchLabel,
 }: {
   src?: string;
-  servers?: { name: string; url: string; accent?: string }[];
+  servers?: { name: string; url: string; accent?: string; external?: boolean }[];
+
   onClose: () => void;
   closeLabel: string;
   serverLabel?: string;
