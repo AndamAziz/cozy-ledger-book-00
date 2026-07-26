@@ -3925,120 +3925,213 @@ function PlayerOverlay({
         {/* Episode navigation (series only): manual prev/next + auto-next countdown */}
         {episodeNav && (
           <div style={{ padding: "14px 16px 0" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                background: C.panel,
-                border: `1px solid ${C.border}`,
-                borderRadius: 999,
-                padding: 2,
-                gap: 2,
-                boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
-              }}
-            >
-              <button
-                onClick={() => goEpisode("prev")}
-                disabled={!episodeNav.hasPrev}
-                aria-label="prev-episode"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  background: "transparent",
-                  border: "none",
-                  color: episodeNav.hasPrev ? C.text : C.muted,
-                  borderRadius: 999,
-                  padding: "6px 10px",
-                  fontWeight: 700,
-                  fontSize: 11.5,
-                  cursor: episodeNav.hasPrev ? "pointer" : "not-allowed",
-                  opacity: episodeNav.hasPrev ? 1 : 0.45,
-                  transition: "all 0.2s ease",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  flex: "0 1 auto",
-                  minWidth: 0,
-                }}
-                onMouseEnter={(e) => {
-                  if (episodeNav.hasPrev) {
-                    e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <ChevronLeft size={15} strokeWidth={2.5} />
-                <span>{episodeNav.labels.prev}</span>
-              </button>
-
+            <div style={{ position: "relative" }}>
+              {/* subtle glow */}
               <div
                 style={{
-                  flex: "1 0 auto",
-                  minWidth: 0,
-                  textAlign: "center",
-                  padding: "0 4px",
+                  position: "absolute",
+                  inset: -1,
+                  borderRadius: 16,
+                  background: `linear-gradient(135deg, ${C.gold}20, ${C.gold}08)`,
+                  opacity: 0.45,
+                  zIndex: 0,
+                }}
+              />
+              <div
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "stretch",
+                  background: `${C.panel2}CC`,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 15,
+                  overflow: "hidden",
+                  boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
                 }}
               >
-                <div
+                {/* prev episode */}
+                <button
+                  onClick={() => goEpisode("prev")}
+                  disabled={!episodeNav.hasPrev}
+                  aria-label="prev-episode"
+                  title={episodeNav.labels.prev}
                   style={{
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    color: C.text,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    letterSpacing: 0.3,
+                    display: "grid",
+                    placeItems: "center",
+                    width: 42,
+                    flexShrink: 0,
+                    background: "transparent",
+                    border: "none",
+                    borderInlineEnd: `1px solid ${C.border}`,
+                    color: episodeNav.hasPrev ? C.text : C.muted,
+                    opacity: episodeNav.hasPrev ? 1 : 0.4,
+                    cursor: episodeNav.hasPrev ? "pointer" : "not-allowed",
                   }}
                 >
-                  {episodeNav.label}
-                </div>
-              </div>
+                  <ChevronLeft size={18} strokeWidth={2.5} />
+                </button>
 
-              <button
-                onClick={() => goEpisode("next")}
-                disabled={!episodeNav.hasNext}
-                aria-label="next-episode"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  background: episodeNav.hasNext ? C.gold : "transparent",
-                  border: "none",
-                  color: episodeNav.hasNext ? "#0A0A0F" : C.muted,
-                  borderRadius: 999,
-                  padding: "6px 10px",
-                  fontWeight: 800,
-                  fontSize: 11.5,
-                  cursor: episodeNav.hasNext ? "pointer" : "not-allowed",
-                  opacity: episodeNav.hasNext ? 1 : 0.45,
-                  transition: "all 0.2s ease",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  flex: "0 1 auto",
-                  minWidth: 0,
-                  boxShadow: episodeNav.hasNext
-                    ? "0 4px 18px rgba(245,197,24,0.22)"
-                    : "none",
-                }}
-                onMouseEnter={(e) => {
-                  if (episodeNav.hasNext) {
-                    e.currentTarget.style.filter = "brightness(1.08)";
-                    e.currentTarget.style.transform = "translateX(1px)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.filter = "none";
-                  e.currentTarget.style.transform = "none";
-                }}
-              >
-                <span>{episodeNav.labels.next}</span>
-                <ChevronRight size={15} strokeWidth={2.5} />
-              </button>
+                {/* Season selector */}
+                <div style={{ flex: 1, position: "relative", minWidth: 0 }}>
+                  <label
+                    style={{
+                      position: "absolute",
+                      top: 7,
+                      insetInlineStart: 12,
+                      fontSize: 9.5,
+                      fontWeight: 700,
+                      color: C.muted,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.6,
+                      zIndex: 1,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {episodeNav.labels.season}
+                  </label>
+                  <select
+                    value={episodeNav.season}
+                    onChange={(e) => episodeNav.onSeason(Number(e.target.value))}
+                    aria-label="player-season-select"
+                    style={{
+                      width: "100%",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      background: "transparent",
+                      border: "none",
+                      color: C.text,
+                      padding: "23px 30px 9px 12px",
+                      paddingInlineEnd: 30,
+                      paddingInlineStart: 12,
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    {episodeNav.seasons.map((s) => (
+                      <option key={s.season_number} value={s.season_number}>
+                        {episodeNav.labels.season} {s.season_number}
+                      </option>
+                    ))}
+                  </select>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      insetInlineEnd: 9,
+                      transform: "translateY(-50%)",
+                      pointerEvents: "none",
+                      color: C.gold,
+                      marginTop: 4,
+                    }}
+                  >
+                    <ChevronDown size={15} strokeWidth={2.5} />
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div
+                  style={{
+                    width: 1,
+                    alignSelf: "stretch",
+                    background: `linear-gradient(to bottom, transparent, ${C.border}, transparent)`,
+                    margin: "10px 0",
+                    flexShrink: 0,
+                  }}
+                />
+
+                {/* Episode selector */}
+                <div style={{ flex: 1, position: "relative", minWidth: 0 }}>
+                  <label
+                    style={{
+                      position: "absolute",
+                      top: 7,
+                      insetInlineStart: 12,
+                      fontSize: 9.5,
+                      fontWeight: 700,
+                      color: C.muted,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.6,
+                      zIndex: 1,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {episodeNav.labels.episode}
+                  </label>
+                  <select
+                    value={episodeNav.episode}
+                    onChange={(e) => episodeNav.onEpisode(Number(e.target.value))}
+                    aria-label="player-episode-select"
+                    style={{
+                      width: "100%",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      background: "transparent",
+                      border: "none",
+                      color: C.text,
+                      padding: "23px 30px 9px 12px",
+                      paddingInlineEnd: 30,
+                      paddingInlineStart: 12,
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    {Array.from(
+                      {
+                        length:
+                          episodeNav.seasons.find(
+                            (s) => s.season_number === episodeNav.season,
+                          )?.episode_count || 1,
+                      },
+                      (_, i) => i + 1,
+                    ).map((ep) => (
+                      <option key={ep} value={ep}>
+                        {episodeNav.labels.episode} {ep}
+                      </option>
+                    ))}
+                  </select>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      insetInlineEnd: 9,
+                      transform: "translateY(-50%)",
+                      pointerEvents: "none",
+                      color: C.gold,
+                      marginTop: 4,
+                    }}
+                  >
+                    <ChevronDown size={15} strokeWidth={2.5} />
+                  </div>
+                </div>
+
+                {/* next episode */}
+                <button
+                  onClick={() => goEpisode("next")}
+                  disabled={!episodeNav.hasNext}
+                  aria-label="next-episode"
+                  title={episodeNav.labels.next}
+                  style={{
+                    display: "grid",
+                    placeItems: "center",
+                    width: 42,
+                    flexShrink: 0,
+                    background: episodeNav.hasNext ? C.gold : "transparent",
+                    border: "none",
+                    borderInlineStart: `1px solid ${C.border}`,
+                    color: episodeNav.hasNext ? "#0A0A0F" : C.muted,
+                    opacity: episodeNav.hasNext ? 1 : 0.4,
+                    cursor: episodeNav.hasNext ? "pointer" : "not-allowed",
+                  }}
+                >
+                  <ChevronRight size={18} strokeWidth={2.5} />
+                </button>
+              </div>
             </div>
+
 
             {autoNext !== null && (
               <div
