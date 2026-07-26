@@ -35,30 +35,19 @@ describe("imdbTitleLandingUrl", () => {
 });
 
 describe("buildWatchServers", () => {
-  it("puts IMDB embed hosts first then TMDB fallbacks then /title/ last (movie)", () => {
+  it("returns only VidAPI for movies", () => {
     const servers = buildWatchServers({
       imdbId: "tt0111161",
       tmdbId: 278,
       media: "movie",
       imdbDomains: DOMAINS,
     });
-    // 2 embed hosts + VidAPI + IMDb Title = 4
-    expect(servers).toHaveLength(4);
-    expect(servers[0].url).toContain("/embed/movie/tt0111161");
-    expect(servers[1].url).toContain("directimdb.com/embed/movie/tt0111161");
-    expect(servers.map((s) => s.name)).toEqual([
-      "Fastimdb",
-      "Directimdb",
-      "VidAPI",
-      "IMDb Title",
-    ]);
-    // TMDB fallbacks use the numeric tmdb id
-    expect(servers[2].url).toBe("https://vidapi.ru/embed/movie/278");
-    // last resort points at the /title/ landing page
-    expect(servers[3].url).toBe("https://www.fastimdb.com/title/tt0111161/");
+    expect(servers).toHaveLength(1);
+    expect(servers.map((s) => s.name)).toEqual(["VidAPI"]);
+    expect(servers[0].url).toBe("https://vidapi.ru/embed/movie/278");
   });
 
-  it("uses tv paths with season/episode for series", () => {
+  it("returns only VidAPI for series with season/episode", () => {
     const servers = buildWatchServers({
       imdbId: "tt0903747",
       tmdbId: 1396,
@@ -67,19 +56,18 @@ describe("buildWatchServers", () => {
       episode: 7,
       imdbDomains: DOMAINS,
     });
-    expect(servers[0].url).toContain("/embed/tv/tt0903747/3/7");
-    expect(servers[2].url).toBe("https://vidapi.ru/embed/tv/1396/3/7");
-    expect(servers[3].url).toBe("https://www.fastimdb.com/title/tt0903747/");
+    expect(servers).toHaveLength(1);
+    expect(servers.map((s) => s.name)).toEqual(["VidAPI"]);
+    expect(servers[0].url).toBe("https://vidapi.ru/embed/tv/1396/3/7");
   });
 
-  it("falls back to TMDB-only servers when there is no IMDB id", () => {
+  it("returns only VidAPI when there is no IMDB id", () => {
     const servers = buildWatchServers({
       imdbId: null,
       tmdbId: 278,
       media: "movie",
       imdbDomains: DOMAINS,
     });
-    // Only VidAPI, no IMDb Title (needs an imdb id)
     expect(servers.map((s) => s.name)).toEqual(["VidAPI"]);
   });
 });

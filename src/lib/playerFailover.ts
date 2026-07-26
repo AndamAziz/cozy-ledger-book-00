@@ -36,12 +36,10 @@ export function imdbTitleLandingUrl(host: string, imdbId: string): string {
 }
 
 /**
- * Build the ordered list of watch servers with automatic fallbacks.
+ * Build the ordered list of watch servers.
  *
- * Order (each entry is tried in turn by the failover watchdog):
- *  1. IMDB `/embed/movie|tv/...` hosts (when an IMDB id is known)
- *  2. TMDB-based providers: VidAPI, VidSrc, 2Embed
- *  3. IMDB `/title/` landing page (last resort, only when an IMDB id exists)
+ * Only VidAPI remains as the in-app iframe source; external links (e.g.
+ * PLUSCHANNEL) are added separately by the caller.
  */
 export function buildWatchServers(opts: {
   imdbId?: string | null;
@@ -49,39 +47,20 @@ export function buildWatchServers(opts: {
   media: MediaKind;
   season?: number;
   episode?: number;
-  imdbDomains: ImdbDomain[];
+  imdbDomains?: ImdbDomain[];
 }): PlayerServer[] {
-  const { imdbId, tmdbId, media, season = 1, episode = 1, imdbDomains } = opts;
+  const { tmdbId, media, season = 1, episode = 1 } = opts;
   const isTv = media === "tv";
-  const servers: PlayerServer[] = [];
 
-  if (imdbId) {
-    for (const d of imdbDomains) {
-      servers.push({
-        name: d.name,
-        url: imdbEmbedUrl(d.host, imdbId, media, season, episode),
-        accent: d.accent,
-      });
-    }
-  }
-
-  servers.push({
-    name: "VidAPI",
-    url: isTv
-      ? `https://vidapi.ru/embed/tv/${tmdbId}/${season}/${episode}`
-      : `https://vidapi.ru/embed/movie/${tmdbId}`,
-    accent: "#00BCD4",
-  });
-
-  if (imdbId && imdbDomains.length > 0) {
-    servers.push({
-      name: "IMDb Title",
-      url: imdbTitleLandingUrl(imdbDomains[0].host, imdbId),
-      accent: "#EAB308",
-    });
-  }
-
-  return servers;
+  return [
+    {
+      name: "VidAPI",
+      url: isTv
+        ? `https://vidapi.ru/embed/tv/${tmdbId}/${season}/${episode}`
+        : `https://vidapi.ru/embed/movie/${tmdbId}`,
+      accent: "#00BCD4",
+    },
+  ];
 }
 
 /**
