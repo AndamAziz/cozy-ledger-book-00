@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize, Minimize, Heart } from "lucide-react";
+import { Bot, Play, X, RotateCcw, MonitorPlay, Maximize, Minimize, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useFavorite, useFavoritesList } from "@/lib/movieFavorites";
 import { buildPlusChannelUrl } from "@/lib/searchQuery";
@@ -3786,110 +3786,243 @@ function PlayerOverlay({
 
         {/* Episode navigation (series only): manual prev/next + auto-next countdown */}
         {episodeNav && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 9,
-              flexWrap: "wrap",
-              padding: "12px 16px 0",
-            }}
-          >
-            <button
-              onClick={() => goEpisode("prev")}
-              disabled={!episodeNav.hasPrev}
-              aria-label="prev-episode"
-              style={{
-                background: C.panel2,
-                border: `1px solid ${C.border}`,
-                color: C.text,
-                borderRadius: 10,
-                padding: "9px 13px",
-                fontWeight: 800,
-                fontSize: 12.5,
-                cursor: episodeNav.hasPrev ? "pointer" : "not-allowed",
-                opacity: episodeNav.hasPrev ? 1 : 0.45,
-              }}
-            >
-              ‹ {episodeNav.labels.prev}
-            </button>
+          <div style={{ padding: "14px 16px 0" }}>
             <div
               style={{
-                flex: 1,
-                minWidth: 90,
-                textAlign: "center",
-                fontSize: 12.5,
-                fontWeight: 700,
-                color: C.muted,
+                display: "flex",
+                alignItems: "center",
+                background: C.panel,
+                border: `1px solid ${C.border}`,
+                borderRadius: 999,
+                padding: 2,
+                gap: 2,
+                boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
               }}
             >
-              {episodeNav.label}
+              <button
+                onClick={() => goEpisode("prev")}
+                disabled={!episodeNav.hasPrev}
+                aria-label="prev-episode"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: "transparent",
+                  border: "none",
+                  color: episodeNav.hasPrev ? C.text : C.muted,
+                  borderRadius: 999,
+                  padding: "6px 10px",
+                  fontWeight: 700,
+                  fontSize: 11.5,
+                  cursor: episodeNav.hasPrev ? "pointer" : "not-allowed",
+                  opacity: episodeNav.hasPrev ? 1 : 0.45,
+                  transition: "all 0.2s ease",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  flex: "0 1 auto",
+                  minWidth: 0,
+                }}
+                onMouseEnter={(e) => {
+                  if (episodeNav.hasPrev) {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <ChevronLeft size={15} strokeWidth={2.5} />
+                <span>{episodeNav.labels.prev}</span>
+              </button>
+
+              <div
+                style={{
+                  flex: "1 0 auto",
+                  minWidth: 0,
+                  textAlign: "center",
+                  padding: "0 4px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: C.text,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  {episodeNav.label}
+                </div>
+              </div>
+
+              <button
+                onClick={() => goEpisode("next")}
+                disabled={!episodeNav.hasNext}
+                aria-label="next-episode"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  background: episodeNav.hasNext ? C.gold : "transparent",
+                  border: "none",
+                  color: episodeNav.hasNext ? "#0A0A0F" : C.muted,
+                  borderRadius: 999,
+                  padding: "6px 10px",
+                  fontWeight: 800,
+                  fontSize: 11.5,
+                  cursor: episodeNav.hasNext ? "pointer" : "not-allowed",
+                  opacity: episodeNav.hasNext ? 1 : 0.45,
+                  transition: "all 0.2s ease",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  flex: "0 1 auto",
+                  minWidth: 0,
+                  boxShadow: episodeNav.hasNext
+                    ? "0 4px 18px rgba(245,197,24,0.22)"
+                    : "none",
+                }}
+                onMouseEnter={(e) => {
+                  if (episodeNav.hasNext) {
+                    e.currentTarget.style.filter = "brightness(1.08)";
+                    e.currentTarget.style.transform = "translateX(1px)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.filter = "none";
+                  e.currentTarget.style.transform = "none";
+                }}
+              >
+                <span>{episodeNav.labels.next}</span>
+                <ChevronRight size={15} strokeWidth={2.5} />
+              </button>
             </div>
-            <button
-              onClick={() => goEpisode("next")}
-              disabled={!episodeNav.hasNext}
-              aria-label="next-episode"
-              style={{
-                background: episodeNav.hasNext ? C.gold : C.panel2,
-                border: `1px solid ${episodeNav.hasNext ? C.gold : C.border}`,
-                color: episodeNav.hasNext ? "#0A0A0F" : C.text,
-                borderRadius: 10,
-                padding: "9px 13px",
-                fontWeight: 800,
-                fontSize: 12.5,
-                cursor: episodeNav.hasNext ? "pointer" : "not-allowed",
-                opacity: episodeNav.hasNext ? 1 : 0.45,
-              }}
-            >
-              {episodeNav.labels.next} ›
-            </button>
+
             {autoNext !== null && (
               <div
                 style={{
-                  width: "100%",
+                  marginTop: 12,
                   display: "flex",
                   alignItems: "center",
-                  gap: 9,
-                  flexWrap: "wrap",
-                  background: `linear-gradient(135deg, ${C.goldDim}, ${C.panel2})`,
+                  gap: 10,
+                  background: C.panel,
                   border: `1px solid ${C.border}`,
-                  borderRadius: 12,
+                  borderRadius: 14,
                   padding: "10px 12px",
                 }}
               >
-                <span style={{ fontSize: 12.5, fontWeight: 800, color: C.text }}>
-                  {episodeNav.labels.autoNextIn} {autoNext}s
-                </span>
-                <button
-                  onClick={() => goEpisode("next")}
+                <div
                   style={{
-                    background: C.gold,
-                    border: "none",
-                    color: "#0A0A0F",
-                    borderRadius: 9,
-                    padding: "7px 12px",
-                    fontWeight: 800,
-                    fontSize: 12,
-                    cursor: "pointer",
+                    position: "relative",
+                    width: 34,
+                    height: 34,
+                    borderRadius: "50%",
+                    background: `conic-gradient(${C.gold} ${
+                      (autoNext / 8) * 360
+                    }deg, rgba(255,255,255,0.08) 0deg)`,
+                    display: "grid",
+                    placeItems: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  {episodeNav.labels.playNow}
-                </button>
-                <button
-                  onClick={() => setAutoNext(null)}
-                  style={{
-                    background: "transparent",
-                    border: `1px solid ${C.border}`,
-                    color: C.muted,
-                    borderRadius: 9,
-                    padding: "7px 12px",
-                    fontWeight: 800,
-                    fontSize: 12,
-                    cursor: "pointer",
-                  }}
-                >
-                  {episodeNav.labels.cancel}
-                </button>
+                  <div
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: "50%",
+                      background: C.panel,
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: C.gold,
+                    }}
+                  >
+                    {autoNext}
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: C.text,
+                      marginBottom: 2,
+                    }}
+                  >
+                    {episodeNav.labels.autoNextIn}
+                  </div>
+                  <div
+                    style={{
+                      height: 4,
+                      borderRadius: 2,
+                      background: "rgba(255,255,255,0.08)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${(autoNext / 8) * 100}%`,
+                        height: "100%",
+                        background: C.gold,
+                        borderRadius: 2,
+                        transition: "width 1s linear",
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button
+                    onClick={() => goEpisode("next")}
+                    style={{
+                      background: C.gold,
+                      border: "none",
+                      color: "#0A0A0F",
+                      borderRadius: 9,
+                      padding: "7px 12px",
+                      fontWeight: 800,
+                      fontSize: 12,
+                      cursor: "pointer",
+                      transition: "filter 0.2s ease",
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.filter = "brightness(1.08)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.filter = "none")
+                    }
+                  >
+                    {episodeNav.labels.playNow}
+                  </button>
+                  <button
+                    onClick={() => setAutoNext(null)}
+                    style={{
+                      background: "transparent",
+                      border: `1px solid ${C.border}`,
+                      color: C.muted,
+                      borderRadius: 9,
+                      padding: "7px 12px",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
+                      e.currentTarget.style.color = C.text;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = C.border;
+                      e.currentTarget.style.color = C.muted;
+                    }}
+                  >
+                    {episodeNav.labels.cancel}
+                  </button>
+                </div>
               </div>
             )}
           </div>
