@@ -3784,6 +3784,119 @@ function PlayerOverlay({
           )}
         </div>
 
+        {/* Episode navigation (series only): manual prev/next + auto-next countdown */}
+        {episodeNav && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 9,
+              flexWrap: "wrap",
+              padding: "12px 16px 0",
+            }}
+          >
+            <button
+              onClick={() => goEpisode("prev")}
+              disabled={!episodeNav.hasPrev}
+              aria-label="prev-episode"
+              style={{
+                background: C.panel2,
+                border: `1px solid ${C.border}`,
+                color: C.text,
+                borderRadius: 10,
+                padding: "9px 13px",
+                fontWeight: 800,
+                fontSize: 12.5,
+                cursor: episodeNav.hasPrev ? "pointer" : "not-allowed",
+                opacity: episodeNav.hasPrev ? 1 : 0.45,
+              }}
+            >
+              ‹ {episodeNav.labels.prev}
+            </button>
+            <div
+              style={{
+                flex: 1,
+                minWidth: 90,
+                textAlign: "center",
+                fontSize: 12.5,
+                fontWeight: 700,
+                color: C.muted,
+              }}
+            >
+              {episodeNav.label}
+            </div>
+            <button
+              onClick={() => goEpisode("next")}
+              disabled={!episodeNav.hasNext}
+              aria-label="next-episode"
+              style={{
+                background: episodeNav.hasNext ? C.gold : C.panel2,
+                border: `1px solid ${episodeNav.hasNext ? C.gold : C.border}`,
+                color: episodeNav.hasNext ? "#0A0A0F" : C.text,
+                borderRadius: 10,
+                padding: "9px 13px",
+                fontWeight: 800,
+                fontSize: 12.5,
+                cursor: episodeNav.hasNext ? "pointer" : "not-allowed",
+                opacity: episodeNav.hasNext ? 1 : 0.45,
+              }}
+            >
+              {episodeNav.labels.next} ›
+            </button>
+            {autoNext !== null && (
+              <div
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  flexWrap: "wrap",
+                  background: `linear-gradient(135deg, ${C.goldDim}, ${C.panel2})`,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 12,
+                  padding: "10px 12px",
+                }}
+              >
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: C.text }}>
+                  {episodeNav.labels.autoNextIn} {autoNext}s
+                </span>
+                <button
+                  onClick={() => goEpisode("next")}
+                  style={{
+                    background: C.gold,
+                    border: "none",
+                    color: "#0A0A0F",
+                    borderRadius: 9,
+                    padding: "7px 12px",
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  {episodeNav.labels.playNow}
+                </button>
+                <button
+                  onClick={() => setAutoNext(null)}
+                  style={{
+                    background: "transparent",
+                    border: `1px solid ${C.border}`,
+                    color: C.muted,
+                    borderRadius: 9,
+                    padding: "7px 12px",
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  {episodeNav.labels.cancel}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+
+
 
         {/* server selector */}
         {list.length > 1 && (
