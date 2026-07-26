@@ -3852,19 +3852,6 @@ function PlayerOverlay({
                 >
                   {episodeNav.label}
                 </div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    letterSpacing: 1,
-                    textTransform: "uppercase",
-                    color: C.gold,
-                    opacity: 0.85,
-                    marginTop: 2,
-                  }}
-                >
-                  {episodeNav.hasNext ? "Up next ready" : "Last episode"}
-                </div>
               </div>
 
               <button
