@@ -2342,8 +2342,23 @@ function MovieModal({
               s.season_number > 0 && s.episode_count > 0,
           );
           setSeasons(ss);
-          if (ss.length > 0) setSeason(ss[0].season_number);
+          if (ss.length > 0) {
+            // Restore the saved season when it still exists, else use the first.
+            const saved = savedProgress?.season;
+            const match = saved
+              ? ss.find((s: { season_number: number }) => s.season_number === saved)
+              : undefined;
+            if (match) {
+              setSeason(match.season_number);
+              const maxEp = match.episode_count || 1;
+              setEpisode(Math.min(savedProgress?.episode || 1, maxEp));
+            } else {
+              setSeason(ss[0].season_number);
+              setEpisode(1);
+            }
+          }
         }
+
       } catch {
         /* ignore */
       }
