@@ -3507,6 +3507,66 @@ function PlayerOverlay({
     };
   }, []);
 
+  // Auto-advance: embedded players post a message when playback finishes.
+  // Different providers use different shapes, so accept any "ended/complete"
+  // style event and start a short countdown to the next episode.
+  const canAutoNext = !!episodeNav?.hasNext;
+  useEffect(() => {
+    if (!canAutoNext) return;
+    const looksEnded = (data: unknown): boolean => {
+      const check = (v: unknown) =>
+        typeof v === "string" && /^(ended|complete[d]?|finish(ed)?|video[-_]?end(ed)?)$/i.test(v.trim());
+      if (check(data)) return true;
+      if (data && typeof data === "object") {
+        const o = data as Record<string, unknown>;
+        if (check(o.event) || check(o.type) || check(o.action) || check(o.state)) return true;
+        if (o.info && typeof o.info === "object") {
+          const st = (o.info as Record<string, unknown>).playerState;
+          if (st === 0) return true; // YouTube: ENDED
+        }
+      }
+      return false;
+    };
+    const onMessage = (e: MessageEvent) => {
+      let payload: unknown = e.data;
+      if (typeof payload === "string" && payload.trim().startsWith("{")) {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          /* keep raw string */
+        }
+      }
+      if (looksEnded(payload)) setAutoNext((c) => (c === null ? 8 : c));
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [canAutoNext]);
+
+  // Countdown ticker → fire the episode change at zero.
+  useEffect(() => {
+    if (autoNext === null) return;
+    if (autoNext <= 0) {
+      setAutoNext(null);
+      episodeNav?.onNext();
+      return;
+    }
+    const id = setTimeout(() => setAutoNext((c) => (c === null ? null : c - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [autoNext, episodeNav]);
+
+  // Reset the countdown whenever the episode (source) changes.
+  useEffect(() => {
+    setAutoNext(null);
+  }, [currentSrc]);
+
+  const goEpisode = (dir: "next" | "prev") => {
+    setAutoNext(null);
+    if (dir === "next") episodeNav?.onNext();
+    else episodeNav?.onPrev();
+  };
+
+
+
 
   const circleBtnStyle: React.CSSProperties = {
     width: 42,
