@@ -3429,11 +3429,15 @@ function PlayerOverlay({
   const iframeServers = list.filter((s) => !s.external);
 
   // Clamp the index defensively so we never read an out-of-range server.
-  // Only iframe servers participate in the embedded player; external links open
-  // in a new tab and are skipped from active/failover logic.
-  const iframeSafeActive = clampIndex(active, iframeServers.length);
+  const safeActive = clampIndex(active, list.length);
+  // External-link servers (e.g. PLUSCHANNEL) are not loaded inside the iframe;
+  // they open in a new tab instead. If the active index happens to point to an
+  // external server, fall back to the first iframe server.
   const currentSrc =
-    iframeServers.length > 0 ? iframeServers[iframeSafeActive]?.url ?? "" : src || "";
+    iframeServers.length > 0
+      ? (list[safeActive]?.external ? iframeServers[0] : list[safeActive])?.url ?? ""
+      : src || "";
+
 
 
   // Mark the active server as failed and jump to the next server that hasn't
