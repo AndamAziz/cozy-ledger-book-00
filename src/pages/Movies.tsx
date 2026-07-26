@@ -3738,7 +3738,7 @@ function PlayerOverlay({
                   borderTopColor: C.gold,
                 }}
               />
-              {list.length > 0 ? `Trying ${list[safeActive]?.name ?? ""}…` : "Trying next server…"}
+              {iframeServers.length > 0 ? `Trying ${iframeServers[clampIndex(active, iframeServers.length)]?.name ?? ""}…` : "Trying next server…"}
             </div>
           )}
           {allFailed && !loaded && (
