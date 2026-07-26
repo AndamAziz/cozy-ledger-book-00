@@ -3761,7 +3761,7 @@ function PlayerOverlay({
 
 
         {/* server selector */}
-        {servers && servers.length > 1 && (
+        {list.length > 1 && (
           <div style={{ padding: "18px 16px 22px" }}>
             <div
               style={{
