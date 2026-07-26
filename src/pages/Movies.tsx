@@ -2366,7 +2366,7 @@ function MovieModal({
     return () => {
       alive = false;
     };
-  }, [movie.tmdb_id, mediaPath, isTv]);
+  }, [movie.tmdb_id, mediaPath, isTv, savedProgress]);
 
   // TV: fetch the cast from the aggregate credits (uses series-level credits)
   useEffect(() => {
