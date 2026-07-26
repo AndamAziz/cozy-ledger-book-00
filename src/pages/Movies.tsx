@@ -2243,6 +2243,47 @@ function MovieModal({
   const [season, setSeason] = useState(1);
   const [episode, setEpisode] = useState(1);
 
+  // ---- Episode navigation (next/previous across season boundaries) ----
+  const episodeCountOf = useCallback(
+    (s: number) => seasons.find((x) => x.season_number === s)?.episode_count || 0,
+    [seasons],
+  );
+  const nextEpisodeOf = useCallback(
+    (s: number, e: number): { season: number; episode: number } | null => {
+      if (e < episodeCountOf(s)) return { season: s, episode: e + 1 };
+      const idx = seasons.findIndex((x) => x.season_number === s);
+      const nextSeason = idx >= 0 ? seasons[idx + 1] : undefined;
+      if (nextSeason && nextSeason.episode_count > 0)
+        return { season: nextSeason.season_number, episode: 1 };
+      return null;
+    },
+    [seasons, episodeCountOf],
+  );
+  const prevEpisodeOf = useCallback(
+    (s: number, e: number): { season: number; episode: number } | null => {
+      if (e > 1) return { season: s, episode: e - 1 };
+      const idx = seasons.findIndex((x) => x.season_number === s);
+      const prevSeason = idx > 0 ? seasons[idx - 1] : undefined;
+      if (prevSeason && prevSeason.episode_count > 0)
+        return { season: prevSeason.season_number, episode: prevSeason.episode_count };
+      return null;
+    },
+    [seasons],
+  );
+  const goNextEpisode = useCallback(() => {
+    const nx = nextEpisodeOf(season, episode);
+    if (!nx) return;
+    setSeason(nx.season);
+    setEpisode(nx.episode);
+  }, [nextEpisodeOf, season, episode]);
+  const goPrevEpisode = useCallback(() => {
+    const pv = prevEpisodeOf(season, episode);
+    if (!pv) return;
+    setSeason(pv.season);
+    setEpisode(pv.episode);
+  }, [prevEpisodeOf, season, episode]);
+
+
   const rating = parseFloat(movie.rating) || 0;
 
   useEffect(() => {
