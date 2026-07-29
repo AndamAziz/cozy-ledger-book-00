@@ -60,9 +60,15 @@ Deno.serve(async (req) => {
   }
 
   if (plain && streamId) {
-    const { byId } = await getM3U(source)
-    const entry = byId.get(streamId)
-    if (!entry) return err('Unknown stream id', 404)
+    const { byId, entries } = await getM3U(source)
+    let entry = byId.get(streamId)
+    // Legacy index-based ids ("m0", "m12") issued before content-hashed ids.
+    if (!entry) {
+      const legacy = /^m(\d+)$/.exec(streamId)
+      if (legacy) entry = entries[Number(legacy[1])]
+    }
+    if (!entry) return err(`Unknown stream id: ${streamId}`, 404)
+
     try {
       upstream = new URL(entry.url)
     } catch {
