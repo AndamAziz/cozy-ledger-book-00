@@ -437,14 +437,7 @@ export function LiveTVPlayer({
               />
               <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
             </span>
-            <p className="text-xs font-semibold text-white/70">
-              {slotLimited ? 'All viewing slots busy' : 'Connecting to stream…'}
-            </p>
-            {slotLimited && (
-              <p className="text-[11px] font-medium text-white/45">
-                {retryIn ? `Reconnecting in ${retryIn}s…` : 'Reconnecting…'}
-              </p>
-            )}
+            <p className="text-xs font-semibold text-white/70">Connecting to stream…</p>
           </div>
         )}
 
@@ -454,21 +447,16 @@ export function LiveTVPlayer({
               <span
                 className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
                 style={{
-                  background: errorKind === 'busy' ? 'rgba(240,185,11,0.14)' : 'rgba(255,45,111,0.14)',
+                  background: 'rgba(255,45,111,0.14)',
                 }}
               >
-                <AlertTriangle
-                  className="h-6 w-6"
-                  style={{ color: errorKind === 'busy' ? '#f0b90b' : '#ff2d6f' }}
-                />
+                <AlertTriangle className="h-6 w-6" style={{ color: '#ff2d6f' }} />
               </span>
               <p className="text-sm font-extrabold tracking-tight text-white">
-                {errorKind === 'busy' ? 'All viewing slots are in use' : 'This channel is not responding'}
+                This channel is not responding
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                {errorKind === 'busy'
-                  ? 'Your provider allows a limited number of simultaneous streams. Close other devices, then retry.'
-                  : 'The source may be offline right now. Retry, or pick another channel.'}
+                The source may be unavailable right now. Retry, or pick another channel.
               </p>
               <div className="mt-4 flex justify-center gap-2">
                 <button
@@ -477,7 +465,7 @@ export function LiveTVPlayer({
                     setAttempt((a) => a + 1);
                   }}
                   className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
-                  style={{ background: errorKind === 'busy' ? '#f0b90b' : '#ff2d6f' }}
+                  style={{ background: '#ff2d6f' }}
                 >
                   <RefreshCw className="h-3.5 w-3.5" /> Retry
                 </button>
