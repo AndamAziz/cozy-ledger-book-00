@@ -276,7 +276,8 @@ export function LiveTVPlayer({
           { enableWorker: true, liveBufferLatencyChasing: !isVod, lazyLoad: false },
         );
         mpegtsRef.current = player;
-        player.on(mpegts.Events.ERROR, () => {
+        player.on(mpegts.Events.ERROR, (type: string, detail: string) => {
+          console.error(`[mpegts.js] ${type} · ${detail}`);
           const next = mpegtsFallback;
           mpegtsFallback = null;
           if (next) next();
