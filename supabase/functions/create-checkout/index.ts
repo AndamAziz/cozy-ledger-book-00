@@ -42,6 +42,8 @@ async function createCheckoutSession(options: {
   userId?: string;
   returnUrl: string;
   environment: StripeEnv;
+  /** Optional purpose tag so the webhook knows what the payment unlocks. */
+  purpose?: string;
 }) {
   if (!/^[a-zA-Z0-9_-]+$/.test(options.priceId)) throw new Error("Invalid priceId");
   const stripe = createStripeClient(options.environment);
@@ -65,9 +67,12 @@ async function createCheckoutSession(options: {
     return_url: options.returnUrl,
     ...(customerId && { customer: customerId }),
     managed_payments: { enabled: true },
-    ...(options.userId && {
-      metadata: { userId: options.userId },
-      ...(isRecurring && { subscription_data: { metadata: { userId: options.userId } } }),
+    metadata: {
+      ...(options.userId && { userId: options.userId }),
+      ...(options.purpose && { purpose: options.purpose }),
+    },
+    ...(options.userId && isRecurring && {
+      subscription_data: { metadata: { userId: options.userId } },
     }),
   } as Stripe.Checkout.SessionCreateParams);
 
@@ -85,6 +90,9 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const { priceId, quantity, customerEmail, userId, returnUrl, environment } = body;
+    const purpose = typeof body.purpose === "string" && /^[a-z0-9_]{1,40}$/.test(body.purpose)
+      ? body.purpose
+      : undefined;
     if (environment !== "sandbox" && environment !== "live") {
       throw new Error("Invalid environment");
     }
@@ -95,6 +103,7 @@ Deno.serve(async (req: Request) => {
       userId,
       returnUrl,
       environment,
+      purpose,
     });
     return new Response(JSON.stringify({ clientSecret }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
