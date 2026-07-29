@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import { X, Loader2, AlertTriangle, Maximize2, Settings2 } from 'lucide-react';
-import { toPlayableUrl, type IptvChannel } from '@/hooks/useIptvPlaylist';
+import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 
 interface QualityLevel {
