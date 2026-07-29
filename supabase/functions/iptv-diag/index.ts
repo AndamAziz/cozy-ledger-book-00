@@ -39,7 +39,8 @@ Deno.serve(async (req) => {
   for (const [un, u] of Object.entries(urls)) {
     for (const [vn, mk] of Object.entries(variants)) {
       for (const [uan, ua] of Object.entries(uas)) {
-        if (vn === 'withOrigin' && uan !== 'exo') continue
+        if (vn === 'withOrigin') continue
+        if (uan !== 'exo') continue
         const key = `${un}|${vn}|${uan}`
         try {
           const res = await fetch(u, {
@@ -53,9 +54,11 @@ Deno.serve(async (req) => {
             const t = await res.text().catch(() => '')
             peek = t.slice(0, 80).replace(/\s+/g, ' ')
           } else {
-            await res.body?.cancel()
+            const t = await res.text().catch(() => '')
+            peek = t.slice(0, 300).replace(/\s+/g, ' ')
           }
-          out[key] = `${res.status} ${ct} ${peek}`
+          const hdrs = JSON.stringify(Object.fromEntries(res.headers.entries()))
+          out[key] = `${res.status} ${ct} ${peek} :: ${hdrs}`
         } catch (e) {
           out[key] = `ERR ${e instanceof Error ? e.message : String(e)}`
         }
