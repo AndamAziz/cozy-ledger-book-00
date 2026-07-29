@@ -311,9 +311,11 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
  * single-slot cache would thrash between accounts.
  */
 export async function getM3U(url: string): Promise<M3uSnapshot> {
-  // Direct single-stream links are never downloaded here: a raw .ts feed would
-  // stream forever. Wrap them as a one-channel playlist immediately.
-  if (isDirectStreamUrl(url)) {
+  // Direct media links (.ts / .mp4 / extension-less Xtream stream paths) are
+  // never downloaded here — a raw feed would stream forever. Wrap them as a
+  // one-channel playlist immediately. `.m3u8` is still fetched: it may be a
+  // real multi-channel playlist, and loadM3U detects the manifest case.
+  if (isDirectStreamUrl(url) && !/\.m3u8(\?|#|$)/i.test(url)) {
     const cached = m3uCache.get(url)
     if (cached) return cached
     const snap = directStreamSnapshot(url)
@@ -322,6 +324,7 @@ export async function getM3U(url: string): Promise<M3uSnapshot> {
   }
 
   const hit = m3uCache.get(url) ?? null
+
 
 
   if (hit && Date.now() - hit.at < M3U_TTL) return hit
