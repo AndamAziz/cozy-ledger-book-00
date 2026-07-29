@@ -98,6 +98,11 @@ export function LiveTVPlayer({
     if (!video) return;
     const isVod = channel.kind === 'vod' || channel.kind === 'series';
     const src = `${toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext)}&_r=${attempt}`;
+    // Safari / iOS decode HLS in the media element itself; every other browser
+    // (Chrome, Edge, Firefox) needs hls.js + MSE for the same .m3u8.
+    const nativeHls = !!video.canPlayType('application/vnd.apple.mpegurl');
+    const extLower = (channel.ext ?? '').toLowerCase();
+    const isHlsUrl = extLower === 'm3u8' || extLower === 'm3u' || /\.m3u8?(\?|$)/i.test(src);
 
     setStatus('loading');
     setSlotLimited(false);
@@ -110,6 +115,7 @@ export function LiveTVPlayer({
     let hls: Hls | null = null;
     let usedNative = false;
     let usedMpegts = false;
+    let usedHls = false;
     // When MPEG-TS is tried first (raw .ts links), fall back to native playback
     // instead of surfacing an error straight away.
     let mpegtsFallback: (() => void) | null = null;
@@ -251,12 +257,14 @@ export function LiveTVPlayer({
         const mod: any = await import('mpegts.js');
         const mpegts: any = mod.default ?? mod;
         if (cancelled || !mpegts.isSupported()) {
+          console.warn('[LiveTVPlayer] mpegts.js unsupported in this browser');
           const next = mpegtsFallback;
           mpegtsFallback = null;
           if (next) next();
           else void handleFailure();
           return;
         }
+        console.info('[LiveTVPlayer] engine: mpegts.js (MSE)');
         hls?.destroy();
         hls = null;
         hlsRef.current = null;
@@ -268,7 +276,8 @@ export function LiveTVPlayer({
           { enableWorker: true, liveBufferLatencyChasing: !isVod, lazyLoad: false },
         );
         mpegtsRef.current = player;
-        player.on(mpegts.Events.ERROR, () => {
+        player.on(mpegts.Events.ERROR, (type: string, detail: string) => {
+          console.error(`[mpegts.js] ${type} · ${detail}`);
           const next = mpegtsFallback;
           mpegtsFallback = null;
           if (next) next();
@@ -288,7 +297,18 @@ export function LiveTVPlayer({
     // VOD items can be progressive MP4/MKV rather than HLS — fall back to native playback.
     const playNative = () => {
       if (usedNative) return;
+      // Only Safari (and iOS WebViews) can decode an .m3u8 from a plain
+      // <video src>. Everywhere else a native attempt would hang forever on
+      // "Connecting to stream…", so hand HLS back to hls.js first. The proxy
+      // URL hides the real container, so this applies to any non-progressive
+      // stream, live or VOD.
+      if (!nativeHls && !progressive && !usedHls && Hls.isSupported()) {
+        console.info('[LiveTVPlayer] no native HLS support → switching to hls.js');
+        startHls();
+        return;
+      }
       usedNative = true;
+      console.info('[LiveTVPlayer] engine: native <video src>');
       hls?.destroy();
       hls = null;
       hlsRef.current = null;
@@ -333,6 +353,8 @@ export function LiveTVPlayer({
       });
 
       hlsRef.current = hls;
+      usedHls = true;
+      console.info('[LiveTVPlayer] engine: hls.js (MSE)');
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -355,6 +377,10 @@ export function LiveTVPlayer({
         setAutoLabel(lvl ? labelForLevel(lvl.height, lvl.bitrate) : null);
       });
       hls.on(Hls.Events.ERROR, (_e, data) => {
+        // Explicit fatal / non-fatal logging so playback issues are debuggable.
+        const log = `[hls.js] ${data.fatal ? 'FATAL' : 'non-fatal'} ${data.type} · ${data.details}`;
+        if (data.fatal) console.error(log, data);
+        else console.warn(log);
         // Non-fatal: self-heal stalls/gaps instead of surfacing an error.
         if (!data.fatal) {
           const d = data.details;
@@ -409,7 +435,12 @@ export function LiveTVPlayer({
     const rawLiveFirst = !isVod && extHint !== 'm3u8' && extHint !== 'm3u';
     const progressive = ['mp4', 'm4v', 'mov', 'webm'].includes(extHint);
 
-    if (tsFirst || rawLiveFirst) {
+    if (isHlsUrl) {
+      // Explicit HLS: Safari plays it natively, everyone else uses hls.js.
+      if (nativeHls && !Hls.isSupported()) playNative();
+      else if (Hls.isSupported()) startHls();
+      else playNative();
+    } else if (tsFirst || rawLiveFirst) {
       // Raw transport streams: mpegts.js first, native as the safety net.
       mpegtsFallback = () => {
         if (Hls.isSupported() && !tsFirst) startHls();
