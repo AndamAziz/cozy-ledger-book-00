@@ -662,7 +662,22 @@ Deno.serve(async (req) => {
 
     const out = new Headers({ ...cors, ...debugHeaders() })
 
-    out.set('Content-Type', ct || 'video/mp2t')
+    // Providers frequently serve segments as text/plain or octet-stream, which
+    // makes some browsers refuse the buffer — force the real media type.
+    const path = upstream.pathname.toLowerCase()
+    const byExt = /\.ts$/.test(path)
+      ? 'video/mp2t'
+      : /\.m4s$|\.mp4$/.test(path)
+        ? 'video/mp4'
+        : /\.aac$/.test(path)
+          ? 'audio/aac'
+          : /\.key$/.test(path)
+            ? 'application/octet-stream'
+            : ''
+    const upstreamCt = (ct || '').toLowerCase()
+    const ctUsable = upstreamCt.startsWith('video/') || upstreamCt.startsWith('audio/')
+    out.set('Content-Type', byExt || (ctUsable ? ct : 'video/mp2t'))
+
     const len = active.headers.get('content-length')
     if (len) out.set('Content-Length', len)
     const cr = active.headers.get('content-range')
