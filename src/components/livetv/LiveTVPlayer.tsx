@@ -40,6 +40,7 @@ export function LiveTVPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const mpegtsRef = useRef<{ destroy: () => void; unload?: () => void; detachMediaElement?: () => void } | null>(null);
   const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading');
   const [errorKind, setErrorKind] = useState<'offline' | 'busy'>('offline');
   const [retryIn, setRetryIn] = useState<number | null>(null);
@@ -71,6 +72,7 @@ export function LiveTVPlayer({
 
     let hls: Hls | null = null;
     let usedNative = false;
+    let usedMpegts = false;
     let mediaRecoveries = 0;
     let networkRetries = 0;
     let cancelled = false;
@@ -138,8 +140,8 @@ export function LiveTVPlayer({
       }
       usedMpegts = true;
       try {
-        const mod = await import('mpegts.js');
-        const mpegts = mod.default ?? mod;
+        const mod: any = await import('mpegts.js');
+        const mpegts: any = mod.default ?? mod;
         if (cancelled || !mpegts.isSupported()) {
           void handleFailure();
           return;
@@ -306,6 +308,12 @@ export function LiveTVPlayer({
       video.removeEventListener('error', onError);
       hls?.destroy();
       hlsRef.current = null;
+      try {
+        mpegtsRef.current?.unload?.();
+        mpegtsRef.current?.detachMediaElement?.();
+        mpegtsRef.current?.destroy();
+      } catch { /* engine already torn down */ }
+      mpegtsRef.current = null;
       // Releasing the element's source tears the proxied request down, which
       // frees the provider's viewing slot immediately.
       video.removeAttribute('src');
