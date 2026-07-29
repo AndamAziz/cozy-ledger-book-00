@@ -243,15 +243,22 @@ export function LiveTVPlayer({
       hls = new Hls({
         lowLatencyMode: !isVod,
         enableWorker: true,
-        backBufferLength: isVod ? 120 : 60,
-        // Pre-load far more ahead so IPTV hiccups don't surface as freezes.
-        maxBufferLength: isVod ? 90 : 45,
-        maxMaxBufferLength: isVod ? 600 : 240,
+        backBufferLength: isVod ? 120 : 30,
+        // Live: a tight, steadily-refilled buffer recovers from IPTV hiccups
+        // faster than a huge one that takes ages to rebuild after a drop.
+        maxBufferLength: isVod ? 90 : 30,
+        maxMaxBufferLength: isVod ? 600 : 120,
         maxBufferSize: 120 * 1000 * 1000,
         maxBufferHole: 0.5,
         highBufferWatchdogPeriod: 1,
-        nudgeMaxRetry: 10,
+        nudgeOffset: 0.2,
+        nudgeMaxRetry: 15,
+        // Stay ~3 segments behind the edge, but never drift more than 10;
+        // slight speed-up catches up instead of seeking (no visible jump).
         liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 10,
+        maxLiveSyncPlaybackRate: 1.5,
+        liveDurationInfinity: !isVod,
         // Bounded so a dead origin surfaces as a retryable error instead of an
         // endless "Connecting to stream…" spinner.
         manifestLoadingTimeOut: 18000,
@@ -264,6 +271,7 @@ export function LiveTVPlayer({
         fragLoadingRetryDelay: 800,
 
       });
+
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
