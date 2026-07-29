@@ -27,12 +27,22 @@ Deno.serve(async (req) => {
   const reqUrl = new URL(req.url)
   const { host, protocol, username, password } = creds()
   const streamId = reqUrl.searchParams.get('id')
+  const kind = reqUrl.searchParams.get('kind') === 'vod' ? 'vod' : 'live'
   const passthrough = reqUrl.searchParams.get('u')
 
+  // Candidate upstreams: live HLS first, then Xtream VOD/series containers.
+  let candidates: string[] = []
   let upstream: URL
   if (streamId) {
     if (!/^\d+$/.test(streamId)) return err('Invalid id', 400)
-    upstream = new URL(`${protocol}//${host}/live/${username}/${password}/${streamId}.m3u8`)
+    const cred = `${protocol}//${host}`
+    const live = `${cred}/live/${username}/${password}/${streamId}.m3u8`
+    const vod = ['mp4', 'mkv', 'avi'].flatMap((ext) => [
+      `${cred}/movie/${username}/${password}/${streamId}.${ext}`,
+      `${cred}/series/${username}/${password}/${streamId}.${ext}`,
+    ])
+    candidates = kind === 'vod' ? [live, ...vod] : [live]
+    upstream = new URL(candidates[0])
   } else if (passthrough) {
     try {
       upstream = new URL(passthrough)
@@ -42,6 +52,7 @@ Deno.serve(async (req) => {
     // Only the provider host or its HLS edge nodes may be proxied.
     const isEdgeSegment = /^\/hls\//.test(upstream.pathname)
     if (upstream.host !== host && !isEdgeSegment) return err('Host not allowed', 403)
+    candidates = [upstream.toString()]
   } else {
     return err('Missing id or u parameter', 400)
   }
