@@ -19,7 +19,8 @@ interface Health {
   checkedAt: string
 }
 
-let cache: { at: number; health: Health } | null = null
+// Health is per provider account, so it is cached per user.
+const cache = new Map<string, { at: number; health: Health }>()
 
 async function timedFetch(url: string, init: RequestInit = {}) {
   const ctrl = new AbortController()
@@ -117,15 +118,17 @@ Deno.serve(async (req) => {
     })
 
   const fresh = new URL(req.url).searchParams.get('fresh') === '1'
-  if (!fresh && cache && Date.now() - cache.at < CACHE_TTL_MS) {
-    return json({ ...cache.health, cached: true })
-  }
 
   const resolved = await resolveViewer(req)
   if (!resolved.ok) {
     return json({ ...base('offline', resolved.message), code: resolved.error })
   }
   const source = resolved.viewer.playlistUrl
+
+  const hit = cache.get(resolved.viewer.userId)
+  if (!fresh && hit && Date.now() - hit.at < CACHE_TTL_MS) {
+    return json({ ...hit.health, cached: true })
+  }
 
   let health: Health
   try {
@@ -134,6 +137,7 @@ Deno.serve(async (req) => {
     health = base('offline', e instanceof Error && e.name === 'AbortError' ? 'Provider timed out' : 'Provider unreachable')
   }
 
-  cache = { at: Date.now(), health }
+  cache.set(resolved.viewer.userId, { at: Date.now(), health })
+  if (cache.size > 500) cache.delete(cache.keys().next().value as string)
   return json({ ...health, cached: false })
 })
