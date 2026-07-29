@@ -112,7 +112,9 @@ Deno.serve(async (req) => {
     const live = `${cred}/live/${username}/${password}/${streamId}.m3u8`
     // Some panels only expose raw MPEG-TS for live channels (no HLS packaging).
     const liveTs = `${cred}/live/${username}/${password}/${streamId}.ts`
-    const exts = [...new Set([extHint, 'mp4', 'mkv', 'avi'].filter(Boolean))]
+    // Always probe .mp4 first: Safari/iOS cannot play the Matroska container
+    // even with H.264/AAC inside, so .mkv is only ever a fallback.
+    const exts = [...new Set(['mp4', extHint, 'mkv', 'avi'].filter(Boolean))]
     // Series episodes live under /series/, movies under /movie/ — try the likely one first.
     const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
     const vod = exts.flatMap((ext) => dirs.map((dir) => `${cred}/${dir}/${username}/${password}/${streamId}.${ext}`))
