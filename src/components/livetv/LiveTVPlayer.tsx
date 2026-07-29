@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import { X, Loader2, AlertTriangle, Maximize2, Settings2, RefreshCw } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
@@ -49,7 +49,27 @@ export function LiveTVPlayer({
   const shellRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const mpegtsRef = useRef<{ destroy: () => void; unload?: () => void; detachMediaElement?: () => void } | null>(null);
-  const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading');
+  const [status, setStatusRaw] = useState<'loading' | 'playing' | 'error'>('loading');
+  // Once the stream has produced frames for this channel, the loading overlay is
+  // permanently locked out — no later buffering event may bring the spinner back.
+  const playedOnceRef = useRef(false);
+  const [playedOnce, setPlayedOnce] = useState(false);
+  const setStatus = useCallback(
+    (next: 'loading' | 'playing' | 'error' | ((s: 'loading' | 'playing' | 'error') => 'loading' | 'playing' | 'error')) => {
+      setStatusRaw((prev) => {
+        const value = typeof next === 'function' ? next(prev) : next;
+        if (value === 'playing' && !playedOnceRef.current) {
+          playedOnceRef.current = true;
+          setPlayedOnce(true);
+        }
+        // Locked: never fall back to the loading state during playback.
+        if (value === 'loading' && playedOnceRef.current) return prev;
+        return value;
+      });
+    },
+    [],
+  );
+
   const [errorKind, setErrorKind] = useState<'offline' | 'busy' | 'geo'>('offline');
   const [retryIn, setRetryIn] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -65,10 +85,12 @@ export function LiveTVPlayer({
 
   const accent = accentFor(channel.name);
 
-  // A new channel starts with a clean retry budget.
+  // A new channel starts with a clean retry budget and a fresh overlay lock.
   useEffect(() => {
     slotRetriesRef.current = 0;
     autoRetriesRef.current = 0;
+    playedOnceRef.current = false;
+    setPlayedOnce(false);
   }, [channel.id]);
 
   useEffect(() => {
@@ -633,7 +655,7 @@ export function LiveTVPlayer({
           muted={false}
         />
 
-        {status === 'loading' && (
+        {status === 'loading' && !playedOnce && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45 backdrop-blur-[2px]">
             <span className="relative flex h-14 w-14 items-center justify-center">
               <span
