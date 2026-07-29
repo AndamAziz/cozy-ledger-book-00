@@ -18,7 +18,7 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const src = toPlayableUrl(channel.url);
+    const src = toPlayableUrl(channel.id);
     setStatus('loading');
 
     let hls: Hls | null = null;
