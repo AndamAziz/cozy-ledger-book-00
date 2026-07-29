@@ -238,6 +238,8 @@ export function LiveTVPlayer({
     return () => {
       cancelled = true;
       window.clearTimeout(retryTimer);
+      window.clearTimeout(connectWatchdog);
+
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('error', onError);
