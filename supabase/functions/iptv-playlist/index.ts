@@ -109,8 +109,10 @@ async function scanArray(url: string, onRow: (row: Record<string, unknown>) => b
   }
 
   while (!done) {
+    if (Date.now() > deadline) break
     const { value, done: finished } = await reader.read()
     if (finished) break
+
     buf += decoder.decode(value, { stream: true })
     let i: number
     while ((i = buf.indexOf('},{')) >= 0) {
