@@ -3,13 +3,17 @@ import { getPlaylistUrl, parseXtream } from '../_shared/iptvConfig.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 
-interface Stream {
-  stream_id: number
+type Kind = 'live' | 'vod' | 'series'
+
+interface Item {
+  id: string
   name: string
-  stream_icon: string
-  category_id: string
+  /** poster / logo, already normalised */
+  logo: string | null
+  categoryId: string
+  kind: Kind
 }
-interface Category {
+interface RawCategory {
   category_id: string
   category_name: string
 }
@@ -17,9 +21,9 @@ interface Category {
 interface Snapshot {
   at: number
   source: string
-  categories: { id: string; name: string; count: number }[]
-  byCat: Map<string, Stream[]>
-  all: Stream[]
+  categories: { id: string; name: string; count: number; kind: Kind }[]
+  byCat: Map<string, Item[]>
+  all: Item[]
 }
 
 const TTL = 30 * 60 * 1000
@@ -31,29 +35,100 @@ function apiBase(raw: string) {
   return `${protocol}//${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
 }
 
+/** Pick the first usable artwork field an Xtream/M3U payload may expose. */
+function pickLogo(row: Record<string, unknown>): string | null {
+  const keys = [
+    'stream_icon',
+    'cover',
+    'cover_big',
+    'movie_image',
+    'poster',
+    'poster_path',
+    'thumbnail',
+    'icon',
+    'tvg-logo',
+    'tvg_logo',
+    'logo',
+  ]
+  for (const k of keys) {
+    const v = row[k]
+    if (typeof v === 'string') {
+      const s = v.trim()
+      if (s && s !== 'null' && /^https?:\/\//i.test(s)) return s
+    }
+  }
+  return null
+}
+
+async function fetchJson<T>(url: string): Promise<T | null> {
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': UA } })
+    if (!res.ok) return null
+    const json = await res.json()
+    return Array.isArray(json) ? (json as T) : null
+  } catch {
+    return null
+  }
+}
+
+async function loadSection(api: string, kind: Kind) {
+  const [catAction, listAction] =
+    kind === 'live'
+      ? ['get_live_categories', 'get_live_streams']
+      : kind === 'vod'
+        ? ['get_vod_categories', 'get_vod_streams']
+        : ['get_series_categories', 'get_series']
+
+  const [cats, rows] = await Promise.all([
+    fetchJson<RawCategory[]>(`${api}&action=${catAction}`),
+    fetchJson<Record<string, unknown>[]>(`${api}&action=${listAction}`),
+  ])
+  if (!cats || !rows) return { cats: [] as RawCategory[], items: [] as Item[] }
+
+  const items: Item[] = rows.map((r) => ({
+    id: String(r.stream_id ?? r.series_id ?? r.num ?? ''),
+    name: String(r.name ?? r.title ?? 'Untitled'),
+    logo: pickLogo(r),
+    categoryId: `${kind}:${String(r.category_id ?? '0')}`,
+    kind,
+  }))
+
+  return { cats, items: items.filter((i) => i.id) }
+}
+
 async function build(source: string): Promise<Snapshot> {
   const api = apiBase(source)
-  const [catRes, streamRes] = await Promise.all([
-    fetch(`${api}&action=get_live_categories`, { headers: { 'User-Agent': UA } }),
-    fetch(`${api}&action=get_live_streams`, { headers: { 'User-Agent': UA } }),
+  const [live, vod, series] = await Promise.all([
+    loadSection(api, 'live'),
+    loadSection(api, 'vod'),
+    loadSection(api, 'series'),
   ])
-  if (!catRes.ok || !streamRes.ok) throw new Error(`Upstream error (${catRes.status}/${streamRes.status})`)
-
-  const cats = (await catRes.json()) as Category[]
-  const streams = (await streamRes.json()) as Stream[]
-
-  const byCat = new Map<string, Stream[]>()
-  for (const s of streams) {
-    const arr = byCat.get(s.category_id) ?? []
-    arr.push(s)
-    byCat.set(s.category_id, arr)
+  if (!live.items.length && !vod.items.length && !series.items.length) {
+    throw new Error('Upstream returned no channels')
   }
 
-  const categories = cats
-    .map((c) => ({ id: c.category_id, name: c.category_name, count: byCat.get(c.category_id)?.length ?? 0 }))
-    .filter((c) => c.count > 0)
+  const all = [...live.items, ...vod.items, ...series.items]
+  const byCat = new Map<string, Item[]>()
+  for (const s of all) {
+    const arr = byCat.get(s.categoryId) ?? []
+    arr.push(s)
+    byCat.set(s.categoryId, arr)
+  }
 
-  return { at: Date.now(), source, categories, byCat, all: streams }
+  const categories = (
+    [
+      [live.cats, 'live'],
+      [vod.cats, 'vod'],
+      [series.cats, 'series'],
+    ] as [RawCategory[], Kind][]
+  ).flatMap(([cats, kind]) =>
+    cats.map((c) => {
+      const id = `${kind}:${c.category_id}`
+      return { id, name: c.category_name, count: byCat.get(id)?.length ?? 0, kind }
+    }),
+  ).filter((c) => c.count > 0)
+
+  return { at: Date.now(), source, categories, byCat, all }
 }
 
 async function getSnapshot(source: string): Promise<Snapshot> {
@@ -72,11 +147,12 @@ async function getSnapshot(source: string): Promise<Snapshot> {
   return loading
 }
 
-const shape = (s: Stream, group: string) => ({
-  id: String(s.stream_id),
+const shape = (s: Item, group: string) => ({
+  id: s.id,
   name: s.name,
-  logo: s.stream_icon || null,
+  logo: s.logo,
   group,
+  kind: s.kind,
 })
 
 Deno.serve(async (req) => {
@@ -110,7 +186,7 @@ Deno.serve(async (req) => {
 
     const nameOf = (id: string) => snap.categories.find((c) => c.id === id)?.name ?? 'Other'
 
-    let list: Stream[]
+    let list: Item[]
     if (category) {
       list = snap.byCat.get(category) ?? []
       if (q) list = list.filter((s) => s.name.toLowerCase().includes(q))
@@ -120,7 +196,7 @@ Deno.serve(async (req) => {
 
     return json({
       total: list.length,
-      channels: list.slice(offset, offset + limit).map((s) => shape(s, nameOf(s.category_id))),
+      channels: list.slice(offset, offset + limit).map((s) => shape(s, nameOf(s.categoryId))),
     })
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 502)
