@@ -76,7 +76,7 @@ export function useIptvIndex() {
   });
 }
 
-export function useIptvChannels(categoryId: string | null, enabled: boolean, limit = 60) {
+export function useIptvChannels(categoryId: string | null, enabled: boolean, limit = 24) {
   return useQuery({
     queryKey: ['iptv-channels', categoryId, limit],
     queryFn: () =>
@@ -85,8 +85,11 @@ export function useIptvChannels(categoryId: string | null, enabled: boolean, lim
       ),
     enabled: enabled && !!categoryId,
     staleTime: 15 * 60 * 1000,
+    // Paging keeps the already-rendered grid on screen instead of flashing skeletons.
+    placeholderData: keepPreviousData,
   });
 }
+
 
 export function useIptvSearch(query: string, section: 'live' | 'vod' | 'series' = 'live') {
   const q = query.trim();
