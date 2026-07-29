@@ -365,10 +365,12 @@ Deno.serve(async (req) => {
         status: 200,
         headers: {
           ...corsHeaders,
+          ...debugHeaders(),
           'Content-Type': 'application/vnd.apple.mpegurl',
           'Cache-Control': 'no-store',
         },
       })
+
     }
 
     // Provider slot limits come back as 458/429/407 — surface a readable message.
