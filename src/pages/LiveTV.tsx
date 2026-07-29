@@ -137,10 +137,13 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const searching = query.trim().length >= 2;
   const { data: results, isFetching: searchLoading } = useIptvSearch(query);
 
+  const usePoster = tab === 'movies' || tab === 'series';
+
   const categories = useMemo(
-    () => (index?.categories ?? []).filter((c) => tabOf(c.name) === tab),
+    () => (index?.categories ?? []).filter((c) => tabOf(c) === tab),
     [index, tab],
   );
+
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[#07070b] text-white">
@@ -213,10 +216,14 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
               )}
             </div>
             {searchLoading && <Loader2 className="mx-auto my-10 h-6 w-6 animate-spin text-[#ff2d6f]" />}
-            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-              {results?.channels.map((channel) => (
-                <ChannelCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={setPlaying} />
-              ))}
+            <div className={usePoster ? GRID_POSTER : GRID_LIVE}>
+              {results?.channels.map((channel) =>
+                usePoster ? (
+                  <PosterCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={setPlaying} />
+                ) : (
+                  <ChannelCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={setPlaying} />
+                ),
+              )}
             </div>
             {results && results.channels.length === 0 && !searchLoading && (
               <p className="py-20 text-center text-xs font-semibold text-white/40">No channels match “{query}”.</p>
@@ -231,8 +238,10 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
                 onPlay={setPlaying}
                 eager={i < 3}
                 kind={playbackKind}
+                poster={usePoster}
               />
             ))}
+
             {!isLoading && !error && categories.length === 0 && (
               <p className="py-24 text-center text-xs font-semibold text-white/40">No channels in this section.</p>
             )}
