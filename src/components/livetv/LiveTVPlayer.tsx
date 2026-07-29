@@ -175,6 +175,44 @@ export function LiveTVPlayer({
       else void playMpegts();
     };
 
+    /**
+     * Cheap first-line stall recovery (≤1.5s frozen): jump the tiny buffer hole,
+     * or skip straight to the live edge when the stream fell behind. Only if
+     * this keeps failing does the heavier engine escalation kick in.
+     */
+    let nudges = 0;
+    const nudge = () => {
+      nudges += 1;
+      try {
+        const buffered = video.buffered;
+        const now = video.currentTime;
+        // Live edge = end of the last buffered range (or seekable end).
+        let target = now + 0.25;
+        if (buffered.length) {
+          const end = buffered.end(buffered.length - 1);
+          if (end - now > 1) target = isVod ? now + 0.25 : Math.max(now + 0.25, end - 1);
+          else {
+            // Frozen at the head of the buffer: hop over the hole to the next range.
+            for (let i = 0; i < buffered.length; i++) {
+              if (buffered.start(i) > now) { target = buffered.start(i) + 0.05; break; }
+            }
+          }
+        } else if (!isVod && video.seekable.length) {
+          target = Math.max(now, video.seekable.end(video.seekable.length - 1) - 1.5);
+        }
+        if (target > now) video.currentTime = target;
+        void video.play().catch(() => undefined);
+        if (hls && nudges % 2 === 0) hls.startLoad();
+      } catch { /* seeking not possible yet */ }
+      // Repeated nudges mean the stream itself is dead — escalate.
+      if (nudges >= 4) {
+        nudges = 0;
+        if (hls) recoverMedia();
+        else if (!usedMpegts) void playMpegts();
+      }
+    };
+
+
     // Last engine in the chain: MPEG-TS / raw transport-stream demuxing in MSE.
     // Xtream VOD and live links are frequently .ts containers that <video> and
     // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
