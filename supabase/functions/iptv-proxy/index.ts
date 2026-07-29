@@ -328,7 +328,7 @@ Deno.serve(async (req) => {
         const nextUrl = new URL(u)
         const primaryHeaders = buildUpstreamHeaders(req, nextUrl, plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase)
         let t0 = Date.now()
-        const first = await fetchUpstream(u, primaryHeaders, req.signal)
+        const first = await fetchUpstream(u, primaryHeaders, req.signal, directEgress)
         record(u, 'mobile', t0, first)
         if (first.ok || isSlot(first.status) || isGeoBlocked(first.status)) return first
         await first.body?.cancel()
@@ -337,7 +337,7 @@ Deno.serve(async (req) => {
         // handshake once with VLC headers before marking the channel offline.
         const fallbackHeaders = { ...primaryHeaders, 'User-Agent': VLC_UA }
         t0 = Date.now()
-        const second = await fetchUpstream(u, fallbackHeaders, req.signal)
+        const second = await fetchUpstream(u, fallbackHeaders, req.signal, directEgress)
         record(u, 'vlc', t0, second)
         return second
       } catch (e) {
