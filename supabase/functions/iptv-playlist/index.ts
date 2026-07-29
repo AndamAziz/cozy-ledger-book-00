@@ -430,13 +430,14 @@ async function handlePlain(source: string, url: URL): Promise<{ body: unknown; v
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  const json = (body: unknown, status = 200, cacheSeconds = 0) =>
+  const json = (body: unknown, status = 200, cacheSeconds = 0, etag?: string) =>
     new Response(JSON.stringify(body), {
       status,
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
         'Cache-Control': cacheSeconds ? `public, max-age=${cacheSeconds}` : 'no-store',
+        ...(etag ? { ETag: etag } : {}),
       },
     })
 
@@ -449,9 +450,18 @@ Deno.serve(async (req) => {
 
     // Public .m3u/.m3u8 links have no Xtream API — parse the playlist directly.
     if (!isXtreamUrl(source)) {
-      const body = await handlePlain(source, url)
-      return json(body, 200, url.searchParams.get('q') ? 0 : 120)
+      const { body, version } = await handlePlain(source, url)
+      // Version + query identify the payload: unchanged playlists answer 304.
+      const etag = `W/"${version}-${await digest(url.search)}"`
+      if (req.headers.get('if-none-match') === etag) {
+        return new Response(null, {
+          status: 304,
+          headers: { ...corsHeaders, ETag: etag, 'Cache-Control': 'public, max-age=60' },
+        })
+      }
+      return json(body, 200, url.searchParams.get('q') ? 0 : 120, etag)
     }
+
 
     const seriesId = url.searchParams.get('series')
     if (seriesId) {
