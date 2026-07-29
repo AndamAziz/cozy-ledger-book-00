@@ -156,6 +156,54 @@ type Attempt = {
   error?: string
 }
 
+const SIGNATURE_TTL_SECONDS = 10 * 60
+let hmacKey: Promise<CryptoKey | null> | null = null
+
+function signingSecret(): string | null {
+  return (Deno.env.get('IPTV_ENC_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '').trim() || null
+}
+
+function signingKey(): Promise<CryptoKey | null> {
+  if (!hmacKey) {
+    const secret = signingSecret()
+    hmacKey = secret
+      ? crypto.subtle.importKey(
+          'raw',
+          new TextEncoder().encode(secret),
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['sign', 'verify'],
+        )
+      : Promise.resolve(null)
+  }
+  return hmacKey
+}
+
+function b64url(bytes: ArrayBuffer): string {
+  let binary = ''
+  for (const b of new Uint8Array(bytes)) binary += String.fromCharCode(b)
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+/** Short-lived signature for CDN segment/key URLs emitted from rewritten m3u8 files. */
+async function signPassthrough(url: string, exp: number): Promise<string | null> {
+  const key = await signingKey()
+  if (!key) return null
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${exp}\n${url}`))
+  return b64url(mac)
+}
+
+async function validPassthroughSignature(url: string, expRaw: string | null, sig: string | null): Promise<boolean> {
+  if (!expRaw || !sig) return false
+  const exp = Number(expRaw)
+  if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) return false
+  const expected = await signPassthrough(url, exp)
+  if (!expected || expected.length !== sig.length) return false
+  let diff = 0
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i)
+  return diff === 0
+}
+
 async function isAdminRequest(req: Request): Promise<boolean> {
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return false
@@ -287,7 +335,11 @@ Deno.serve(async (req) => {
     const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
     const vod = exts.flatMap((ext) => dirs.map((dir) => `${cred}/${dir}/${username}/${password}/${streamId}.${ext}`))
     candidates =
-      kind === 'live' ? [live, liveTs] : kind === 'series' ? [...vod, live] : [live, ...vod]
+      kind === 'live'
+        ? [liveTs, live]
+        : kind === 'series'
+          ? [...vod, live]
+          : [...vod, live]
 
     upstream = new URL(candidates[0])
 
@@ -299,9 +351,16 @@ Deno.serve(async (req) => {
     }
     // Only the provider host or its HLS edge nodes may be proxied.
     // Panels redirect segments to CDN nodes under /hls/, /hlsr/ or /hlsr2/.
-    const isEdgeSegment = /^\/hlsr?\d*\//.test(upstream.pathname)
+    const isEdgeSegment = /^\/(hlsr?\d*|live|movie|series|stream|streams|play|playlist|key|keys|cdn|edge)\//i.test(
+      upstream.pathname,
+    )
+    const signed = await validPassthroughSignature(
+      upstream.toString(),
+      reqUrl.searchParams.get('exp'),
+      reqUrl.searchParams.get('sig'),
+    )
     const allowed = plain ? !!plainHosts?.has(upstream.host) : upstream.host === host
-    if (!allowed && !isEdgeSegment) return err('Host not allowed', 403)
+    if (!allowed && !isEdgeSegment && !signed) return err('Host not allowed', 403)
     candidates = [upstream.toString()]
   } else {
     return err('Missing id or u parameter', 400)
@@ -313,10 +372,16 @@ Deno.serve(async (req) => {
   // Segment/keys URLs are fetched by the player without headers, so the
   // viewer's token has to ride along on the rewritten playlist entries.
   const viewerToken = tokenFromRequest(req)
-  const proxied = (u: string) =>
-    `${base}?u=${encodeURIComponent(u)}` +
-    `${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}` +
-    `${viewerToken ? `&token=${encodeURIComponent(viewerToken)}` : ''}`
+  const proxied = async (u: string) => {
+    const exp = Math.floor(Date.now() / 1000) + SIGNATURE_TTL_SECONDS
+    const sig = await signPassthrough(u, exp)
+    return (
+      `${base}?u=${encodeURIComponent(u)}` +
+      `${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}` +
+      `${viewerToken ? `&token=${encodeURIComponent(viewerToken)}` : ''}` +
+      `${sig ? `&exp=${exp}&sig=${encodeURIComponent(sig)}` : ''}`
+    )
+  }
 
   const refererBase = plain ? `${upstream.protocol}//${upstream.host}/` : `${protocol}//${host}/`
   const wantsJson = (req.headers.get('accept') ?? '').toLowerCase().includes('application/json')
@@ -492,16 +557,23 @@ Deno.serve(async (req) => {
       // The relay follows redirects server-side; X-Final-URL is the host the
       // segment paths are relative to (the provider redirects before answering).
       const finalUrl = new URL(finalUrlOf(active, chosenUrl))
-      const rewritten = text
+      const rewritten = (
+        await Promise.all(text
         .split(/\r?\n/)
-        .map((line) => {
+        .map(async (line) => {
           const t = line.trim()
           if (!t) return line
           if (t.startsWith('#')) {
-            return t.replace(/URI="([^"]+)"/g, (_m, u) => `URI="${proxied(new URL(u, finalUrl).toString())}"`)
+            let out = t
+            const matches = [...t.matchAll(/URI="([^"]+)"/g)]
+            for (const m of matches) {
+              const raw = m[1]
+              out = out.replace(`URI="${raw}"`, `URI="${await proxied(new URL(raw, finalUrl).toString())}"`)
+            }
+            return out
           }
-          return proxied(new URL(t, finalUrl).toString())
-        })
+          return await proxied(new URL(t, finalUrl).toString())
+        })))
         .join('\n')
 
       return new Response(rewritten, {
