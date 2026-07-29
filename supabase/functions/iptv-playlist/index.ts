@@ -405,6 +405,13 @@ Deno.serve(async (req) => {
     if (!source) return json({ error: 'Playlist not configured' }, 500)
 
     const url = new URL(req.url)
+
+    // Public .m3u/.m3u8 links have no Xtream API — parse the playlist directly.
+    if (!isXtreamUrl(source)) {
+      const body = await handlePlain(source, url)
+      return json(body, 200, url.searchParams.get('q') ? 0 : 120)
+    }
+
     const seriesId = url.searchParams.get('series')
     if (seriesId) {
       if (!/^\d+$/.test(seriesId)) return json({ error: 'Invalid series id' }, 400)
