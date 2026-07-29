@@ -502,6 +502,7 @@ export function LiveTVPlayer({
       window.clearTimeout(connectWatchdog);
       window.clearInterval(countdownTimer);
       window.clearInterval(stallWatchdog);
+      window.clearInterval(microWatchdog);
       window.clearInterval(overlayGuard);
 
       video.removeEventListener('playing', onPlaying);
