@@ -81,6 +81,8 @@ export interface M3uEntry {
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 const M3U_TTL = 30 * 60 * 1000
+/** Beyond the TTL the cached parse is still served while it revalidates. */
+const M3U_STALE_MAX = 6 * 60 * 60 * 1000
 const SERIES_RE = /\bS\s?(\d{1,2})\s?[\s._-]?E\s?(\d{1,3})\b/i
 
 const attr = (line: string, key: string) => {
