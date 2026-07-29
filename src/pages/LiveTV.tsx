@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Search, SignalHigh, AlertTriangle } from 'lucide-react';
 import {
   useIptvIndex,
@@ -80,9 +80,37 @@ function CategorySection({
   );
 }
 
-export default function LiveTV() {
+const TAB_META: Record<LiveTab, { path: string; title: string; heading: string; description: string }> = {
+  direct: {
+    path: '/live-tv',
+    title: 'Live TV & Sports Streaming | City Taxperts',
+    heading: 'Live TV',
+    description: 'Watch live sports, Kurdish satellite channels, news and entertainment in one sleek streaming player.',
+  },
+  movies: {
+    path: '/live-tv/movies',
+    title: 'Movies | Live TV | City Taxperts',
+    heading: 'Movies',
+    description: 'Stream on-demand movies from the Live TV library in a fast, mobile-friendly player.',
+  },
+  series: {
+    path: '/live-tv/series',
+    title: 'Series | Live TV | City Taxperts',
+    heading: 'Series',
+    description: 'Browse and stream TV series and shows from the Live TV library.',
+  },
+  replay: {
+    path: '/live-tv/replay',
+    title: 'Replay | Live TV | City Taxperts',
+    heading: 'Replay',
+    description: 'Catch up on replays, archives and 24/7 channels from the Live TV library.',
+  },
+};
+
+export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const { data: index, isLoading, error } = useIptvIndex();
-  const [tab, setTab] = useState<LiveTab>('direct');
+  const navigate = useNavigate();
+  const meta = TAB_META[tab];
   const [query, setQuery] = useState('');
   const [playing, setPlaying] = useState<IptvChannel | null>(null);
 
@@ -97,12 +125,9 @@ export default function LiveTV() {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[#07070b] text-white">
       <Helmet>
-        <title>Live TV & Sports Streaming | City Taxperts</title>
-        <meta
-          name="description"
-          content="Watch live sports, Kurdish satellite channels, news and entertainment in one sleek streaming player."
-        />
-        <link rel="canonical" href="/live-tv" />
+        <title>{meta.title}</title>
+        <meta name="description" content={meta.description} />
+        <link rel="canonical" href={meta.path} />
       </Helmet>
 
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07070b]/90 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur-xl">
@@ -115,7 +140,7 @@ export default function LiveTV() {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-extrabold tracking-tight">Live TV</h1>
+            <h1 className="truncate text-base font-extrabold tracking-tight">{meta.heading}</h1>
             <p className="truncate text-[10px] uppercase tracking-[0.2em] text-white/35">
               {index ? `${index.total.toLocaleString()} channels` : 'Streaming'}
             </p>
@@ -189,7 +214,7 @@ export default function LiveTV() {
         )}
       </main>
 
-      <LiveBottomNav active={tab} onChange={setTab} />
+      <LiveBottomNav active={tab} onChange={(t) => navigate(TAB_META[t].path)} />
 
       {playing && <LiveTVPlayer channel={playing} onClose={() => setPlaying(null)} />}
     </div>

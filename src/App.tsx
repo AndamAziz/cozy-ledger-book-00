@@ -44,6 +44,9 @@ const App = () => (
                 <Route path="/crypto" element={<CryptoTracker />} />
                 <Route path="/movies" element={<Movies />} />
                 <Route path="/live-tv" element={<LiveTV />} />
+                <Route path="/live-tv/movies" element={<LiveTV tab="movies" />} />
+                <Route path="/live-tv/series" element={<LiveTV tab="series" />} />
+                <Route path="/live-tv/replay" element={<LiveTV tab="replay" />} />
                 <Route path="/prayer" element={<PrayerTimes />} />
                 <Route path="/quran" element={<Quran />} />
                 <Route path="/gesture-qa" element={<GestureQA />} />
