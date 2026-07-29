@@ -11,6 +11,7 @@ import InstallPrompt from "@/components/InstallPrompt";
 import Index from "./pages/Index";
 import CryptoTracker from "./pages/CryptoTracker";
 import Movies from "./pages/Movies";
+import LiveTV from "./pages/LiveTV";
 import PrayerTimes from "./pages/PrayerTimes";
 import Quran from "./pages/Quran";
 import GestureQA from "./pages/GestureQA";
@@ -42,6 +43,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/crypto" element={<CryptoTracker />} />
                 <Route path="/movies" element={<Movies />} />
+                <Route path="/live-tv" element={<LiveTV />} />
                 <Route path="/prayer" element={<PrayerTimes />} />
                 <Route path="/quran" element={<Quran />} />
                 <Route path="/gesture-qa" element={<GestureQA />} />
