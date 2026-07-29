@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
+import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
+import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
 import { egressFetch, finalUrlOf, hasEgressProxy, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
 const MOBILE_UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
@@ -139,8 +140,10 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, ...debugHeaders(), 'Content-Type': 'application/json' },
         })
 
-  const source = await getPlaylistUrl()
-  if (!source) return err('Playlist not configured', 500)
+  // Every stream is served from the caller's OWN provider account.
+  const resolved = await resolveViewer(req)
+  if (!resolved.ok) return err(resolved.message, resolved.status, resolved.error)
+  const source = resolved.viewer.playlistUrl
 
 
   const reqUrl = new URL(req.url)
@@ -219,8 +222,13 @@ Deno.serve(async (req) => {
   const publicBase = (Deno.env.get('SUPABASE_URL') ?? reqUrl.origin).replace(/\/$/, '')
   const base = `${publicBase}/functions/v1/iptv-proxy`
   const apikey = reqUrl.searchParams.get('apikey')
+  // Segment/keys URLs are fetched by the player without headers, so the
+  // viewer's token has to ride along on the rewritten playlist entries.
+  const viewerToken = tokenFromRequest(req)
   const proxied = (u: string) =>
-    `${base}?u=${encodeURIComponent(u)}${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}`
+    `${base}?u=${encodeURIComponent(u)}` +
+    `${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}` +
+    `${viewerToken ? `&token=${encodeURIComponent(viewerToken)}` : ''}`
 
   const refererBase = plain ? `${upstream.protocol}//${upstream.host}/` : `${protocol}//${host}/`
   const wantsJson = (req.headers.get('accept') ?? '').toLowerCase().includes('application/json')

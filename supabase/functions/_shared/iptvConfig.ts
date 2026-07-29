@@ -1,42 +1,11 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
 import { egressFetch } from './iptvEgress.ts'
 
-export const IPTV_SETTING_KEY = 'iptv_playlist_url'
-
-const CACHE_TTL = 60 * 1000
-let cached: { url: string; at: number } | null = null
-
 /**
- * Resolve the active IPTV playlist URL.
- * Priority: admin-managed value in `app_settings` → the IPTV_PLAYLIST_URL secret.
+ * NOTE: there is deliberately no platform-wide playlist URL any more. The
+ * provider forbids a single shared server, so every request resolves the
+ * caller's personal credentials via `_shared/iptvViewer.ts`.
  */
-export async function getPlaylistUrl(): Promise<string> {
-  if (cached && Date.now() - cached.at < CACHE_TTL) return cached.url
 
-  const fallback = Deno.env.get('IPTV_PLAYLIST_URL') ?? ''
-  let url = fallback
-
-  try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      { auth: { persistSession: false } },
-    )
-    const { data } = await supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', IPTV_SETTING_KEY)
-      .maybeSingle()
-    if (data?.value && typeof data.value === 'string' && data.value.trim()) {
-      url = data.value.trim()
-    }
-  } catch (_e) {
-    // Fall back to the secret when the settings lookup fails.
-  }
-
-  cached = { url, at: Date.now() }
-  return url
-}
 
 /** Parse Xtream credentials out of an M3U playlist URL. */
 export function parseXtream(raw: string) {
@@ -166,9 +135,10 @@ export interface M3uSnapshot {
   lastModified: string | null
 }
 
-let m3uCache: M3uSnapshot | null = null
-let m3uLoading: Promise<M3uSnapshot> | null = null
-let revalidating = false
+const M3U_CACHE_MAX = 8
+const m3uCache = new Map<string, M3uSnapshot>()
+const m3uLoading = new Map<string, Promise<M3uSnapshot>>()
+const revalidating = new Set<string>()
 
 function snapshot(
   url: string,
@@ -237,42 +207,51 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
 }
 
 /**
- * Fetch + parse the configured plain M3U playlist.
+ * Fetch + parse a plain M3U playlist.
  * Fresh cache → instant. Stale cache → served immediately while a conditional
  * revalidation runs in the background (stale-while-revalidate).
+ *
+ * Cached per playlist URL: every user streams from their own server, so a
+ * single-slot cache would thrash between accounts.
  */
 export async function getM3U(url: string): Promise<M3uSnapshot> {
-  const hit = m3uCache && m3uCache.url === url ? m3uCache : null
+  const hit = m3uCache.get(url) ?? null
 
   if (hit && Date.now() - hit.at < M3U_TTL) return hit
 
   if (hit && Date.now() - hit.at < M3U_STALE_MAX) {
-    if (!revalidating) {
-      revalidating = true
+    if (!revalidating.has(url)) {
+      revalidating.add(url)
       loadM3U(url, hit)
         .then((c) => {
-          m3uCache = c
+          m3uCache.set(url, c)
         })
         .catch(() => {
           // keep serving the stale snapshot
         })
         .finally(() => {
-          revalidating = false
+          revalidating.delete(url)
         })
     }
     return hit
   }
 
-  if (!m3uLoading) {
-    m3uLoading = loadM3U(url, hit)
+  let pending = m3uLoading.get(url)
+  if (!pending) {
+    pending = loadM3U(url, hit)
       .then((c) => {
-        m3uCache = c
+        m3uCache.set(url, c)
+        if (m3uCache.size > M3U_CACHE_MAX) {
+          const oldest = [...m3uCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
+          if (oldest) m3uCache.delete(oldest[0])
+        }
         return c
       })
       .finally(() => {
-        m3uLoading = null
+        m3uLoading.delete(url)
       })
+    m3uLoading.set(url, pending)
   }
-  return m3uLoading
+  return pending
 }
 

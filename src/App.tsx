@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import CryptoTracker from "./pages/CryptoTracker";
 import Movies from "./pages/Movies";
 import LiveTV from "./pages/LiveTV";
+import { LiveTvGate } from "./components/livetv/LiveTvGate";
 import PrayerTimes from "./pages/PrayerTimes";
 import Quran from "./pages/Quran";
 import GestureQA from "./pages/GestureQA";
@@ -43,10 +44,10 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/crypto" element={<CryptoTracker />} />
                 <Route path="/movies" element={<Movies />} />
-                <Route path="/live-tv" element={<LiveTV />} />
-                <Route path="/live-tv/movies" element={<LiveTV tab="movies" />} />
-                <Route path="/live-tv/series" element={<LiveTV tab="series" />} />
-                <Route path="/live-tv/replay" element={<LiveTV tab="replay" />} />
+                <Route path="/live-tv" element={<LiveTvGate><LiveTV /></LiveTvGate>} />
+                <Route path="/live-tv/movies" element={<LiveTvGate><LiveTV tab="movies" /></LiveTvGate>} />
+                <Route path="/live-tv/series" element={<LiveTvGate><LiveTV tab="series" /></LiveTvGate>} />
+                <Route path="/live-tv/replay" element={<LiveTvGate><LiveTV tab="replay" /></LiveTvGate>} />
                 <Route path="/prayer" element={<PrayerTimes />} />
                 <Route path="/quran" element={<Quran />} />
                 <Route path="/gesture-qa" element={<GestureQA />} />

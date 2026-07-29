@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U, type M3uEntry } from '../_shared/iptvConfig.ts'
+import { parseXtream, isXtreamUrl, getM3U, type M3uEntry } from '../_shared/iptvConfig.ts'
+import { resolveViewer } from '../_shared/iptvViewer.ts'
 import { egressFetch } from '../_shared/iptvEgress.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
@@ -29,8 +30,11 @@ const TTL = 30 * 60 * 1000
 
 // The VOD/series catalogues are ~70MB each, so nothing global is kept in memory:
 // the index caches category lists only and item lists are fetched per category.
-let indexCache: { at: number; source: string; categories: CategoryInfo[]; total: number } | null = null
-let indexLoading: Promise<NonNullable<typeof indexCache>> | null = null
+type IndexSnapshot = { at: number; source: string; categories: CategoryInfo[]; total: number }
+// Keyed by playlist URL: each user browses their own provider catalogue.
+const indexCache = new Map<string, IndexSnapshot>()
+const indexLoading = new Map<string, Promise<IndexSnapshot>>()
+const INDEX_MAX = 8
 
 function apiBase(raw: string) {
   const { protocol, host, username, password } = parseXtream(raw)
@@ -168,19 +172,26 @@ async function buildIndex(source: string) {
 }
 
 
-async function getIndex(source: string) {
-  if (indexCache && indexCache.source === source && Date.now() - indexCache.at < TTL) return indexCache
-  if (!indexLoading) {
-    indexLoading = buildIndex(source)
+async function getIndex(source: string): Promise<IndexSnapshot> {
+  const hit = indexCache.get(source)
+  if (hit && Date.now() - hit.at < TTL) return hit
+  let pending = indexLoading.get(source)
+  if (!pending) {
+    pending = buildIndex(source)
       .then((i) => {
-        indexCache = i
+        indexCache.set(source, i)
+        if (indexCache.size > INDEX_MAX) {
+          const oldest = [...indexCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
+          if (oldest) indexCache.delete(oldest[0])
+        }
         return i
       })
       .finally(() => {
-        indexLoading = null
+        indexLoading.delete(source)
       })
+    indexLoading.set(source, pending)
   }
-  return indexLoading
+  return pending
 }
 
 const kindOf = (categoryId: string): Kind => {
@@ -310,7 +321,7 @@ interface PlainDerived {
 
 // Derived views are rebuilt only when the parsed playlist version changes, so
 // paging/searching a 280k-entry playlist never re-walks it from scratch.
-let plainDerived: PlainDerived | null = null
+const plainDerivedCache = new Map<string, PlainDerived>()
 
 const catKey = (kind: Kind, group: string) => `${kind}:${group}`
 
@@ -363,8 +374,11 @@ function derive(version: string, entries: M3uEntry[]): PlainDerived {
 
 async function handlePlain(source: string, url: URL): Promise<{ body: unknown; version: string }> {
   const snap = await getM3U(source)
-  if (!plainDerived || plainDerived.version !== snap.version) {
+  let plainDerived = plainDerivedCache.get(snap.version)
+  if (!plainDerived) {
     plainDerived = derive(snap.version, snap.entries)
+    plainDerivedCache.set(snap.version, plainDerived)
+    if (plainDerivedCache.size > 8) plainDerivedCache.delete(plainDerivedCache.keys().next().value as string)
   }
   const { seriesGroups, browsable, categories } = plainDerived
   const version = snap.version
@@ -449,15 +463,17 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
-        'Cache-Control': cacheSeconds ? `public, max-age=${cacheSeconds}` : 'no-store',
+        'Cache-Control': cacheSeconds ? `private, max-age=${cacheSeconds}` : 'no-store',
         ...(etag ? { ETag: etag } : {}),
       },
     })
 
 
   try {
-    const source = await getPlaylistUrl()
-    if (!source) return json({ error: 'Playlist not configured' }, 500)
+    // Per-user provider: the catalogue always comes from the caller's own server.
+    const resolved = await resolveViewer(req)
+    if (!resolved.ok) return json({ error: resolved.message, code: resolved.error }, resolved.status)
+    const source = resolved.viewer.playlistUrl
 
     const url = new URL(req.url)
 
@@ -469,7 +485,7 @@ Deno.serve(async (req) => {
       if (req.headers.get('if-none-match') === etag) {
         return new Response(null, {
           status: 304,
-          headers: { ...corsHeaders, ETag: etag, 'Cache-Control': 'public, max-age=60' },
+          headers: { ...corsHeaders, ETag: etag, 'Cache-Control': 'private, max-age=60' },
         })
       }
       return json(body, 200, url.searchParams.get('q') ? 0 : 120, etag)
@@ -511,7 +527,7 @@ Deno.serve(async (req) => {
     if (category) {
       const kind = kindOf(category)
       const rawId = category.slice(category.indexOf(':') + 1)
-      list = await getCategoryItems(api, kind, rawId, category)
+      list = await getCategoryItems(api, kind, rawId, `${digest(source)}|${category}`)
       if (q) list = list.filter((s) => s.name.toLowerCase().includes(q))
     } else {
 
