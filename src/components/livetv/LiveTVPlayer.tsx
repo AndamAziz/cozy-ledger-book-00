@@ -324,6 +324,34 @@ export function LiveTVPlayer({ channel, onClose, episodes, currentEpisodeId, onS
           </div>
         )}
       </div>
+
+      {episodes && episodes.length > 0 && (
+        <div className="shrink-0 border-t border-white/10 bg-black/60 px-3 py-2.5 pb-[calc(env(safe-area-inset-bottom)+0.625rem)]">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">Episodes</p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {episodes.map((ep) => {
+              const active = ep.id === currentEpisodeId;
+              return (
+                <button
+                  key={ep.id}
+                  type="button"
+                  onClick={() => onSelectEpisode?.(ep)}
+                  title={ep.title}
+                  className={`shrink-0 rounded-xl border px-3 py-2 text-left transition active:scale-95 ${
+                    active
+                      ? 'border-[#ff2d6f] bg-[#ff2d6f]/15 text-white'
+                      : 'border-white/10 bg-white/[0.05] text-white/70 hover:border-white/30 hover:text-white'
+                  }`}
+                >
+                  <span className="block text-[11px] font-extrabold">E{ep.episode}</span>
+                  <span className="block max-w-[8rem] truncate text-[10px] text-white/50">{ep.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
+
   );
 }
