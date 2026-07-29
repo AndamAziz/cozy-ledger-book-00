@@ -13,12 +13,13 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading');
+  const [attempt, setAttempt] = useState(0);
   const accent = accentFor(channel.name);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const src = toPlayableUrl(channel.id);
+    const src = `${toPlayableUrl(channel.id)}&_r=${attempt}`;
     setStatus('loading');
 
     let hls: Hls | null = null;
