@@ -7,6 +7,7 @@ import {
   Plus,
   RadioTower,
   Trash2,
+  Wifi,
   XCircle,
   Zap,
 } from 'lucide-react';
@@ -30,6 +31,16 @@ export interface IptvSource {
   is_active: boolean;
   last_test: TestResult | null;
   updated_at: string;
+}
+
+interface RowTestResult {
+  ok: boolean;
+  latency_ms?: number;
+  status?: number;
+  errorKind?: string;
+  message?: string;
+  error?: string;
+  reqId?: string;
 }
 
 interface TestResult {
@@ -121,6 +132,27 @@ export function IptvSourceManager({
   const [url, setUrl] = useState('');
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<TestResult | null>(null);
+  // Per-row stream-resolver probe (does not block the row UI).
+  const [rowTesting, setRowTesting] = useState<string | null>(null);
+  const [rowTest, setRowTest] = useState<Record<string, RowTestResult>>({});
+
+  const testStream = async (s: IptvSource) => {
+    setRowTesting(s.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('iptv-stream-test', {
+        body: { sourceId: s.id, userId },
+      });
+      if (error) throw error;
+      setRowTest((prev) => ({ ...prev, [s.id]: data as RowTestResult }));
+    } catch (e) {
+      setRowTest((prev) => ({
+        ...prev,
+        [s.id]: { ok: false, errorKind: 'unknown', message: e instanceof Error ? e.message : 'Test failed' },
+      }));
+    } finally {
+      setRowTesting(null);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -267,7 +299,34 @@ export function IptvSourceManager({
                   {s.last_test.latency_ms != null ? `${s.last_test.latency_ms} ms` : ''}
                 </p>
               )}
+              {rowTest[s.id] && (
+                <p
+                  dir="ltr"
+                  className={`text-[10px] font-bold ${
+                    rowTest[s.id].ok ? 'text-emerald-400' : 'text-rose-400'
+                  }`}
+                >
+                  {rowTest[s.id].ok
+                    ? `Stream OK · ${rowTest[s.id].latency_ms ?? '—'} ms`
+                    : `${rowTest[s.id].errorKind ?? 'error'}${
+                        rowTest[s.id].status ? ` · ${rowTest[s.id].status}` : ''
+                      }${rowTest[s.id].message ? ` — ${rowTest[s.id].message}` : ''}`}
+                </p>
+              )}
               <div className="flex flex-wrap gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => void testStream(s)}
+                  disabled={rowTesting === s.id}
+                  className="flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-[10px] font-bold opacity-80 transition hover:border-emerald-400/50 hover:opacity-100 disabled:opacity-40"
+                >
+                  {rowTesting === s.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Wifi className="h-3 w-3" />
+                  )}
+                  Test
+                </button>
                 {!s.is_active && (
                   <button
                     type="button"
