@@ -98,6 +98,11 @@ export function LiveTVPlayer({
     if (!video) return;
     const isVod = channel.kind === 'vod' || channel.kind === 'series';
     const src = `${toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext)}&_r=${attempt}`;
+    // Safari / iOS decode HLS in the media element itself; every other browser
+    // (Chrome, Edge, Firefox) needs hls.js + MSE for the same .m3u8.
+    const nativeHls = !!video.canPlayType('application/vnd.apple.mpegurl');
+    const extLower = (channel.ext ?? '').toLowerCase();
+    const isHlsUrl = extLower === 'm3u8' || extLower === 'm3u' || /\.m3u8?(\?|$)/i.test(src);
 
     setStatus('loading');
     setSlotLimited(false);
