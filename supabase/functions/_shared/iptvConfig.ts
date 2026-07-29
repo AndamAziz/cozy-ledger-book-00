@@ -284,8 +284,15 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
     return { ...prev, at: Date.now(), lastModified: lastModified ?? prev.lastModified }
   }
 
+  // An HLS media/master manifest is ONE stream, not a channel list — its
+  // #EXTINF lines are segments/variants, so never parse them as channels.
+  if (HLS_STREAM_RE.test(body ?? '')) return directStreamSnapshot(url)
+
   const entries = parseM3U(body ?? '')
-  if (!entries.length) throw new Error('Playlist contains no channels')
+  // Some providers hand out a bare stream URL (or a body we cannot parse) —
+  // treat that as a single channel instead of failing the whole source.
+  if (!entries.length) return directStreamSnapshot(url)
+
   const next = snapshot(url, entries, etag, lastModified)
   // Unchanged content: keep the previous object identity so derived caches stay warm.
   if (prev && prev.url === url && prev.version === next.version) {
