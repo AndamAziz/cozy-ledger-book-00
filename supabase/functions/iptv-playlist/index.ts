@@ -299,13 +299,10 @@ Deno.serve(async (req) => {
     if (category) {
       const kind = kindOf(category)
       const rawId = category.slice(category.indexOf(':') + 1)
-      const rows =
-        (await fetchJson<Record<string, unknown>[]>(
-          `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
-        )) ?? []
-      list = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
+      list = await getCategoryItems(api, kind, rawId, category)
       if (q) list = list.filter((s) => s.name.toLowerCase().includes(q))
     } else {
+
       const kindParam = url.searchParams.get('kind')
       const kind: Kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
       const cap = offset + limit
