@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, ArrowLeft, ChevronDown, Clapperboard, Loader2, Play } from 'lucide-react';
 import {
   useIptvSeriesInfo,
@@ -7,6 +7,7 @@ import {
 } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 import { LiveTVPlayer } from './LiveTVPlayer';
+import { firstAvailableEpisode } from '@/lib/iptvSlotRetry';
 
 interface Props {
   series: IptvChannel;
@@ -31,6 +32,9 @@ export function SeriesDetail({ series, onClose }: Props) {
   const accent = accentFor(series.name);
   const [seasonNum, setSeasonNum] = useState<number | null>(null);
   const [currentEpisode, setCurrentEpisode] = useState<IptvEpisode | null>(null);
+  const [slotNotice, setSlotNotice] = useState<string | null>(null);
+  // Episodes already refused by the provider's session limit during this visit.
+  const exhaustedRef = useRef<Set<string>>(new Set());
 
   const seasons = data?.seasons ?? [];
   useEffect(() => {
@@ -41,6 +45,28 @@ export function SeriesDetail({ series, onClose }: Props) {
     () => seasons.find((s) => s.season === seasonNum)?.episodes ?? [],
     [seasons, seasonNum],
   );
+
+  const playEpisode = useCallback((ep: IptvEpisode) => {
+    exhaustedRef.current.delete(ep.id);
+    setSlotNotice(null);
+    setCurrentEpisode(ep);
+  }, []);
+
+  // The provider ran out of viewing slots for this episode: hop to the first
+  // episode of the season that hasn't hit the limit yet.
+  const handleSlotLimit = useCallback(() => {
+    const current = currentEpisode;
+    if (current) exhaustedRef.current.add(current.id);
+    const next = firstAvailableEpisode(episodes, exhaustedRef.current);
+    if (next && next.id !== current?.id) {
+      setSlotNotice(`All slots were busy — switched to E${next.episode}.`);
+      setCurrentEpisode(next);
+      return;
+    }
+    exhaustedRef.current.clear();
+    setSlotNotice('All viewing slots are in use right now. Try again in a moment.');
+    setCurrentEpisode(null);
+  }, [currentEpisode, episodes]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !currentEpisode && onClose();
@@ -104,6 +130,13 @@ export function SeriesDetail({ series, onClose }: Props) {
           </div>
         )}
 
+        {slotNotice && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#ff2d6f]/40 bg-[#ff2d6f]/10 px-3 py-2 text-[11px] font-semibold text-white/80">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-[#ff2d6f]" />
+            {slotNotice}
+          </div>
+        )}
+
         {seasons.length > 0 && (
           <>
             {/* Season selector: tabs on wide screens, dropdown on narrow ones */}
@@ -147,7 +180,7 @@ export function SeriesDetail({ series, onClose }: Props) {
                   <button
                     key={ep.id}
                     type="button"
-                    onClick={() => setCurrentEpisode(ep)}
+                    onClick={() => playEpisode(ep)}
                     className={`group flex items-center gap-3 rounded-2xl border p-2 text-left transition active:scale-[0.98] ${
                       active
                         ? 'border-[#ff2d6f] bg-[#ff2d6f]/10'
@@ -188,7 +221,8 @@ export function SeriesDetail({ series, onClose }: Props) {
           onClose={() => setCurrentEpisode(null)}
           episodes={episodes}
           currentEpisodeId={currentEpisode.id}
-          onSelectEpisode={setCurrentEpisode}
+          onSelectEpisode={playEpisode}
+          onSlotLimit={handleSlotLimit}
         />
       )}
     </div>
