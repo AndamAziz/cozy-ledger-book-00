@@ -206,42 +206,51 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
 }
 
 /**
- * Fetch + parse the configured plain M3U playlist.
+ * Fetch + parse a plain M3U playlist.
  * Fresh cache → instant. Stale cache → served immediately while a conditional
  * revalidation runs in the background (stale-while-revalidate).
+ *
+ * Cached per playlist URL: every user streams from their own server, so a
+ * single-slot cache would thrash between accounts.
  */
 export async function getM3U(url: string): Promise<M3uSnapshot> {
-  const hit = m3uCache && m3uCache.url === url ? m3uCache : null
+  const hit = m3uCache.get(url) ?? null
 
   if (hit && Date.now() - hit.at < M3U_TTL) return hit
 
   if (hit && Date.now() - hit.at < M3U_STALE_MAX) {
-    if (!revalidating) {
-      revalidating = true
+    if (!revalidating.has(url)) {
+      revalidating.add(url)
       loadM3U(url, hit)
         .then((c) => {
-          m3uCache = c
+          m3uCache.set(url, c)
         })
         .catch(() => {
           // keep serving the stale snapshot
         })
         .finally(() => {
-          revalidating = false
+          revalidating.delete(url)
         })
     }
     return hit
   }
 
-  if (!m3uLoading) {
-    m3uLoading = loadM3U(url, hit)
+  let pending = m3uLoading.get(url)
+  if (!pending) {
+    pending = loadM3U(url, hit)
       .then((c) => {
-        m3uCache = c
+        m3uCache.set(url, c)
+        if (m3uCache.size > M3U_CACHE_MAX) {
+          const oldest = [...m3uCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
+          if (oldest) m3uCache.delete(oldest[0])
+        }
         return c
       })
       .finally(() => {
-        m3uLoading = null
+        m3uLoading.delete(url)
       })
+    m3uLoading.set(url, pending)
   }
-  return m3uLoading
+  return pending
 }
 
