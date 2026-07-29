@@ -181,6 +181,17 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <span className="font-bold text-foreground text-xs sm:text-sm truncate">Movies 🎬</span>
             </button>
 
+            {/* Live TV */}
+            <button
+              onClick={() => navigate('/live-tv')}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-destructive/20 via-destructive/10 to-transparent border border-destructive/30 hover:from-destructive/30 hover:via-destructive/20 hover:border-destructive/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-destructive/30 active:via-destructive/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-3 sm:gap-4 min-h-[66px] sm:min-h-[72px]"
+            >
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-destructive to-pink-500 flex items-center justify-center shadow-md shadow-destructive/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-destructive/40 transition-all duration-200">
+                <Tv className="h-5 w-5 sm:h-6 sm:w-6 text-destructive-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">Live TV 📺</span>
+            </button>
+
             {/* Crypto Tracker */}
             <button
               onClick={() => navigate('/crypto')}
