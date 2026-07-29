@@ -503,10 +503,14 @@ export function LiveTVPlayer({
                 <AlertTriangle className="h-6 w-6" style={{ color: '#ff2d6f' }} />
               </span>
               <p className="text-sm font-extrabold tracking-tight text-white">
-                This channel is not responding
+                {errorKind === 'geo'
+                  ? 'Streaming blocked by the provider'
+                  : 'This channel is not responding'}
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                The source may be unavailable right now. Retry, or pick another channel.
+                {errorKind === 'geo'
+                  ? GEO_BLOCK_MESSAGE
+                  : 'The source may be unavailable right now. Retry, or pick another channel.'}
               </p>
               <div className="mt-4 flex justify-center gap-2">
                 <button
