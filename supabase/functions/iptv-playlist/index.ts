@@ -607,7 +607,20 @@ Deno.serve(async (req) => {
     })
 
 
+  const reqId = crypto.randomUUID().slice(0, 8)
+  lastUpstreamDiag = null
+  const reqUrl = new URL(req.url)
+  console.log(
+    `[iptv-playlist] ${JSON.stringify({
+      reqId,
+      query: Object.fromEntries(
+        [...reqUrl.searchParams.entries()].filter(([k]) => !['token', 'apikey'].includes(k.toLowerCase())),
+      ),
+    })}`,
+  )
+
   try {
+
     // Per-user provider: the catalogue always comes from the caller's own server.
     const resolved = await resolveViewer(req)
     if (!resolved.ok) return json({ error: resolved.message, code: resolved.error }, resolved.status)
