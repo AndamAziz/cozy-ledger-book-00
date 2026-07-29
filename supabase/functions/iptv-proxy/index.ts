@@ -128,7 +128,8 @@ Deno.serve(async (req) => {
       return err('Invalid url', 400)
     }
     // Only the provider host or its HLS edge nodes may be proxied.
-    const isEdgeSegment = /^\/hls\//.test(upstream.pathname)
+    // Panels redirect segments to CDN nodes under /hls/, /hlsr/ or /hlsr2/.
+    const isEdgeSegment = /^\/hlsr?\d*\//.test(upstream.pathname)
     const allowed = plain ? !!plainHosts?.has(upstream.host) : upstream.host === host
     if (!allowed && !isEdgeSegment) return err('Host not allowed', 403)
     candidates = [upstream.toString()]
