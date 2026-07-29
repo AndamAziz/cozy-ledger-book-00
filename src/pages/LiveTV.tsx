@@ -11,6 +11,7 @@ import {
 } from '@/hooks/useIptvPlaylist';
 import { ChannelCard } from '@/components/livetv/ChannelCard';
 import { PosterCard } from '@/components/livetv/PosterCard';
+import { CategoryAccordion } from '@/components/livetv/CategoryAccordion';
 import { LiveTVPlayer } from '@/components/livetv/LiveTVPlayer';
 import { LiveBottomNav, type LiveTab } from '@/components/livetv/LiveBottomNav';
 import { SeriesDetail } from '@/components/livetv/SeriesDetail';
@@ -145,6 +146,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const [query, setQuery] = useState('');
   const [playing, setPlaying] = useState<IptvChannel | null>(null);
   const [seriesItem, setSeriesItem] = useState<IptvChannel | null>(null);
+  const [fullCategory, setFullCategory] = useState<IptvCategory | null>(null);
 
   // Series open a season/episode detail sheet; everything else plays directly.
   const openItem = (c: IptvChannel) => (c.kind === 'series' ? setSeriesItem(c) : setPlaying(c));
@@ -164,6 +166,13 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
     () => (index?.categories ?? []).filter((c) => tabOf(c) === tab),
     [index, tab],
   );
+
+  // Switching tabs returns to the category list.
+  useEffect(() => {
+    setFullCategory(null);
+  }, [tab]);
+
+
 
 
   return (
@@ -250,16 +259,33 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
               <p className="py-20 text-center text-xs font-semibold text-white/40">No channels match “{query}”.</p>
             )}
           </section>
+        ) : fullCategory ? (
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setFullCategory(null)}
+              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-[11px] font-bold text-white/80 transition hover:border-[#b026ff]/60 hover:text-white"
+            >
+              <ArrowLeft className="h-3 w-3" /> Categories
+            </button>
+            <CategorySection
+              category={fullCategory}
+              onPlay={openItem}
+              eager
+              kind={playbackKind}
+              poster={usePoster}
+            />
+          </div>
         ) : (
-          <div className="space-y-7">
-            {categories.map((category, i) => (
-              <CategorySection
+          <div className="space-y-3">
+            {categories.map((category) => (
+              <CategoryAccordion
                 key={category.id}
                 category={category}
                 onPlay={openItem}
-                eager={i < 2}
                 kind={playbackKind}
                 poster={usePoster}
+                onSeeAll={setFullCategory}
               />
             ))}
 
