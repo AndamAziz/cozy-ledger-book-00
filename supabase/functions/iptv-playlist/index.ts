@@ -191,6 +191,66 @@ const shape = (s: Item, group: string) => ({
   kind: s.kind,
 })
 
+interface EpisodeOut {
+  id: string
+  season: number
+  episode: number
+  title: string
+  cover: string | null
+  ext: string
+  plot: string | null
+  duration: string | null
+}
+
+/** Fetch season/episode structure for one series via Xtream get_series_info. */
+async function getSeriesInfo(api: string, seriesId: string) {
+  const res = await fetch(`${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`, {
+    headers: { 'User-Agent': UA },
+  })
+  if (!res.ok) throw new Error(`Series unavailable (${res.status})`)
+  const data = (await res.json()) as Record<string, unknown>
+
+  const info = (data.info ?? {}) as Record<string, unknown>
+  const rawEpisodes = (data.episodes ?? {}) as Record<string, unknown>
+
+  const seasons: { season: number; episodes: EpisodeOut[] }[] = []
+  for (const [key, value] of Object.entries(rawEpisodes)) {
+    if (!Array.isArray(value)) continue
+    const seasonNum = Number(key) || 0
+    const episodes: EpisodeOut[] = []
+    for (const raw of value as Record<string, unknown>[]) {
+      const id = String(raw.id ?? '')
+      if (!id) continue
+      const epInfo = (raw.info ?? {}) as Record<string, unknown>
+      const num = Number(raw.episode_num ?? epInfo.episode_num ?? episodes.length + 1) || episodes.length + 1
+      episodes.push({
+        id,
+        season: Number(raw.season ?? seasonNum) || seasonNum,
+        episode: num,
+        title: String(raw.title ?? epInfo.name ?? `Episode ${num}`),
+        cover: pickLogo(epInfo) ?? pickLogo(raw),
+        ext: String(raw.container_extension ?? 'mp4').replace(/[^a-z0-9]/gi, '') || 'mp4',
+        plot: typeof epInfo.plot === 'string' && epInfo.plot.trim() ? epInfo.plot.trim() : null,
+        duration: typeof epInfo.duration === 'string' ? epInfo.duration : null,
+      })
+    }
+    if (episodes.length) {
+      episodes.sort((a, b) => a.episode - b.episode)
+      seasons.push({ season: seasonNum, episodes })
+    }
+  }
+  seasons.sort((a, b) => a.season - b.season)
+  if (!seasons.length) throw new Error('No episodes found for this series')
+
+  return {
+    id: seriesId,
+    name: String(info.name ?? info.title ?? 'Series'),
+    cover: pickLogo(info),
+    plot: typeof info.plot === 'string' ? info.plot : null,
+    seasons,
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -205,12 +265,19 @@ Deno.serve(async (req) => {
     if (!source) return json({ error: 'Playlist not configured' }, 500)
 
     const url = new URL(req.url)
+    const seriesId = url.searchParams.get('series')
+    if (seriesId) {
+      if (!/^\d+$/.test(seriesId)) return json({ error: 'Invalid series id' }, 400)
+      return json(await getSeriesInfo(apiBase(source), seriesId))
+    }
+
     const category = url.searchParams.get('category')
     const q = (url.searchParams.get('q') ?? '').trim().toLowerCase()
     const limit = Math.min(Number(url.searchParams.get('limit') ?? 60) || 60, 200)
     const offset = Math.max(Number(url.searchParams.get('offset') ?? 0) || 0, 0)
 
     const index = await getIndex(source)
+
 
     if (!category && !q) {
       return json({

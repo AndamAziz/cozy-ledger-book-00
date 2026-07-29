@@ -13,6 +13,7 @@ import { ChannelCard } from '@/components/livetv/ChannelCard';
 import { PosterCard } from '@/components/livetv/PosterCard';
 import { LiveTVPlayer } from '@/components/livetv/LiveTVPlayer';
 import { LiveBottomNav, type LiveTab } from '@/components/livetv/LiveBottomNav';
+import { SeriesDetail } from '@/components/livetv/SeriesDetail';
 
 function tabOf(category: IptvCategory): LiveTab {
   if (category.kind === 'vod') return 'movies';
@@ -35,7 +36,7 @@ function CategorySection({
   category: IptvCategory;
   onPlay: (c: IptvChannel) => void;
   eager: boolean;
-  kind: 'live' | 'vod';
+  kind: 'live' | 'vod' | 'series';
   poster: boolean;
 }) {
   const gridClass = poster ? GRID_POSTER : GRID_LIVE;
@@ -131,9 +132,14 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const meta = TAB_META[tab];
   const [query, setQuery] = useState('');
   const [playing, setPlaying] = useState<IptvChannel | null>(null);
+  const [seriesItem, setSeriesItem] = useState<IptvChannel | null>(null);
+
+  // Series open a season/episode detail sheet; everything else plays directly.
+  const openItem = (c: IptvChannel) => (c.kind === 'series' ? setSeriesItem(c) : setPlaying(c));
 
   // Movies / Series / Replay items are on-demand containers, not live channels.
-  const playbackKind: 'live' | 'vod' = tab === 'direct' ? 'live' : 'vod';
+  const playbackKind: 'live' | 'vod' | 'series' =
+    tab === 'direct' ? 'live' : tab === 'series' ? 'series' : 'vod';
   const searchSection: 'live' | 'vod' | 'series' =
     tab === 'movies' ? 'vod' : tab === 'series' ? 'series' : 'live';
   const searching = query.trim().length >= 2;
@@ -222,9 +228,9 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
             <div className={usePoster ? GRID_POSTER : GRID_LIVE}>
               {results?.channels.map((channel) =>
                 usePoster ? (
-                  <PosterCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={setPlaying} />
+                  <PosterCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={openItem} />
                 ) : (
-                  <ChannelCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={setPlaying} />
+                  <ChannelCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={openItem} />
                 ),
               )}
             </div>
@@ -238,7 +244,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
               <CategorySection
                 key={category.id}
                 category={category}
-                onPlay={setPlaying}
+                onPlay={openItem}
                 eager={i < 3}
                 kind={playbackKind}
                 poster={usePoster}
@@ -254,6 +260,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
 
       <LiveBottomNav active={tab} onChange={(t) => navigate(TAB_META[t].path)} />
 
+      {seriesItem && <SeriesDetail series={seriesItem} onClose={() => setSeriesItem(null)} />}
       {playing && <LiveTVPlayer channel={playing} onClose={() => setPlaying(null)} />}
     </div>
   );

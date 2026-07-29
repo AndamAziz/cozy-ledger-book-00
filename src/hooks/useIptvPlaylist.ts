@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-export type IptvKind = 'live' | 'vod';
+export type IptvKind = 'live' | 'vod' | 'series';
 
 export interface IptvChannel {
   id: string;
@@ -9,7 +9,29 @@ export interface IptvChannel {
   group: string;
   /** 'vod' for Movies/Series/Replay items, 'live' for direct channels. */
   kind?: IptvKind;
+  /** Container extension hint for VOD/series episodes (mp4, mkv…). */
+  ext?: string;
 }
+
+export interface IptvEpisode {
+  id: string;
+  season: number;
+  episode: number;
+  title: string;
+  cover: string | null;
+  ext: string;
+  plot: string | null;
+  duration: string | null;
+}
+
+export interface IptvSeriesInfo {
+  id: string;
+  name: string;
+  cover: string | null;
+  plot: string | null;
+  seasons: { season: number; episodes: IptvEpisode[] }[];
+}
+
 
 export interface IptvCategory {
   id: string;
@@ -30,9 +52,11 @@ const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 /** CORS-safe, browser-playable HLS URL for a channel (credentials stay server-side). */
-export function toPlayableUrl(channelId: string, kind: IptvKind = 'live'): string {
-  return `${FN_BASE}/iptv-proxy?id=${encodeURIComponent(channelId)}&kind=${kind}&apikey=${ANON}`;
+export function toPlayableUrl(channelId: string, kind: IptvKind = 'live', ext?: string): string {
+  const extPart = ext ? `&ext=${encodeURIComponent(ext)}` : '';
+  return `${FN_BASE}/iptv-proxy?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}&apikey=${ANON}`;
 }
+
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${FN_BASE}/${path}`, {
@@ -76,4 +100,16 @@ export function useIptvSearch(query: string, section: 'live' | 'vod' | 'series' 
     staleTime: 5 * 60 * 1000,
   });
 }
+
+/** Season / episode structure for a single series. */
+export function useIptvSeriesInfo(seriesId: string | null) {
+  return useQuery({
+    queryKey: ['iptv-series', seriesId],
+    queryFn: () => get<IptvSeriesInfo>(`iptv-playlist?series=${encodeURIComponent(seriesId ?? '')}`),
+    enabled: !!seriesId,
+    staleTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+}
+
 
