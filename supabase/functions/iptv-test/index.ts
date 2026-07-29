@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { isXtreamUrl, parseXtream } from '../_shared/iptvConfig.ts'
+import { isDirectStreamUrl, isXtreamUrl, parseXtream } from '../_shared/iptvConfig.ts'
 import { relayFetch, xtreamAuthError } from '../_shared/iptvFetch.ts'
 
 const TIMEOUT_MS = 10_000
@@ -51,6 +51,26 @@ Deno.serve(async (req) => {
   const started = performance.now()
   const latency = () => Math.round(performance.now() - started)
 
+  // --- Direct single-stream link (.ts / .mp4 / raw stream path) ------------
+  // Not a playlist: just confirm the stream responds; it is wrapped as a
+  // one-channel source everywhere else in the pipeline.
+  if (isDirectStreamUrl(raw) && !/\.m3u8(\?|#|$)/i.test(raw)) {
+    const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS, maxBytes: 2048 })
+    if (!res.ok && res.status !== 206) {
+      return json({ ok: false, error: res.error ?? 'Could not reach the stream', status: res.status })
+    }
+    return json({
+      ok: true,
+      kind: 'stream',
+      channels: 1,
+      latency_ms: latency(),
+      host: creds.host,
+      via: res.userAgent,
+      compatible: true,
+      message: `Direct stream reachable — 1 channel in ${latency()} ms`,
+    })
+  }
+
   // --- Plain M3U / M3U8 playlist (no Xtream credentials) -------------------
   if (!isXtreamUrl(raw)) {
     const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS })
@@ -59,6 +79,19 @@ Deno.serve(async (req) => {
       return json({
         ok: false,
         error: `That link did not return an M3U playlist (content-type: ${res.contentType ?? 'unknown'})`,
+      })
+    }
+    // An HLS manifest is a single stream, not a channel list.
+    if (/#EXT-X-(TARGETDURATION|MEDIA-SEQUENCE|STREAM-INF|ENDLIST|MAP|KEY)/i.test(res.body)) {
+      return json({
+        ok: true,
+        kind: 'stream',
+        channels: 1,
+        latency_ms: latency(),
+        host: creds.host,
+        via: res.userAgent,
+        compatible: true,
+        message: `Direct HLS stream reachable — 1 channel in ${latency()} ms`,
       })
     }
     const channels = (res.body.match(/#EXTINF/gi) ?? []).length

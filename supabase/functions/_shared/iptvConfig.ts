@@ -33,6 +33,36 @@ export function isXtreamUrl(raw: string) {
  * Plain M3U / M3U8 playlist support
  * ------------------------------------------------------------------ */
 
+/** Media extensions that mean "this URL is one stream", not a channel list. */
+const DIRECT_STREAM_EXT = /\.(m3u8|ts|mp4|mkv|avi|m4v|mov|mpd|flv|webm)(\?|#|$)/i
+
+/**
+ * True when the link points at a single playable stream (an HLS manifest, a raw
+ * MPEG-TS feed, a progressive file …) rather than a multi-channel M3U playlist.
+ * `.m3u`/`.m3u8` are ambiguous, so `.m3u8` only counts as direct when the path
+ * is not a classic playlist endpoint (get.php / playlist / channels …).
+ */
+export function isDirectStreamUrl(raw: string): boolean {
+  let u: URL
+  try {
+    u = new URL(raw)
+  } catch {
+    return false
+  }
+  if (isXtreamUrl(raw)) return false
+  const path = u.pathname
+  if (/\/(get\.php|player_api\.php|playlist|list|channels|panel_api\.php)/i.test(path)) return false
+  if (/\.m3u(\?|#|$)/i.test(path)) return false
+  if (DIRECT_STREAM_EXT.test(path)) return true
+  // Xtream-style direct stream paths without an extension: /live/user/pass/123
+  return /\/(live|movie|series)\/[^/]+\/[^/]+\/\d+$/i.test(path)
+}
+
+/** HLS manifest markers that only ever appear inside a single stream's playlist. */
+const HLS_STREAM_RE = /#EXT-X-(TARGETDURATION|MEDIA-SEQUENCE|STREAM-INF|ENDLIST|PLAYLIST-TYPE|MAP|KEY)/i
+
+
+
 export type M3uKind = 'live' | 'vod' | 'series'
 
 export interface M3uEntry {
@@ -159,6 +189,41 @@ function snapshot(
   return { url, at: Date.now(), entries, byId, hosts, version, etag, lastModified }
 }
 
+/** Human-friendly channel name for a direct stream link. */
+function directStreamName(url: string): string {
+  try {
+    const u = new URL(url)
+    const file = decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() ?? '')
+    const clean = file.replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[._-]+/g, ' ').trim()
+    return clean || u.host
+  } catch {
+    return 'Live stream'
+  }
+}
+
+/**
+ * A single direct stream link (.m3u8 / .ts / .mp4 …) is wrapped as a one-channel
+ * playlist so the whole catalogue/proxy/player pipeline keeps working unchanged
+ * instead of failing with "no channels were returned".
+ */
+export function directStreamSnapshot(url: string): M3uSnapshot {
+  const ext = (url.match(DIRECT_STREAM_EXT)?.[1] ?? '').toLowerCase()
+  const kind: M3uKind = /^(mp4|mkv|avi|m4v|mov|webm)$/.test(ext) ? 'vod' : 'live'
+  const entry: M3uEntry = {
+    id: hashId(url),
+    name: directStreamName(url),
+    logo: null,
+    group: kind === 'vod' ? 'Direct link' : 'Direct stream',
+    kind,
+    url,
+    season: null,
+    episode: null,
+    seriesKey: null,
+  }
+  return snapshot(url, [entry], null, null)
+}
+
+
 /**
  * Conditional fetch: when the upstream answers 304 (or serves an identical
  * body) the previous parse is reused, so a refresh costs a few bytes instead
@@ -203,13 +268,22 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
       await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
     }
   }
-  if (!res) throw (lastError instanceof Error ? lastError : new Error('Playlist unavailable'))
+  if (!res) {
+    // A direct stream link that refuses a plain GET is still playable through
+    // the proxy — expose it as one channel rather than killing the source.
+    if (isDirectStreamUrl(url)) return directStreamSnapshot(url)
+    throw (lastError instanceof Error ? lastError : new Error('Playlist unavailable'))
+  }
 
   if (res.status === 304 && prev) {
     await res.body?.cancel()
     return { ...prev, at: Date.now() }
   }
-  if (!res.ok) throw new Error(`Playlist unavailable (${res.status})`)
+  if (!res.ok) {
+    if (isDirectStreamUrl(url)) return directStreamSnapshot(url)
+    throw new Error(`Playlist unavailable (${res.status})`)
+  }
+
 
   const etag = res.headers.get('etag')
   const lastModified = res.headers.get('last-modified')
@@ -219,8 +293,15 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
     return { ...prev, at: Date.now(), lastModified: lastModified ?? prev.lastModified }
   }
 
+  // An HLS media/master manifest is ONE stream, not a channel list — its
+  // #EXTINF lines are segments/variants, so never parse them as channels.
+  if (HLS_STREAM_RE.test(body ?? '')) return directStreamSnapshot(url)
+
   const entries = parseM3U(body ?? '')
-  if (!entries.length) throw new Error('Playlist contains no channels')
+  // Some providers hand out a bare stream URL (or a body we cannot parse) —
+  // treat that as a single channel instead of failing the whole source.
+  if (!entries.length) return directStreamSnapshot(url)
+
   const next = snapshot(url, entries, etag, lastModified)
   // Unchanged content: keep the previous object identity so derived caches stay warm.
   if (prev && prev.url === url && prev.version === next.version) {
@@ -239,7 +320,21 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
  * single-slot cache would thrash between accounts.
  */
 export async function getM3U(url: string): Promise<M3uSnapshot> {
+  // Direct media links (.ts / .mp4 / extension-less Xtream stream paths) are
+  // never downloaded here — a raw feed would stream forever. Wrap them as a
+  // one-channel playlist immediately. `.m3u8` is still fetched: it may be a
+  // real multi-channel playlist, and loadM3U detects the manifest case.
+  if (isDirectStreamUrl(url) && !/\.m3u8(\?|#|$)/i.test(url)) {
+    const cached = m3uCache.get(url)
+    if (cached) return cached
+    const snap = directStreamSnapshot(url)
+    m3uCache.set(url, snap)
+    return snap
+  }
+
   const hit = m3uCache.get(url) ?? null
+
+
 
   if (hit && Date.now() - hit.at < M3U_TTL) return hit
 
