@@ -8,6 +8,9 @@ import {
   slotRetryDelay,
   SLOT_MAX_RETRIES,
   GEO_BLOCK_MESSAGE,
+  AUTO_MAX_RETRIES,
+  autoRetryDelay,
+  STALL_TIMEOUT_MS,
 } from '@/lib/iptvSlotRetry';
 
 interface QualityLevel {
