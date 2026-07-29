@@ -189,6 +189,41 @@ function snapshot(
   return { url, at: Date.now(), entries, byId, hosts, version, etag, lastModified }
 }
 
+/** Human-friendly channel name for a direct stream link. */
+function directStreamName(url: string): string {
+  try {
+    const u = new URL(url)
+    const file = decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() ?? '')
+    const clean = file.replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[._-]+/g, ' ').trim()
+    return clean || u.host
+  } catch {
+    return 'Live stream'
+  }
+}
+
+/**
+ * A single direct stream link (.m3u8 / .ts / .mp4 …) is wrapped as a one-channel
+ * playlist so the whole catalogue/proxy/player pipeline keeps working unchanged
+ * instead of failing with "no channels were returned".
+ */
+export function directStreamSnapshot(url: string): M3uSnapshot {
+  const ext = (url.match(DIRECT_STREAM_EXT)?.[1] ?? '').toLowerCase()
+  const kind: M3uKind = /^(mp4|mkv|avi|m4v|mov|webm)$/.test(ext) ? 'vod' : 'live'
+  const entry: M3uEntry = {
+    id: hashId(url),
+    name: directStreamName(url),
+    logo: null,
+    group: kind === 'vod' ? 'Direct link' : 'Direct stream',
+    kind,
+    url,
+    season: null,
+    episode: null,
+    seriesKey: null,
+  }
+  return snapshot(url, [entry], null, null)
+}
+
+
 /**
  * Conditional fetch: when the upstream answers 304 (or serves an identical
  * body) the previous parse is reused, so a refresh costs a few bytes instead
