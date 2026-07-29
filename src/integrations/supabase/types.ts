@@ -740,6 +740,39 @@ export type Database = {
           },
         ]
       }
+      livetv_access: {
+        Row: {
+          activated_at: string | null
+          activation_ref: string | null
+          created_at: string
+          is_activated: boolean
+          trial_ends_at: string
+          trial_started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activated_at?: string | null
+          activation_ref?: string | null
+          created_at?: string
+          is_activated?: boolean
+          trial_ends_at?: string
+          trial_started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activated_at?: string | null
+          activation_ref?: string | null
+          created_at?: string
+          is_activated?: boolean
+          trial_ends_at?: string
+          trial_started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       locations: {
         Row: {
           created_at: string
@@ -1409,6 +1442,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_iptv_servers: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          playlist_url: string
+          provider_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          playlist_url?: string
+          provider_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          playlist_url?: string
+          provider_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1460,6 +1520,7 @@ export type Database = {
           is_expired: boolean
         }[]
       }
+      has_livetv_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
