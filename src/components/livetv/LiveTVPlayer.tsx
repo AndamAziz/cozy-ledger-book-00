@@ -304,11 +304,18 @@ export function LiveTVPlayer({
     // stuck on "Connecting to stream…".
     const extHint = (channel.ext ?? '').toLowerCase();
     const tsFirst = extHint === 'ts' || extHint === 'mpegts' || extHint === 'mpg';
+    // Xtream live channels are served by the proxy as raw MPEG-TS first on
+    // desktop/Android to avoid one-slot HLS segment storms. If no explicit HLS
+    // extension is known, start with mpegts.js and only fall back to HLS/native.
+    const rawLiveFirst = !isVod && extHint !== 'm3u8' && extHint !== 'm3u';
     const progressive = ['mp4', 'm4v', 'mov', 'webm'].includes(extHint);
 
-    if (tsFirst) {
+    if (tsFirst || rawLiveFirst) {
       // Raw transport streams: mpegts.js first, native as the safety net.
-      mpegtsFallback = () => playNative();
+      mpegtsFallback = () => {
+        if (Hls.isSupported() && !tsFirst) startHls();
+        else playNative();
+      };
       void playMpegts();
     } else if (progressive) {
       playNative();
