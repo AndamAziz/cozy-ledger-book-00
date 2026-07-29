@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U, type M3uEntry } from '../_shared/iptvConfig.ts'
+import { egressFetch } from '../_shared/iptvEgress.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 
@@ -74,7 +75,7 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
 
 async function fetchJson<T>(url: string, timeoutMs = 15000): Promise<T | null> {
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(timeoutMs) })
+    const res = await egressFetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(timeoutMs) })
     if (!res.ok) return null
     const json = await res.json()
     return Array.isArray(json) ? (json as T) : null
@@ -90,7 +91,7 @@ async function fetchJson<T>(url: string, timeoutMs = 15000): Promise<T | null> {
  */
 async function scanArray(url: string, onRow: (row: Record<string, unknown>) => boolean) {
   const deadline = Date.now() + 20_000
-  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20_000) })
+  const res = await egressFetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20_000) })
   if (!res.ok || !res.body) return
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
@@ -233,7 +234,7 @@ interface EpisodeOut {
 
 /** Fetch season/episode structure for one series via Xtream get_series_info. */
 async function getSeriesInfo(api: string, seriesId: string) {
-  const res = await fetch(`${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`, {
+  const res = await egressFetch(`${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`, {
     headers: { 'User-Agent': UA },
   })
   if (!res.ok) throw new Error(`Series unavailable (${res.status})`)
