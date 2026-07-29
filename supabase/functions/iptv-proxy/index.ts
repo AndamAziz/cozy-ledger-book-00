@@ -18,6 +18,9 @@ function buildUpstreamHeaders(req: Request, upstream: URL, refererBase?: string)
     'User-Agent': MOBILE_UA,
     'Accept': '*/*',
     'Accept-Language': 'en-US,en;q=0.9',
+    // Media is already compressed; a gzip/br hop through the relay only adds a
+    // decoder that can truncate ("error reading a body from connection").
+    'Accept-Encoding': 'identity',
     'Icy-MetaData': '1',
     'X-Requested-With': 'com.nathnetwork.xciptv',
   }
@@ -32,7 +35,54 @@ function buildUpstreamHeaders(req: Request, upstream: URL, refererBase?: string)
   return headers
 }
 
-async function fetchUpstream(url: string, headers: Record<string, string>, clientSignal?: AbortSignal) {
+/**
+ * Pull the first chunk off an upstream body before handing it to the player.
+ *
+ * Edge → relay connections are pooled and are occasionally reused after the
+ * peer already closed them, which surfaces as "error reading a body from
+ * connection" the moment the body is read. Priming lets us detect that failure
+ * while a retry is still possible, instead of the player receiving a broken
+ * stream and hanging on "Connecting to stream…".
+ */
+async function primeBody(res: Response): Promise<ReadableStream<Uint8Array> | null> {
+  if (!res.body) return new ReadableStream({ start: (c) => c.close() })
+  const reader = res.body.getReader()
+  let first: ReadableStreamReadResult<Uint8Array>
+  try {
+    first = await reader.read()
+  } catch {
+    try {
+      await reader.cancel()
+    } catch { /* already torn down */ }
+    return null
+  }
+  return new ReadableStream<Uint8Array>({
+    start(c) {
+      if (first.value) c.enqueue(first.value)
+      if (first.done) c.close()
+    },
+    async pull(c) {
+      try {
+        const { done, value } = await reader.read()
+        if (done) c.close()
+        else if (value) c.enqueue(value)
+      } catch (e) {
+        c.error(e)
+      }
+    },
+    cancel(reason) {
+      reader.cancel(reason).catch(() => undefined)
+    },
+  })
+}
+
+
+async function fetchUpstream(
+  url: string,
+  headers: Record<string, string>,
+  clientSignal?: AbortSignal,
+  direct = false,
+) {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), CONNECT_TIMEOUT_MS)
   // Propagate client disconnects upstream: with single-slot provider accounts a
@@ -41,7 +91,8 @@ async function fetchUpstream(url: string, headers: Record<string, string>, clien
   clientSignal?.addEventListener('abort', onAbort, { once: true })
   try {
     // All provider traffic exits through our own VPS relay (allowed country).
-    return await egressFetch(url, { headers, signal: ctrl.signal })
+    // `direct` is an admin-only diagnostic that bypasses the relay.
+    return await egressFetch(url, { headers, signal: ctrl.signal }, { direct })
   } finally {
     // Cleared once headers are in, so large 4K bodies are never cut short.
     clearTimeout(timer)
@@ -99,6 +150,9 @@ Deno.serve(async (req) => {
   // debug=1 → compact X-IPTV-Debug header. debug=json → admin-only JSON report.
   const debugHeaderOn = debugParam === '1' || debugParam === 'true' || debugParam === 'json'
   const debugJson = debugParam === 'json' && (await isAdminRequest(req))
+  // Admin-only diagnostic: bypass the VPS relay and hit the provider directly.
+  const directEgress =
+    (reqUrlEarly.searchParams.get('egress') ?? '') === 'direct' && (debugJson || (await isAdminRequest(req)))
   const attempts: Attempt[] = []
   let chosen: Attempt | null = null
 
@@ -274,7 +328,7 @@ Deno.serve(async (req) => {
         const nextUrl = new URL(u)
         const primaryHeaders = buildUpstreamHeaders(req, nextUrl, plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase)
         let t0 = Date.now()
-        const first = await fetchUpstream(u, primaryHeaders, req.signal)
+        const first = await fetchUpstream(u, primaryHeaders, req.signal, directEgress)
         record(u, 'mobile', t0, first)
         if (first.ok || isSlot(first.status) || isGeoBlocked(first.status)) return first
         await first.body?.cancel()
@@ -283,7 +337,7 @@ Deno.serve(async (req) => {
         // handshake once with VLC headers before marking the channel offline.
         const fallbackHeaders = { ...primaryHeaders, 'User-Agent': VLC_UA }
         t0 = Date.now()
-        const second = await fetchUpstream(u, fallbackHeaders, req.signal)
+        const second = await fetchUpstream(u, fallbackHeaders, req.signal, directEgress)
         record(u, 'vlc', t0, second)
         return second
       } catch (e) {
@@ -343,28 +397,48 @@ Deno.serve(async (req) => {
       }
     }
     if (!res) return err('Stream timed out while connecting. Try again.', 504, 'TIMEOUT')
+    let active: Response = res
 
 
 
-    const ct = res.headers.get('content-type') ?? ''
+    const ct = active.headers.get('content-type') ?? ''
     const isPlaylist = ct.includes('mpegurl') || /\.m3u8?$/i.test(upstream.pathname)
-
+    const chosenUrl = upstream.toString()
+    // A pooled edge→relay connection can be dead on arrival; the failure only
+    // shows when the body is read. Re-open the same upstream a couple of times
+    // before telling the player the channel is down.
+    const BODY_RETRIES = 2
 
     if (isPlaylist) {
-      const text = await res.text()
-      if (!res.ok) {
-        const slot = res.status === 458 || res.status === 429 || res.status === 407
-        if (isGeoBlocked(res.status, text)) return geoBlockResponse()
+      let text: string | null = null
+      let current: Response = active
+      for (let i = 0; i <= BODY_RETRIES; i++) {
+        try {
+          text = await current.text()
+          break
+        } catch (_e) {
+          if (i === BODY_RETRIES) break
+          const again = await tryFetch(chosenUrl)
+          if (!again) break
+          current = again
+        }
+      }
+      active = current
+      if (text === null) return err('Stream connection dropped. Try again.', 502, 'BODY_ERROR')
+
+      if (!active.ok) {
+        const slot = active.status === 458 || active.status === 429 || active.status === 407
+        if (isGeoBlocked(active.status, text)) return geoBlockResponse()
         // 5xx / 521 / 404 mean the channel's own origin is down — not our error.
         const msg = slot
           ? 'All viewing slots are in use right now. Try again in a moment.'
-          : `This channel is offline right now (${res.status}). Try another channel.`
+          : `This channel is offline right now (${active.status}). Try another channel.`
         return slot ? slotLimitResponse() : err(msg, 502, 'OFFLINE')
       }
 
       // The relay follows redirects server-side; X-Final-URL is the host the
       // segment paths are relative to (the provider redirects before answering).
-      const finalUrl = new URL(finalUrlOf(res, upstream.toString()))
+      const finalUrl = new URL(finalUrlOf(active, chosenUrl))
       const rewritten = text
         .split(/\r?\n/)
         .map((line) => {
@@ -390,25 +464,39 @@ Deno.serve(async (req) => {
     }
 
     // Provider slot limits come back as 458/429/407 — surface a readable message.
-    if (!res.ok) {
-      await res.body?.cancel()
-      const slot = res.status === 458 || res.status === 429 || res.status === 407
+    if (!active.ok) {
+      await active.body?.cancel()
+      const slot = active.status === 458 || active.status === 429 || active.status === 407
       if (slot) return slotLimitResponse()
-      if (isGeoBlocked(res.status)) return geoBlockResponse()
-      return err(`This channel is offline right now (${res.status}). Try another channel.`, 502, 'OFFLINE')
+      if (isGeoBlocked(active.status)) return geoBlockResponse()
+      return err(`This channel is offline right now (${active.status}). Try another channel.`, 502, 'OFFLINE')
     }
+
+    let body = await primeBody(active)
+    for (let i = 0; body === null && i < BODY_RETRIES; i++) {
+      const again = await tryFetch(chosenUrl)
+      if (!again) break
+      if (!again.ok) {
+        await again.body?.cancel()
+        break
+      }
+      active = again
+      body = await primeBody(again)
+    }
+    if (body === null) return err('Stream connection dropped. Try again.', 502, 'BODY_ERROR')
 
     const out = new Headers({ ...corsHeaders, ...debugHeaders() })
 
     out.set('Content-Type', ct || 'video/mp2t')
-    const len = res.headers.get('content-length')
+    const len = active.headers.get('content-length')
     if (len) out.set('Content-Length', len)
-    const cr = res.headers.get('content-range')
+    const cr = active.headers.get('content-range')
     if (cr) out.set('Content-Range', cr)
     out.set('Accept-Ranges', 'bytes')
     out.set('Cache-Control', 'no-store')
 
-    return new Response(res.body, { status: res.status, headers: out })
+    return new Response(body, { status: active.status, headers: out })
+
   } catch (e) {
     return err(e instanceof Error ? e.message : String(e), 502)
   }
