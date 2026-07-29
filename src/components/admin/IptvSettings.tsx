@@ -54,7 +54,19 @@ export function IptvSettings() {
       const { data, error } = await supabase.functions.invoke('iptv-test', {
         body: { url: candidate },
       });
-      if (error) throw error;
+      if (error) {
+        // Surface the real reason the function returned instead of a generic message.
+        let detail = error.message;
+        const ctx = (error as { context?: Response }).context;
+        try {
+          const parsed = ctx ? await ctx.clone().json() : null;
+          if (parsed?.error) detail = String(parsed.error);
+        } catch {
+          // keep error.message
+        }
+        setTest({ ok: false, message: detail });
+        return false;
+      }
       if (data?.ok) {
         setTest({
           ok: true,
@@ -62,7 +74,12 @@ export function IptvSettings() {
         });
         return true;
       }
-      setTest({ ok: false, message: data?.error ?? 'Connection failed' });
+      setTest({
+        ok: false,
+        message: data?.error
+          ? `${data.error}${data.status ? ` (HTTP ${data.status})` : ''}`
+          : 'Connection failed',
+      });
       return false;
     } catch (e) {
       setTest({ ok: false, message: e instanceof Error ? e.message : 'Connection failed' });
@@ -71,6 +88,7 @@ export function IptvSettings() {
       setTesting(false);
     }
   };
+
 
   const save = async () => {
     const candidate = url.trim();
