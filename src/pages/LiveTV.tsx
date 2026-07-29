@@ -146,6 +146,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const [query, setQuery] = useState('');
   const [playing, setPlaying] = useState<IptvChannel | null>(null);
   const [seriesItem, setSeriesItem] = useState<IptvChannel | null>(null);
+  const [fullCategory, setFullCategory] = useState<IptvCategory | null>(null);
 
   // Series open a season/episode detail sheet; everything else plays directly.
   const openItem = (c: IptvChannel) => (c.kind === 'series' ? setSeriesItem(c) : setPlaying(c));
