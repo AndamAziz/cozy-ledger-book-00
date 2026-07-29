@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       const legacy = /^m(\d+)$/.exec(streamId)
       if (legacy) entry = entries[Number(legacy[1])]
     }
-    if (!entry) return err('Unknown stream id', 404)
+    if (!entry) return err(`Unknown stream id: ${streamId}`, 404)
 
     try {
       upstream = new URL(entry.url)
