@@ -33,6 +33,36 @@ export function isXtreamUrl(raw: string) {
  * Plain M3U / M3U8 playlist support
  * ------------------------------------------------------------------ */
 
+/** Media extensions that mean "this URL is one stream", not a channel list. */
+const DIRECT_STREAM_EXT = /\.(m3u8|ts|mp4|mkv|avi|m4v|mov|mpd|flv|webm)(\?|#|$)/i
+
+/**
+ * True when the link points at a single playable stream (an HLS manifest, a raw
+ * MPEG-TS feed, a progressive file …) rather than a multi-channel M3U playlist.
+ * `.m3u`/`.m3u8` are ambiguous, so `.m3u8` only counts as direct when the path
+ * is not a classic playlist endpoint (get.php / playlist / channels …).
+ */
+export function isDirectStreamUrl(raw: string): boolean {
+  let u: URL
+  try {
+    u = new URL(raw)
+  } catch {
+    return false
+  }
+  if (isXtreamUrl(raw)) return false
+  const path = u.pathname
+  if (/\/(get\.php|player_api\.php|playlist|list|channels|panel_api\.php)/i.test(path)) return false
+  if (/\.m3u(\?|#|$)/i.test(path)) return false
+  if (DIRECT_STREAM_EXT.test(path)) return true
+  // Xtream-style direct stream paths without an extension: /live/user/pass/123
+  return /\/(live|movie|series)\/[^/]+\/[^/]+\/\d+$/i.test(path)
+}
+
+/** HLS manifest markers that only ever appear inside a single stream's playlist. */
+const HLS_STREAM_RE = /#EXT-X-(TARGETDURATION|MEDIA-SEQUENCE|STREAM-INF|ENDLIST|PLAYLIST-TYPE|MAP|KEY)/i
+
+
+
 export type M3uKind = 'live' | 'vod' | 'series'
 
 export interface M3uEntry {
