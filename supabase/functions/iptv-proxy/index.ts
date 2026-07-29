@@ -2,20 +2,32 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
 import { egressFetch, finalUrlOf, hasEgressProxy, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
+import { absorbCookies, cookieHeaderFor, isCloudflareChallenge } from '../_shared/iptvCookies.ts'
 
 const MOBILE_UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const VLC_UA = 'VLC/3.0.20 LibVLC/3.0.20'
+// Cloudflare bot-management scores a real desktop Chrome UA + client hints much
+// higher than a bare player UA; used as the last handshake attempt.
+const CHROME_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 const SLOT_LIMIT_STATUS = 429
+
+type UaKind = 'mobile' | 'vlc' | 'chrome'
 
 /** Connect timeout for the upstream handshake (headers only — the body streams freely). */
 const CONNECT_TIMEOUT_MS = 14000
 
-function buildUpstreamHeaders(req: Request, upstream: URL, refererBase?: string): Record<string, string> {
+function buildUpstreamHeaders(
+  req: Request,
+  upstream: URL,
+  refererBase?: string,
+  ua: UaKind = 'mobile',
+): Record<string, string> {
   const headers: Record<string, string> = {
     // Most IPTV apps identify as an Android/ExoPlayer-style client. Keeping the
     // raw provider request server-side lets HTTP streams work from the HTTPS app
     // and avoids browser User-Agent / mixed-content limitations.
-    'User-Agent': MOBILE_UA,
+    'User-Agent': ua === 'vlc' ? VLC_UA : ua === 'chrome' ? CHROME_UA : MOBILE_UA,
     'Accept': '*/*',
     'Accept-Language': 'en-US,en;q=0.9',
     // Media is already compressed; a gzip/br hop through the relay only adds a
@@ -23,6 +35,21 @@ function buildUpstreamHeaders(req: Request, upstream: URL, refererBase?: string)
     'Accept-Encoding': 'identity',
     'Icy-MetaData': '1',
     'X-Requested-With': 'com.nathnetwork.xciptv',
+    'Connection': 'keep-alive',
+  }
+
+  if (ua === 'chrome') {
+    // Client hints + fetch metadata: Cloudflare flags a "Chrome" UA that sends
+    // none of these as an obvious bot.
+    headers['sec-ch-ua'] = '"Chromium";v="126", "Google Chrome";v="126", "Not-A.Brand";v="99"'
+    headers['sec-ch-ua-mobile'] = '?0'
+    headers['sec-ch-ua-platform'] = '"Windows"'
+    headers['Sec-Fetch-Dest'] = 'empty'
+    headers['Sec-Fetch-Mode'] = 'cors'
+    headers['Sec-Fetch-Site'] = 'cross-site'
+    headers['Accept'] = '*/*'
+    delete headers['X-Requested-With']
+    delete headers['Icy-MetaData']
   }
 
   const range = req.headers.get('range')
@@ -32,8 +59,14 @@ function buildUpstreamHeaders(req: Request, upstream: URL, refererBase?: string)
   headers['Origin'] = origin.replace(/\/$/, '')
   headers['Referer'] = origin.endsWith('/') ? origin : `${origin}/`
 
+  // Replay Cloudflare clearance / panel session cookies handed out by earlier
+  // requests to this host, exactly like a native IPTV app's HTTP client does.
+  const cookie = cookieHeaderFor(upstream.toString())
+  if (cookie) headers['Cookie'] = cookie
+
   return headers
 }
+
 
 /**
  * Pull the first chunk off an upstream body before handing it to the player.
