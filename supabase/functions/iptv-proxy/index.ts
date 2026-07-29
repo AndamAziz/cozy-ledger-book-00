@@ -23,7 +23,9 @@ Deno.serve(async (req) => {
   const reqUrl = new URL(req.url)
   const { host, protocol, username, password } = creds(source)
   const streamId = reqUrl.searchParams.get('id')
-  const kind = reqUrl.searchParams.get('kind') === 'vod' ? 'vod' : 'live'
+  const kindParam = reqUrl.searchParams.get('kind')
+  const kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
+  const extHint = (reqUrl.searchParams.get('ext') ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase()
   const passthrough = reqUrl.searchParams.get('u')
 
   // Candidate upstreams: live HLS first, then Xtream VOD/series containers.
@@ -33,12 +35,13 @@ Deno.serve(async (req) => {
     if (!/^\d+$/.test(streamId)) return err('Invalid id', 400)
     const cred = `${protocol}//${host}`
     const live = `${cred}/live/${username}/${password}/${streamId}.m3u8`
-    const vod = ['mp4', 'mkv', 'avi'].flatMap((ext) => [
-      `${cred}/movie/${username}/${password}/${streamId}.${ext}`,
-      `${cred}/series/${username}/${password}/${streamId}.${ext}`,
-    ])
-    candidates = kind === 'vod' ? [live, ...vod] : [live]
+    const exts = [...new Set([extHint, 'mp4', 'mkv', 'avi'].filter(Boolean))]
+    // Series episodes live under /series/, movies under /movie/ — try the likely one first.
+    const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
+    const vod = exts.flatMap((ext) => dirs.map((dir) => `${cred}/${dir}/${username}/${password}/${streamId}.${ext}`))
+    candidates = kind === 'live' ? [live] : kind === 'series' ? [...vod, live] : [live, ...vod]
     upstream = new URL(candidates[0])
+
   } else if (passthrough) {
     try {
       upstream = new URL(passthrough)
