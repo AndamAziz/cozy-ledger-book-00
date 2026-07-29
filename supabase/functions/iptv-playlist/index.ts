@@ -134,34 +134,33 @@ const ACTIONS: Record<Kind, [string, string]> = {
   series: ['get_series_categories', 'get_series'],
 }
 
+/**
+ * Build the section/category index WITHOUT downloading the ~280k-item stream
+ * catalogues: only the (tiny) category lists are fetched, so the first paint of
+ * the app is a few KB instead of ~150MB of JSON. Item counts are resolved lazily
+ * when a category is actually opened.
+ */
 async function buildIndex(source: string) {
   const api = apiBase(source)
   const categories: CategoryInfo[] = []
-  let total = 0
 
-  for (const kind of ['live', 'vod', 'series'] as Kind[]) {
-    const cats = (await fetchJson<RawCategory[]>(`${api}&action=${ACTIONS[kind][0]}`)) ?? []
-    const counts = new Map<string, number>()
+  const lists = await Promise.all(
+    (['live', 'vod', 'series'] as Kind[]).map(async (kind) => ({
+      kind,
+      cats: (await fetchJson<RawCategory[]>(`${api}&action=${ACTIONS[kind][0]}`)) ?? [],
+    })),
+  )
 
-    // Counting streams a category at a time keeps peak memory tiny.
-    await scanArray(`${api}&action=${ACTIONS[kind][1]}`, (row) => {
-      const cid = String(row.category_id ?? '0')
-      counts.set(cid, (counts.get(cid) ?? 0) + 1)
-      total += 1
-      return true
-    })
-
+  for (const { kind, cats } of lists) {
     for (const c of cats) {
-      const count = counts.get(String(c.category_id)) ?? 0
-      if (count > 0) {
-        categories.push({ id: `${kind}:${c.category_id}`, name: c.category_name, count, kind })
-      }
+      categories.push({ id: `${kind}:${c.category_id}`, name: c.category_name, count: 0, kind })
     }
   }
 
   if (!categories.length) throw new Error('Upstream returned no channels')
-  return { at: Date.now(), source, categories, total }
+  return { at: Date.now(), source, categories, total: 0 }
 }
+
 
 async function getIndex(source: string) {
   if (indexCache && indexCache.source === source && Date.now() - indexCache.at < TTL) return indexCache
