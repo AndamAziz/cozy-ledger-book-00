@@ -91,8 +91,16 @@ export function LiveTVPlayer({
     // then let the parent move on to the first available episode.
     const handleFailure = async () => {
       if (cancelled) return;
-      const limited = await probeSlotLimit(src);
+      const failure = await probeStreamFailure(src);
       if (cancelled) return;
+      // A geo restriction is provider-wide: retrying or switching channel cannot help.
+      if (failure === 'geo') {
+        setRetryIn(null);
+        setErrorKind('geo');
+        setStatus('error');
+        return;
+      }
+      const limited = failure === 'slot';
       if (limited) {
         setSlotLimited(true);
         if (slotRetriesRef.current < SLOT_MAX_RETRIES) {
