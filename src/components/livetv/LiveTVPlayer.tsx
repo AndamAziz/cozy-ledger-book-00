@@ -175,6 +175,44 @@ export function LiveTVPlayer({
       else void playMpegts();
     };
 
+    /**
+     * Cheap first-line stall recovery (≤1.5s frozen): jump the tiny buffer hole,
+     * or skip straight to the live edge when the stream fell behind. Only if
+     * this keeps failing does the heavier engine escalation kick in.
+     */
+    let nudges = 0;
+    const nudge = () => {
+      nudges += 1;
+      try {
+        const buffered = video.buffered;
+        const now = video.currentTime;
+        // Live edge = end of the last buffered range (or seekable end).
+        let target = now + 0.25;
+        if (buffered.length) {
+          const end = buffered.end(buffered.length - 1);
+          if (end - now > 1) target = isVod ? now + 0.25 : Math.max(now + 0.25, end - 1);
+          else {
+            // Frozen at the head of the buffer: hop over the hole to the next range.
+            for (let i = 0; i < buffered.length; i++) {
+              if (buffered.start(i) > now) { target = buffered.start(i) + 0.05; break; }
+            }
+          }
+        } else if (!isVod && video.seekable.length) {
+          target = Math.max(now, video.seekable.end(video.seekable.length - 1) - 1.5);
+        }
+        if (target > now) video.currentTime = target;
+        void video.play().catch(() => undefined);
+        if (hls && nudges % 2 === 0) hls.startLoad();
+      } catch { /* seeking not possible yet */ }
+      // Repeated nudges mean the stream itself is dead — escalate.
+      if (nudges >= 4) {
+        nudges = 0;
+        if (hls) recoverMedia();
+        else if (!usedMpegts) void playMpegts();
+      }
+    };
+
+
     // Last engine in the chain: MPEG-TS / raw transport-stream demuxing in MSE.
     // Xtream VOD and live links are frequently .ts containers that <video> and
     // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
@@ -243,15 +281,22 @@ export function LiveTVPlayer({
       hls = new Hls({
         lowLatencyMode: !isVod,
         enableWorker: true,
-        backBufferLength: isVod ? 120 : 60,
-        // Pre-load far more ahead so IPTV hiccups don't surface as freezes.
-        maxBufferLength: isVod ? 90 : 45,
-        maxMaxBufferLength: isVod ? 600 : 240,
+        backBufferLength: isVod ? 120 : 30,
+        // Live: a tight, steadily-refilled buffer recovers from IPTV hiccups
+        // faster than a huge one that takes ages to rebuild after a drop.
+        maxBufferLength: isVod ? 90 : 30,
+        maxMaxBufferLength: isVod ? 600 : 120,
         maxBufferSize: 120 * 1000 * 1000,
         maxBufferHole: 0.5,
         highBufferWatchdogPeriod: 1,
-        nudgeMaxRetry: 10,
+        nudgeOffset: 0.2,
+        nudgeMaxRetry: 15,
+        // Stay ~3 segments behind the edge, but never drift more than 10;
+        // slight speed-up catches up instead of seeking (no visible jump).
         liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 10,
+        maxLiveSyncPlaybackRate: 1.5,
+        liveDurationInfinity: !isVod,
         // Bounded so a dead origin surfaces as a retryable error instead of an
         // endless "Connecting to stream…" spinner.
         manifestLoadingTimeOut: 18000,
@@ -264,6 +309,7 @@ export function LiveTVPlayer({
         fragLoadingRetryDelay: 800,
 
       });
+
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
@@ -295,7 +341,9 @@ export function LiveTVPlayer({
             d === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL ||
             d === Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE
           ) {
-            recoverMedia();
+            // Nudge/seek first; recoverMediaError only if nudging keeps failing.
+            nudge();
+
           } else if (
             d === Hls.ErrorDetails.FRAG_LOAD_ERROR ||
             d === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT ||
@@ -386,6 +434,28 @@ export function LiveTVPlayer({
       else void handleFailure();
     }, 2000);
 
+    /**
+     * Fast micro-stall watchdog: sampled every 500ms, so a freeze longer than
+     * 1.5s is nudged / skipped to the live edge immediately instead of sitting
+     * in a buffering spinner until the 15s escalation runs.
+     */
+    let microTime = 0;
+    let microFrozen = 0;
+    const microWatchdog = window.setInterval(() => {
+      if (cancelled || video.paused || video.readyState < 2) return;
+      if (video.currentTime > microTime + 0.01) {
+        microTime = video.currentTime;
+        microFrozen = 0;
+        nudges = 0;
+        return;
+      }
+      microFrozen += 500;
+      if (microFrozen < 1500) return;
+      microFrozen = 0;
+      nudge();
+    }, 500);
+
+
     const onPlaying = () => {
       window.clearTimeout(connectWatchdog);
       window.clearInterval(countdownTimer);
@@ -432,6 +502,7 @@ export function LiveTVPlayer({
       window.clearTimeout(connectWatchdog);
       window.clearInterval(countdownTimer);
       window.clearInterval(stallWatchdog);
+      window.clearInterval(microWatchdog);
       window.clearInterval(overlayGuard);
 
       video.removeEventListener('playing', onPlaying);
