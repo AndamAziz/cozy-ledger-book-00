@@ -79,6 +79,28 @@ async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
     .eq("environment", env);
 }
 
+/** One-off £40 Live TV activation: unlock the account permanently. */
+async function handleLiveTvActivation(session: any) {
+  const userId = session.metadata?.userId;
+  if (!userId) {
+    console.error("Live TV activation without userId metadata");
+    return;
+  }
+  const { error } = await getSupabase()
+    .from("livetv_access")
+    .upsert(
+      {
+        user_id: userId,
+        is_activated: true,
+        activated_at: new Date().toISOString(),
+        activation_ref: session.id ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+  if (error) console.error("Live TV activation failed:", error.message);
+}
+
 async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
   switch (event.type) {
@@ -91,6 +113,21 @@ async function handleWebhook(req: Request, env: StripeEnv) {
     case "customer.subscription.deleted":
       await handleSubscriptionDeleted(event.data.object, env);
       break;
+    case "checkout.session.completed": {
+      const session = event.data.object as any;
+      // Delayed-notification methods stay "unpaid" until settlement.
+      if (session.payment_status !== "unpaid" && session.metadata?.purpose === "livetv_activation") {
+        await handleLiveTvActivation(session);
+      }
+      break;
+    }
+    case "checkout.session.async_payment_succeeded": {
+      const session = event.data.object as any;
+      if (session.metadata?.purpose === "livetv_activation") {
+        await handleLiveTvActivation(session);
+      }
+      break;
+    }
     default:
       console.log("Unhandled event:", event.type);
   }
