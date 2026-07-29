@@ -254,17 +254,17 @@ export function LiveTVPlayer({
           // reported straight away instead of stalling on a dead <video> src.
           if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
             if (isVod && !usedNative) playNative();
-            else void handleFailure();
+            else void playMpegts();
           } else if (networkRetries < 5) {
             networkRetries += 1;
             window.setTimeout(() => hls?.startLoad(), 1000 * networkRetries);
           } else if (isVod && !usedNative) playNative();
-          else void handleFailure();
+          else void playMpegts();
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
 
           recoverMedia();
         } else if (!usedNative) playNative();
-        else void handleFailure();
+        else void playMpegts();
       });
     } else {
       playNative();
@@ -276,7 +276,7 @@ export function LiveTVPlayer({
     const connectWatchdog = window.setTimeout(() => {
       if (cancelled || video.readyState >= 3) return
       if (!usedNative) playNative();
-      else void handleFailure();
+      else void playMpegts();
     }, 15000);
 
     const onPlaying = () => {
@@ -290,7 +290,7 @@ export function LiveTVPlayer({
     const onWaiting = () => setStatus((s) => (s === 'error' ? s : 'loading'));
     const onError = () => {
       if (!usedNative) playNative();
-      else void handleFailure();
+      else void playMpegts();
     };
     video.addEventListener('playing', onPlaying);
     video.addEventListener('waiting', onWaiting);
