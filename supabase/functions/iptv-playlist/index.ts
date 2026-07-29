@@ -455,7 +455,7 @@ Deno.serve(async (req) => {
     if (!isXtreamUrl(source)) {
       const { body, version } = await handlePlain(source, url)
       // Version + query identify the payload: unchanged playlists answer 304.
-      const etag = `W/"${version}-${await digest(url.search)}"`
+      const etag = `W/"${version}-${digest(url.search)}"`
       if (req.headers.get('if-none-match') === etag) {
         return new Response(null, {
           status: 304,
