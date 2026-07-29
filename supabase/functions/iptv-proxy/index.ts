@@ -112,7 +112,9 @@ Deno.serve(async (req) => {
     const live = `${cred}/live/${username}/${password}/${streamId}.m3u8`
     // Some panels only expose raw MPEG-TS for live channels (no HLS packaging).
     const liveTs = `${cred}/live/${username}/${password}/${streamId}.ts`
-    const exts = [...new Set([extHint, 'mp4', 'mkv', 'avi'].filter(Boolean))]
+    // Always probe .mp4 first: Safari/iOS cannot play the Matroska container
+    // even with H.264/AAC inside, so .mkv is only ever a fallback.
+    const exts = [...new Set(['mp4', extHint, 'mkv', 'avi'].filter(Boolean))]
     // Series episodes live under /series/, movies under /movie/ — try the likely one first.
     const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
     const vod = exts.flatMap((ext) => dirs.map((dir) => `${cred}/${dir}/${username}/${password}/${streamId}.${ext}`))
@@ -186,16 +188,31 @@ Deno.serve(async (req) => {
       }
     }
     const list = streamId ? candidates : [upstream.toString()]
+    // A wrong container guess (e.g. .mp4 for an .mkv-only title) answers 200 with
+    // an empty text/plain body, so a 200 alone is not proof of a real stream.
+    const isRealMedia = (r: Response, u: string) => {
+      const ct = (r.headers.get('content-type') ?? '').toLowerCase()
+      if (ct.includes('mpegurl') || /\.m3u8?$/i.test(u)) return true
+      if (ct.startsWith('video/') || ct.startsWith('audio/') || ct.includes('octet-stream') || ct.includes('mp2t')) return true
+      if (!ct || ct.startsWith('text/') || ct.includes('json') || ct.includes('html')) return false
+      return true
+    }
     let res: Response | null = null
     for (let i = 0; i < list.length; i++) {
       if (req.signal.aborted) return err('Client disconnected', 499)
       if (i > 0) await new Promise((r) => setTimeout(r, 300))
       const next = await tryFetch(list[i])
-      if (next?.ok) {
+      if (next?.ok && isRealMedia(next, list[i])) {
         upstream = new URL(list[i])
         res = next
         break
       }
+      if (next?.ok) {
+        // Empty/HTML body: this container does not exist upstream — keep walking.
+        await next.body?.cancel()
+        continue
+      }
+
       if (next) {
         // Slot limits are account-wide: trying another container just burns more
         // provider sessions, so surface it straight away.
