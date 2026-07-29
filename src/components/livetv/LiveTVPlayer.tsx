@@ -130,6 +130,25 @@ export function LiveTVPlayer({
           return;
         }
       }
+      // Generic failures (dead engine, stalled segments) get silent timed
+      // restarts before the user ever sees an error card.
+      if (autoRetriesRef.current < AUTO_MAX_RETRIES) {
+        const delay = autoRetryDelay(autoRetriesRef.current);
+        autoRetriesRef.current += 1;
+        setStatus('loading');
+        let left = Math.ceil(delay / 1000);
+        setRetryIn(left);
+        window.clearInterval(countdownTimer);
+        countdownTimer = window.setInterval(() => {
+          left -= 1;
+          setRetryIn(left > 0 ? left : null);
+          if (left <= 0) window.clearInterval(countdownTimer);
+        }, 1000);
+        retryTimer = window.setTimeout(() => {
+          if (!cancelled) setAttempt((a) => a + 1);
+        }, delay);
+        return;
+      }
       setRetryIn(null);
       setErrorKind(limited ? 'busy' : 'offline');
       setStatus('error');
