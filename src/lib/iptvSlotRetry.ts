@@ -26,33 +26,44 @@ export function isSlotLimitStatus(status: number): boolean {
   return status === 429 || status === 458 || status === 407;
 }
 
-/** Probe a proxy stream URL and report whether it failed because of the slot limit. */
-export async function probeSlotLimit(url: string): Promise<boolean> {
+/** Message shown when the provider refuses playback from our server's country. */
+export const GEO_BLOCK_MESSAGE =
+  'The provider blocks streaming from this server’s country. Ask your IPTV provider to allow it.';
+
+/** True when a proxy JSON payload signals a provider geo restriction. */
+export function isGeoBlockPayload(payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object') return false;
+  const { code, error } = payload as { code?: unknown; error?: unknown };
+  if (code === 'GEO_BLOCK') return true;
+  return typeof error === 'string' && /country/i.test(error);
+}
+
+export type StreamFailure = 'slot' | 'geo' | 'other';
+
+/** Probe a proxy stream URL and classify why it failed. */
+export async function probeStreamFailure(url: string): Promise<StreamFailure> {
   try {
     // Ask for a single byte and abort straight after, so the probe never holds
     // a second viewing slot open against the provider.
     const res = await fetch(url, { headers: { Accept: 'application/json', Range: 'bytes=0-0' } });
     const ct = res.headers.get('content-type') ?? '';
-    if (res.ok) {
-      if (ct.includes('json')) return isSlotLimitPayload(await res.json());
-      await res.body?.cancel();
-      return false;
-    }
-    if (isSlotLimitStatus(res.status)) {
-      if (!ct.includes('json')) {
-        await res.body?.cancel();
-        return true;
-      }
-      return isSlotLimitPayload(await res.json());
-    }
     if (!ct.includes('json')) {
       await res.body?.cancel();
-      return false;
+      if (res.status === 451) return 'geo';
+      return isSlotLimitStatus(res.status) ? 'slot' : 'other';
     }
-    return isSlotLimitPayload(await res.json());
+    const payload = await res.json();
+    if (isGeoBlockPayload(payload)) return 'geo';
+    if (isSlotLimitPayload(payload)) return 'slot';
+    return 'other';
   } catch {
-    return false;
+    return 'other';
   }
+}
+
+/** Probe a proxy stream URL and report whether it failed because of the slot limit. */
+export async function probeSlotLimit(url: string): Promise<boolean> {
+  return (await probeStreamFailure(url)) === 'slot';
 }
 
 /**
