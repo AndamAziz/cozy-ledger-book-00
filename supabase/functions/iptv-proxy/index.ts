@@ -1,16 +1,11 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { getPlaylistUrl, parseXtream } from '../_shared/iptvConfig.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 
-function creds() {
-  const raw = Deno.env.get('IPTV_PLAYLIST_URL') ?? ''
-  const u = new URL(raw)
-  return {
-    host: u.host,
-    protocol: 'http:',
-    username: u.searchParams.get('username') ?? '',
-    password: u.searchParams.get('password') ?? '',
-  }
+function creds(raw: string) {
+  const { host, username, password } = parseXtream(raw)
+  return { host, protocol: 'http:', username, password }
 }
 
 Deno.serve(async (req) => {
@@ -22,10 +17,11 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 
-  if (!Deno.env.get('IPTV_PLAYLIST_URL')) return err('Playlist not configured', 500)
+  const source = await getPlaylistUrl()
+  if (!source) return err('Playlist not configured', 500)
 
   const reqUrl = new URL(req.url)
-  const { host, protocol, username, password } = creds()
+  const { host, protocol, username, password } = creds(source)
   const streamId = reqUrl.searchParams.get('id')
   const kind = reqUrl.searchParams.get('kind') === 'vod' ? 'vod' : 'live'
   const passthrough = reqUrl.searchParams.get('u')

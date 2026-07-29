@@ -1,4 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { getPlaylistUrl, parseXtream } from '../_shared/iptvConfig.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 
@@ -15,6 +16,7 @@ interface Category {
 
 interface Snapshot {
   at: number
+  source: string
   categories: { id: string; name: string; count: number }[]
   byCat: Map<string, Stream[]>
   all: Stream[]
@@ -24,18 +26,13 @@ const TTL = 30 * 60 * 1000
 let snapshot: Snapshot | null = null
 let loading: Promise<Snapshot> | null = null
 
-function apiBase() {
-  const raw = Deno.env.get('IPTV_PLAYLIST_URL') ?? ''
-  const u = new URL(raw)
-  const username = u.searchParams.get('username') ?? ''
-  const password = u.searchParams.get('password') ?? ''
-  return {
-    api: `${u.protocol}//${u.host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
-  }
+function apiBase(raw: string) {
+  const { protocol, host, username, password } = parseXtream(raw)
+  return `${protocol}//${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
 }
 
-async function build(): Promise<Snapshot> {
-  const { api } = apiBase()
+async function build(source: string): Promise<Snapshot> {
+  const api = apiBase(source)
   const [catRes, streamRes] = await Promise.all([
     fetch(`${api}&action=get_live_categories`, { headers: { 'User-Agent': UA } }),
     fetch(`${api}&action=get_live_streams`, { headers: { 'User-Agent': UA } }),
@@ -56,13 +53,14 @@ async function build(): Promise<Snapshot> {
     .map((c) => ({ id: c.category_id, name: c.category_name, count: byCat.get(c.category_id)?.length ?? 0 }))
     .filter((c) => c.count > 0)
 
-  return { at: Date.now(), categories, byCat, all: streams }
+  return { at: Date.now(), source, categories, byCat, all: streams }
 }
 
-async function getSnapshot(): Promise<Snapshot> {
-  if (snapshot && Date.now() - snapshot.at < TTL) return snapshot
+async function getSnapshot(source: string): Promise<Snapshot> {
+  // Invalidate the cache when an admin points the app at a different playlist.
+  if (snapshot && snapshot.source === source && Date.now() - snapshot.at < TTL) return snapshot
   if (!loading) {
-    loading = build()
+    loading = build(source)
       .then((s) => {
         snapshot = s
         return s
@@ -91,7 +89,8 @@ Deno.serve(async (req) => {
     })
 
   try {
-    if (!Deno.env.get('IPTV_PLAYLIST_URL')) return json({ error: 'Playlist not configured' }, 500)
+    const source = await getPlaylistUrl()
+    if (!source) return json({ error: 'Playlist not configured' }, 500)
 
     const url = new URL(req.url)
     const category = url.searchParams.get('category')
@@ -99,7 +98,7 @@ Deno.serve(async (req) => {
     const limit = Math.min(Number(url.searchParams.get('limit') ?? 60) || 60, 200)
     const offset = Math.max(Number(url.searchParams.get('offset') ?? 0) || 0, 0)
 
-    const snap = await getSnapshot()
+    const snap = await getSnapshot(source)
 
     if (!category && !q) {
       return json({
