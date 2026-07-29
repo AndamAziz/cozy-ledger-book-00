@@ -24,6 +24,18 @@ function BackHome() {
   );
 }
 
+/** Free, public iptv-org playlists users can add with one tap. */
+const FREE_SERVERS = [
+  { label: '🇮🇶 Iraq', url: 'https://iptv-org.github.io/iptv/countries/iq.m3u' },
+  { label: '🇬🇧 UK', url: 'https://iptv-org.github.io/iptv/countries/uk.m3u' },
+  { label: '🇹🇷 Turkey', url: 'https://iptv-org.github.io/iptv/countries/tr.m3u' },
+  { label: '🇺🇸 USA', url: 'https://iptv-org.github.io/iptv/countries/us.m3u' },
+  { label: 'Kurdish', url: 'https://iptv-org.github.io/iptv/languages/kur.m3u' },
+  { label: 'Sports', url: 'https://iptv-org.github.io/iptv/categories/sports.m3u' },
+  { label: 'News', url: 'https://iptv-org.github.io/iptv/categories/news.m3u' },
+  { label: 'All', url: 'https://iptv-org.github.io/iptv/index.m3u' },
+];
+
 /** Personal provider link editor — shown until the user saves their own URL. */
 function ServerForm({
   maskedUrl,
@@ -100,11 +112,29 @@ function ServerForm({
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Save server
         </button>
       </div>
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-extrabold uppercase tracking-wide text-white/45">
+          Free public servers
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {FREE_SERVERS.map((s) => (
+            <button
+              key={s.url}
+              type="button"
+              onClick={() => setUrl(s.url)}
+              className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[11px] font-bold text-white/70 transition hover:border-[#ff2d6f]/50 hover:text-white"
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
       {maskedUrl && (
         <p dir="ltr" className="truncate text-[11px] font-bold text-white/45">
           Saved: {maskedUrl}
         </p>
       )}
+
       <p className="text-[11px] leading-relaxed text-white/40">
         Your link is encrypted before it is stored, is never shown again in full, and is never
         shared with other users.
