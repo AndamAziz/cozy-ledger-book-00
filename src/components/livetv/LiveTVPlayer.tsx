@@ -73,6 +73,9 @@ export function LiveTVPlayer({
     let hls: Hls | null = null;
     let usedNative = false;
     let usedMpegts = false;
+    // When MPEG-TS is tried first (raw .ts links), fall back to native playback
+    // instead of surfacing an error straight away.
+    let mpegtsFallback: (() => void) | null = null;
     let mediaRecoveries = 0;
     let networkRetries = 0;
     let cancelled = false;
@@ -135,7 +138,10 @@ export function LiveTVPlayer({
     // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
     const playMpegts = async () => {
       if (usedMpegts) {
-        void handleFailure();
+        const next = mpegtsFallback;
+        mpegtsFallback = null;
+        if (next) next();
+        else void handleFailure();
         return;
       }
       usedMpegts = true;
@@ -143,7 +149,10 @@ export function LiveTVPlayer({
         const mod: any = await import('mpegts.js');
         const mpegts: any = mod.default ?? mod;
         if (cancelled || !mpegts.isSupported()) {
-          void handleFailure();
+          const next = mpegtsFallback;
+          mpegtsFallback = null;
+          if (next) next();
+          else void handleFailure();
           return;
         }
         hls?.destroy();
@@ -157,12 +166,20 @@ export function LiveTVPlayer({
           { enableWorker: true, liveBufferLatencyChasing: !isVod, lazyLoad: false },
         );
         mpegtsRef.current = player;
-        player.on(mpegts.Events.ERROR, () => void handleFailure());
+        player.on(mpegts.Events.ERROR, () => {
+          const next = mpegtsFallback;
+          mpegtsFallback = null;
+          if (next) next();
+          else void handleFailure();
+        });
         player.attachMediaElement(video);
         player.load();
         play();
       } catch {
-        void handleFailure();
+        const next = mpegtsFallback;
+        mpegtsFallback = null;
+        if (next) next();
+        else void handleFailure();
       }
     };
 
@@ -180,7 +197,7 @@ export function LiveTVPlayer({
       play();
     };
 
-    if (Hls.isSupported()) {
+    const startHls = () => {
       hls = new Hls({
         lowLatencyMode: !isVod,
         enableWorker: true,
@@ -266,18 +283,37 @@ export function LiveTVPlayer({
         } else if (!usedNative) playNative();
         else void playMpegts();
       });
+    };
+
+    // Engine selection up front: HTTP IPTV links are always fetched through the
+    // HTTPS edge proxy (no mixed-content block), but the container decides which
+    // engine can actually decode them. Guessing wrong is what left the player
+    // stuck on "Connecting to stream…".
+    const extHint = (channel.ext ?? '').toLowerCase();
+    const tsFirst = extHint === 'ts' || extHint === 'mpegts' || extHint === 'mpg';
+    const progressive = ['mp4', 'm4v', 'mov', 'webm'].includes(extHint);
+
+    if (tsFirst) {
+      // Raw transport streams: mpegts.js first, native as the safety net.
+      mpegtsFallback = () => playNative();
+      void playMpegts();
+    } else if (progressive) {
+      playNative();
+    } else if (Hls.isSupported()) {
+      startHls();
     } else {
       playNative();
     }
 
 
-    // Hard connect watchdog: if nothing is playing within 15s, fall back /
-    // surface an error instead of spinning forever.
+    // Hard connect watchdog: if nothing is playing within 9s, move to the next
+    // engine instead of spinning on "Connecting to stream…" forever.
     const connectWatchdog = window.setTimeout(() => {
-      if (cancelled || video.readyState >= 3) return
-      if (!usedNative) playNative();
-      else void playMpegts();
-    }, 15000);
+      if (cancelled || video.readyState >= 3) return;
+      if (!usedMpegts && (tsFirst || usedNative)) void playMpegts();
+      else if (!usedNative) playNative();
+      else void handleFailure();
+    }, 9000);
 
     const onPlaying = () => {
       window.clearTimeout(connectWatchdog);
