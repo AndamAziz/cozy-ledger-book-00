@@ -47,7 +47,7 @@ import {
 import { TelegramHealthCard } from './TelegramHealthCard';
 import { ReviewModeration } from './ReviewModeration';
 import { StreamServerManager } from './StreamServerManager';
-import { IptvSettings } from './IptvSettings';
+import { LiveTvUsersAdmin } from './LiveTvUsersAdmin';
 import { normalizeBrandText } from '@/lib/brand';
 
 interface UserApproval {
@@ -731,7 +731,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
         {/* IPTV playlist server configuration */}
         <div className="mt-4">
-          <IptvSettings />
+          <LiveTvUsersAdmin />
         </div>
 
 
