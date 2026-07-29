@@ -13,6 +13,18 @@ export function slotRetryDelay(attempt: number): number {
   return Math.min(2000 * 2 ** Math.max(0, attempt), 12000);
 }
 
+/** How many times playback silently restarts after a generic (non-slot) failure. */
+export const AUTO_MAX_RETRIES = 3;
+
+/** Backoff (ms) between automatic restarts after a stall or engine failure. */
+export function autoRetryDelay(attempt: number): number {
+  return Math.min(1500 * 2 ** Math.max(0, attempt), 8000);
+}
+
+/** Milliseconds of frozen currentTime before playback is considered stalled. */
+export const STALL_TIMEOUT_MS = 15000;
+
+
 /** True when a proxy JSON payload signals the provider slot limit. */
 export function isSlotLimitPayload(payload: unknown): boolean {
   if (!payload || typeof payload !== 'object') return false;
