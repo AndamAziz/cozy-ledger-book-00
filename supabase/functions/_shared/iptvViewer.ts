@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { decryptSecret, encryptSecret, maskPlaylistUrl } from './iptvCrypto.ts'
 
 /**
  * Per-user Live TV resolution.
@@ -99,10 +100,30 @@ export async function resolveViewer(req: Request): Promise<ViewerResult> {
   }
 
   const [serverRes, accessRes, adminRes] = await Promise.all([
-    supabase.from('user_iptv_servers').select('playlist_url').eq('user_id', user.id).maybeSingle(),
+    supabase
+      .from('user_iptv_servers')
+      .select('playlist_url, playlist_enc')
+      .eq('user_id', user.id)
+      .maybeSingle(),
     supabase.from('livetv_access').select('trial_ends_at, is_activated').eq('user_id', user.id).maybeSingle(),
     supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
   ])
+
+  // Credentials are stored encrypted; legacy plaintext rows are migrated on read.
+  const legacyUrl = String(serverRes.data?.playlist_url ?? '').trim()
+  let playlistUrl = legacyUrl
+  if (legacyUrl) {
+    await supabase
+      .from('user_iptv_servers')
+      .update({
+        playlist_url: '',
+        playlist_enc: await encryptSecret(legacyUrl),
+        playlist_masked: maskPlaylistUrl(legacyUrl),
+      })
+      .eq('user_id', user.id)
+  } else {
+    playlistUrl = await decryptSecret(serverRes.data?.playlist_enc as string | null)
+  }
 
   const trialEndsAt = (accessRes.data?.trial_ends_at as string | null) ?? null
   const isActivated = !!accessRes.data?.is_activated
@@ -112,7 +133,7 @@ export async function resolveViewer(req: Request): Promise<ViewerResult> {
   const viewer: Viewer = {
     userId: user.id,
     email: user.email ?? null,
-    playlistUrl: String(serverRes.data?.playlist_url ?? '').trim(),
+    playlistUrl,
     isAdmin,
     access: {
       trialEndsAt,
