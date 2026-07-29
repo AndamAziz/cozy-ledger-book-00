@@ -125,7 +125,43 @@ export function LiveTVPlayer({
         hls.swapAudioCodec();
         hls.recoverMediaError();
       } else if (!usedNative) playNative();
-      else void handleFailure();
+      else void playMpegts();
+    };
+
+    // Last engine in the chain: MPEG-TS / raw transport-stream demuxing in MSE.
+    // Xtream VOD and live links are frequently .ts containers that <video> and
+    // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
+    const playMpegts = async () => {
+      if (usedMpegts) {
+        void handleFailure();
+        return;
+      }
+      usedMpegts = true;
+      try {
+        const mod = await import('mpegts.js');
+        const mpegts = mod.default ?? mod;
+        if (cancelled || !mpegts.isSupported()) {
+          void handleFailure();
+          return;
+        }
+        hls?.destroy();
+        hls = null;
+        hlsRef.current = null;
+        setLevels([]);
+        video.removeAttribute('src');
+        video.load();
+        const player = mpegts.createPlayer(
+          { type: 'mse', isLive: !isVod, url: src, cors: true },
+          { enableWorker: true, liveBufferLatencyChasing: !isVod, lazyLoad: false },
+        );
+        mpegtsRef.current = player;
+        player.on(mpegts.Events.ERROR, () => void handleFailure());
+        player.attachMediaElement(video);
+        player.load();
+        play();
+      } catch {
+        void handleFailure();
+      }
     };
 
     // VOD items can be progressive MP4/MKV rather than HLS — fall back to native playback.
@@ -138,6 +174,7 @@ export function LiveTVPlayer({
       setLevels([]);
       video.src = src;
       video.load();
+
       play();
     };
 
