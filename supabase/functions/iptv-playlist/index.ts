@@ -310,7 +310,13 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
       categoryCache.set(key, { at: Date.now(), items: scanned })
       return scanned
     }
-    throw new Error('Your IPTV provider did not respond. Please try again.')
+    const d = lastUpstreamDiag
+    throw new Error(
+      d
+        ? `Your IPTV provider did not respond (${d.kind}${d.status ? ` ${d.status}` : ''}${d.message ? `: ${d.message}` : ''}).`
+        : 'Your IPTV provider did not respond. Please try again.',
+    )
+
   }
 
   let items = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
