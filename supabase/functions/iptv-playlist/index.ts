@@ -26,10 +26,9 @@ interface CategoryInfo {
 
 const TTL = 30 * 60 * 1000
 
-// The VOD/series catalogues are huge, so only one section is kept resident at a
-// time; the index only retains the (small) per-category counts.
+// The VOD/series catalogues are ~70MB each, so nothing global is kept in memory:
+// the index caches category lists only and item lists are fetched per category.
 let indexCache: { at: number; source: string; categories: CategoryInfo[]; total: number } | null = null
-let sectionCache: { at: number; source: string; kind: Kind; byCat: Map<string, Item[]> } | null = null
 let indexLoading: Promise<NonNullable<typeof indexCache>> | null = null
 
 function apiBase(raw: string) {
@@ -61,6 +60,18 @@ function pickLogo(row: Record<string, unknown>): string | null {
   return null
 }
 
+function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
+  const id = String(r.stream_id ?? r.series_id ?? '')
+  if (!id || id === 'undefined') return null
+  return {
+    id,
+    name: String(r.name ?? r.title ?? 'Untitled'),
+    logo: pickLogo(r),
+    categoryId: `${kind}:${String(r.category_id ?? '0')}`,
+    kind,
+  }
+}
+
 async function fetchJson<T>(url: string): Promise<T | null> {
   try {
     const res = await fetch(url, { headers: { 'User-Agent': UA } })
@@ -72,42 +83,55 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+/**
+ * Stream a huge Xtream JSON array and hand each object to `onRow`, without ever
+ * materialising the whole payload. Returns early when `onRow` returns false.
+ */
+async function scanArray(url: string, onRow: (row: Record<string, unknown>) => boolean) {
+  const res = await fetch(url, { headers: { 'User-Agent': UA } })
+  if (!res.ok || !res.body) return
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buf = ''
+  let done = false
+
+  const handle = (fragment: string) => {
+    const t = fragment.trim().replace(/^\[/, '').replace(/\]$/, '').trim()
+    if (!t.startsWith('{')) return true
+    try {
+      return onRow(JSON.parse(t) as Record<string, unknown>)
+    } catch {
+      return true
+    }
+  }
+
+  while (!done) {
+    const { value, done: finished } = await reader.read()
+    if (finished) break
+    buf += decoder.decode(value, { stream: true })
+    let i: number
+    while ((i = buf.indexOf('},{')) >= 0) {
+      const frag = buf.slice(0, i + 1)
+      buf = buf.slice(i + 2)
+      if (!handle(frag)) {
+        done = true
+        break
+      }
+    }
+    if (buf.length > 4_000_000) buf = buf.slice(-1_000_000) // safety valve
+  }
+  try {
+    await reader.cancel()
+  } catch {
+    // stream already closed
+  }
+  if (!done && buf.trim()) handle(buf)
+}
+
 const ACTIONS: Record<Kind, [string, string]> = {
   live: ['get_live_categories', 'get_live_streams'],
   vod: ['get_vod_categories', 'get_vod_streams'],
   series: ['get_series_categories', 'get_series'],
-}
-
-async function loadSection(api: string, kind: Kind) {
-  const [catAction, listAction] = ACTIONS[kind]
-  const cats = (await fetchJson<RawCategory[]>(`${api}&action=${catAction}`)) ?? []
-  const rows = (await fetchJson<Record<string, unknown>[]>(`${api}&action=${listAction}`)) ?? []
-
-  const byCat = new Map<string, Item[]>()
-  for (const r of rows) {
-    const id = String(r.stream_id ?? r.series_id ?? '')
-    if (!id) continue
-    const categoryId = `${kind}:${String(r.category_id ?? '0')}`
-    const item: Item = {
-      id,
-      name: String(r.name ?? r.title ?? 'Untitled'),
-      logo: pickLogo(r),
-      categoryId,
-      kind,
-    }
-    const arr = byCat.get(categoryId) ?? []
-    arr.push(item)
-    byCat.set(categoryId, arr)
-  }
-
-  const categories: CategoryInfo[] = cats
-    .map((c) => {
-      const id = `${kind}:${c.category_id}`
-      return { id, name: c.category_name, count: byCat.get(id)?.length ?? 0, kind }
-    })
-    .filter((c) => c.count > 0)
-
-  return { categories, byCat, total: rows.length }
 }
 
 async function buildIndex(source: string) {
@@ -115,12 +139,24 @@ async function buildIndex(source: string) {
   const categories: CategoryInfo[] = []
   let total = 0
 
-  // Sequential on purpose: keeps peak memory to one catalogue at a time.
   for (const kind of ['live', 'vod', 'series'] as Kind[]) {
-    const section = await loadSection(api, kind)
-    categories.push(...section.categories)
-    total += section.total
-    if (kind === 'live') sectionCache = { at: Date.now(), source, kind, byCat: section.byCat }
+    const cats = (await fetchJson<RawCategory[]>(`${api}&action=${ACTIONS[kind][0]}`)) ?? []
+    const counts = new Map<string, number>()
+
+    // Counting streams a category at a time keeps peak memory tiny.
+    await scanArray(`${api}&action=${ACTIONS[kind][1]}`, (row) => {
+      const cid = String(row.category_id ?? '0')
+      counts.set(cid, (counts.get(cid) ?? 0) + 1)
+      total += 1
+      return true
+    })
+
+    for (const c of cats) {
+      const count = counts.get(String(c.category_id)) ?? 0
+      if (count > 0) {
+        categories.push({ id: `${kind}:${c.category_id}`, name: c.category_name, count, kind })
+      }
+    }
   }
 
   if (!categories.length) throw new Error('Upstream returned no channels')
@@ -142,14 +178,9 @@ async function getIndex(source: string) {
   return indexLoading
 }
 
-async function getSection(source: string, kind: Kind) {
-  if (sectionCache && sectionCache.source === source && sectionCache.kind === kind && Date.now() - sectionCache.at < TTL) {
-    return sectionCache.byCat
-  }
-  sectionCache = null // release the previous catalogue before loading a new one
-  const { byCat } = await loadSection(apiBase(source), kind)
-  sectionCache = { at: Date.now(), source, kind, byCat }
-  return byCat
+const kindOf = (categoryId: string): Kind => {
+  const prefix = categoryId.split(':')[0]
+  return prefix === 'vod' || prefix === 'series' ? prefix : 'live'
 }
 
 const shape = (s: Item, group: string) => ({
@@ -189,26 +220,32 @@ Deno.serve(async (req) => {
       })
     }
 
+    const api = apiBase(source)
     const nameOf = (id: string) => index.categories.find((c) => c.id === id)?.name ?? 'Other'
-    const kindOf = (id: string): Kind => {
-      const prefix = id.split(':')[0]
-      return prefix === 'vod' || prefix === 'series' ? prefix : 'live'
-    }
 
     let list: Item[] = []
+
     if (category) {
-      const byCat = await getSection(source, kindOf(category))
-      list = byCat.get(category) ?? []
+      const kind = kindOf(category)
+      const rawId = category.slice(category.indexOf(':') + 1)
+      const rows =
+        (await fetchJson<Record<string, unknown>[]>(
+          `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
+        )) ?? []
+      list = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
       if (q) list = list.filter((s) => s.name.toLowerCase().includes(q))
     } else {
-      // Search scans the resident catalogue (defaults to live channels).
       const kindParam = url.searchParams.get('kind')
       const kind: Kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
-      const byCat = await getSection(source, kind)
-      for (const items of byCat.values()) {
-        for (const s of items) if (s.name.toLowerCase().includes(q)) list.push(s)
-        if (list.length > 2000) break
-      }
+      const cap = offset + limit
+      await scanArray(`${api}&action=${ACTIONS[kind][1]}`, (row) => {
+        const name = String(row.name ?? row.title ?? '')
+        if (name.toLowerCase().includes(q)) {
+          const item = toItem(row, kind)
+          if (item) list.push(item)
+        }
+        return list.length < cap + 60
+      })
     }
 
     return json({
