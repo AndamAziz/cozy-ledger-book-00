@@ -3,6 +3,7 @@ import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
 import { egressFetch, finalUrlOf, hasEgressProxy, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 import { absorbCookies, cookieHeaderFor, isCloudflareChallenge } from '../_shared/iptvCookies.ts'
+import { diagFetchRaw, type UpstreamDiag } from '../_shared/iptvDiag.ts'
 
 const MOBILE_UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const VLC_UA = 'VLC/3.0.20 LibVLC/3.0.20'
@@ -15,7 +16,7 @@ const SLOT_LIMIT_STATUS = 429
 type UaKind = 'mobile' | 'vlc' | 'chrome'
 
 /** Connect timeout for the upstream handshake (headers only — the body streams freely). */
-const CONNECT_TIMEOUT_MS = 14000
+const CONNECT_TIMEOUT_MS = 15000
 
 function buildUpstreamHeaders(
   req: Request,
@@ -244,6 +245,8 @@ Deno.serve(async (req) => {
     (reqUrlEarly.searchParams.get('egress') ?? '') === 'direct' && (debugJson || (await isAdminRequest(req)))
   const attempts: Attempt[] = []
   let chosen: Attempt | null = null
+  // Last upstream diagnostic for this request (surfaced in logs + error JSON).
+  let lastDiag: UpstreamDiag | null = null
 
   // One id per probing session so a single request can be traced end-to-end
   // across headers, the JSON report and the function logs.
@@ -268,7 +271,7 @@ Deno.serve(async (req) => {
   const debugReport = (extra: Record<string, unknown> = {}, status = 200) =>
     new Response(
       JSON.stringify(
-        { requestId, attempts, chosen, candidateCount: attempts.length, ...extra },
+        { requestId, attempts, chosen, candidateCount: attempts.length, upstream: lastDiag, ...extra },
         null,
         2,
       ),
@@ -278,7 +281,7 @@ Deno.serve(async (req) => {
   const err = (msg: string, status: number, code?: string) =>
     debugJson
       ? debugReport({ error: msg, code }, 200)
-      : new Response(JSON.stringify({ error: msg, code }), {
+      : new Response(JSON.stringify({ error: msg, code, reqId: requestId, upstream: lastDiag }), {
           status,
           headers: { ...corsHeaders, ...debugHeaders(), 'Content-Type': 'application/json' },
         })
@@ -434,9 +437,20 @@ Deno.serve(async (req) => {
       const referer = plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase
       // Each attempt re-reads the cookie jar, so clearance cookies handed out by
       // the previous attempt (or by the manifest request) ride along.
+      let attemptNo = 0
       const attempt = async (ua: UaKind) => {
         const t0 = Date.now()
-        const res = await fetchUpstream(u, buildUpstreamHeaders(req, nextUrl, referer, ua), req.signal, directEgress)
+        attemptNo += 1
+        const res = await fetchUpstream(
+          u,
+          buildUpstreamHeaders(req, nextUrl, referer, ua),
+          req.signal,
+          directEgress,
+          attemptNo,
+          (d) => {
+            lastDiag = d
+          },
+        )
         absorbCookies(res, u)
         record(u, ua, t0, res)
         return res
@@ -465,7 +479,10 @@ Deno.serve(async (req) => {
         // requests (Cloudflare rotates __cf_bm mid-session).
         return await attempt('chrome')
       } catch (e) {
-        record(u, 'mobile', Date.now(), null, e instanceof Error ? e.message : String(e))
+        const d = (e as { diag?: UpstreamDiag })?.diag
+        if (d) lastDiag = d
+        console.error(`[iptv-proxy] ${JSON.stringify({ reqId: requestId, upstream: d ?? { message: String(e) } })}`)
+        record(u, 'mobile', Date.now(), null, d ? `${d.kind}: ${d.message ?? ''}`.trim() : e instanceof Error ? e.message : String(e))
         return null
       }
     }
