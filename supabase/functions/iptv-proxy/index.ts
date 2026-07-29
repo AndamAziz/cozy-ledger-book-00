@@ -253,6 +253,7 @@ Deno.serve(async (req) => {
       await res.body?.cancel()
       const slot = res.status === 458 || res.status === 429 || res.status === 407
       if (slot) return slotLimitResponse()
+      if (isGeoBlocked(res.status)) return geoBlockResponse()
       return err(`This channel is offline right now (${res.status}). Try another channel.`, 502, 'OFFLINE')
     }
 
