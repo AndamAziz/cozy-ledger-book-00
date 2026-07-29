@@ -84,21 +84,33 @@ Deno.serve(async (req) => {
   try {
     // The provider limits concurrent sessions; a fresh session sometimes needs a retry.
     // For VOD we also walk the candidate list (live → movie → series containers).
-    let res = await fetch(upstream.toString(), { headers, redirect: 'follow' })
-    if (!res.ok && streamId) {
+    // Every attempt is bounded by CONNECT_TIMEOUT_MS so a dead origin can never
+    // leave the player hanging on "Connecting to stream…".
+    const tryFetch = async (u: string) => {
+      try {
+        return await fetchUpstream(u, headers)
+      } catch {
+        return null
+      }
+    }
+
+    let res = await tryFetch(upstream.toString())
+    if ((!res || !res.ok) && streamId) {
       outer: for (const candidate of candidates) {
-        for (let attempt = 0; attempt < (candidates.length > 1 ? 1 : 3); attempt++) {
-          await new Promise((r) => setTimeout(r, 800))
-          const next = await fetch(candidate, { headers, redirect: 'follow' })
-          if (next.ok) {
+        for (let attempt = 0; attempt < (candidates.length > 1 ? 1 : 2); attempt++) {
+          await new Promise((r) => setTimeout(r, 400))
+          const next = await tryFetch(candidate)
+          if (next?.ok) {
             upstream = new URL(candidate)
             res = next
             break outer
           }
-          res = next
+          if (next) res = next
         }
       }
     }
+    if (!res) return err('Stream timed out while connecting. Try again.', 504, 'TIMEOUT')
+
 
     const ct = res.headers.get('content-type') ?? ''
     const isPlaylist = ct.includes('mpegurl') || /\.m3u8?$/i.test(upstream.pathname)
