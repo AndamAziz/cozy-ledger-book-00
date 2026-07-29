@@ -257,7 +257,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
                 key={category.id}
                 category={category}
                 onPlay={openItem}
-                eager={i < 3}
+                eager={i < 2}
                 kind={playbackKind}
                 poster={usePoster}
               />
