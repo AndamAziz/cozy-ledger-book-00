@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { getPlaylistUrl, parseXtream, isXtreamUrl } from '../_shared/iptvConfig.ts'
+import { parseXtream, isXtreamUrl } from '../_shared/iptvConfig.ts'
+import { resolveViewer } from '../_shared/iptvViewer.ts'
 import { egressFetch } from '../_shared/iptvEgress.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
@@ -120,8 +121,11 @@ Deno.serve(async (req) => {
     return json({ ...cache.health, cached: true })
   }
 
-  const source = await getPlaylistUrl()
-  if (!source) return json(base('offline', 'Playlist not configured'))
+  const resolved = await resolveViewer(req)
+  if (!resolved.ok) {
+    return json({ ...base('offline', resolved.message), code: resolved.error })
+  }
+  const source = resolved.viewer.playlistUrl
 
   let health: Health
   try {

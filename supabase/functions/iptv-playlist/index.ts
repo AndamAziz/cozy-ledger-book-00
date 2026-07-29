@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U, type M3uEntry } from '../_shared/iptvConfig.ts'
+import { parseXtream, isXtreamUrl, getM3U, type M3uEntry } from '../_shared/iptvConfig.ts'
+import { resolveViewer } from '../_shared/iptvViewer.ts'
 import { egressFetch } from '../_shared/iptvEgress.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
@@ -456,8 +457,10 @@ Deno.serve(async (req) => {
 
 
   try {
-    const source = await getPlaylistUrl()
-    if (!source) return json({ error: 'Playlist not configured' }, 500)
+    // Per-user provider: the catalogue always comes from the caller's own server.
+    const resolved = await resolveViewer(req)
+    if (!resolved.ok) return json({ error: resolved.message, code: resolved.error }, resolved.status)
+    const source = resolved.viewer.playlistUrl
 
     const url = new URL(req.url)
 
