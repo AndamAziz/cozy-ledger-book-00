@@ -1446,6 +1446,8 @@ export type Database = {
         Row: {
           assigned_by: string | null
           created_at: string
+          playlist_enc: string | null
+          playlist_masked: string | null
           playlist_url: string
           provider_name: string | null
           updated_at: string
@@ -1454,6 +1456,8 @@ export type Database = {
         Insert: {
           assigned_by?: string | null
           created_at?: string
+          playlist_enc?: string | null
+          playlist_masked?: string | null
           playlist_url?: string
           provider_name?: string | null
           updated_at?: string
@@ -1462,6 +1466,8 @@ export type Database = {
         Update: {
           assigned_by?: string | null
           created_at?: string
+          playlist_enc?: string | null
+          playlist_masked?: string | null
           playlist_url?: string
           provider_name?: string | null
           updated_at?: string

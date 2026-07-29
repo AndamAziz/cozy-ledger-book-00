@@ -18,6 +18,7 @@ import { InventoryTab } from '@/components/InventoryTab';
 import { SalesTab } from '@/components/SalesTab';
 import { ReportsTab } from '@/components/ReportsTab';
 import { HelpGuide } from '@/components/HelpGuide';
+import { LiveTvStatusPanel } from '@/components/livetv/LiveTvStatusPanel';
 import { SplashScreen } from '@/components/SplashScreen';
 import { OnboardingScreen } from '@/components/OnboardingScreen';
 import { ReviewForm } from '@/components/reviews/ReviewForm';
@@ -191,6 +192,13 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               </div>
               <span className="font-bold text-foreground text-xs sm:text-sm truncate">Live TV 📺</span>
             </button>
+
+            {/* Live TV real-time status: trial countdown, activation, next step */}
+            <div className="col-span-full">
+              <LiveTvStatusPanel />
+            </div>
+
+
 
             {/* Crypto Tracker */}
             <button

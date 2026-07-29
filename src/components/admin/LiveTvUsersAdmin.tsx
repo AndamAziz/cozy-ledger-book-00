@@ -8,7 +8,8 @@ import { Loader2, Radio, Save, Search, Timer, Unlock, Lock } from 'lucide-react'
 interface Row {
   userId: string;
   email: string;
-  playlistUrl: string;
+  hasServer: boolean;
+  masked: string;
   trialEndsAt: string | null;
   isActivated: boolean;
 }
@@ -40,15 +41,22 @@ export function LiveTvUsersAdmin() {
     const [users, access, servers] = await Promise.all([
       supabase.from('user_approvals').select('user_id, email').order('email'),
       supabase.from('livetv_access').select('user_id, trial_ends_at, is_activated'),
-      supabase.from('user_iptv_servers').select('user_id, playlist_url'),
+      supabase.functions.invoke('iptv-server', { body: { action: 'admin_list' } }),
     ]);
     const accessMap = new Map((access.data ?? []).map((a) => [a.user_id, a]));
-    const serverMap = new Map((servers.data ?? []).map((s) => [s.user_id, s]));
+    // Credentials are encrypted at rest; the vault function returns masked previews only.
+    const serverRows = (servers.data?.rows ?? []) as {
+      userId: string;
+      hasServer: boolean;
+      masked: string;
+    }[];
+    const serverMap = new Map(serverRows.map((s) => [s.userId, s]));
     setRows(
       (users.data ?? []).map((u) => ({
         userId: u.user_id,
         email: u.email,
-        playlistUrl: serverMap.get(u.user_id)?.playlist_url ?? '',
+        hasServer: !!serverMap.get(u.user_id)?.hasServer,
+        masked: serverMap.get(u.user_id)?.masked ?? '',
         trialEndsAt: accessMap.get(u.user_id)?.trial_ends_at ?? null,
         isActivated: !!accessMap.get(u.user_id)?.is_activated,
       })),
@@ -66,15 +74,21 @@ export function LiveTvUsersAdmin() {
   }, [rows, query]);
 
   const saveServer = async (row: Row) => {
-    const url = (drafts[row.userId] ?? row.playlistUrl).trim();
+    const url = (drafts[row.userId] ?? '').trim();
+    if (!/^https?:\/\//i.test(url)) {
+      toast({ title: 'Enter a full http(s) URL', variant: 'destructive' });
+      return;
+    }
     setBusy(row.userId);
-    const { error } = await supabase
-      .from('user_iptv_servers')
-      .upsert({ user_id: row.userId, playlist_url: url }, { onConflict: 'user_id' });
+    const { data, error } = await supabase.functions.invoke('iptv-server', {
+      body: { action: 'admin_save', userId: row.userId, playlistUrl: url },
+    });
     setBusy(null);
-    if (error) toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
-    else {
-      toast({ title: 'IPTV server updated', description: row.email });
+    if (error || data?.error) {
+      toast({ title: 'Save failed', description: data?.error ?? error?.message, variant: 'destructive' });
+    } else {
+      setDrafts((d) => ({ ...d, [row.userId]: '' }));
+      toast({ title: 'IPTV server updated (encrypted)', description: row.email });
       void load();
     }
   };
@@ -146,9 +160,9 @@ export function LiveTvUsersAdmin() {
                 <div className="flex flex-wrap gap-2">
                   <Input
                     dir="ltr"
-                    value={drafts[row.userId] ?? row.playlistUrl}
+                    value={drafts[row.userId] ?? ''}
                     onChange={(e) => setDrafts((d) => ({ ...d, [row.userId]: e.target.value }))}
-                    placeholder="http://provider/get.php?username=…&password=…"
+                    placeholder={row.hasServer ? `Saved: ${row.masked} — paste a new link to replace` : 'http://provider/get.php?username=…&password=…'}
                     className="min-w-[240px] flex-1"
                   />
                   <Button size="sm" onClick={() => saveServer(row)} disabled={busy === row.userId}>

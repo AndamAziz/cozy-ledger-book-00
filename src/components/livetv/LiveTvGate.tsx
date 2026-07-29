@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { StripeEmbeddedCheckout } from '@/components/StripeEmbeddedCheckout';
 import { useLiveTvAccess, formatCountdown } from '@/hooks/useLiveTvAccess';
+import { LiveTvStatusPanel } from '@/components/livetv/LiveTvStatusPanel';
 
 /** One-time £40 Live TV activation price (see payments catalogue). */
 const ACTIVATION_PRICE_ID = 'ctp_livetv_activation_4000gbp';
@@ -25,13 +26,13 @@ function BackHome() {
 
 /** Personal provider link editor — shown until the user saves their own URL. */
 function ServerForm({
-  initialUrl,
+  maskedUrl,
   onSaved,
 }: {
-  initialUrl: string;
+  maskedUrl: string;
   onSaved: () => void;
 }) {
-  const [url, setUrl] = useState(initialUrl);
+  const [url, setUrl] = useState('');
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -56,21 +57,19 @@ function ServerForm({
       return;
     }
     setSaving(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id;
-    if (!uid) {
-      setSaving(false);
+    // Stored through the vault function so the link is encrypted at rest and
+    // never written to a table the browser can read.
+    const { data, error } = await supabase.functions.invoke('iptv-server', {
+      body: { action: 'save', playlistUrl: trimmed },
+    });
+    setSaving(false);
+    if (error || data?.error) {
+      toast.error(data?.error ?? error?.message ?? 'Could not save your server');
       return;
     }
-    const { error } = await supabase
-      .from('user_iptv_servers')
-      .upsert({ user_id: uid, playlist_url: trimmed }, { onConflict: 'user_id' });
-    setSaving(false);
-    if (error) toast.error(error.message);
-    else {
-      toast.success('Your IPTV server was saved');
-      onSaved();
-    }
+    setUrl('');
+    toast.success('Your IPTV server was saved securely');
+    onSaved();
   };
 
   return (
@@ -101,8 +100,14 @@ function ServerForm({
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Save server
         </button>
       </div>
+      {maskedUrl && (
+        <p dir="ltr" className="truncate text-[11px] font-bold text-white/45">
+          Saved: {maskedUrl}
+        </p>
+      )}
       <p className="text-[11px] leading-relaxed text-white/40">
-        Your provider link is private to your account and is never shared with other users.
+        Your link is encrypted before it is stored, is never shown again in full, and is never
+        shared with other users.
       </p>
     </div>
   );
@@ -175,6 +180,9 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
             Activate for £40
           </button>
         )}
+        <div className="w-full max-w-md pt-2 text-left">
+          <LiveTvStatusPanel />
+        </div>
         <button
           type="button"
           onClick={() => void refresh()}
@@ -198,7 +206,7 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
           own subscription.
         </p>
         <ServerForm
-          initialUrl={server?.playlistUrl ?? ''}
+          maskedUrl={server?.masked ?? ''}
           onSaved={() => {
             setEditServer(false);
             void refresh();
