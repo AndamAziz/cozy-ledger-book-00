@@ -3,10 +3,25 @@ import { getPlaylistUrl, parseXtream } from '../_shared/iptvConfig.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 
+/** Connect timeout for the upstream handshake (headers only — the body streams freely). */
+const CONNECT_TIMEOUT_MS = 8000
+
+async function fetchUpstream(url: string, headers: Record<string, string>) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), CONNECT_TIMEOUT_MS)
+  try {
+    return await fetch(url, { headers, redirect: 'follow', signal: ctrl.signal })
+  } finally {
+    // Cleared once headers are in, so large 4K bodies are never cut short.
+    clearTimeout(timer)
+  }
+}
+
 function creds(raw: string) {
   const { host, username, password } = parseXtream(raw)
   return { host, protocol: 'http:', username, password }
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
