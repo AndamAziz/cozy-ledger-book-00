@@ -72,9 +72,9 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
   }
 }
 
-async function fetchJson<T>(url: string): Promise<T | null> {
+async function fetchJson<T>(url: string, timeoutMs = 15000): Promise<T | null> {
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': UA } })
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(timeoutMs) })
     if (!res.ok) return null
     const json = await res.json()
     return Array.isArray(json) ? (json as T) : null
@@ -82,6 +82,7 @@ async function fetchJson<T>(url: string): Promise<T | null> {
     return null
   }
 }
+
 
 /**
  * Stream a huge Xtream JSON array and hand each object to `onRow`, without ever
