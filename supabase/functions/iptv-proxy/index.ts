@@ -217,6 +217,7 @@ Deno.serve(async (req) => {
       const text = await res.text()
       if (!res.ok) {
         const slot = res.status === 458 || res.status === 429 || res.status === 407
+        if (isGeoBlocked(res.status, text)) return geoBlockResponse()
         // 5xx / 521 / 404 mean the channel's own origin is down — not our error.
         const msg = slot
           ? 'All viewing slots are in use right now. Try again in a moment.'
