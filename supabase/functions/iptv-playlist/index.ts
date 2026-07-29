@@ -351,10 +351,15 @@ Deno.serve(async (req) => {
       })
     }
 
-    return json({
-      total: list.length,
-      channels: list.slice(offset, offset + limit).map((s) => shape(s, nameOf(s.categoryId))),
-    })
+    return json(
+      {
+        total: list.length,
+        channels: list.slice(offset, offset + limit).map((s) => shape(s, nameOf(s.categoryId))),
+      },
+      200,
+      category ? 120 : 0,
+    )
+
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 502)
   }
