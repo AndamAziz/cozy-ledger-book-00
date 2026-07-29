@@ -115,22 +115,29 @@ async function fetchUpstream(
   headers: Record<string, string>,
   clientSignal?: AbortSignal,
   direct = false,
-) {
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), CONNECT_TIMEOUT_MS)
-  // Propagate client disconnects upstream: with single-slot provider accounts a
-  // lingering upstream socket keeps the only viewing slot busy forever.
-  const onAbort = () => ctrl.abort()
-  clientSignal?.addEventListener('abort', onAbort, { once: true })
-  try {
-    // All provider traffic exits through our own VPS relay (allowed country).
-    // `direct` is an admin-only diagnostic that bypasses the relay.
-    return await egressFetch(url, { headers, signal: ctrl.signal }, { direct })
-  } finally {
-    // Cleared once headers are in, so large 4K bodies are never cut short.
-    clearTimeout(timer)
+  attempt = 1,
+  onDiag?: (d: UpstreamDiag) => void,
+): Promise<Response> {
+  // All provider traffic exits through our own VPS relay (allowed country).
+  // `direct` is an admin-only diagnostic that bypasses the relay.
+  // diagFetchRaw wraps the fetch itself in try/catch, applies the AbortController
+  // timeout and logs the redacted URL / status / duration / headers / errorKind.
+  const { res, diag } = await diagFetchRaw('stream', url, {
+    timeoutMs: CONNECT_TIMEOUT_MS,
+    attempt,
+    headers,
+    signal: clientSignal,
+    direct,
+    onDiag,
+  })
+  if (!res) {
+    const e = new Error(diag.message ?? 'Upstream request failed') as Error & { diag?: UpstreamDiag }
+    e.diag = diag
+    throw e
   }
+  return res
 }
+
 
 
 function creds(raw: string) {
