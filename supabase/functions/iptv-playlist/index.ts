@@ -167,23 +167,30 @@ async function scanArray(url: string, onRow: (row: Record<string, unknown>) => b
     }
   }
 
-  while (!done) {
-    if (Date.now() > deadline) break
-    const { value, done: finished } = await reader.read()
-    if (finished) break
+  try {
+    while (!done) {
+      if (Date.now() > deadline) break
+      const { value, done: finished } = await reader.read()
+      if (finished) break
 
-    buf += decoder.decode(value, { stream: true })
-    let i: number
-    while ((i = buf.indexOf('},{')) >= 0) {
-      const frag = buf.slice(0, i + 1)
-      buf = buf.slice(i + 2)
-      if (!handle(frag)) {
-        done = true
-        break
+      buf += decoder.decode(value, { stream: true })
+      let i: number
+      while ((i = buf.indexOf('},{')) >= 0) {
+        const frag = buf.slice(0, i + 1)
+        buf = buf.slice(i + 2)
+        if (!handle(frag)) {
+          done = true
+          break
+        }
       }
+      if (buf.length > 4_000_000) buf = buf.slice(-1_000_000) // safety valve
     }
-    if (buf.length > 4_000_000) buf = buf.slice(-1_000_000) // safety valve
+  } catch (e) {
+    const { kind, message } = classifyError(e)
+    lastUpstreamDiag = { ...diag, ok: false, kind, message: `Stream aborted while reading: ${message}` }
+    logDiag('scanArray:stream', lastUpstreamDiag)
   }
+
   try {
     await reader.cancel()
   } catch {
