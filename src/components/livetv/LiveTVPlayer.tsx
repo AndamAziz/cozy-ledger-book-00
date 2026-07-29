@@ -295,19 +295,16 @@ export function LiveTVPlayer({
       if (usedNative) return;
       // Only Safari (and iOS WebViews) can decode an .m3u8 from a plain
       // <video src>. Everywhere else a native attempt would hang forever on
-      // "Connecting to stream…", so hand HLS back to hls.js instead.
-      if (isHlsUrl && !nativeHls) {
-        if (Hls.isSupported() && !hls) {
-          console.info('[LiveTVPlayer] native HLS unsupported → using hls.js');
-          startHls();
-          return;
-        }
-        if (!usedMpegts) {
-          void playMpegts();
-          return;
-        }
+      // "Connecting to stream…", so hand HLS back to hls.js first. The proxy
+      // URL hides the real container, so this applies to any non-progressive
+      // stream, live or VOD.
+      if (!nativeHls && !progressive && !usedHls && Hls.isSupported()) {
+        console.info('[LiveTVPlayer] no native HLS support → switching to hls.js');
+        startHls();
+        return;
       }
       usedNative = true;
+      console.info('[LiveTVPlayer] engine: native <video src>');
       hls?.destroy();
       hls = null;
       hlsRef.current = null;
