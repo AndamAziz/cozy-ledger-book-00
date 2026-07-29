@@ -47,6 +47,7 @@ import {
 import { TelegramHealthCard } from './TelegramHealthCard';
 import { ReviewModeration } from './ReviewModeration';
 import { StreamServerManager } from './StreamServerManager';
+import { IptvSettings } from './IptvSettings';
 import { normalizeBrandText } from '@/lib/brand';
 
 interface UserApproval {
@@ -727,6 +728,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
         {/* Sport Live server management (CEO only) */}
         <StreamServerManager isCEO={isCEO} />
+
+        {/* IPTV playlist server configuration */}
+        <div className="mt-4">
+          <IptvSettings />
+        </div>
 
 
 
