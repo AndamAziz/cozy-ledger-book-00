@@ -32,15 +32,19 @@ export function ChannelCard({ channel, onPlay }: Props) {
   const accent = accentFor(channel.name);
   const { data: provider } = useProviderHealth();
   const nameOffline = /offline|no signal|\bnot working\b/i.test(channel.name);
-  // Only probe individual streams while the provider itself is healthy.
-  const health = useChannelHealth(channel, provider?.status === 'online' && !nameOffline && (provider?.maxConnections ?? 0) > 1);
+  // Single-slot accounts can't spare a connection for probing — trust the provider check.
+  const canProbe = provider?.status === 'online' && !nameOffline && (provider?.maxConnections ?? 0) > 1;
+  const health = useChannelHealth(channel, canProbe);
   const status = nameOffline
     ? 'offline'
     : provider?.status === 'offline'
       ? 'offline'
       : provider?.status === 'slot_limit'
         ? 'busy'
-        : health;
+        : health === 'unknown' && provider?.status === 'online'
+          ? 'online'
+          : health;
+
 
   return (
     <button
