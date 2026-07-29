@@ -2,6 +2,7 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
+const SLOT_LIMIT_STATUS = 429
 
 /** Connect timeout for the upstream handshake (headers only — the body streams freely). */
 const CONNECT_TIMEOUT_MS = 8000
@@ -153,7 +154,7 @@ Deno.serve(async (req) => {
           await next.body?.cancel()
           return err(
             'All viewing slots are in use right now. Try again in a moment.',
-            502,
+            SLOT_LIMIT_STATUS,
             'SLOT_LIMIT',
           )
         }
@@ -177,7 +178,7 @@ Deno.serve(async (req) => {
         const msg = slot
           ? 'All viewing slots are in use right now. Try again in a moment.'
           : `This channel is offline right now (${res.status}). Try another channel.`
-        return err(msg, 502, slot ? 'SLOT_LIMIT' : 'OFFLINE')
+        return err(msg, slot ? SLOT_LIMIT_STATUS : 502, slot ? 'SLOT_LIMIT' : 'OFFLINE')
       }
 
       const finalUrl = new URL(res.url || upstream.toString())
@@ -211,7 +212,7 @@ Deno.serve(async (req) => {
         slot
           ? 'All viewing slots are in use right now. Try again in a moment.'
           : `This channel is offline right now (${res.status}). Try another channel.`,
-        502,
+        slot ? SLOT_LIMIT_STATUS : 502,
         slot ? 'SLOT_LIMIT' : 'OFFLINE',
       )
     }
