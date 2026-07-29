@@ -1,5 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { getPlaylistUrl, parseXtream } from '../_shared/iptvConfig.ts'
+import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U, type M3uEntry } from '../_shared/iptvConfig.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 
