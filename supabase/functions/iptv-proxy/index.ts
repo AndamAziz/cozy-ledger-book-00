@@ -2,49 +2,66 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 
+function creds() {
+  const raw = Deno.env.get('IPTV_PLAYLIST_URL') ?? ''
+  const u = new URL(raw)
+  return {
+    host: u.host,
+    protocol: 'http:',
+    username: u.searchParams.get('username') ?? '',
+    password: u.searchParams.get('password') ?? '',
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  const reqUrl = new URL(req.url)
-  const target = reqUrl.searchParams.get('u')
-  if (!target) {
-    return new Response(JSON.stringify({ error: 'Missing u parameter' }), {
-      status: 400,
+  const err = (msg: string, status: number) =>
+    new Response(JSON.stringify({ error: msg }), {
+      status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
-  }
+
+  if (!Deno.env.get('IPTV_PLAYLIST_URL')) return err('Playlist not configured', 500)
+
+  const reqUrl = new URL(req.url)
+  const { host, protocol, username, password } = creds()
+  const streamId = reqUrl.searchParams.get('id')
+  const passthrough = reqUrl.searchParams.get('u')
 
   let upstream: URL
-  try {
-    upstream = new URL(target)
-  } catch {
-    return new Response(JSON.stringify({ error: 'Invalid url' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
-  if (upstream.protocol !== 'http:' && upstream.protocol !== 'https:') {
-    return new Response(JSON.stringify({ error: 'Unsupported protocol' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+  if (streamId) {
+    if (!/^\d+$/.test(streamId)) return err('Invalid id', 400)
+    upstream = new URL(`${protocol}//${host}/live/${username}/${password}/${streamId}.m3u8`)
+  } else if (passthrough) {
+    try {
+      upstream = new URL(passthrough)
+    } catch {
+      return err('Invalid url', 400)
+    }
+    // Only the provider's own hosts may be proxied.
+    if (upstream.host !== host) return err('Host not allowed', 403)
+  } else {
+    return err('Missing id or u parameter', 400)
   }
 
   const base = `${reqUrl.origin}${reqUrl.pathname}`
-  const proxied = (u: string) => `${base}?u=${encodeURIComponent(u)}`
+  const apikey = reqUrl.searchParams.get('apikey')
+  const proxied = (u: string) =>
+    `${base}?u=${encodeURIComponent(u)}${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}`
 
-  const headers: Record<string, string> = { 'User-Agent': UA, Referer: upstream.origin }
+  const headers: Record<string, string> = { 'User-Agent': UA, Referer: `${protocol}//${host}/` }
   const range = req.headers.get('range')
   if (range) headers['Range'] = range
 
   try {
     const res = await fetch(upstream.toString(), { headers, redirect: 'follow' })
     const ct = res.headers.get('content-type') ?? ''
-    const isPlaylist =
-      ct.includes('mpegurl') || upstream.pathname.endsWith('.m3u8') || upstream.pathname.endsWith('.m3u')
+    const isPlaylist = ct.includes('mpegurl') || /\.m3u8?$/i.test(upstream.pathname)
 
     if (isPlaylist) {
       const text = await res.text()
+      if (!res.ok) return err(`Stream unavailable (${res.status})`, 502)
       const finalUrl = new URL(res.url || upstream.toString())
       const rewritten = text
         .split(/\r?\n/)
@@ -59,7 +76,7 @@ Deno.serve(async (req) => {
         .join('\n')
 
       return new Response(rewritten, {
-        status: res.status,
+        status: 200,
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/vnd.apple.mpegurl',
@@ -79,9 +96,6 @@ Deno.serve(async (req) => {
 
     return new Response(res.body, { status: res.status, headers: out })
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 502,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return err(e instanceof Error ? e.message : String(e), 502)
   }
 })
