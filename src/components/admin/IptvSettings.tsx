@@ -42,12 +42,14 @@ export function IptvSettings() {
     void load();
   }, [load]);
 
-  const runTest = async (): Promise<boolean> => {
+  const runTest = async (): Promise<TestState> => {
+    const fail = (message: string): TestState => {
+      const state: TestState = { ok: false, message };
+      setTest(state);
+      return state;
+    };
     const candidate = url.trim();
-    if (!candidate) {
-      setTest({ ok: false, message: 'Enter a playlist URL first' });
-      return false;
-    }
+    if (!candidate) return fail('Enter a playlist URL first');
     setTesting(true);
     setTest(null);
     try {
@@ -64,26 +66,21 @@ export function IptvSettings() {
         } catch {
           // keep error.message
         }
-        setTest({ ok: false, message: detail });
-        return false;
+        return fail(detail);
       }
       if (data?.ok) {
-        setTest({
+        const state: TestState = {
           ok: true,
           message: `Connected to ${data.host} · ${data.channels} channels · ${data.latency_ms}ms`,
-        });
-        return true;
+        };
+        setTest(state);
+        return state;
       }
-      setTest({
-        ok: false,
-        message: data?.error
-          ? `${data.error}${data.status ? ` (HTTP ${data.status})` : ''}`
-          : 'Connection failed',
-      });
-      return false;
+      return fail(
+        data?.error ? `${data.error}${data.status ? ` (HTTP ${data.status})` : ''}` : 'Connection failed',
+      );
     } catch (e) {
-      setTest({ ok: false, message: e instanceof Error ? e.message : 'Connection failed' });
-      return false;
+      return fail(e instanceof Error ? e.message : 'Connection failed');
     } finally {
       setTesting(false);
     }
@@ -97,10 +94,10 @@ export function IptvSettings() {
     try {
       // Never save a link that isn't returning channels.
       const healthy = await runTest();
-      if (!healthy) {
+      if (!healthy.ok) {
         toast({
           title: 'Not saved',
-          description: 'The link did not return channels. Fix it and try again.',
+          description: healthy.message,
           variant: 'destructive',
         });
         return;
