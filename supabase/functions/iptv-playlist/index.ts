@@ -2,10 +2,14 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U, type M3uEntry } from '../_shared/iptvConfig.ts'
 import { resolveViewer } from '../_shared/iptvViewer.ts'
 import { egressFetch } from '../_shared/iptvEgress.ts'
+import { classifyError, diagFetch, logDiag, redactUrl, type UpstreamDiag } from '../_shared/iptvDiag.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
+/** Last upstream failure seen while serving the current request (per isolate). */
+let lastUpstreamDiag: UpstreamDiag | null = null
 
 type Kind = 'live' | 'vod' | 'series'
+
 
 interface Item {
   id: string
