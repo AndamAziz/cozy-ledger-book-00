@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { parseXtream } from '../_shared/iptvConfig.ts'
+import { isXtreamUrl, parseXtream } from '../_shared/iptvConfig.ts'
+
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 const TIMEOUT_MS = 15000
