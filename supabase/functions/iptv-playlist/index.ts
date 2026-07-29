@@ -283,11 +283,16 @@ async function getSeriesInfo(api: string, seriesId: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  const json = (body: unknown, status = 200) =>
+  const json = (body: unknown, status = 200, cacheSeconds = 0) =>
     new Response(JSON.stringify(body), {
       status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Cache-Control': cacheSeconds ? `public, max-age=${cacheSeconds}` : 'no-store',
+      },
     })
+
 
   try {
     const source = await getPlaylistUrl()
