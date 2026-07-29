@@ -211,7 +211,16 @@ export function LiveTVPlayer({
     }
 
 
+    // Hard connect watchdog: if nothing is playing within 20s, fall back /
+    // surface an error instead of spinning forever.
+    const connectWatchdog = window.setTimeout(() => {
+      if (cancelled || video.readyState >= 3) return
+      if (!usedNative) playNative();
+      else void handleFailure();
+    }, 20000);
+
     const onPlaying = () => {
+      window.clearTimeout(connectWatchdog);
       slotRetriesRef.current = 0;
       setSlotLimited(false);
       setStatus('playing');
@@ -224,6 +233,7 @@ export function LiveTVPlayer({
     video.addEventListener('playing', onPlaying);
     video.addEventListener('waiting', onWaiting);
     video.addEventListener('error', onError);
+
 
     return () => {
       cancelled = true;
