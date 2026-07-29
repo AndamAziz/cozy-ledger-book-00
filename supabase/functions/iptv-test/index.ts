@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
 
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
-  // --- Auth: admins only ---------------------------------------------------
+  // --- Auth: any signed-in user (they test their own personal server) ------
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return json({ error: 'Unauthorized' }, 401)
 
@@ -29,9 +29,6 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await admin.auth.getUser(token)
   const user = userData?.user
   if (userErr || !user) return json({ error: 'Unauthorized' }, 401)
-
-  const { data: isAdmin } = await admin.rpc('has_role', { _user_id: user.id, _role: 'admin' })
-  if (!isAdmin) return json({ error: 'Forbidden' }, 403)
 
   // --- Validate input ------------------------------------------------------
   let body: { url?: unknown } = {}
