@@ -182,8 +182,16 @@ Deno.serve(async (req) => {
     }
 
     // Provider slot limits come back as 458/429 — surface a readable message.
-    if (streamId && (res.status === 458 || res.status === 429)) {
-      return err('All viewing slots are in use right now. Try again in a moment.', 502, 'SLOT_LIMIT')
+    if (!res.ok) {
+      await res.body?.cancel()
+      const slot = res.status === 458 || res.status === 429
+      return err(
+        slot
+          ? 'All viewing slots are in use right now. Try again in a moment.'
+          : `This channel is offline right now (${res.status}). Try another channel.`,
+        502,
+        slot ? 'SLOT_LIMIT' : 'OFFLINE',
+      )
     }
 
     const out = new Headers(corsHeaders)
