@@ -297,6 +297,8 @@ interface Browsable {
   logo: string | null
   group: string
   kind: Kind
+  /** Container hint from the source URL so the client can pick the right engine. */
+  ext?: string
 }
 interface PlainDerived {
   version: string
@@ -323,7 +325,14 @@ function derive(version: string, entries: M3uEntry[]): PlainDerived {
       continue
     }
     if (e.kind === 'series') continue
-    browsable.push({ id: e.id, name: e.name, logo: e.logo, group: e.group, kind: e.kind })
+    browsable.push({
+      id: e.id,
+      name: e.name,
+      logo: e.logo,
+      group: e.group,
+      kind: e.kind,
+      ext: (e.url.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? '').toLowerCase() || undefined,
+    })
   }
   for (const [key, eps] of seriesGroups) {
     browsable.push({
