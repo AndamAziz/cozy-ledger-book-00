@@ -88,7 +88,11 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
  */
 async function fetchJson<T>(url: string, timeoutMs = 15000, attempts = 2, tag = 'fetchJson'): Promise<T | null> {
   for (let i = 0; i < attempts; i++) {
-    const { res, diag } = await diagFetch(tag, url, { timeoutMs: timeoutMs * (i + 1), attempt: i + 1 })
+    const { res, diag } = await diagFetch(tag, url, {
+      timeoutMs: timeoutMs * (i + 1),
+      attempt: i + 1,
+      headers: { 'User-Agent': UA },
+    })
     if (!res) {
       lastUpstreamDiag = diag
       continue
@@ -292,7 +296,9 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
 
   const rows = await fetchJson<Record<string, unknown>[]>(
     `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
-    25000,
+    15000,
+    2,
+    `category:${kind}:${rawId}`,
   )
   // Some Xtream panels either reject `category_id` or return an empty payload for
   // it, while native IPTV apps recover by loading the full section and filtering
