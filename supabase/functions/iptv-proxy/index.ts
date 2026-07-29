@@ -293,7 +293,9 @@ Deno.serve(async (req) => {
   const extHint = (reqUrl.searchParams.get('ext') ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase()
   const passthrough = reqUrl.searchParams.get('u')
 
-  // Candidate upstreams: live HLS first, then Xtream VOD/series containers.
+  // Candidate upstreams: browser-capable HLS for iOS/Safari, raw TS first for
+  // Chrome/Android/desktop so one-slot providers are not forced into many HLS
+  // segment connections. VOD/series try their real /movie or /series path first.
   let candidates: string[] = []
   let upstream: URL
   // Plain M3U playlists: the id maps to a parsed #EXTINF entry URL.
@@ -334,12 +336,10 @@ Deno.serve(async (req) => {
     // Series episodes live under /series/, movies under /movie/ — try the likely one first.
     const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
     const vod = exts.flatMap((ext) => dirs.map((dir) => `${cred}/${dir}/${username}/${password}/${streamId}.${ext}`))
-    candidates =
-      kind === 'live'
-        ? [liveTs, live]
-        : kind === 'series'
-          ? [...vod, live]
-          : [...vod, live]
+    const browserUa = req.headers.get('user-agent') ?? ''
+    const needsNativeHls = /iphone|ipad|ipod/i.test(browserUa) || (/safari/i.test(browserUa) && !/chrome|chromium|crios|android/i.test(browserUa))
+    const liveCandidates = needsNativeHls || extHint === 'm3u8' ? [live, liveTs] : [liveTs, live]
+    candidates = kind === 'live' ? liveCandidates : [...vod, live]
 
     upstream = new URL(candidates[0])
 
