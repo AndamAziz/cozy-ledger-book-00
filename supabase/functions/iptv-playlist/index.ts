@@ -1,11 +1,15 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U, type M3uEntry } from '../_shared/iptvConfig.ts'
 import { resolveViewer } from '../_shared/iptvViewer.ts'
-import { egressFetch } from '../_shared/iptvEgress.ts'
+import { classifyError, diagFetch, logDiag, type UpstreamDiag } from '../_shared/iptvDiag.ts'
+
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
+/** Last upstream failure seen while serving the current request (per isolate). */
+let lastUpstreamDiag: UpstreamDiag | null = null
 
 type Kind = 'live' | 'vod' | 'series'
+
 
 interface Item {
   id: string
@@ -82,25 +86,51 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
  * failed (timeout / error / non-array body) — an empty array is a valid answer.
  * Slow Xtream servers are common, so each call gets a retry with more headroom.
  */
-async function fetchJson<T>(url: string, timeoutMs = 25000, attempts = 2): Promise<T | null> {
+async function fetchJson<T>(url: string, timeoutMs = 15000, attempts = 2, tag = 'fetchJson'): Promise<T | null> {
   for (let i = 0; i < attempts; i++) {
+    const { res, diag } = await diagFetch(tag, url, {
+      timeoutMs: timeoutMs * (i + 1),
+      attempt: i + 1,
+      headers: { 'User-Agent': UA },
+    })
+    if (!res) {
+      lastUpstreamDiag = diag
+      continue
+    }
+    let text = ''
     try {
-      const res = await egressFetch(url, {
-        headers: { 'User-Agent': UA },
-        signal: AbortSignal.timeout(timeoutMs * (i + 1)),
-      })
-      if (!res.ok) {
-        await res.body?.cancel()
-        continue
-      }
-      const json = await res.json()
+      text = await res.text()
+    } catch (e) {
+      const { kind, message } = classifyError(e)
+      lastUpstreamDiag = { ...diag, ok: false, kind, message }
+      logDiag(`${tag}:read`, lastUpstreamDiag)
+      continue
+    }
+    try {
+      const json = JSON.parse(text)
       if (Array.isArray(json)) return json as T
-    } catch {
-      // retry
+      lastUpstreamDiag = {
+        ...diag,
+        ok: false,
+        kind: 'parse_error',
+        bodySnippet: text.slice(0, 500),
+        message: 'Upstream returned JSON that is not an array',
+      }
+      logDiag(`${tag}:shape`, lastUpstreamDiag)
+    } catch (e) {
+      lastUpstreamDiag = {
+        ...diag,
+        ok: false,
+        kind: 'parse_error',
+        bodySnippet: text.slice(0, 500),
+        message: classifyError(e).message,
+      }
+      logDiag(`${tag}:parse`, lastUpstreamDiag)
     }
   }
   return null
 }
+
 
 
 
@@ -110,8 +140,21 @@ async function fetchJson<T>(url: string, timeoutMs = 25000, attempts = 2): Promi
  */
 async function scanArray(url: string, onRow: (row: Record<string, unknown>) => boolean) {
   const deadline = Date.now() + 20_000
-  const res = await egressFetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20_000) })
-  if (!res.ok || !res.body) return
+  // Streaming read: keep the body, so no snippet is consumed on success.
+  const { res, diag } = await diagFetch('scanArray', url, {
+    timeoutMs: 15_000,
+    headers: { 'User-Agent': UA },
+  })
+  if (!res) {
+    lastUpstreamDiag = diag
+    return
+  }
+  if (!res.body) {
+    lastUpstreamDiag = { ...diag, ok: false, kind: 'parse_error', message: 'Upstream returned an empty body' }
+    logDiag('scanArray:empty', lastUpstreamDiag)
+    return
+  }
+
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
@@ -128,23 +171,30 @@ async function scanArray(url: string, onRow: (row: Record<string, unknown>) => b
     }
   }
 
-  while (!done) {
-    if (Date.now() > deadline) break
-    const { value, done: finished } = await reader.read()
-    if (finished) break
+  try {
+    while (!done) {
+      if (Date.now() > deadline) break
+      const { value, done: finished } = await reader.read()
+      if (finished) break
 
-    buf += decoder.decode(value, { stream: true })
-    let i: number
-    while ((i = buf.indexOf('},{')) >= 0) {
-      const frag = buf.slice(0, i + 1)
-      buf = buf.slice(i + 2)
-      if (!handle(frag)) {
-        done = true
-        break
+      buf += decoder.decode(value, { stream: true })
+      let i: number
+      while ((i = buf.indexOf('},{')) >= 0) {
+        const frag = buf.slice(0, i + 1)
+        buf = buf.slice(i + 2)
+        if (!handle(frag)) {
+          done = true
+          break
+        }
       }
+      if (buf.length > 4_000_000) buf = buf.slice(-1_000_000) // safety valve
     }
-    if (buf.length > 4_000_000) buf = buf.slice(-1_000_000) // safety valve
+  } catch (e) {
+    const { kind, message } = classifyError(e)
+    lastUpstreamDiag = { ...diag, ok: false, kind, message: `Stream aborted while reading: ${message}` }
+    logDiag('scanArray:stream', lastUpstreamDiag)
   }
+
   try {
     await reader.cancel()
   } catch {
@@ -246,7 +296,9 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
 
   const rows = await fetchJson<Record<string, unknown>[]>(
     `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
-    25000,
+    15000,
+    2,
+    `category:${kind}:${rawId}`,
   )
   // Some Xtream panels either reject `category_id` or return an empty payload for
   // it, while native IPTV apps recover by loading the full section and filtering
@@ -258,7 +310,13 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
       categoryCache.set(key, { at: Date.now(), items: scanned })
       return scanned
     }
-    throw new Error('Your IPTV provider did not respond. Please try again.')
+    const d = lastUpstreamDiag
+    throw new Error(
+      d
+        ? `Your IPTV provider did not respond (${d.kind}${d.status ? ` ${d.status}` : ''}${d.message ? `: ${d.message}` : ''}).`
+        : 'Your IPTV provider did not respond. Please try again.',
+    )
+
   }
 
   let items = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
@@ -304,22 +362,33 @@ async function getSeriesInfo(api: string, seriesId: string) {
   const url = `${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
   let data: Record<string, unknown> | null = null
   for (let i = 0; i < 2 && !data; i++) {
+    const { res, diag } = await diagFetch('getSeriesInfo', url, {
+      timeoutMs: 15000 * (i + 1),
+      attempt: i + 1,
+      headers: { 'User-Agent': UA },
+    })
+    if (!res) {
+      lastUpstreamDiag = diag
+      continue
+    }
+    let text = ''
     try {
-      const res = await egressFetch(url, {
-        headers: { 'User-Agent': UA },
-        signal: AbortSignal.timeout(25000 * (i + 1)),
-      })
-      if (!res.ok) {
-        await res.body?.cancel()
-        continue
-      }
-      const json = await res.json()
+      text = await res.text()
+      const json = JSON.parse(text)
       if (json && typeof json === 'object') data = json as Record<string, unknown>
-    } catch {
-      // retry once
+    } catch (e) {
+      lastUpstreamDiag = {
+        ...diag,
+        ok: false,
+        kind: 'parse_error',
+        bodySnippet: text.slice(0, 500),
+        message: classifyError(e).message,
+      }
+      logDiag('getSeriesInfo:parse', lastUpstreamDiag)
     }
   }
   if (!data) throw new Error('Your IPTV provider did not respond. Please try again.')
+
 
 
   const info = (data.info ?? {}) as Record<string, unknown>
@@ -550,7 +619,20 @@ Deno.serve(async (req) => {
     })
 
 
+  const reqId = crypto.randomUUID().slice(0, 8)
+  lastUpstreamDiag = null
+  const reqUrl = new URL(req.url)
+  console.log(
+    `[iptv-playlist] ${JSON.stringify({
+      reqId,
+      query: Object.fromEntries(
+        [...reqUrl.searchParams.entries()].filter(([k]) => !['token', 'apikey'].includes(k.toLowerCase())),
+      ),
+    })}`,
+  )
+
   try {
+
     // Per-user provider: the catalogue always comes from the caller's own server.
     const resolved = await resolveViewer(req)
     if (!resolved.ok) return json({ error: resolved.message, code: resolved.error }, resolved.status)
@@ -635,6 +717,45 @@ Deno.serve(async (req) => {
     )
 
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : String(e) }, 502)
+    const { kind, message } = classifyError(e)
+    const upstream = lastUpstreamDiag
+    console.error(
+      `[iptv-playlist] ${JSON.stringify({
+        reqId,
+        failed: true,
+        errorKind: upstream?.kind ?? kind,
+        message: e instanceof Error ? e.message : String(e),
+        upstream: upstream
+          ? {
+              url: upstream.url,
+              status: upstream.status,
+              statusText: upstream.statusText,
+              durationMs: upstream.durationMs,
+              attempt: upstream.attempt,
+              headers: upstream.headers,
+              bodySnippet: upstream.bodySnippet,
+              message: upstream.message,
+            }
+          : null,
+      })}`,
+    )
+    return json(
+      {
+        error: e instanceof Error ? e.message : String(e),
+        reqId,
+        errorKind: upstream?.kind ?? kind,
+        upstream: upstream
+          ? {
+              url: upstream.url,
+              status: upstream.status,
+              statusText: upstream.statusText,
+              durationMs: upstream.durationMs,
+              message: upstream.message,
+            }
+          : null,
+      },
+      upstream?.kind === 'timeout' ? 504 : 502,
+    )
   }
 })
+
