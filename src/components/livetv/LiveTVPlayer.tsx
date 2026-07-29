@@ -49,7 +49,27 @@ export function LiveTVPlayer({
   const shellRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const mpegtsRef = useRef<{ destroy: () => void; unload?: () => void; detachMediaElement?: () => void } | null>(null);
-  const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading');
+  const [status, setStatusRaw] = useState<'loading' | 'playing' | 'error'>('loading');
+  // Once the stream has produced frames for this channel, the loading overlay is
+  // permanently locked out — no later buffering event may bring the spinner back.
+  const playedOnceRef = useRef(false);
+  const [playedOnce, setPlayedOnce] = useState(false);
+  const setStatus = useCallback(
+    (next: 'loading' | 'playing' | 'error' | ((s: 'loading' | 'playing' | 'error') => 'loading' | 'playing' | 'error')) => {
+      setStatusRaw((prev) => {
+        const value = typeof next === 'function' ? next(prev) : next;
+        if (value === 'playing' && !playedOnceRef.current) {
+          playedOnceRef.current = true;
+          setPlayedOnce(true);
+        }
+        // Locked: never fall back to the loading state during playback.
+        if (value === 'loading' && playedOnceRef.current) return prev;
+        return value;
+      });
+    },
+    [],
+  );
+
   const [errorKind, setErrorKind] = useState<'offline' | 'busy' | 'geo'>('offline');
   const [retryIn, setRetryIn] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
