@@ -90,7 +90,7 @@ async function checkXtream(source: string): Promise<Health> {
 async function checkPlainM3U(source: string): Promise<Health> {
   const res = await timedFetch(source, { headers: { Range: 'bytes=0-1024' } })
   await res.body?.cancel()
-  if (res.status === 458 || res.status === 429) return base('slot_limit', 'Provider connection limit reached')
+  if (res.status === 458 || res.status === 429 || res.status === 407) return base('slot_limit', 'Provider connection limit reached')
   if (!res.ok) return base('offline', `Playlist responded ${res.status}`)
   return base('online', 'Playlist is reachable')
 }

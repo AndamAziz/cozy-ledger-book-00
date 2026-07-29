@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
-import { X, Loader2, AlertTriangle, Maximize2, Settings2 } from 'lucide-react';
+import { X, Loader2, AlertTriangle, Maximize2, Settings2, RefreshCw } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 import { probeSlotLimit, slotRetryDelay, SLOT_MAX_RETRIES } from '@/lib/iptvSlotRetry';
@@ -41,6 +41,8 @@ export function LiveTVPlayer({
   const shellRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading');
+  const [errorKind, setErrorKind] = useState<'offline' | 'busy'>('offline');
+  const [retryIn, setRetryIn] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [levels, setLevels] = useState<QualityLevel[]>([]);
   const [selectedLevel, setSelectedLevel] = useState(-1);
@@ -50,6 +52,7 @@ export function LiveTVPlayer({
   const slotRetriesRef = useRef(0);
   const onSlotLimitRef = useRef(onSlotLimit);
   onSlotLimitRef.current = onSlotLimit;
+
   const accent = accentFor(channel.name);
 
   useEffect(() => {
@@ -60,6 +63,7 @@ export function LiveTVPlayer({
 
     setStatus('loading');
     setSlotLimited(false);
+    setRetryIn(null);
     setLevels([]);
     setSelectedLevel(-1);
     setAutoLabel(null);
@@ -71,6 +75,7 @@ export function LiveTVPlayer({
     let networkRetries = 0;
     let cancelled = false;
     let retryTimer = 0;
+    let countdownTimer = 0;
 
     // A failure may just be the provider's session limit: refresh a few times,
     // then let the parent move on to the first available episode.
@@ -84,6 +89,14 @@ export function LiveTVPlayer({
           const delay = slotRetryDelay(slotRetriesRef.current);
           slotRetriesRef.current += 1;
           setStatus('loading');
+          // Visible countdown so a busy provider never looks like a frozen app.
+          let left = Math.ceil(delay / 1000);
+          setRetryIn(left);
+          countdownTimer = window.setInterval(() => {
+            left -= 1;
+            setRetryIn(left > 0 ? left : null);
+            if (left <= 0) window.clearInterval(countdownTimer);
+          }, 1000);
           retryTimer = window.setTimeout(() => {
             if (!cancelled) setAttempt((a) => a + 1);
           }, delay);
@@ -95,8 +108,11 @@ export function LiveTVPlayer({
           return;
         }
       }
+      setRetryIn(null);
+      setErrorKind(limited ? 'busy' : 'offline');
       setStatus('error');
     };
+
 
     const play = () => video.play().catch(() => undefined);
 
@@ -195,13 +211,18 @@ export function LiveTVPlayer({
         }
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
           // A non-HLS payload (VOD) surfaces as a manifest parsing/network failure.
-          if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR && !usedNative) playNative();
-          else if (networkRetries < 5) {
+          // Live channels have no progressive fallback, so a failed manifest is
+          // reported straight away instead of stalling on a dead <video> src.
+          if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
+            if (isVod && !usedNative) playNative();
+            else void handleFailure();
+          } else if (networkRetries < 5) {
             networkRetries += 1;
             window.setTimeout(() => hls?.startLoad(), 1000 * networkRetries);
-          } else if (!usedNative) playNative();
+          } else if (isVod && !usedNative) playNative();
           else void handleFailure();
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+
           recoverMedia();
         } else if (!usedNative) playNative();
         else void handleFailure();
@@ -211,18 +232,20 @@ export function LiveTVPlayer({
     }
 
 
-    // Hard connect watchdog: if nothing is playing within 20s, fall back /
+    // Hard connect watchdog: if nothing is playing within 15s, fall back /
     // surface an error instead of spinning forever.
     const connectWatchdog = window.setTimeout(() => {
       if (cancelled || video.readyState >= 3) return
       if (!usedNative) playNative();
       else void handleFailure();
-    }, 20000);
+    }, 15000);
 
     const onPlaying = () => {
       window.clearTimeout(connectWatchdog);
+      window.clearInterval(countdownTimer);
       slotRetriesRef.current = 0;
       setSlotLimited(false);
+      setRetryIn(null);
       setStatus('playing');
     };
     const onWaiting = () => setStatus((s) => (s === 'error' ? s : 'loading'));
@@ -239,15 +262,19 @@ export function LiveTVPlayer({
       cancelled = true;
       window.clearTimeout(retryTimer);
       window.clearTimeout(connectWatchdog);
+      window.clearInterval(countdownTimer);
 
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('error', onError);
       hls?.destroy();
       hlsRef.current = null;
+      // Releasing the element's source tears the proxied request down, which
+      // frees the provider's viewing slot immediately.
       video.removeAttribute('src');
       video.load();
     };
+
   }, [channel, attempt]);
 
   useEffect(() => {
@@ -357,40 +384,69 @@ export function LiveTVPlayer({
         />
 
         {status === 'loading' && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
-            <p className="text-xs font-semibold text-white/60">
-              {slotLimited ? 'All slots busy — retrying automatically…' : 'Connecting to stream…'}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45 backdrop-blur-[2px]">
+            <span className="relative flex h-14 w-14 items-center justify-center">
+              <span
+                className="absolute inset-0 animate-ping rounded-full opacity-25"
+                style={{ background: accent }}
+              />
+              <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
+            </span>
+            <p className="text-xs font-semibold text-white/70">
+              {slotLimited ? 'All viewing slots busy' : 'Connecting to stream…'}
             </p>
+            {slotLimited && (
+              <p className="text-[11px] font-medium text-white/45">
+                {retryIn ? `Reconnecting in ${retryIn}s…` : 'Reconnecting…'}
+              </p>
+            )}
           </div>
         )}
 
         {status === 'error' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
-            <AlertTriangle className="h-8 w-8 text-[#ff2d6f]" />
-            <p className="text-sm font-bold text-white">This channel is not responding</p>
-            <p className="text-xs text-white/50">
-              It may be offline or all viewing slots are in use. Retry, or pick another channel.
-            </p>
-            <div className="mt-2 flex gap-2">
-              <button
-                onClick={() => {
-                slotRetriesRef.current = 0;
-                setAttempt((a) => a + 1);
-              }}
-                className="rounded-full bg-[#ff2d6f] px-5 py-2 text-xs font-bold text-white active:scale-95"
+          <div className="absolute inset-0 flex items-center justify-center px-6">
+            <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.06] px-6 py-7 text-center shadow-2xl backdrop-blur-2xl">
+              <span
+                className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
+                style={{
+                  background: errorKind === 'busy' ? 'rgba(240,185,11,0.14)' : 'rgba(255,45,111,0.14)',
+                }}
               >
-                Retry
-              </button>
-              <button
-                onClick={onClose}
-                className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 active:scale-95"
-              >
-                Back to channels
-              </button>
+                <AlertTriangle
+                  className="h-6 w-6"
+                  style={{ color: errorKind === 'busy' ? '#f0b90b' : '#ff2d6f' }}
+                />
+              </span>
+              <p className="text-sm font-extrabold tracking-tight text-white">
+                {errorKind === 'busy' ? 'All viewing slots are in use' : 'This channel is not responding'}
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-white/50">
+                {errorKind === 'busy'
+                  ? 'Your provider allows a limited number of simultaneous streams. Close other devices, then retry.'
+                  : 'The source may be offline right now. Retry, or pick another channel.'}
+              </p>
+              <div className="mt-4 flex justify-center gap-2">
+                <button
+                  onClick={() => {
+                    slotRetriesRef.current = 0;
+                    setAttempt((a) => a + 1);
+                  }}
+                  className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
+                  style={{ background: errorKind === 'busy' ? '#f0b90b' : '#ff2d6f' }}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Retry
+                </button>
+                <button
+                  onClick={onClose}
+                  className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 transition hover:border-white/40 hover:text-white active:scale-95"
+                >
+                  Back
+                </button>
+              </div>
             </div>
           </div>
         )}
+
       </div>
 
       {episodes && episodes.length > 0 && (
