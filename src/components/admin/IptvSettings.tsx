@@ -132,7 +132,7 @@ export function IptvSettings() {
               setUrl(e.target.value);
               setTest(null);
             }}
-            placeholder="http://example.com/get.php?username=USER&password=PASS&type=m3u_plus"
+            placeholder="http://host/get.php?username=USER&password=PASS&type=m3u_plus  or  https://…/playlist.m3u8"
             disabled={loading}
             autoComplete="off"
             spellCheck={false}

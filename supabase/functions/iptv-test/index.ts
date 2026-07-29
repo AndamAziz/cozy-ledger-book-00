@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { parseXtream } from '../_shared/iptvConfig.ts'
+import { isXtreamUrl, parseXtream } from '../_shared/iptvConfig.ts'
+
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 const TIMEOUT_MS = 15000
@@ -54,18 +55,45 @@ Deno.serve(async (req) => {
   if (!/^https?:$/.test(creds.protocol)) {
     return json({ ok: false, error: 'URL must start with http:// or https://' }, 200)
   }
-  if (!creds.username || !creds.password) {
-    return json({ ok: false, error: 'URL is missing the username/password parameters' }, 200)
-  }
-
-  // --- Probe the playlist --------------------------------------------------
-  const api = `${creds.protocol}//${creds.host}/player_api.php?username=${encodeURIComponent(
-    creds.username,
-  )}&password=${encodeURIComponent(creds.password)}`
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   const started = performance.now()
+
+  // --- Plain M3U / M3U8 playlist (no Xtream credentials) -------------------
+  if (!isXtreamUrl(raw)) {
+    try {
+      const res = await fetch(raw, {
+        headers: { 'User-Agent': UA },
+        redirect: 'follow',
+        signal: controller.signal,
+      })
+      if (!res.ok) return json({ ok: false, error: `Server responded with ${res.status}` }, 200)
+      const text = await res.text()
+      if (!/#EXTM3U|#EXTINF/i.test(text)) {
+        return json({ ok: false, error: 'That link did not return an M3U playlist' }, 200)
+      }
+      const channels = (text.match(/#EXTINF/gi) ?? []).length
+      if (!channels) return json({ ok: false, error: 'Connected, but no channels were returned' }, 200)
+      return json({
+        ok: true,
+        channels,
+        latency_ms: Math.round(performance.now() - started),
+        host: creds.host,
+      })
+    } catch (e) {
+      const timedOut = (e as Error)?.name === 'AbortError'
+      return json({ ok: false, error: timedOut ? 'Connection timed out' : 'Could not reach the server' }, 200)
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+
+  // --- Probe the Xtream playlist -------------------------------------------
+  const api = `${creds.protocol}//${creds.host}/player_api.php?username=${encodeURIComponent(
+    creds.username,
+  )}&password=${encodeURIComponent(creds.password)}`
+
   try {
     const res = await fetch(`${api}&action=get_live_streams`, {
       headers: { 'User-Agent': UA },
@@ -97,3 +125,4 @@ Deno.serve(async (req) => {
     clearTimeout(timer)
   }
 })
+

@@ -47,3 +47,14 @@ export function parseXtream(raw: string) {
     password: u.searchParams.get('password') ?? '',
   }
 }
+
+/** True when the link looks like an Xtream Codes API playlist (has username + password). */
+export function isXtreamUrl(raw: string) {
+  try {
+    const u = new URL(raw)
+    return !!(u.searchParams.get('username') && u.searchParams.get('password'))
+  } catch {
+    return false
+  }
+}
+
