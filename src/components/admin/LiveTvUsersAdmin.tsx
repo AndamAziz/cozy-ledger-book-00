@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Radio, Save, Search, Timer, Unlock, Lock } from 'lucide-react';
+import { ListTree, Loader2, Radio, Save, Search, Timer, Unlock, Lock } from 'lucide-react';
+import { IptvSourceManager } from '@/components/livetv/IptvSourceManager';
 
 interface Row {
   userId: string;
@@ -35,6 +36,7 @@ export function LiveTvUsersAdmin() {
   const [query, setQuery] = useState('');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [openSources, setOpenSources] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -168,7 +170,21 @@ export function LiveTvUsersAdmin() {
                   <Button size="sm" onClick={() => saveServer(row)} disabled={busy === row.userId}>
                     <Save className="mr-1 h-3.5 w-3.5" /> Save
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setOpenSources((s) => (s === row.userId ? null : row.userId))}
+                  >
+                    <ListTree className="mr-1 h-3.5 w-3.5" />
+                    {openSources === row.userId ? 'Hide sources' : 'Sources'}
+                  </Button>
                 </div>
+                {openSources === row.userId && (
+                  <div className="rounded-lg border bg-background/40 p-3">
+                    <IptvSourceManager userId={row.userId} compact onChanged={() => void load()} />
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => extendTrial(row, 24)} disabled={busy === row.userId}>
                     <Timer className="mr-1 h-3.5 w-3.5" /> +24h trial

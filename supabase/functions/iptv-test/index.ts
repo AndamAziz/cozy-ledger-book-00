@@ -63,7 +63,16 @@ Deno.serve(async (req) => {
     }
     const channels = (res.body.match(/#EXTINF/gi) ?? []).length
     if (!channels) return json({ ok: false, error: 'Connected, but no channels were returned' })
-    return json({ ok: true, channels, latency_ms: latency(), host: creds.host, via: res.userAgent })
+    return json({
+      ok: true,
+      kind: 'm3u',
+      channels,
+      latency_ms: latency(),
+      host: creds.host,
+      via: res.userAgent,
+      compatible: true,
+      message: `Connected — ${channels} channels in ${latency()} ms`,
+    })
   }
 
   // --- Probe the Xtream playlist -------------------------------------------
@@ -93,9 +102,12 @@ Deno.serve(async (req) => {
 
   return json({
     ok: true,
+    kind: 'xtream',
     channels: parsed.length,
     latency_ms: latency(),
     host: creds.host,
     via: list.userAgent,
+    compatible: true,
+    message: `Connected — ${parsed.length} live channels in ${latency()} ms`,
   })
 })
