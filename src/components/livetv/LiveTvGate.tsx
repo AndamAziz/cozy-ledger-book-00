@@ -223,10 +223,7 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
       {access && !access.isActivated && (
         <div className="flex flex-wrap items-center justify-center gap-2 bg-gradient-to-r from-[#ff2d6f]/20 to-[#b026ff]/20 px-4 py-2 text-center text-[11px] font-bold text-white">
           <Timer className="h-3.5 w-3.5 text-[#ff2d6f]" />
-          Free trial ends in {formatCountdown(access.msLeft)}
-          <Link to="/live-tv/activate" className="underline underline-offset-4">
-            Activate £40
-          </Link>
+          Free trial ends in {formatCountdown(access.msLeft)} · £40 unlocks it permanently
         </div>
       )}
       <div className="flex justify-end bg-[#07070b] px-4 pt-2">
