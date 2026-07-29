@@ -121,7 +121,13 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Provider slot limits come back as 458/429 — surface a readable message.
+    if (streamId && (res.status === 458 || res.status === 429)) {
+      return err('All viewing slots are in use right now. Try again in a moment.', 502)
+    }
+
     const out = new Headers(corsHeaders)
+
     out.set('Content-Type', ct || 'video/mp2t')
     const len = res.headers.get('content-length')
     if (len) out.set('Content-Length', len)
