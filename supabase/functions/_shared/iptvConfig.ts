@@ -311,7 +311,18 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
  * single-slot cache would thrash between accounts.
  */
 export async function getM3U(url: string): Promise<M3uSnapshot> {
+  // Direct single-stream links are never downloaded here: a raw .ts feed would
+  // stream forever. Wrap them as a one-channel playlist immediately.
+  if (isDirectStreamUrl(url)) {
+    const cached = m3uCache.get(url)
+    if (cached) return cached
+    const snap = directStreamSnapshot(url)
+    m3uCache.set(url, snap)
+    return snap
+  }
+
   const hit = m3uCache.get(url) ?? null
+
 
   if (hit && Date.now() - hit.at < M3U_TTL) return hit
 
