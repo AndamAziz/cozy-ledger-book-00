@@ -257,12 +257,14 @@ export function LiveTVPlayer({
         const mod: any = await import('mpegts.js');
         const mpegts: any = mod.default ?? mod;
         if (cancelled || !mpegts.isSupported()) {
+          console.warn('[LiveTVPlayer] mpegts.js unsupported in this browser');
           const next = mpegtsFallback;
           mpegtsFallback = null;
           if (next) next();
           else void handleFailure();
           return;
         }
+        console.info('[LiveTVPlayer] engine: mpegts.js (MSE)');
         hls?.destroy();
         hls = null;
         hlsRef.current = null;
