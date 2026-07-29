@@ -13,26 +13,49 @@ export interface LiveTvAccess {
 }
 
 export interface LiveTvServer {
-  playlistUrl: string;
+  /** Redacted preview only — the real credentials never reach the browser. */
+  masked: string;
   providerName: string | null;
+  updatedAt: string | null;
 }
 
 /**
  * Live TV entitlement + the user's personal provider link.
- * Every account streams from its own credentials, so both are needed before
- * the player can be opened.
+ *
+ * Entitlement is read from `livetv_access` (with a realtime subscription so
+ * activation/trial changes land instantly). The provider link is NEVER read
+ * from the database by the client: it is encrypted at rest and only a masked
+ * preview is returned by the `iptv-server` edge function.
  */
 export function useLiveTvAccess() {
   const { user, isLoading: authLoading } = useAuth();
   const [access, setAccess] = useState<LiveTvAccess | null>(null);
   const [server, setServer] = useState<LiveTvServer | null>(null);
+  const [hasServer, setHasServer] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(() => Date.now());
+
+  const applyAccessRow = useCallback(
+    (row: { trial_ends_at?: string | null; is_activated?: boolean | null } | null) => {
+      const trialEndsAt = row?.trial_ends_at ?? null;
+      const isActivated = !!row?.is_activated;
+      const trialLive = !!trialEndsAt && new Date(trialEndsAt).getTime() > Date.now();
+      setAccess({
+        trialEndsAt,
+        isActivated,
+        hasAccess: isActivated || trialLive,
+        trialExpired: !isActivated && !trialLive,
+        msLeft: trialEndsAt ? Math.max(0, new Date(trialEndsAt).getTime() - Date.now()) : 0,
+      });
+    },
+    [],
+  );
 
   const load = useCallback(async () => {
     if (!user) {
       setAccess(null);
       setServer(null);
+      setHasServer(false);
       setIsLoading(false);
       return;
     }
@@ -43,40 +66,51 @@ export function useLiveTvAccess() {
         .select('trial_ends_at, is_activated')
         .eq('user_id', user.id)
         .maybeSingle(),
-      supabase
-        .from('user_iptv_servers')
-        .select('playlist_url, provider_name')
-        .eq('user_id', user.id)
-        .maybeSingle(),
+      supabase.functions.invoke('iptv-server', { body: { action: 'get' } }),
     ]);
 
-    const row = accessRes.data;
-    const trialEndsAt = row?.trial_ends_at ?? null;
-    const isActivated = !!row?.is_activated;
-    const trialLive = !!trialEndsAt && new Date(trialEndsAt).getTime() > Date.now();
+    applyAccessRow(accessRes.data ?? null);
 
-    setAccess({
-      trialEndsAt,
-      isActivated,
-      hasAccess: isActivated || trialLive,
-      trialExpired: !isActivated && !trialLive,
-      msLeft: trialEndsAt ? Math.max(0, new Date(trialEndsAt).getTime() - Date.now()) : 0,
+    const info = serverRes.data as
+      | { hasServer?: boolean; masked?: string; providerName?: string | null; updatedAt?: string | null }
+      | null;
+    setHasServer(!!info?.hasServer);
+    setServer({
+      masked: info?.masked ?? '',
+      providerName: info?.providerName ?? null,
+      updatedAt: info?.updatedAt ?? null,
     });
-    setServer(
-      serverRes.data
-        ? {
-            playlistUrl: serverRes.data.playlist_url ?? '',
-            providerName: serverRes.data.provider_name ?? null,
-          }
-        : { playlistUrl: '', providerName: null },
-    );
     setIsLoading(false);
-  }, [user]);
+  }, [user, applyAccessRow]);
 
   useEffect(() => {
     if (authLoading) return;
     void load();
   }, [authLoading, load]);
+
+  // Realtime entitlement: activation via Stripe or an admin change lands live.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`livetv-access-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'livetv_access',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as { trial_ends_at?: string | null; is_activated?: boolean | null };
+          if (row) applyAccessRow(row);
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user, applyAccessRow]);
 
   // Keeps the trial countdown ticking and flips the gate the moment it ends.
   useEffect(() => {
@@ -102,7 +136,7 @@ export function useLiveTvAccess() {
     user,
     access: live,
     server,
-    hasServer: !!server?.playlistUrl,
+    hasServer,
     isLoading: authLoading || isLoading,
     refresh: load,
   };
