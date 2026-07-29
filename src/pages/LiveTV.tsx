@@ -125,12 +125,9 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[#07070b] text-white">
       <Helmet>
-        <title>Live TV & Sports Streaming | City Taxperts</title>
-        <meta
-          name="description"
-          content="Watch live sports, Kurdish satellite channels, news and entertainment in one sleek streaming player."
-        />
-        <link rel="canonical" href="/live-tv" />
+        <title>{meta.title}</title>
+        <meta name="description" content={meta.description} />
+        <link rel="canonical" href={meta.path} />
       </Helmet>
 
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07070b]/90 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur-xl">
@@ -143,7 +140,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-extrabold tracking-tight">Live TV</h1>
+            <h1 className="truncate text-base font-extrabold tracking-tight">{meta.heading}</h1>
             <p className="truncate text-[10px] uppercase tracking-[0.2em] text-white/35">
               {index ? `${index.total.toLocaleString()} channels` : 'Streaming'}
             </p>
