@@ -350,22 +350,33 @@ async function getSeriesInfo(api: string, seriesId: string) {
   const url = `${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
   let data: Record<string, unknown> | null = null
   for (let i = 0; i < 2 && !data; i++) {
+    const { res, diag } = await diagFetch('getSeriesInfo', url, {
+      timeoutMs: 15000 * (i + 1),
+      attempt: i + 1,
+      headers: { 'User-Agent': UA },
+    })
+    if (!res) {
+      lastUpstreamDiag = diag
+      continue
+    }
+    let text = ''
     try {
-      const res = await egressFetch(url, {
-        headers: { 'User-Agent': UA },
-        signal: AbortSignal.timeout(25000 * (i + 1)),
-      })
-      if (!res.ok) {
-        await res.body?.cancel()
-        continue
-      }
-      const json = await res.json()
+      text = await res.text()
+      const json = JSON.parse(text)
       if (json && typeof json === 'object') data = json as Record<string, unknown>
-    } catch {
-      // retry once
+    } catch (e) {
+      lastUpstreamDiag = {
+        ...diag,
+        ok: false,
+        kind: 'parse_error',
+        bodySnippet: text.slice(0, 500),
+        message: classifyError(e).message,
+      }
+      logDiag('getSeriesInfo:parse', lastUpstreamDiag)
     }
   }
   if (!data) throw new Error('Your IPTV provider did not respond. Please try again.')
+
 
 
   const info = (data.info ?? {}) as Record<string, unknown>
