@@ -27,12 +27,22 @@ Deno.serve(async (req) => {
   const reqUrl = new URL(req.url)
   const { host, protocol, username, password } = creds()
   const streamId = reqUrl.searchParams.get('id')
+  const kind = reqUrl.searchParams.get('kind') === 'vod' ? 'vod' : 'live'
   const passthrough = reqUrl.searchParams.get('u')
 
+  // Candidate upstreams: live HLS first, then Xtream VOD/series containers.
+  let candidates: string[] = []
   let upstream: URL
   if (streamId) {
     if (!/^\d+$/.test(streamId)) return err('Invalid id', 400)
-    upstream = new URL(`${protocol}//${host}/live/${username}/${password}/${streamId}.m3u8`)
+    const cred = `${protocol}//${host}`
+    const live = `${cred}/live/${username}/${password}/${streamId}.m3u8`
+    const vod = ['mp4', 'mkv', 'avi'].flatMap((ext) => [
+      `${cred}/movie/${username}/${password}/${streamId}.${ext}`,
+      `${cred}/series/${username}/${password}/${streamId}.${ext}`,
+    ])
+    candidates = kind === 'vod' ? [live, ...vod] : [live]
+    upstream = new URL(candidates[0])
   } else if (passthrough) {
     try {
       upstream = new URL(passthrough)
@@ -42,6 +52,7 @@ Deno.serve(async (req) => {
     // Only the provider host or its HLS edge nodes may be proxied.
     const isEdgeSegment = /^\/hls\//.test(upstream.pathname)
     if (upstream.host !== host && !isEdgeSegment) return err('Host not allowed', 403)
+    candidates = [upstream.toString()]
   } else {
     return err('Missing id or u parameter', 400)
   }
@@ -58,14 +69,26 @@ Deno.serve(async (req) => {
 
   try {
     // The provider limits concurrent sessions; a fresh session sometimes needs a retry.
+    // For VOD we also walk the candidate list (live → movie → series containers).
     let res = await fetch(upstream.toString(), { headers, redirect: 'follow' })
-    for (let attempt = 0; attempt < 3 && !res.ok && !!streamId; attempt++) {
-      await new Promise((r) => setTimeout(r, 1200))
-      res = await fetch(upstream.toString(), { headers, redirect: 'follow' })
+    if (!res.ok && streamId) {
+      outer: for (const candidate of candidates) {
+        for (let attempt = 0; attempt < (candidates.length > 1 ? 1 : 3); attempt++) {
+          await new Promise((r) => setTimeout(r, 800))
+          const next = await fetch(candidate, { headers, redirect: 'follow' })
+          if (next.ok) {
+            upstream = new URL(candidate)
+            res = next
+            break outer
+          }
+          res = next
+        }
+      }
     }
 
     const ct = res.headers.get('content-type') ?? ''
     const isPlaylist = ct.includes('mpegurl') || /\.m3u8?$/i.test(upstream.pathname)
+
 
     if (isPlaylist) {
       const text = await res.text()
