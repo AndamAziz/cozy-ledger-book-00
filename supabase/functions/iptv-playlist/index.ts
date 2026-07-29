@@ -265,12 +265,19 @@ Deno.serve(async (req) => {
     if (!source) return json({ error: 'Playlist not configured' }, 500)
 
     const url = new URL(req.url)
+    const seriesId = url.searchParams.get('series')
+    if (seriesId) {
+      if (!/^\d+$/.test(seriesId)) return json({ error: 'Invalid series id' }, 400)
+      return json(await getSeriesInfo(apiBase(source), seriesId))
+    }
+
     const category = url.searchParams.get('category')
     const q = (url.searchParams.get('q') ?? '').trim().toLowerCase()
     const limit = Math.min(Number(url.searchParams.get('limit') ?? 60) || 60, 200)
     const offset = Math.max(Number(url.searchParams.get('offset') ?? 0) || 0, 0)
 
     const index = await getIndex(source)
+
 
     if (!category && !q) {
       return json({
