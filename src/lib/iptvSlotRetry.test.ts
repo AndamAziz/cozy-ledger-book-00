@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { firstAvailableEpisode, isSlotLimitPayload, slotRetryDelay } from './iptvSlotRetry';
+import {
+  autoRetryDelay,
+  firstAvailableEpisode,
+  isSlotLimitPayload,
+  slotRetryDelay,
+} from './iptvSlotRetry';
 
 describe('iptvSlotRetry', () => {
   it('detects slot limit payloads', () => {
