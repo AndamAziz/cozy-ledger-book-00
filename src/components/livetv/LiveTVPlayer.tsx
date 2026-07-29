@@ -47,8 +47,22 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
 
     let hls: Hls | null = null;
     let usedNative = false;
+    let mediaRecoveries = 0;
+    let networkRetries = 0;
 
     const play = () => video.play().catch(() => undefined);
+
+    // Escalating media recovery: recoverMediaError → swapAudioCodec → native.
+    const recoverMedia = () => {
+      if (!hls) return;
+      mediaRecoveries += 1;
+      if (mediaRecoveries === 1) hls.recoverMediaError();
+      else if (mediaRecoveries <= 3) {
+        hls.swapAudioCodec();
+        hls.recoverMediaError();
+      } else if (!usedNative) playNative();
+      else setStatus('error');
+    };
 
     // VOD items can be progressive MP4/MKV rather than HLS — fall back to native playback.
     const playNative = () => {
@@ -67,11 +81,24 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
       hls = new Hls({
         lowLatencyMode: !isVod,
         enableWorker: true,
-        backBufferLength: isVod ? 90 : 30,
-        maxBufferLength: isVod ? 30 : 12,
-        liveSyncDurationCount: 2,
-        manifestLoadingMaxRetry: 3,
-        fragLoadingMaxRetry: 4,
+        backBufferLength: isVod ? 120 : 60,
+        // Pre-load far more ahead so IPTV hiccups don't surface as freezes.
+        maxBufferLength: isVod ? 90 : 45,
+        maxMaxBufferLength: isVod ? 600 : 240,
+        maxBufferSize: 120 * 1000 * 1000,
+        maxBufferHole: 0.5,
+        highBufferWatchdogPeriod: 1,
+        nudgeMaxRetry: 10,
+        liveSyncDurationCount: 3,
+        // Slow IPTV origins need generous timeouts before we call it an error.
+        manifestLoadingTimeOut: 30000,
+        manifestLoadingMaxRetry: 6,
+        manifestLoadingRetryDelay: 1000,
+        levelLoadingTimeOut: 30000,
+        levelLoadingMaxRetry: 6,
+        fragLoadingTimeOut: 60000,
+        fragLoadingMaxRetry: 8,
+        fragLoadingRetryDelay: 1000,
       });
       hlsRef.current = hls;
       hls.loadSource(src);
@@ -96,13 +123,37 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
         setAutoLabel(lvl ? labelForLevel(lvl.height, lvl.bitrate) : null);
       });
       hls.on(Hls.Events.ERROR, (_e, data) => {
-        if (!data.fatal) return;
+        // Non-fatal: self-heal stalls/gaps instead of surfacing an error.
+        if (!data.fatal) {
+          const d = data.details;
+          if (
+            d === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
+            d === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL ||
+            d === Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE
+          ) {
+            recoverMedia();
+          } else if (
+            d === Hls.ErrorDetails.FRAG_LOAD_ERROR ||
+            d === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT ||
+            d === Hls.ErrorDetails.LEVEL_LOAD_ERROR ||
+            d === Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT
+          ) {
+            // Nudge the loader back to life on flaky segment delivery.
+            window.setTimeout(() => hls?.startLoad(), 500);
+          }
+          return;
+        }
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
           // A non-HLS payload (VOD) surfaces as a manifest parsing/network failure.
-          if (!usedNative) playNative();
-          else hls?.startLoad();
-        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls?.recoverMediaError();
-        else if (!usedNative) playNative();
+          if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR && !usedNative) playNative();
+          else if (networkRetries < 5) {
+            networkRetries += 1;
+            window.setTimeout(() => hls?.startLoad(), 1000 * networkRetries);
+          } else if (!usedNative) playNative();
+          else setStatus('error');
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          recoverMedia();
+        } else if (!usedNative) playNative();
         else setStatus('error');
       });
     } else {
