@@ -432,7 +432,12 @@ export function LiveTVPlayer({
     const rawLiveFirst = !isVod && extHint !== 'm3u8' && extHint !== 'm3u';
     const progressive = ['mp4', 'm4v', 'mov', 'webm'].includes(extHint);
 
-    if (tsFirst || rawLiveFirst) {
+    if (isHlsUrl) {
+      // Explicit HLS: Safari plays it natively, everyone else uses hls.js.
+      if (nativeHls && !Hls.isSupported()) playNative();
+      else if (Hls.isSupported()) startHls();
+      else playNative();
+    } else if (tsFirst || rawLiveFirst) {
       // Raw transport streams: mpegts.js first, native as the safety net.
       mpegtsFallback = () => {
         if (Hls.isSupported() && !tsFirst) startHls();
