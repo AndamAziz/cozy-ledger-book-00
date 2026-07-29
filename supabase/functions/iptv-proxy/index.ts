@@ -11,8 +11,8 @@ function creds(raw: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  const err = (msg: string, status: number) =>
-    new Response(JSON.stringify({ error: msg }), {
+  const err = (msg: string, status: number, code?: string) =>
+    new Response(JSON.stringify({ error: msg, code }), {
       status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
           res.status === 458 || res.status === 429
             ? 'All viewing slots are in use right now. Try again in a moment.'
             : `Stream unavailable (${res.status})`
-        return err(msg, 502)
+        return err(msg, 502, res.status === 458 || res.status === 429 ? 'SLOT_LIMIT' : undefined)
       }
       const finalUrl = new URL(res.url || upstream.toString())
       const rewritten = text
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 
     // Provider slot limits come back as 458/429 — surface a readable message.
     if (streamId && (res.status === 458 || res.status === 429)) {
-      return err('All viewing slots are in use right now. Try again in a moment.', 502)
+      return err('All viewing slots are in use right now. Try again in a moment.', 502, 'SLOT_LIMIT')
     }
 
     const out = new Headers(corsHeaders)

@@ -3,6 +3,7 @@ import Hls from 'hls.js';
 import { X, Loader2, AlertTriangle, Maximize2, Settings2 } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
+import { probeSlotLimit, slotRetryDelay, SLOT_MAX_RETRIES } from '@/lib/iptvSlotRetry';
 
 interface QualityLevel {
   /** hls.js level index, or -1 for auto */
@@ -24,9 +25,18 @@ interface Props {
   episodes?: IptvEpisode[];
   currentEpisodeId?: string;
   onSelectEpisode?: (episode: IptvEpisode) => void;
+  /** Called when the provider slot limit persists after automatic refreshes. */
+  onSlotLimit?: () => void;
 }
 
-export function LiveTVPlayer({ channel, onClose, episodes, currentEpisodeId, onSelectEpisode }: Props) {
+export function LiveTVPlayer({
+  channel,
+  onClose,
+  episodes,
+  currentEpisodeId,
+  onSelectEpisode,
+  onSlotLimit,
+}: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -36,6 +46,10 @@ export function LiveTVPlayer({ channel, onClose, episodes, currentEpisodeId, onS
   const [selectedLevel, setSelectedLevel] = useState(-1);
   const [autoLabel, setAutoLabel] = useState<string | null>(null);
   const [qualityOpen, setQualityOpen] = useState(false);
+  const [slotLimited, setSlotLimited] = useState(false);
+  const slotRetriesRef = useRef(0);
+  const onSlotLimitRef = useRef(onSlotLimit);
+  onSlotLimitRef.current = onSlotLimit;
   const accent = accentFor(channel.name);
 
   useEffect(() => {
@@ -45,6 +59,7 @@ export function LiveTVPlayer({ channel, onClose, episodes, currentEpisodeId, onS
     const src = `${toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext)}&_r=${attempt}`;
 
     setStatus('loading');
+    setSlotLimited(false);
     setLevels([]);
     setSelectedLevel(-1);
     setAutoLabel(null);
@@ -54,6 +69,34 @@ export function LiveTVPlayer({ channel, onClose, episodes, currentEpisodeId, onS
     let usedNative = false;
     let mediaRecoveries = 0;
     let networkRetries = 0;
+    let cancelled = false;
+    let retryTimer = 0;
+
+    // A failure may just be the provider's session limit: refresh a few times,
+    // then let the parent move on to the first available episode.
+    const handleFailure = async () => {
+      if (cancelled) return;
+      const limited = await probeSlotLimit(src);
+      if (cancelled) return;
+      if (limited) {
+        setSlotLimited(true);
+        if (slotRetriesRef.current < SLOT_MAX_RETRIES) {
+          const delay = slotRetryDelay(slotRetriesRef.current);
+          slotRetriesRef.current += 1;
+          setStatus('loading');
+          retryTimer = window.setTimeout(() => {
+            if (!cancelled) setAttempt((a) => a + 1);
+          }, delay);
+          return;
+        }
+        if (onSlotLimitRef.current) {
+          slotRetriesRef.current = 0;
+          onSlotLimitRef.current();
+          return;
+        }
+      }
+      setStatus('error');
+    };
 
     const play = () => video.play().catch(() => undefined);
 
@@ -66,7 +109,7 @@ export function LiveTVPlayer({ channel, onClose, episodes, currentEpisodeId, onS
         hls.swapAudioCodec();
         hls.recoverMediaError();
       } else if (!usedNative) playNative();
-      else setStatus('error');
+      else void handleFailure();
     };
 
     // VOD items can be progressive MP4/MKV rather than HLS — fall back to native playback.
@@ -155,28 +198,34 @@ export function LiveTVPlayer({ channel, onClose, episodes, currentEpisodeId, onS
             networkRetries += 1;
             window.setTimeout(() => hls?.startLoad(), 1000 * networkRetries);
           } else if (!usedNative) playNative();
-          else setStatus('error');
+          else void handleFailure();
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
           recoverMedia();
         } else if (!usedNative) playNative();
-        else setStatus('error');
+        else void handleFailure();
       });
     } else {
       playNative();
     }
 
 
-    const onPlaying = () => setStatus('playing');
+    const onPlaying = () => {
+      slotRetriesRef.current = 0;
+      setSlotLimited(false);
+      setStatus('playing');
+    };
     const onWaiting = () => setStatus((s) => (s === 'error' ? s : 'loading'));
     const onError = () => {
       if (!usedNative) playNative();
-      else setStatus('error');
+      else void handleFailure();
     };
     video.addEventListener('playing', onPlaying);
     video.addEventListener('waiting', onWaiting);
     video.addEventListener('error', onError);
 
     return () => {
+      cancelled = true;
+      window.clearTimeout(retryTimer);
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('error', onError);
@@ -296,7 +345,9 @@ export function LiveTVPlayer({ channel, onClose, episodes, currentEpisodeId, onS
         {status === 'loading' && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
-            <p className="text-xs font-semibold text-white/60">Connecting to stream…</p>
+            <p className="text-xs font-semibold text-white/60">
+              {slotLimited ? 'All slots busy — retrying automatically…' : 'Connecting to stream…'}
+            </p>
           </div>
         )}
 
@@ -309,7 +360,10 @@ export function LiveTVPlayer({ channel, onClose, episodes, currentEpisodeId, onS
             </p>
             <div className="mt-2 flex gap-2">
               <button
-                onClick={() => setAttempt((a) => a + 1)}
+                onClick={() => {
+                slotRetriesRef.current = 0;
+                setAttempt((a) => a + 1);
+              }}
                 className="rounded-full bg-[#ff2d6f] px-5 py-2 text-xs font-bold text-white active:scale-95"
               >
                 Retry
