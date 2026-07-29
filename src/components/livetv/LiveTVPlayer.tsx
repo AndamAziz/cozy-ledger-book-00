@@ -47,7 +47,7 @@ export function LiveTVPlayer({
   const hlsRef = useRef<Hls | null>(null);
   const mpegtsRef = useRef<{ destroy: () => void; unload?: () => void; detachMediaElement?: () => void } | null>(null);
   const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading');
-  const [errorKind, setErrorKind] = useState<'offline' | 'busy'>('offline');
+  const [errorKind, setErrorKind] = useState<'offline' | 'busy' | 'geo'>('offline');
   const [retryIn, setRetryIn] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [levels, setLevels] = useState<QualityLevel[]>([]);
