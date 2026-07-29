@@ -130,12 +130,8 @@ export function SeriesDetail({ series, onClose }: Props) {
           </div>
         )}
 
-        {slotNotice && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-[#ff2d6f]/40 bg-[#ff2d6f]/10 px-3 py-2 text-[11px] font-semibold text-white/80">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-[#ff2d6f]" />
-            {slotNotice}
-          </div>
-        )}
+
+
 
         {seasons.length > 0 && (
           <>

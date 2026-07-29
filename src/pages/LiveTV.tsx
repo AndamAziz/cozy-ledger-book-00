@@ -230,30 +230,8 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
       </header>
 
       <main className="flex-1 px-4 pb-6 pt-4">
-        {health && health.status !== 'online' && (
-          <div
-            className="mb-4 flex items-center gap-3 rounded-2xl border px-3.5 py-3 backdrop-blur-xl"
-            style={{
-              borderColor: `${healthTone.fg}55`,
-              background: healthTone.bg,
-            }}
-          >
-            <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: healthTone.fg }} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[11px] font-extrabold text-white">
-                {health.status === 'slot_limit' ? 'All viewing slots are in use' : 'Provider unreachable'}
-              </p>
-              <p className="truncate text-[10px] text-white/55">{health.message}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => refetchHealth()}
-              className="shrink-0 rounded-full border border-white/20 px-3 py-1 text-[10px] font-bold text-white/80 transition hover:border-white/40 hover:text-white active:scale-95"
-            >
-              Retry
-            </button>
-          </div>
-        )}
+
+
 
         {isLoading && (
           <div className="flex flex-col items-center justify-center gap-3 py-24 text-white/50">
