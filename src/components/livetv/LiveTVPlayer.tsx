@@ -8,6 +8,9 @@ import {
   slotRetryDelay,
   SLOT_MAX_RETRIES,
   GEO_BLOCK_MESSAGE,
+  AUTO_MAX_RETRIES,
+  autoRetryDelay,
+  STALL_TIMEOUT_MS,
 } from '@/lib/iptvSlotRetry';
 
 interface QualityLevel {
@@ -56,10 +59,17 @@ export function LiveTVPlayer({
   const [qualityOpen, setQualityOpen] = useState(false);
   const [slotLimited, setSlotLimited] = useState(false);
   const slotRetriesRef = useRef(0);
+  const autoRetriesRef = useRef(0);
   const onSlotLimitRef = useRef(onSlotLimit);
   onSlotLimitRef.current = onSlotLimit;
 
   const accent = accentFor(channel.name);
+
+  // A new channel starts with a clean retry budget.
+  useEffect(() => {
+    slotRetriesRef.current = 0;
+    autoRetriesRef.current = 0;
+  }, [channel.id]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -125,6 +135,25 @@ export function LiveTVPlayer({
           onSlotLimitRef.current();
           return;
         }
+      }
+      // Generic failures (dead engine, stalled segments) get silent timed
+      // restarts before the user ever sees an error card.
+      if (autoRetriesRef.current < AUTO_MAX_RETRIES) {
+        const delay = autoRetryDelay(autoRetriesRef.current);
+        autoRetriesRef.current += 1;
+        setStatus('loading');
+        let left = Math.ceil(delay / 1000);
+        setRetryIn(left);
+        window.clearInterval(countdownTimer);
+        countdownTimer = window.setInterval(() => {
+          left -= 1;
+          setRetryIn(left > 0 ? left : null);
+          if (left <= 0) window.clearInterval(countdownTimer);
+        }, 1000);
+        retryTimer = window.setTimeout(() => {
+          if (!cancelled) setAttempt((a) => a + 1);
+        }, delay);
+        return;
       }
       setRetryIn(null);
       setErrorKind(limited ? 'busy' : 'offline');
@@ -336,10 +365,33 @@ export function LiveTVPlayer({
       else void handleFailure();
     }, 18000);
 
+    // Stall watchdog: playback that freezes mid-stream (frozen currentTime)
+    // escalates through the engine chain instead of buffering forever.
+    let lastTime = 0;
+    let stalledFor = 0;
+    const stallWatchdog = window.setInterval(() => {
+      if (cancelled || video.paused || video.readyState < 2) return;
+      if (video.currentTime > lastTime + 0.05) {
+        lastTime = video.currentTime;
+        stalledFor = 0;
+        return;
+      }
+      stalledFor += 2000;
+      if (stalledFor < STALL_TIMEOUT_MS) return;
+      stalledFor = 0;
+      setStatus((s) => (s === 'error' ? s : 'loading'));
+      if (hls) recoverMedia();
+      else if (!usedMpegts) void playMpegts();
+      else if (!usedNative) playNative();
+      else void handleFailure();
+    }, 2000);
+
     const onPlaying = () => {
       window.clearTimeout(connectWatchdog);
       window.clearInterval(countdownTimer);
       slotRetriesRef.current = 0;
+      autoRetriesRef.current = 0;
+      stalledFor = 0;
       setSlotLimited(false);
       setRetryIn(null);
       setStatus('playing');
@@ -359,6 +411,7 @@ export function LiveTVPlayer({
       window.clearTimeout(retryTimer);
       window.clearTimeout(connectWatchdog);
       window.clearInterval(countdownTimer);
+      window.clearInterval(stallWatchdog);
 
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('waiting', onWaiting);
@@ -523,6 +576,7 @@ export function LiveTVPlayer({
                 <button
                   onClick={() => {
                     slotRetriesRef.current = 0;
+                    autoRetriesRef.current = 0;
                     setAttempt((a) => a + 1);
                   }}
                   className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"

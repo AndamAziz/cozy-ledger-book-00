@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { firstAvailableEpisode, isSlotLimitPayload, slotRetryDelay } from './iptvSlotRetry';
+import {
+  autoRetryDelay,
+  firstAvailableEpisode,
+  isSlotLimitPayload,
+  slotRetryDelay,
+} from './iptvSlotRetry';
 
 describe('iptvSlotRetry', () => {
   it('detects slot limit payloads', () => {
@@ -13,6 +18,12 @@ describe('iptvSlotRetry', () => {
     expect(slotRetryDelay(0)).toBe(2000);
     expect(slotRetryDelay(1)).toBe(4000);
     expect(slotRetryDelay(9)).toBe(12000);
+  });
+
+  it('backs off automatic engine restarts and caps them', () => {
+    expect(autoRetryDelay(0)).toBe(1500);
+    expect(autoRetryDelay(1)).toBe(3000);
+    expect(autoRetryDelay(9)).toBe(8000);
   });
 
   it('picks the first non-exhausted episode', () => {
