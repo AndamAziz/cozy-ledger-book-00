@@ -150,6 +150,9 @@ Deno.serve(async (req) => {
   // debug=1 → compact X-IPTV-Debug header. debug=json → admin-only JSON report.
   const debugHeaderOn = debugParam === '1' || debugParam === 'true' || debugParam === 'json'
   const debugJson = debugParam === 'json' && (await isAdminRequest(req))
+  // Admin-only diagnostic: bypass the VPS relay and hit the provider directly.
+  const directEgress =
+    (reqUrlEarly.searchParams.get('egress') ?? '') === 'direct' && (debugJson || (await isAdminRequest(req)))
   const attempts: Attempt[] = []
   let chosen: Attempt | null = null
 
