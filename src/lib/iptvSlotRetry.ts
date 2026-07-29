@@ -21,17 +21,30 @@ export function isSlotLimitPayload(payload: unknown): boolean {
   return typeof error === 'string' && /viewing slots/i.test(error);
 }
 
+/** True for HTTP statuses used by IPTV panels/proxy responses when the line is full. */
+export function isSlotLimitStatus(status: number): boolean {
+  return status === 429 || status === 458 || status === 407;
+}
+
 /** Probe a proxy stream URL and report whether it failed because of the slot limit. */
 export async function probeSlotLimit(url: string): Promise<boolean> {
   try {
     // Ask for a single byte and abort straight after, so the probe never holds
     // a second viewing slot open against the provider.
     const res = await fetch(url, { headers: { Accept: 'application/json', Range: 'bytes=0-0' } });
+    const ct = res.headers.get('content-type') ?? '';
     if (res.ok) {
+      if (ct.includes('json')) return isSlotLimitPayload(await res.json());
       await res.body?.cancel();
       return false;
     }
-    const ct = res.headers.get('content-type') ?? '';
+    if (isSlotLimitStatus(res.status)) {
+      if (!ct.includes('json')) {
+        await res.body?.cancel();
+        return true;
+      }
+      return isSlotLimitPayload(await res.json());
+    }
     if (!ct.includes('json')) {
       await res.body?.cancel();
       return false;
