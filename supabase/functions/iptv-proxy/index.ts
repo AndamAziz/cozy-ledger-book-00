@@ -57,13 +57,25 @@ Deno.serve(async (req) => {
   if (range) headers['Range'] = range
 
   try {
-    const res = await fetch(upstream.toString(), { headers, redirect: 'follow' })
+    // The provider limits concurrent sessions; a fresh session sometimes needs a retry.
+    let res = await fetch(upstream.toString(), { headers, redirect: 'follow' })
+    for (let attempt = 0; attempt < 3 && !res.ok && !!streamId; attempt++) {
+      await new Promise((r) => setTimeout(r, 1200))
+      res = await fetch(upstream.toString(), { headers, redirect: 'follow' })
+    }
+
     const ct = res.headers.get('content-type') ?? ''
     const isPlaylist = ct.includes('mpegurl') || /\.m3u8?$/i.test(upstream.pathname)
 
     if (isPlaylist) {
       const text = await res.text()
-      if (!res.ok) return err(`Stream unavailable (${res.status})`, 502)
+      if (!res.ok) {
+        const msg =
+          res.status === 458 || res.status === 429
+            ? 'All viewing slots are in use right now. Try again in a moment.'
+            : `Stream unavailable (${res.status})`
+        return err(msg, 502)
+      }
       const finalUrl = new URL(res.url || upstream.toString())
       const rewritten = text
         .split(/\r?\n/)
