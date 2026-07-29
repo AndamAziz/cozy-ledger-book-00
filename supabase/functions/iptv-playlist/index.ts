@@ -30,7 +30,7 @@ const TTL = 30 * 60 * 1000
 
 // The VOD/series catalogues are ~70MB each, so nothing global is kept in memory:
 // the index caches category lists only and item lists are fetched per category.
-type IndexSnapshot = { at: number; source: string; categories: CategoryInfo[]; total: number }
+type IndexSnapshot = { at: number; source: string; categories: CategoryInfo[]; total: number; partial?: boolean }
 // Keyed by playlist URL: each user browses their own provider catalogue.
 const indexCache = new Map<string, IndexSnapshot>()
 const indexLoading = new Map<string, Promise<IndexSnapshot>>()
@@ -77,16 +77,31 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
   }
 }
 
-async function fetchJson<T>(url: string, timeoutMs = 15000): Promise<T | null> {
-  try {
-    const res = await egressFetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(timeoutMs) })
-    if (!res.ok) return null
-    const json = await res.json()
-    return Array.isArray(json) ? (json as T) : null
-  } catch {
-    return null
+/**
+ * Fetch an Xtream JSON array. Returns `null` ONLY when the provider genuinely
+ * failed (timeout / error / non-array body) — an empty array is a valid answer.
+ * Slow Xtream servers are common, so each call gets a retry with more headroom.
+ */
+async function fetchJson<T>(url: string, timeoutMs = 25000, attempts = 2): Promise<T | null> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await egressFetch(url, {
+        headers: { 'User-Agent': UA },
+        signal: AbortSignal.timeout(timeoutMs * (i + 1)),
+      })
+      if (!res.ok) {
+        await res.body?.cancel()
+        continue
+      }
+      const json = await res.json()
+      if (Array.isArray(json)) return json as T
+    } catch {
+      // retry
+    }
   }
+  return null
 }
+
 
 
 /**
@@ -157,24 +172,29 @@ async function buildIndex(source: string) {
   const lists = await Promise.all(
     (['live', 'vod', 'series'] as Kind[]).map(async (kind) => ({
       kind,
-      cats: (await fetchJson<RawCategory[]>(`${api}&action=${ACTIONS[kind][0]}`)) ?? [],
+      cats: await fetchJson<RawCategory[]>(`${api}&action=${ACTIONS[kind][0]}`),
     })),
   )
 
+  // A `null` list means the provider failed (not "no movies"): don't let that
+  // failure get cached for 30 minutes as an empty Movies/Series tab.
+  const partial = lists.some((l) => l.cats === null)
+
   for (const { kind, cats } of lists) {
-    for (const c of cats) {
+    for (const c of cats ?? []) {
       categories.push({ id: `${kind}:${c.category_id}`, name: c.category_name, count: 0, kind })
     }
   }
 
   if (!categories.length) throw new Error('Upstream returned no channels')
-  return { at: Date.now(), source, categories, total: 0 }
+  return { at: Date.now(), source, categories, total: 0, partial }
 }
 
 
 async function getIndex(source: string): Promise<IndexSnapshot> {
   const hit = indexCache.get(source)
-  if (hit && Date.now() - hit.at < TTL) return hit
+  // Partial snapshots (a section failed upstream) are only trusted for a minute.
+  if (hit && Date.now() - hit.at < (hit.partial ? 60_000 : TTL)) return hit
   let pending = indexLoading.get(source)
   if (!pending) {
     pending = buildIndex(source)
@@ -201,19 +221,44 @@ const kindOf = (categoryId: string): Kind => {
 
 // Per-category item cache: paging through one category never refetches upstream.
 const CATEGORY_TTL = 10 * 60 * 1000
+// Genuinely empty answers are re-checked quickly — some providers only populate
+// a movie/series category through the full catalogue listing.
+const EMPTY_TTL = 60 * 1000
 const CATEGORY_MAX = 12
 const categoryCache = new Map<string, { at: number; items: Item[] }>()
 
+/** Fallback for providers that ignore `category_id` on get_vod_streams/get_series. */
+async function scanCategory(api: string, kind: Kind, rawId: string): Promise<Item[]> {
+  const items: Item[] = []
+  await scanArray(`${api}&action=${ACTIONS[kind][1]}`, (row) => {
+    if (String(row.category_id ?? '') === rawId) {
+      const item = toItem(row, kind)
+      if (item) items.push(item)
+    }
+    return items.length < 600
+  })
+  return items
+}
+
 async function getCategoryItems(api: string, kind: Kind, rawId: string, key: string): Promise<Item[]> {
   const hit = categoryCache.get(key)
-  if (hit && Date.now() - hit.at < CATEGORY_TTL) return hit.items
+  if (hit && Date.now() - hit.at < (hit.items.length ? CATEGORY_TTL : EMPTY_TTL)) return hit.items
 
-  const rows =
-    (await fetchJson<Record<string, unknown>[]>(
-      `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
-      20000,
-    )) ?? []
-  const items = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
+  const rows = await fetchJson<Record<string, unknown>[]>(
+    `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
+    25000,
+  )
+  // Upstream failure: surface it instead of caching an empty Movies/Series grid.
+  if (rows === null) throw new Error('Your IPTV provider did not respond. Please try again.')
+
+  let items = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
+  if (!items.length && kind !== 'live') {
+    try {
+      items = await scanCategory(api, kind, rawId)
+    } catch {
+      // keep the empty result
+    }
+  }
 
   categoryCache.set(key, { at: Date.now(), items })
   if (categoryCache.size > CATEGORY_MAX) {
@@ -222,6 +267,7 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
   }
   return items
 }
+
 
 
 const shape = (s: Item, group: string) => ({
@@ -245,14 +291,39 @@ interface EpisodeOut {
 
 /** Fetch season/episode structure for one series via Xtream get_series_info. */
 async function getSeriesInfo(api: string, seriesId: string) {
-  const res = await egressFetch(`${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`, {
-    headers: { 'User-Agent': UA },
-  })
-  if (!res.ok) throw new Error(`Series unavailable (${res.status})`)
-  const data = (await res.json()) as Record<string, unknown>
+  const url = `${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
+  let data: Record<string, unknown> | null = null
+  for (let i = 0; i < 2 && !data; i++) {
+    try {
+      const res = await egressFetch(url, {
+        headers: { 'User-Agent': UA },
+        signal: AbortSignal.timeout(25000 * (i + 1)),
+      })
+      if (!res.ok) {
+        await res.body?.cancel()
+        continue
+      }
+      const json = await res.json()
+      if (json && typeof json === 'object') data = json as Record<string, unknown>
+    } catch {
+      // retry once
+    }
+  }
+  if (!data) throw new Error('Your IPTV provider did not respond. Please try again.')
+
 
   const info = (data.info ?? {}) as Record<string, unknown>
-  const rawEpisodes = (data.episodes ?? {}) as Record<string, unknown>
+  // Most providers key episodes by season; a few return one flat array.
+  let rawEpisodes = (data.episodes ?? {}) as Record<string, unknown>
+  if (Array.isArray(data.episodes)) {
+    const grouped: Record<string, Record<string, unknown>[]> = {}
+    for (const e of data.episodes as Record<string, unknown>[]) {
+      const s = String(e.season ?? 1)
+      ;(grouped[s] ??= []).push(e)
+    }
+    rawEpisodes = grouped as unknown as Record<string, unknown>
+  }
+
 
   const seasons: { season: number; episodes: EpisodeOut[] }[] = []
   for (const [key, value] of Object.entries(rawEpisodes)) {
