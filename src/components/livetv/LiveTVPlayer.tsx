@@ -350,6 +350,8 @@ export function LiveTVPlayer({
       });
 
       hlsRef.current = hls;
+      usedHls = true;
+      console.info('[LiveTVPlayer] engine: hls.js (MSE)');
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
