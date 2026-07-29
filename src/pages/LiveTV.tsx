@@ -214,7 +214,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
         )}
       </main>
 
-      <LiveBottomNav active={tab} onChange={setTab} />
+      <LiveBottomNav active={tab} onChange={(t) => navigate(TAB_META[t].path)} />
 
       {playing && <LiveTVPlayer channel={playing} onClose={() => setPlaying(null)} />}
     </div>
