@@ -19,19 +19,32 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const src = `${toPlayableUrl(channel.id)}&_r=${attempt}`;
+    const isVod = channel.kind === 'vod';
+    const src = `${toPlayableUrl(channel.id, isVod ? 'vod' : 'live')}&_r=${attempt}`;
     setStatus('loading');
 
     let hls: Hls | null = null;
+    let usedNative = false;
 
     const play = () => video.play().catch(() => undefined);
 
+    // VOD items can be progressive MP4/MKV rather than HLS — fall back to native playback.
+    const playNative = () => {
+      if (usedNative) return;
+      usedNative = true;
+      hls?.destroy();
+      hls = null;
+      video.src = src;
+      video.load();
+      play();
+    };
+
     if (Hls.isSupported()) {
       hls = new Hls({
-        lowLatencyMode: true,
+        lowLatencyMode: !isVod,
         enableWorker: true,
-        backBufferLength: 30,
-        maxBufferLength: 12,
+        backBufferLength: isVod ? 90 : 30,
+        maxBufferLength: isVod ? 30 : 12,
         liveSyncDurationCount: 2,
         manifestLoadingMaxRetry: 3,
         fragLoadingMaxRetry: 4,
@@ -41,14 +54,18 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
       hls.on(Hls.Events.MANIFEST_PARSED, play);
       hls.on(Hls.Events.ERROR, (_e, data) => {
         if (!data.fatal) return;
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls?.startLoad();
-        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls?.recoverMediaError();
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          // A non-HLS payload (VOD) surfaces as a manifest parsing/network failure.
+          if (!usedNative) playNative();
+          else hls?.startLoad();
+        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls?.recoverMediaError();
+        else if (!usedNative) playNative();
         else setStatus('error');
       });
     } else {
-      video.src = src;
-      play();
+      playNative();
     }
+
 
     const onPlaying = () => setStatus('playing');
     const onWaiting = () => setStatus((s) => (s === 'error' ? s : 'loading'));
