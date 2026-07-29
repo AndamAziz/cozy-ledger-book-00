@@ -374,6 +374,10 @@ export function LiveTVPlayer({
         setAutoLabel(lvl ? labelForLevel(lvl.height, lvl.bitrate) : null);
       });
       hls.on(Hls.Events.ERROR, (_e, data) => {
+        // Explicit fatal / non-fatal logging so playback issues are debuggable.
+        const log = `[hls.js] ${data.fatal ? 'FATAL' : 'non-fatal'} ${data.type} · ${data.details}`;
+        if (data.fatal) console.error(log, data);
+        else console.warn(log);
         // Non-fatal: self-heal stalls/gaps instead of surfacing an error.
         if (!data.fatal) {
           const d = data.details;
