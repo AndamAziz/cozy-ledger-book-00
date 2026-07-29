@@ -9,7 +9,29 @@ export interface IptvChannel {
   group: string;
   /** 'vod' for Movies/Series/Replay items, 'live' for direct channels. */
   kind?: IptvKind;
+  /** Container extension hint for VOD/series episodes (mp4, mkv…). */
+  ext?: string;
 }
+
+export interface IptvEpisode {
+  id: string;
+  season: number;
+  episode: number;
+  title: string;
+  cover: string | null;
+  ext: string;
+  plot: string | null;
+  duration: string | null;
+}
+
+export interface IptvSeriesInfo {
+  id: string;
+  name: string;
+  cover: string | null;
+  plot: string | null;
+  seasons: { season: number; episodes: IptvEpisode[] }[];
+}
+
 
 export interface IptvCategory {
   id: string;
