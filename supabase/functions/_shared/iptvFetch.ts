@@ -1,3 +1,4 @@
+import { egressFetch } from './iptvEgress.ts'
 /**
  * Server-to-server relay fetch for IPTV providers.
  * Runs in Deno (no browser CORS / mixed-content limits) and returns a
@@ -67,8 +68,7 @@ export async function relayFetch(
 
   for (const ua of IPTV_USER_AGENTS) {
     try {
-      const res = await fetch(parsed.toString(), {
-        redirect: 'follow',
+      const res = await egressFetch(parsed.toString(), {
         signal: AbortSignal.timeout(timeoutMs),
         headers: {
           'User-Agent': ua,

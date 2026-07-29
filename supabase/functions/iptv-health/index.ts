@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { getPlaylistUrl, parseXtream, isXtreamUrl } from '../_shared/iptvConfig.ts'
+import { egressFetch } from '../_shared/iptvEgress.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 const TIMEOUT_MS = 6000
@@ -23,10 +24,9 @@ async function timedFetch(url: string, init: RequestInit = {}) {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
   try {
-    return await fetch(url, {
+    return await egressFetch(url, {
       ...init,
       headers: { 'User-Agent': UA, ...(init.headers ?? {}) },
-      redirect: 'follow',
       signal: ctrl.signal,
     })
   } finally {

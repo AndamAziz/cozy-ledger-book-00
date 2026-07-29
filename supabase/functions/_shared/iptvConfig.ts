@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { egressFetch } from './iptvEgress.ts'
 
 export const IPTV_SETTING_KEY = 'iptv_playlist_url'
 
@@ -208,7 +209,7 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
     if (prev.lastModified) headers['If-Modified-Since'] = prev.lastModified
   }
 
-  const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) })
+  const res = await egressFetch(url, { headers, signal: AbortSignal.timeout(30_000) })
 
   if (res.status === 304 && prev) {
     await res.body?.cancel()

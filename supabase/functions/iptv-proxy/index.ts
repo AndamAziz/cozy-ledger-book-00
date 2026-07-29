@@ -1,6 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
-import { egressUrl, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
+import { egressFetch, finalUrlOf, hasEgressProxy, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
 const MOBILE_UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const VLC_UA = 'VLC/3.0.20 LibVLC/3.0.20'
@@ -39,8 +39,8 @@ async function fetchUpstream(url: string, headers: Record<string, string>, clien
   const onAbort = () => ctrl.abort()
   clientSignal?.addEventListener('abort', onAbort, { once: true })
   try {
-    // egressUrl() is a no-op unless an allowed-country relay is configured.
-    return await fetch(egressUrl(url), { headers, redirect: 'follow', signal: ctrl.signal })
+    // All provider traffic exits through our own VPS relay (allowed country).
+    return await egressFetch(url, { headers, signal: ctrl.signal })
   } finally {
     // Cleared once headers are in, so large 4K bodies are never cut short.
     clearTimeout(timer)
@@ -153,7 +153,14 @@ Deno.serve(async (req) => {
       'SLOT_LIMIT',
     )
 
-  const geoBlockResponse = () => err(GEO_BLOCK_MESSAGE, isProbe ? 200 : 451, 'GEO_BLOCK')
+  // With the relay in place a geo-block should no longer happen; keep it only
+  // as a fallback message for when the relay itself cannot reach the provider.
+  const geoBlockResponse = () =>
+    err(
+      hasEgressProxy() ? GEO_BLOCK_MESSAGE : 'The provider blocks streaming from this server\u2019s country.',
+      isProbe ? 200 : 451,
+      'GEO_BLOCK',
+    )
 
   try {
     // Walk the candidate list once (live HLS → live TS → VOD containers). Every
@@ -225,7 +232,9 @@ Deno.serve(async (req) => {
         return slot ? slotLimitResponse() : err(msg, 502, 'OFFLINE')
       }
 
-      const finalUrl = new URL(res.url || upstream.toString())
+      // The relay follows redirects server-side; X-Final-URL is the host the
+      // segment paths are relative to (the provider redirects before answering).
+      const finalUrl = new URL(finalUrlOf(res, upstream.toString()))
       const rewritten = text
         .split(/\r?\n/)
         .map((line) => {
