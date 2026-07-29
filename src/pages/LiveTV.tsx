@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Search, SignalHigh, AlertTriangle } from 'lucide-react';
 import {
   useIptvIndex,
@@ -80,9 +80,37 @@ function CategorySection({
   );
 }
 
-export default function LiveTV() {
+const TAB_META: Record<LiveTab, { path: string; title: string; heading: string; description: string }> = {
+  direct: {
+    path: '/live-tv',
+    title: 'Live TV & Sports Streaming | City Taxperts',
+    heading: 'Live TV',
+    description: 'Watch live sports, Kurdish satellite channels, news and entertainment in one sleek streaming player.',
+  },
+  movies: {
+    path: '/live-tv/movies',
+    title: 'Movies | Live TV | City Taxperts',
+    heading: 'Movies',
+    description: 'Stream on-demand movies from the Live TV library in a fast, mobile-friendly player.',
+  },
+  series: {
+    path: '/live-tv/series',
+    title: 'Series | Live TV | City Taxperts',
+    heading: 'Series',
+    description: 'Browse and stream TV series and shows from the Live TV library.',
+  },
+  replay: {
+    path: '/live-tv/replay',
+    title: 'Replay | Live TV | City Taxperts',
+    heading: 'Replay',
+    description: 'Catch up on replays, archives and 24/7 channels from the Live TV library.',
+  },
+};
+
+export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const { data: index, isLoading, error } = useIptvIndex();
-  const [tab, setTab] = useState<LiveTab>('direct');
+  const navigate = useNavigate();
+  const meta = TAB_META[tab];
   const [query, setQuery] = useState('');
   const [playing, setPlaying] = useState<IptvChannel | null>(null);
 
