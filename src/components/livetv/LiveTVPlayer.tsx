@@ -341,7 +341,9 @@ export function LiveTVPlayer({
             d === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL ||
             d === Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE
           ) {
-            recoverMedia();
+            // Nudge/seek first; recoverMediaError only if nudging keeps failing.
+            nudge();
+
           } else if (
             d === Hls.ErrorDetails.FRAG_LOAD_ERROR ||
             d === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT ||
