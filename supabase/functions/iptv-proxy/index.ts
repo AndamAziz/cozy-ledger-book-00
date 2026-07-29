@@ -1,11 +1,34 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
 
-const UA = 'VLC/3.0.20 LibVLC/3.0.20'
+const MOBILE_UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
+const VLC_UA = 'VLC/3.0.20 LibVLC/3.0.20'
 const SLOT_LIMIT_STATUS = 429
 
 /** Connect timeout for the upstream handshake (headers only — the body streams freely). */
-const CONNECT_TIMEOUT_MS = 8000
+const CONNECT_TIMEOUT_MS = 14000
+
+function buildUpstreamHeaders(req: Request, upstream: URL, refererBase?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    // Most IPTV apps identify as an Android/ExoPlayer-style client. Keeping the
+    // raw provider request server-side lets HTTP streams work from the HTTPS app
+    // and avoids browser User-Agent / mixed-content limitations.
+    'User-Agent': MOBILE_UA,
+    'Accept': '*/*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Icy-MetaData': '1',
+    'X-Requested-With': 'com.nathnetwork.xciptv',
+  }
+
+  const range = req.headers.get('range')
+  if (range) headers['Range'] = range
+
+  const origin = refererBase ?? `${upstream.protocol}//${upstream.host}/`
+  headers['Origin'] = origin.replace(/\/$/, '')
+  headers['Referer'] = origin.endsWith('/') ? origin : `${origin}/`
+
+  return headers
+}
 
 async function fetchUpstream(url: string, headers: Record<string, string>, clientSignal?: AbortSignal) {
   const ctrl = new AbortController()
@@ -117,12 +140,9 @@ Deno.serve(async (req) => {
   const proxied = (u: string) =>
     `${base}?u=${encodeURIComponent(u)}${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}`
 
-  const headers: Record<string, string> = { 'User-Agent': UA }
-  if (!plain) headers['Referer'] = `${protocol}//${host}/`
-  const range = req.headers.get('range')
-  if (range) headers['Range'] = range
+  const refererBase = plain ? `${upstream.protocol}//${upstream.host}/` : `${protocol}//${host}/`
   const wantsJson = (req.headers.get('accept') ?? '').toLowerCase().includes('application/json')
-  const isProbe = wantsJson && range === 'bytes=0-0'
+  const isProbe = wantsJson && req.headers.get('range') === 'bytes=0-0'
 
   const slotLimitResponse = () =>
     err(
@@ -136,15 +156,23 @@ Deno.serve(async (req) => {
     // attempt is bounded by CONNECT_TIMEOUT_MS so a dead origin can never leave
     // the player hanging on "Connecting to stream…", and failed responses are
     // drained so their upstream socket (and viewing slot) is released at once.
+    const isSlot = (status: number) => status === 458 || status === 429 || status === 407
     const tryFetch = async (u: string) => {
       try {
-        return await fetchUpstream(u, headers, req.signal)
+        const nextUrl = new URL(u)
+        const primaryHeaders = buildUpstreamHeaders(req, nextUrl, plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase)
+        const first = await fetchUpstream(u, primaryHeaders, req.signal)
+        if (first.ok || isSlot(first.status)) return first
+        await first.body?.cancel()
+
+        // Some older panels whitelist VLC/libVLC instead of ExoPlayer. Retry the
+        // handshake once with VLC headers before marking the channel offline.
+        const fallbackHeaders = { ...primaryHeaders, 'User-Agent': VLC_UA }
+        return await fetchUpstream(u, fallbackHeaders, req.signal)
       } catch {
         return null
       }
     }
-    const isSlot = (status: number) => status === 458 || status === 429 || status === 407
-
     const list = streamId ? candidates : [upstream.toString()]
     let res: Response | null = null
     for (let i = 0; i < list.length; i++) {

@@ -79,7 +79,7 @@ export interface M3uEntry {
   seriesKey: string | null
 }
 
-const UA = 'VLC/3.0.20 LibVLC/3.0.20'
+const UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const M3U_TTL = 30 * 60 * 1000
 /** Beyond the TTL the cached parse is still served while it revalidates. */
 const M3U_STALE_MAX = 6 * 60 * 60 * 1000
@@ -194,7 +194,15 @@ function snapshot(
  * of re-downloading and re-parsing the whole playlist.
  */
 async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapshot> {
-  const headers: Record<string, string> = { 'User-Agent': UA }
+  const parsedUrl = new URL(url)
+  const headers: Record<string, string> = {
+    'User-Agent': UA,
+    'Accept': '*/*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer': `${parsedUrl.protocol}//${parsedUrl.host}/`,
+    'Origin': `${parsedUrl.protocol}//${parsedUrl.host}`,
+    'X-Requested-With': 'com.nathnetwork.xciptv',
+  }
   if (prev && prev.url === url) {
     if (prev.etag) headers['If-None-Match'] = prev.etag
     if (prev.lastModified) headers['If-Modified-Since'] = prev.lastModified
