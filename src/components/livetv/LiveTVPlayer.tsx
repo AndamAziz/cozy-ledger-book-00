@@ -212,12 +212,12 @@ export function LiveTVPlayer({
         liveSyncDurationCount: 3,
         // Bounded so a dead origin surfaces as a retryable error instead of an
         // endless "Connecting to stream…" spinner.
-        manifestLoadingTimeOut: 10000,
-        manifestLoadingMaxRetry: 2,
+        manifestLoadingTimeOut: 18000,
+        manifestLoadingMaxRetry: 3,
         manifestLoadingRetryDelay: 700,
-        levelLoadingTimeOut: 10000,
+        levelLoadingTimeOut: 18000,
         levelLoadingMaxRetry: 3,
-        fragLoadingTimeOut: 25000,
+        fragLoadingTimeOut: 30000,
         fragLoadingMaxRetry: 6,
         fragLoadingRetryDelay: 800,
 
@@ -306,14 +306,15 @@ export function LiveTVPlayer({
     }
 
 
-    // Hard connect watchdog: if nothing is playing within 9s, move to the next
+    // Hard connect watchdog: give the HTTPS proxy enough time to negotiate with
+    // IPTV panels that require mobile-app headers, then move to the next
     // engine instead of spinning on "Connecting to stream…" forever.
     const connectWatchdog = window.setTimeout(() => {
       if (cancelled || video.readyState >= 3) return;
       if (!usedMpegts && (tsFirst || usedNative)) void playMpegts();
       else if (!usedNative) playNative();
       else void handleFailure();
-    }, 9000);
+    }, 18000);
 
     const onPlaying = () => {
       window.clearTimeout(connectWatchdog);

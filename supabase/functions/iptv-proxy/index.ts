@@ -156,6 +156,7 @@ Deno.serve(async (req) => {
     // attempt is bounded by CONNECT_TIMEOUT_MS so a dead origin can never leave
     // the player hanging on "Connecting to stream…", and failed responses are
     // drained so their upstream socket (and viewing slot) is released at once.
+    const isSlot = (status: number) => status === 458 || status === 429 || status === 407
     const tryFetch = async (u: string) => {
       try {
         const nextUrl = new URL(u)
@@ -172,8 +173,6 @@ Deno.serve(async (req) => {
         return null
       }
     }
-    const isSlot = (status: number) => status === 458 || status === 429 || status === 407
-
     const list = streamId ? candidates : [upstream.toString()]
     let res: Response | null = null
     for (let i = 0; i < list.length; i++) {
