@@ -24,10 +24,18 @@ export function isSlotLimitPayload(payload: unknown): boolean {
 /** Probe a proxy stream URL and report whether it failed because of the slot limit. */
 export async function probeSlotLimit(url: string): Promise<boolean> {
   try {
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (res.ok) return false;
+    // Ask for a single byte and abort straight after, so the probe never holds
+    // a second viewing slot open against the provider.
+    const res = await fetch(url, { headers: { Accept: 'application/json', Range: 'bytes=0-0' } });
+    if (res.ok) {
+      await res.body?.cancel();
+      return false;
+    }
     const ct = res.headers.get('content-type') ?? '';
-    if (!ct.includes('json')) return false;
+    if (!ct.includes('json')) {
+      await res.body?.cancel();
+      return false;
+    }
     return isSlotLimitPayload(await res.json());
   } catch {
     return false;
