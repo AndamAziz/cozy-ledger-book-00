@@ -136,8 +136,21 @@ async function fetchJson<T>(url: string, timeoutMs = 15000, attempts = 2, tag = 
  */
 async function scanArray(url: string, onRow: (row: Record<string, unknown>) => boolean) {
   const deadline = Date.now() + 20_000
-  const res = await egressFetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20_000) })
-  if (!res.ok || !res.body) return
+  // Streaming read: keep the body, so no snippet is consumed on success.
+  const { res, diag } = await diagFetch('scanArray', url, {
+    timeoutMs: 15_000,
+    headers: { 'User-Agent': UA },
+  })
+  if (!res) {
+    lastUpstreamDiag = diag
+    return
+  }
+  if (!res.body) {
+    lastUpstreamDiag = { ...diag, ok: false, kind: 'parse_error', message: 'Upstream returned an empty body' }
+    logDiag('scanArray:empty', lastUpstreamDiag)
+    return
+  }
+
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
