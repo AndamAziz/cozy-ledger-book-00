@@ -12,6 +12,8 @@ import {
   autoRetryDelay,
   STALL_TIMEOUT_MS,
 } from '@/lib/iptvSlotRetry';
+import { isUnsupportedHevc } from '@/lib/codecSupport';
+
 
 interface QualityLevel {
   /** hls.js level index, or -1 for auto */
