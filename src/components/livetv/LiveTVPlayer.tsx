@@ -396,14 +396,34 @@ export function LiveTVPlayer({
       setRetryIn(null);
       setStatus('playing');
     };
-    const onWaiting = () => setStatus((s) => (s === 'error' ? s : 'loading'));
+    // Some engines never fire `playing` (or fire it before React attaches the
+    // listener) even though frames are already rendering — treat any sign of
+    // decoded video as "playing" so the overlay can never stick.
+    const onProgressSignal = () => {
+      if (video.readyState >= 2 && !video.paused) onPlaying();
+    };
+    const onWaiting = () => {
+      // Ignore spurious `waiting` while the clock is still advancing.
+      if (video.readyState >= 3) return;
+      setStatus((s) => (s === 'error' ? s : 'loading'));
+    };
     const onError = () => {
       if (!usedNative) playNative();
       else void playMpegts();
     };
     video.addEventListener('playing', onPlaying);
+    video.addEventListener('canplay', onProgressSignal);
+    video.addEventListener('loadeddata', onProgressSignal);
+    video.addEventListener('timeupdate', onProgressSignal);
     video.addEventListener('waiting', onWaiting);
     video.addEventListener('error', onError);
+
+    // Final safety net: if frames are decoding but no event surfaced, clear it.
+    const overlayGuard = window.setInterval(() => {
+      if (cancelled) return;
+      if (video.readyState >= 2 && video.currentTime > 0 && !video.paused) onPlaying();
+    }, 500);
+
 
 
     return () => {
