@@ -167,6 +167,13 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
     [index, tab],
   );
 
+  // Switching tabs returns to the category list.
+  useEffect(() => {
+    setFullCategory(null);
+  }, [tab]);
+
+
+
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[#07070b] text-white">
