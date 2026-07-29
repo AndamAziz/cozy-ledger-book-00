@@ -359,10 +359,33 @@ export function LiveTVPlayer({
       else void handleFailure();
     }, 18000);
 
+    // Stall watchdog: playback that freezes mid-stream (frozen currentTime)
+    // escalates through the engine chain instead of buffering forever.
+    let lastTime = 0;
+    let stalledFor = 0;
+    const stallWatchdog = window.setInterval(() => {
+      if (cancelled || video.paused || video.readyState < 2) return;
+      if (video.currentTime > lastTime + 0.05) {
+        lastTime = video.currentTime;
+        stalledFor = 0;
+        return;
+      }
+      stalledFor += 2000;
+      if (stalledFor < STALL_TIMEOUT_MS) return;
+      stalledFor = 0;
+      setStatus((s) => (s === 'error' ? s : 'loading'));
+      if (hls) recoverMedia();
+      else if (!usedMpegts) void playMpegts();
+      else if (!usedNative) playNative();
+      else void handleFailure();
+    }, 2000);
+
     const onPlaying = () => {
       window.clearTimeout(connectWatchdog);
       window.clearInterval(countdownTimer);
       slotRetriesRef.current = 0;
+      autoRetriesRef.current = 0;
+      stalledFor = 0;
       setSlotLimited(false);
       setRetryIn(null);
       setStatus('playing');
