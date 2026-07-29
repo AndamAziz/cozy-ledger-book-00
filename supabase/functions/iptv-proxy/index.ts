@@ -2,20 +2,32 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
 import { egressFetch, finalUrlOf, hasEgressProxy, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
+import { absorbCookies, cookieHeaderFor, isCloudflareChallenge } from '../_shared/iptvCookies.ts'
 
 const MOBILE_UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const VLC_UA = 'VLC/3.0.20 LibVLC/3.0.20'
+// Cloudflare bot-management scores a real desktop Chrome UA + client hints much
+// higher than a bare player UA; used as the last handshake attempt.
+const CHROME_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 const SLOT_LIMIT_STATUS = 429
+
+type UaKind = 'mobile' | 'vlc' | 'chrome'
 
 /** Connect timeout for the upstream handshake (headers only — the body streams freely). */
 const CONNECT_TIMEOUT_MS = 14000
 
-function buildUpstreamHeaders(req: Request, upstream: URL, refererBase?: string): Record<string, string> {
+function buildUpstreamHeaders(
+  req: Request,
+  upstream: URL,
+  refererBase?: string,
+  ua: UaKind = 'mobile',
+): Record<string, string> {
   const headers: Record<string, string> = {
     // Most IPTV apps identify as an Android/ExoPlayer-style client. Keeping the
     // raw provider request server-side lets HTTP streams work from the HTTPS app
     // and avoids browser User-Agent / mixed-content limitations.
-    'User-Agent': MOBILE_UA,
+    'User-Agent': ua === 'vlc' ? VLC_UA : ua === 'chrome' ? CHROME_UA : MOBILE_UA,
     'Accept': '*/*',
     'Accept-Language': 'en-US,en;q=0.9',
     // Media is already compressed; a gzip/br hop through the relay only adds a
@@ -23,6 +35,21 @@ function buildUpstreamHeaders(req: Request, upstream: URL, refererBase?: string)
     'Accept-Encoding': 'identity',
     'Icy-MetaData': '1',
     'X-Requested-With': 'com.nathnetwork.xciptv',
+    'Connection': 'keep-alive',
+  }
+
+  if (ua === 'chrome') {
+    // Client hints + fetch metadata: Cloudflare flags a "Chrome" UA that sends
+    // none of these as an obvious bot.
+    headers['sec-ch-ua'] = '"Chromium";v="126", "Google Chrome";v="126", "Not-A.Brand";v="99"'
+    headers['sec-ch-ua-mobile'] = '?0'
+    headers['sec-ch-ua-platform'] = '"Windows"'
+    headers['Sec-Fetch-Dest'] = 'empty'
+    headers['Sec-Fetch-Mode'] = 'cors'
+    headers['Sec-Fetch-Site'] = 'cross-site'
+    headers['Accept'] = '*/*'
+    delete headers['X-Requested-With']
+    delete headers['Icy-MetaData']
   }
 
   const range = req.headers.get('range')
@@ -32,8 +59,14 @@ function buildUpstreamHeaders(req: Request, upstream: URL, refererBase?: string)
   headers['Origin'] = origin.replace(/\/$/, '')
   headers['Referer'] = origin.endsWith('/') ? origin : `${origin}/`
 
+  // Replay Cloudflare clearance / panel session cookies handed out by earlier
+  // requests to this host, exactly like a native IPTV app's HTTP client does.
+  const cookie = cookieHeaderFor(upstream.toString())
+  if (cookie) headers['Cookie'] = cookie
+
   return headers
 }
+
 
 /**
  * Pull the first chunk off an upstream body before handing it to the player.
@@ -114,7 +147,8 @@ function redact(u: string) {
 type Attempt = {
   url: string
   ext: string
-  ua: 'mobile' | 'vlc'
+  ua: UaKind
+
   status: number | null
   contentType: string | null
   ms: number
@@ -310,7 +344,7 @@ Deno.serve(async (req) => {
     // the player hanging on "Connecting to stream…", and failed responses are
     // drained so their upstream socket (and viewing slot) is released at once.
     const isSlot = (status: number) => status === 458 || status === 429 || status === 407
-    const record = (u: string, ua: 'mobile' | 'vlc', started: number, r: Response | null, error?: string) => {
+    const record = (u: string, ua: UaKind, started: number, r: Response | null, error?: string) => {
       const a: Attempt = {
         url: redact(u),
         ext: (new URL(u).pathname.match(/\.([a-z0-9]+)$/i)?.[1] ?? '').toLowerCase(),
@@ -324,27 +358,46 @@ Deno.serve(async (req) => {
       return a
     }
     const tryFetch = async (u: string) => {
+      const nextUrl = new URL(u)
+      const referer = plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase
+      // Each attempt re-reads the cookie jar, so clearance cookies handed out by
+      // the previous attempt (or by the manifest request) ride along.
+      const attempt = async (ua: UaKind) => {
+        const t0 = Date.now()
+        const res = await fetchUpstream(u, buildUpstreamHeaders(req, nextUrl, referer, ua), req.signal, directEgress)
+        absorbCookies(res, u)
+        record(u, ua, t0, res)
+        return res
+      }
       try {
-        const nextUrl = new URL(u)
-        const primaryHeaders = buildUpstreamHeaders(req, nextUrl, plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase)
-        let t0 = Date.now()
-        const first = await fetchUpstream(u, primaryHeaders, req.signal, directEgress)
-        record(u, 'mobile', t0, first)
+        const first = await attempt('mobile')
         if (first.ok || isSlot(first.status) || isGeoBlocked(first.status)) return first
+        const cfFirst = isCloudflareChallenge(first)
         await first.body?.cancel()
+
+        // Cloudflare-fronted providers reject bare player UAs: retry immediately
+        // as desktop Chrome (client hints + fetch metadata + session cookies).
+        if (cfFirst) {
+          const cf = await attempt('chrome')
+          if (cf.ok || isSlot(cf.status) || isGeoBlocked(cf.status)) return cf
+          await cf.body?.cancel()
+        }
 
         // Some older panels whitelist VLC/libVLC instead of ExoPlayer. Retry the
         // handshake once with VLC headers before marking the channel offline.
-        const fallbackHeaders = { ...primaryHeaders, 'User-Agent': VLC_UA }
-        t0 = Date.now()
-        const second = await fetchUpstream(u, fallbackHeaders, req.signal, directEgress)
-        record(u, 'vlc', t0, second)
-        return second
+        const second = await attempt('vlc')
+        if (second.ok || cfFirst || isSlot(second.status) || isGeoBlocked(second.status)) return second
+        await second.body?.cancel()
+
+        // Last resort for hosts that only answer challenged responses on later
+        // requests (Cloudflare rotates __cf_bm mid-session).
+        return await attempt('chrome')
       } catch (e) {
         record(u, 'mobile', Date.now(), null, e instanceof Error ? e.message : String(e))
         return null
       }
     }
+
 
     const list = streamId ? candidates : [upstream.toString()]
     // A wrong container guess (e.g. .mp4 for an .mkv-only title) answers 200 with
