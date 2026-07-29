@@ -192,6 +192,13 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <span className="font-bold text-foreground text-xs sm:text-sm truncate">Live TV 📺</span>
             </button>
 
+            {/* Live TV real-time status: trial countdown, activation, next step */}
+            <div className="col-span-full">
+              <LiveTvStatusPanel />
+            </div>
+
+
+
             {/* Crypto Tracker */}
             <button
               onClick={() => navigate('/crypto')}
