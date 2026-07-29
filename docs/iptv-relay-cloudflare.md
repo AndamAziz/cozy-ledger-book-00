@@ -93,8 +93,7 @@ app.get('/', (req, res) => {
     '--connect-timeout', String(CONNECT_TMO),
     '--no-buffer',              // stream, do not buffer the segment
     '-c', jar, '-b', jar,       // persistent cookie jar per provider host
-    '--compressed-no-gzip' in {} ? '' : '--no-alpn-noop',
-  ].filter(Boolean);
+  ];
 
   // curl-impersonate already sets the full Chrome header set + client hints;
   // only forward what is request-specific.
@@ -162,10 +161,6 @@ const opts = {
 };
 https.createServer(opts, app).listen(PORT, () => console.log('relay on :' + PORT));
 ```
-
-Remove the stray ternary line if your linter complains — it is a no-op guard:
-delete `'--compressed-no-gzip' in {} ? '' : '--no-alpn-noop',` and the `.filter(Boolean)`
-if you prefer a clean array.
 
 ## 3. Service + env
 
