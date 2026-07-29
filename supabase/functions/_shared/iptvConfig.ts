@@ -94,9 +94,20 @@ function classify(name: string, url: string): M3uKind {
   return 'live'
 }
 
+/** Stable, content-derived id so cached ids survive re-parses of a changed playlist. */
+const hashId = (s: string) => {
+  let h = 2166136261
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return 'm' + (h >>> 0).toString(36)
+}
+
 /** Parse a standard #EXTM3U playlist into normalised entries. */
 export function parseM3U(text: string): M3uEntry[] {
   const out: M3uEntry[] = []
+  const seen = new Set<string>()
   const lines = text.split(/\r?\n/)
   let pending: { name: string; logo: string; group: string } | null = null
 
@@ -122,8 +133,11 @@ export function parseM3U(text: string): M3uEntry[] {
     pending = null
     const kind = classify(meta.name, line)
     const m = meta.name.match(SERIES_RE)
+    let id = hashId(line)
+    while (seen.has(id)) id += 'x'
+    seen.add(id)
     out.push({
-      id: `m${out.length}`,
+      id,
       name: meta.name,
       logo: /^https?:\/\//i.test(meta.logo) ? meta.logo : null,
       group: meta.group || 'Other',
@@ -137,14 +151,28 @@ export function parseM3U(text: string): M3uEntry[] {
   return out
 }
 
-let m3uCache: { url: string; at: number; entries: M3uEntry[]; byId: Map<string, M3uEntry>; hosts: Set<string> } | null = null
-let m3uLoading: Promise<NonNullable<typeof m3uCache>> | null = null
+export interface M3uSnapshot {
+  url: string
+  at: number
+  entries: M3uEntry[]
+  byId: Map<string, M3uEntry>
+  hosts: Set<string>
+  /** Changes only when the parsed content changes — safe as an ETag / derived-cache key. */
+  version: string
+  etag: string | null
+  lastModified: string | null
+}
 
-async function loadM3U(url: string) {
-  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(30_000) })
-  if (!res.ok) throw new Error(`Playlist unavailable (${res.status})`)
-  const entries = parseM3U(await res.text())
-  if (!entries.length) throw new Error('Playlist contains no channels')
+let m3uCache: M3uSnapshot | null = null
+let m3uLoading: Promise<M3uSnapshot> | null = null
+let revalidating = false
+
+function snapshot(
+  url: string,
+  entries: M3uEntry[],
+  etag: string | null,
+  lastModified: string | null,
+): M3uSnapshot {
   const byId = new Map(entries.map((e) => [e.id, e]))
   const hosts = new Set<string>()
   for (const e of entries) {
@@ -154,14 +182,78 @@ async function loadM3U(url: string) {
       // ignore malformed rows
     }
   }
-  return { url, at: Date.now(), entries, byId, hosts }
+  const version = hashId(`${entries.length}|${etag ?? ''}|${entries[0]?.id ?? ''}|${entries[entries.length - 1]?.id ?? ''}`)
+  return { url, at: Date.now(), entries, byId, hosts, version, etag, lastModified }
 }
 
-/** Fetch + parse the configured plain M3U playlist, cached in memory. */
-export async function getM3U(url: string) {
-  if (m3uCache && m3uCache.url === url && Date.now() - m3uCache.at < M3U_TTL) return m3uCache
+/**
+ * Conditional fetch: when the upstream answers 304 (or serves an identical
+ * body) the previous parse is reused, so a refresh costs a few bytes instead
+ * of re-downloading and re-parsing the whole playlist.
+ */
+async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapshot> {
+  const headers: Record<string, string> = { 'User-Agent': UA }
+  if (prev && prev.url === url) {
+    if (prev.etag) headers['If-None-Match'] = prev.etag
+    if (prev.lastModified) headers['If-Modified-Since'] = prev.lastModified
+  }
+
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) })
+
+  if (res.status === 304 && prev) {
+    await res.body?.cancel()
+    return { ...prev, at: Date.now() }
+  }
+  if (!res.ok) throw new Error(`Playlist unavailable (${res.status})`)
+
+  const etag = res.headers.get('etag')
+  const lastModified = res.headers.get('last-modified')
+
+  // Same validator with a 200 response: skip the parse entirely.
+  if (prev && prev.url === url && etag && etag === prev.etag) {
+    await res.body?.cancel()
+    return { ...prev, at: Date.now(), lastModified: lastModified ?? prev.lastModified }
+  }
+
+  const entries = parseM3U(await res.text())
+  if (!entries.length) throw new Error('Playlist contains no channels')
+  const next = snapshot(url, entries, etag, lastModified)
+  // Unchanged content: keep the previous object identity so derived caches stay warm.
+  if (prev && prev.url === url && prev.version === next.version) {
+    return { ...prev, at: Date.now(), etag, lastModified }
+  }
+  return next
+}
+
+/**
+ * Fetch + parse the configured plain M3U playlist.
+ * Fresh cache → instant. Stale cache → served immediately while a conditional
+ * revalidation runs in the background (stale-while-revalidate).
+ */
+export async function getM3U(url: string): Promise<M3uSnapshot> {
+  const hit = m3uCache && m3uCache.url === url ? m3uCache : null
+
+  if (hit && Date.now() - hit.at < M3U_TTL) return hit
+
+  if (hit && Date.now() - hit.at < M3U_STALE_MAX) {
+    if (!revalidating) {
+      revalidating = true
+      loadM3U(url, hit)
+        .then((c) => {
+          m3uCache = c
+        })
+        .catch(() => {
+          // keep serving the stale snapshot
+        })
+        .finally(() => {
+          revalidating = false
+        })
+    }
+    return hit
+  }
+
   if (!m3uLoading) {
-    m3uLoading = loadM3U(url)
+    m3uLoading = loadM3U(url, hit)
       .then((c) => {
         m3uCache = c
         return c
@@ -172,3 +264,4 @@ export async function getM3U(url: string) {
   }
   return m3uLoading
 }
+
