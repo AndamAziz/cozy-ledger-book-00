@@ -10,7 +10,7 @@ import { diagFetchRaw, type UpstreamDiag } from '../_shared/iptvDiag.ts'
  * keys and errors alike — otherwise hls.js/mpegts.js abort the fetch.
  */
 const cors: Record<string, string> = {
-  ...cors,
+  ...corsHeaders,
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
 }
