@@ -138,15 +138,17 @@ export function LiveTVPlayer({
         highBufferWatchdogPeriod: 1,
         nudgeMaxRetry: 10,
         liveSyncDurationCount: 3,
-        // Slow IPTV origins need generous timeouts before we call it an error.
-        manifestLoadingTimeOut: 30000,
-        manifestLoadingMaxRetry: 6,
-        manifestLoadingRetryDelay: 1000,
-        levelLoadingTimeOut: 30000,
-        levelLoadingMaxRetry: 6,
-        fragLoadingTimeOut: 60000,
-        fragLoadingMaxRetry: 8,
-        fragLoadingRetryDelay: 1000,
+        // Bounded so a dead origin surfaces as a retryable error instead of an
+        // endless "Connecting to stream…" spinner.
+        manifestLoadingTimeOut: 10000,
+        manifestLoadingMaxRetry: 2,
+        manifestLoadingRetryDelay: 700,
+        levelLoadingTimeOut: 10000,
+        levelLoadingMaxRetry: 3,
+        fragLoadingTimeOut: 25000,
+        fragLoadingMaxRetry: 6,
+        fragLoadingRetryDelay: 800,
+
       });
       hlsRef.current = hls;
       hls.loadSource(src);
