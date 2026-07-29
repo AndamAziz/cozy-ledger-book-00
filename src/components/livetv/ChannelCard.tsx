@@ -33,7 +33,7 @@ export function ChannelCard({ channel, onPlay }: Props) {
   const { data: provider } = useProviderHealth();
   const nameOffline = /offline|no signal|\bnot working\b/i.test(channel.name);
   // Only probe individual streams while the provider itself is healthy.
-  const health = useChannelHealth(channel, provider?.status === 'online' && !nameOffline);
+  const health = useChannelHealth(channel, provider?.status === 'online' && !nameOffline && (provider?.maxConnections ?? 0) > 1);
   const status = nameOffline
     ? 'offline'
     : provider?.status === 'offline'

@@ -17,7 +17,7 @@ export function PosterCard({ channel, onPlay }: Props) {
   const showPoster = !!channel.logo && !failed;
   const { data: provider } = useProviderHealth();
   // Series are containers (no direct stream), so only probe playable items.
-  const probeable = channel.kind !== 'series' && provider?.status === 'online';
+  const probeable = channel.kind !== 'series' && provider?.status === 'online' && (provider?.maxConnections ?? 0) > 1;
   const health = useChannelHealth(channel, probeable);
   const status =
     channel.kind === 'series'
