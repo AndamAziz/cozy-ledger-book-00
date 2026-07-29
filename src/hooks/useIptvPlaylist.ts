@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export type IptvKind = 'live' | 'vod' | 'series';
 
@@ -51,16 +52,33 @@ export interface IptvIndex {
 const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
-/** CORS-safe, browser-playable HLS URL for a channel (credentials stay server-side). */
+/**
+ * Streams are resolved from the signed-in user's own provider account, so every
+ * request has to carry their token. <video>/hls.js cannot set headers, hence the
+ * mirrored `token` query parameter on media URLs.
+ */
+let accessToken: string | null = null;
+supabase.auth.getSession().then(({ data }) => {
+  accessToken = data.session?.access_token ?? null;
+});
+supabase.auth.onAuthStateChange((_event, session) => {
+  accessToken = session?.access_token ?? null;
+});
+
+/** CORS-safe, browser-playable stream URL (provider credentials stay server-side). */
 export function toPlayableUrl(channelId: string, kind: IptvKind = 'live', ext?: string): string {
   const extPart = ext ? `&ext=${encodeURIComponent(ext)}` : '';
-  return `${FN_BASE}/iptv-proxy?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}&apikey=${ANON}`;
+  const tokenPart = accessToken ? `&token=${encodeURIComponent(accessToken)}` : '';
+  return `${FN_BASE}/iptv-proxy?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}&apikey=${ANON}${tokenPart}`;
 }
 
 
 async function get<T>(path: string): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token ?? null;
+  accessToken = token;
   const res = await fetch(`${FN_BASE}/${path}`, {
-    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+    headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` },
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json?.error ?? 'Failed to load playlist');
