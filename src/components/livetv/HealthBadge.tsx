@@ -9,7 +9,8 @@ const STYLES: Record<Exclude<ChannelStatus, 'unknown'>, { label: string; bg: str
 
 /** ONLINE / BUSY / OFFLINE pill driven by the periodic provider + channel probes. */
 export function HealthBadge({ status, className = '' }: { status: ChannelStatus; className?: string }) {
-  if (status === 'unknown') return null;
+  // Slot-limit ('busy') is intentionally never surfaced in the UI.
+  if (status === 'unknown' || status === 'busy') return null;
   const s = STYLES[status];
   return (
     <span
