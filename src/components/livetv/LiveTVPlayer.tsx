@@ -432,8 +432,12 @@ export function LiveTVPlayer({
       window.clearTimeout(connectWatchdog);
       window.clearInterval(countdownTimer);
       window.clearInterval(stallWatchdog);
+      window.clearInterval(overlayGuard);
 
       video.removeEventListener('playing', onPlaying);
+      video.removeEventListener('canplay', onProgressSignal);
+      video.removeEventListener('loadeddata', onProgressSignal);
+      video.removeEventListener('timeupdate', onProgressSignal);
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('error', onError);
       hls?.destroy();
