@@ -10,16 +10,17 @@ import {
   type IptvChannel,
 } from '@/hooks/useIptvPlaylist';
 import { ChannelCard } from '@/components/livetv/ChannelCard';
+import { PosterCard } from '@/components/livetv/PosterCard';
 import { LiveTVPlayer } from '@/components/livetv/LiveTVPlayer';
 import { LiveBottomNav, type LiveTab } from '@/components/livetv/LiveBottomNav';
 
-function tabOf(name: string): LiveTab {
-  const g = name.toUpperCase();
-  if (/SERIES|SERIE|SHOW/.test(g)) return 'series';
-  if (/VOD|MOVIE|FILM|CINEMA/.test(g)) return 'movies';
-  if (/REPLAY|CATCH ?UP|ARCHIVE|24\/7/.test(g)) return 'replay';
+function tabOf(category: IptvCategory): LiveTab {
+  if (category.kind === 'vod') return 'movies';
+  if (category.kind === 'series') return 'series';
+  if (/REPLAY|CATCH ?UP|ARCHIVE|24\/7/.test(category.name.toUpperCase())) return 'replay';
   return 'direct';
 }
+
 
 function CategorySection({
   category,
