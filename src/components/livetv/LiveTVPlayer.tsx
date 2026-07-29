@@ -655,7 +655,7 @@ export function LiveTVPlayer({
           muted={false}
         />
 
-        {status === 'loading' && (
+        {status === 'loading' && !playedOnce && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45 backdrop-blur-[2px]">
             <span className="relative flex h-14 w-14 items-center justify-center">
               <span
