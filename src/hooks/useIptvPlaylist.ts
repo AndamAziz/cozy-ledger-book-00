@@ -15,7 +15,10 @@ export interface IptvCategory {
   id: string;
   name: string;
   count: number;
+  /** Section the category came from upstream: live channels, movies (vod) or series. */
+  kind?: 'live' | 'vod' | 'series';
 }
+
 
 export interface IptvIndex {
   total: number;
