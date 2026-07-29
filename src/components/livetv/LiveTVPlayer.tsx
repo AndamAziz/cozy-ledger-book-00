@@ -3,7 +3,12 @@ import Hls from 'hls.js';
 import { X, Loader2, AlertTriangle, Maximize2, Settings2, RefreshCw } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
-import { probeSlotLimit, slotRetryDelay, SLOT_MAX_RETRIES } from '@/lib/iptvSlotRetry';
+import {
+  probeStreamFailure,
+  slotRetryDelay,
+  SLOT_MAX_RETRIES,
+  GEO_BLOCK_MESSAGE,
+} from '@/lib/iptvSlotRetry';
 
 interface QualityLevel {
   /** hls.js level index, or -1 for auto */
@@ -42,7 +47,7 @@ export function LiveTVPlayer({
   const hlsRef = useRef<Hls | null>(null);
   const mpegtsRef = useRef<{ destroy: () => void; unload?: () => void; detachMediaElement?: () => void } | null>(null);
   const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading');
-  const [errorKind, setErrorKind] = useState<'offline' | 'busy'>('offline');
+  const [errorKind, setErrorKind] = useState<'offline' | 'busy' | 'geo'>('offline');
   const [retryIn, setRetryIn] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [levels, setLevels] = useState<QualityLevel[]>([]);
@@ -86,8 +91,16 @@ export function LiveTVPlayer({
     // then let the parent move on to the first available episode.
     const handleFailure = async () => {
       if (cancelled) return;
-      const limited = await probeSlotLimit(src);
+      const failure = await probeStreamFailure(src);
       if (cancelled) return;
+      // A geo restriction is provider-wide: retrying or switching channel cannot help.
+      if (failure === 'geo') {
+        setRetryIn(null);
+        setErrorKind('geo');
+        setStatus('error');
+        return;
+      }
+      const limited = failure === 'slot';
       if (limited) {
         setSlotLimited(true);
         if (slotRetriesRef.current < SLOT_MAX_RETRIES) {
@@ -490,10 +503,14 @@ export function LiveTVPlayer({
                 <AlertTriangle className="h-6 w-6" style={{ color: '#ff2d6f' }} />
               </span>
               <p className="text-sm font-extrabold tracking-tight text-white">
-                This channel is not responding
+                {errorKind === 'geo'
+                  ? 'Streaming blocked by the provider'
+                  : 'This channel is not responding'}
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                The source may be unavailable right now. Retry, or pick another channel.
+                {errorKind === 'geo'
+                  ? GEO_BLOCK_MESSAGE
+                  : 'The source may be unavailable right now. Retry, or pick another channel.'}
               </p>
               <div className="mt-4 flex justify-center gap-2">
                 <button

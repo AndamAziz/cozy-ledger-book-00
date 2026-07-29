@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
+import { egressUrl, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
 const MOBILE_UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const VLC_UA = 'VLC/3.0.20 LibVLC/3.0.20'
@@ -38,7 +39,8 @@ async function fetchUpstream(url: string, headers: Record<string, string>, clien
   const onAbort = () => ctrl.abort()
   clientSignal?.addEventListener('abort', onAbort, { once: true })
   try {
-    return await fetch(url, { headers, redirect: 'follow', signal: ctrl.signal })
+    // egressUrl() is a no-op unless an allowed-country relay is configured.
+    return await fetch(egressUrl(url), { headers, redirect: 'follow', signal: ctrl.signal })
   } finally {
     // Cleared once headers are in, so large 4K bodies are never cut short.
     clearTimeout(timer)
@@ -151,6 +153,8 @@ Deno.serve(async (req) => {
       'SLOT_LIMIT',
     )
 
+  const geoBlockResponse = () => err(GEO_BLOCK_MESSAGE, isProbe ? 200 : 451, 'GEO_BLOCK')
+
   try {
     // Walk the candidate list once (live HLS → live TS → VOD containers). Every
     // attempt is bounded by CONNECT_TIMEOUT_MS so a dead origin can never leave
@@ -162,7 +166,7 @@ Deno.serve(async (req) => {
         const nextUrl = new URL(u)
         const primaryHeaders = buildUpstreamHeaders(req, nextUrl, plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase)
         const first = await fetchUpstream(u, primaryHeaders, req.signal)
-        if (first.ok || isSlot(first.status)) return first
+        if (first.ok || isSlot(first.status) || isGeoBlocked(first.status)) return first
         await first.body?.cancel()
 
         // Some older panels whitelist VLC/libVLC instead of ExoPlayer. Retry the
@@ -191,6 +195,12 @@ Deno.serve(async (req) => {
           await next.body?.cancel()
           return slotLimitResponse()
         }
+        // Geo restrictions are account/region-wide too — every other candidate
+        // will fail identically, so stop instead of burning provider sessions.
+        if (isGeoBlocked(next.status)) {
+          await next.body?.cancel()
+          return geoBlockResponse()
+        }
         if (res) await res.body?.cancel()
         res = next
       }
@@ -207,6 +217,7 @@ Deno.serve(async (req) => {
       const text = await res.text()
       if (!res.ok) {
         const slot = res.status === 458 || res.status === 429 || res.status === 407
+        if (isGeoBlocked(res.status, text)) return geoBlockResponse()
         // 5xx / 521 / 404 mean the channel's own origin is down — not our error.
         const msg = slot
           ? 'All viewing slots are in use right now. Try again in a moment.'
@@ -242,6 +253,7 @@ Deno.serve(async (req) => {
       await res.body?.cancel()
       const slot = res.status === 458 || res.status === 429 || res.status === 407
       if (slot) return slotLimitResponse()
+      if (isGeoBlocked(res.status)) return geoBlockResponse()
       return err(`This channel is offline right now (${res.status}). Try another channel.`, 502, 'OFFLINE')
     }
 
