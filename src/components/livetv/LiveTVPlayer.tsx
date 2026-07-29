@@ -134,13 +134,23 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
             <AlertTriangle className="h-8 w-8 text-[#ff2d6f]" />
             <p className="text-sm font-bold text-white">This channel is not responding</p>
-            <p className="text-xs text-white/50">The stream may be offline. Try another channel.</p>
-            <button
-              onClick={onClose}
-              className="mt-2 rounded-full bg-[#ff2d6f] px-5 py-2 text-xs font-bold text-white active:scale-95"
-            >
-              Back to channels
-            </button>
+            <p className="text-xs text-white/50">
+              It may be offline or all viewing slots are in use. Retry, or pick another channel.
+            </p>
+            <div className="mt-2 flex gap-2">
+              <button
+                onClick={() => setAttempt((a) => a + 1)}
+                className="rounded-full bg-[#ff2d6f] px-5 py-2 text-xs font-bold text-white active:scale-95"
+              >
+                Retry
+              </button>
+              <button
+                onClick={onClose}
+                className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 active:scale-95"
+              >
+                Back to channels
+              </button>
+            </div>
           </div>
         )}
       </div>
