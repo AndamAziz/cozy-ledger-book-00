@@ -147,7 +147,8 @@ function redact(u: string) {
 type Attempt = {
   url: string
   ext: string
-  ua: 'mobile' | 'vlc'
+  ua: UaKind
+
   status: number | null
   contentType: string | null
   ms: number
