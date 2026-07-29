@@ -26,7 +26,9 @@ export function PosterCard({ channel, onPlay }: Props) {
         ? 'offline'
         : provider?.status === 'slot_limit'
           ? 'busy'
-          : health;
+          : health === 'unknown' && provider?.status === 'online'
+            ? 'online'
+            : health;
 
   return (
     <button
