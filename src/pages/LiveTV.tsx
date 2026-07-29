@@ -10,30 +10,38 @@ import {
   type IptvChannel,
 } from '@/hooks/useIptvPlaylist';
 import { ChannelCard } from '@/components/livetv/ChannelCard';
+import { PosterCard } from '@/components/livetv/PosterCard';
 import { LiveTVPlayer } from '@/components/livetv/LiveTVPlayer';
 import { LiveBottomNav, type LiveTab } from '@/components/livetv/LiveBottomNav';
 
-function tabOf(name: string): LiveTab {
-  const g = name.toUpperCase();
-  if (/SERIES|SERIE|SHOW/.test(g)) return 'series';
-  if (/VOD|MOVIE|FILM|CINEMA/.test(g)) return 'movies';
-  if (/REPLAY|CATCH ?UP|ARCHIVE|24\/7/.test(g)) return 'replay';
+function tabOf(category: IptvCategory): LiveTab {
+  if (category.kind === 'vod') return 'movies';
+  if (category.kind === 'series') return 'series';
+  if (/REPLAY|CATCH ?UP|ARCHIVE|24\/7/.test(category.name.toUpperCase())) return 'replay';
   return 'direct';
 }
+
+
+const GRID_LIVE = 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8';
+const GRID_POSTER = 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7';
 
 function CategorySection({
   category,
   onPlay,
   eager,
   kind,
+  poster,
 }: {
   category: IptvCategory;
   onPlay: (c: IptvChannel) => void;
   eager: boolean;
   kind: 'live' | 'vod';
+  poster: boolean;
 }) {
+  const gridClass = poster ? GRID_POSTER : GRID_LIVE;
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(eager);
+
 
   useEffect(() => {
     if (visible || !ref.current) return;
@@ -59,18 +67,26 @@ function CategorySection({
       </div>
 
       {isLoading || !data ? (
-        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+        <div className={gridClass}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-[124px] animate-pulse rounded-2xl border border-white/5 bg-white/[0.03]" />
+            <div
+              key={i}
+              className={`animate-pulse rounded-2xl border border-white/5 bg-white/[0.03] ${poster ? 'h-[190px]' : 'h-[124px]'}`}
+            />
           ))}
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-            {data.channels.map((channel) => (
-              <ChannelCard key={channel.id} channel={{ ...channel, kind }} onPlay={onPlay} />
-            ))}
+          <div className={gridClass}>
+            {data.channels.map((channel) =>
+              poster ? (
+                <PosterCard key={channel.id} channel={{ ...channel, kind }} onPlay={onPlay} />
+              ) : (
+                <ChannelCard key={channel.id} channel={{ ...channel, kind }} onPlay={onPlay} />
+              ),
+            )}
           </div>
+
           {data.total > data.channels.length && (
             <p className="mt-2 text-[10px] text-white/30">
               Showing {data.channels.length} of {data.total} — refine with search.
@@ -118,13 +134,19 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
 
   // Movies / Series / Replay items are on-demand containers, not live channels.
   const playbackKind: 'live' | 'vod' = tab === 'direct' ? 'live' : 'vod';
+  const searchSection: 'live' | 'vod' | 'series' =
+    tab === 'movies' ? 'vod' : tab === 'series' ? 'series' : 'live';
   const searching = query.trim().length >= 2;
-  const { data: results, isFetching: searchLoading } = useIptvSearch(query);
+  const { data: results, isFetching: searchLoading } = useIptvSearch(query, searchSection);
+
+
+  const usePoster = tab === 'movies' || tab === 'series';
 
   const categories = useMemo(
-    () => (index?.categories ?? []).filter((c) => tabOf(c.name) === tab),
+    () => (index?.categories ?? []).filter((c) => tabOf(c) === tab),
     [index, tab],
   );
+
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[#07070b] text-white">
@@ -197,10 +219,14 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
               )}
             </div>
             {searchLoading && <Loader2 className="mx-auto my-10 h-6 w-6 animate-spin text-[#ff2d6f]" />}
-            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-              {results?.channels.map((channel) => (
-                <ChannelCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={setPlaying} />
-              ))}
+            <div className={usePoster ? GRID_POSTER : GRID_LIVE}>
+              {results?.channels.map((channel) =>
+                usePoster ? (
+                  <PosterCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={setPlaying} />
+                ) : (
+                  <ChannelCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={setPlaying} />
+                ),
+              )}
             </div>
             {results && results.channels.length === 0 && !searchLoading && (
               <p className="py-20 text-center text-xs font-semibold text-white/40">No channels match “{query}”.</p>
@@ -215,8 +241,10 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
                 onPlay={setPlaying}
                 eager={i < 3}
                 kind={playbackKind}
+                poster={usePoster}
               />
             ))}
+
             {!isLoading && !error && categories.length === 0 && (
               <p className="py-24 text-center text-xs font-semibold text-white/40">No channels in this section.</p>
             )}
