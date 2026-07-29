@@ -69,7 +69,10 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
 
     const onPlaying = () => setStatus('playing');
     const onWaiting = () => setStatus((s) => (s === 'error' ? s : 'loading'));
-    const onError = () => setStatus('error');
+    const onError = () => {
+      if (!usedNative) playNative();
+      else setStatus('error');
+    };
     video.addEventListener('playing', onPlaying);
     video.addEventListener('waiting', onWaiting);
     video.addEventListener('error', onError);
