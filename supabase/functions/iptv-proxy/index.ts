@@ -294,8 +294,15 @@ Deno.serve(async (req) => {
       if (next?.ok && isRealMedia(next, list[i])) {
         upstream = new URL(list[i])
         res = next
+        chosen = attempts[attempts.length - 1] ?? null
+        if (chosen) chosen.accepted = true
+        if (debugJson) {
+          await next.body?.cancel()
+          return debugReport({ kind, streamId, extHint, finalUrl: redact(finalUrlOf(next, list[i])) })
+        }
         break
       }
+
       if (next?.ok) {
         // Empty/HTML body: this container does not exist upstream — keep walking.
         await next.body?.cancel()
