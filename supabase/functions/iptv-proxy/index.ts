@@ -101,22 +101,30 @@ Deno.serve(async (req) => {
   const attempts: Attempt[] = []
   let chosen: Attempt | null = null
 
+  // One id per probing session so a single request can be traced end-to-end
+  // across headers, the JSON report and the function logs.
+  const requestId =
+    reqUrlEarly.searchParams.get('rid')?.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) ||
+    req.headers.get('x-request-id')?.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) ||
+    crypto.randomUUID()
+
   const debugHeaders = (): Record<string, string> => {
-    if (!debugHeaderOn) return {}
+    if (!debugHeaderOn) return { 'X-Request-ID': requestId, 'Access-Control-Expose-Headers': 'X-Request-ID, X-Final-URL' }
     const compact = attempts
       .map((a) => `${a.ext || '-'}:${a.ua}:${a.status ?? a.error ?? 'err'}:${(a.contentType ?? '-').split(';')[0]}:${a.ms}ms${a.accepted ? ':CHOSEN' : ''}`)
       .join(' | ')
     return {
-      'X-IPTV-Debug': compact.slice(0, 1800) || 'no-attempts',
+      'X-Request-ID': requestId,
+      'X-IPTV-Debug': `rid=${requestId} | ${compact || 'no-attempts'}`.slice(0, 1800),
       'X-IPTV-Debug-Chosen': chosen ? `${chosen.ext || '-'}:${chosen.status}:${(chosen.contentType ?? '-').split(';')[0]}` : 'none',
-      'Access-Control-Expose-Headers': 'X-IPTV-Debug, X-IPTV-Debug-Chosen, X-Final-URL',
+      'Access-Control-Expose-Headers': 'X-Request-ID, X-IPTV-Debug, X-IPTV-Debug-Chosen, X-Final-URL',
     }
   }
 
   const debugReport = (extra: Record<string, unknown> = {}, status = 200) =>
     new Response(
       JSON.stringify(
-        { attempts, chosen, candidateCount: attempts.length, ...extra },
+        { requestId, attempts, chosen, candidateCount: attempts.length, ...extra },
         null,
         2,
       ),
