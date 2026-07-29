@@ -72,9 +72,9 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
   }
 }
 
-async function fetchJson<T>(url: string): Promise<T | null> {
+async function fetchJson<T>(url: string, timeoutMs = 15000): Promise<T | null> {
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': UA } })
+    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(timeoutMs) })
     if (!res.ok) return null
     const json = await res.json()
     return Array.isArray(json) ? (json as T) : null
@@ -83,17 +83,20 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+
 /**
  * Stream a huge Xtream JSON array and hand each object to `onRow`, without ever
  * materialising the whole payload. Returns early when `onRow` returns false.
  */
 async function scanArray(url: string, onRow: (row: Record<string, unknown>) => boolean) {
-  const res = await fetch(url, { headers: { 'User-Agent': UA } })
+  const deadline = Date.now() + 20_000
+  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20_000) })
   if (!res.ok || !res.body) return
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
   let done = false
+
 
   const handle = (fragment: string) => {
     const t = fragment.trim().replace(/^\[/, '').replace(/\]$/, '').trim()
@@ -106,8 +109,10 @@ async function scanArray(url: string, onRow: (row: Record<string, unknown>) => b
   }
 
   while (!done) {
+    if (Date.now() > deadline) break
     const { value, done: finished } = await reader.read()
     if (finished) break
+
     buf += decoder.decode(value, { stream: true })
     let i: number
     while ((i = buf.indexOf('},{')) >= 0) {
@@ -134,34 +139,33 @@ const ACTIONS: Record<Kind, [string, string]> = {
   series: ['get_series_categories', 'get_series'],
 }
 
+/**
+ * Build the section/category index WITHOUT downloading the ~280k-item stream
+ * catalogues: only the (tiny) category lists are fetched, so the first paint of
+ * the app is a few KB instead of ~150MB of JSON. Item counts are resolved lazily
+ * when a category is actually opened.
+ */
 async function buildIndex(source: string) {
   const api = apiBase(source)
   const categories: CategoryInfo[] = []
-  let total = 0
 
-  for (const kind of ['live', 'vod', 'series'] as Kind[]) {
-    const cats = (await fetchJson<RawCategory[]>(`${api}&action=${ACTIONS[kind][0]}`)) ?? []
-    const counts = new Map<string, number>()
+  const lists = await Promise.all(
+    (['live', 'vod', 'series'] as Kind[]).map(async (kind) => ({
+      kind,
+      cats: (await fetchJson<RawCategory[]>(`${api}&action=${ACTIONS[kind][0]}`)) ?? [],
+    })),
+  )
 
-    // Counting streams a category at a time keeps peak memory tiny.
-    await scanArray(`${api}&action=${ACTIONS[kind][1]}`, (row) => {
-      const cid = String(row.category_id ?? '0')
-      counts.set(cid, (counts.get(cid) ?? 0) + 1)
-      total += 1
-      return true
-    })
-
+  for (const { kind, cats } of lists) {
     for (const c of cats) {
-      const count = counts.get(String(c.category_id)) ?? 0
-      if (count > 0) {
-        categories.push({ id: `${kind}:${c.category_id}`, name: c.category_name, count, kind })
-      }
+      categories.push({ id: `${kind}:${c.category_id}`, name: c.category_name, count: 0, kind })
     }
   }
 
   if (!categories.length) throw new Error('Upstream returned no channels')
-  return { at: Date.now(), source, categories, total }
+  return { at: Date.now(), source, categories, total: 0 }
 }
+
 
 async function getIndex(source: string) {
   if (indexCache && indexCache.source === source && Date.now() - indexCache.at < TTL) return indexCache
@@ -182,6 +186,31 @@ const kindOf = (categoryId: string): Kind => {
   const prefix = categoryId.split(':')[0]
   return prefix === 'vod' || prefix === 'series' ? prefix : 'live'
 }
+
+// Per-category item cache: paging through one category never refetches upstream.
+const CATEGORY_TTL = 10 * 60 * 1000
+const CATEGORY_MAX = 12
+const categoryCache = new Map<string, { at: number; items: Item[] }>()
+
+async function getCategoryItems(api: string, kind: Kind, rawId: string, key: string): Promise<Item[]> {
+  const hit = categoryCache.get(key)
+  if (hit && Date.now() - hit.at < CATEGORY_TTL) return hit.items
+
+  const rows =
+    (await fetchJson<Record<string, unknown>[]>(
+      `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
+      20000,
+    )) ?? []
+  const items = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
+
+  categoryCache.set(key, { at: Date.now(), items })
+  if (categoryCache.size > CATEGORY_MAX) {
+    const oldest = [...categoryCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
+    if (oldest) categoryCache.delete(oldest[0])
+  }
+  return items
+}
+
 
 const shape = (s: Item, group: string) => ({
   id: s.id,
@@ -254,11 +283,16 @@ async function getSeriesInfo(api: string, seriesId: string) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  const json = (body: unknown, status = 200) =>
+  const json = (body: unknown, status = 200, cacheSeconds = 0) =>
     new Response(JSON.stringify(body), {
       status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Cache-Control': cacheSeconds ? `public, max-age=${cacheSeconds}` : 'no-store',
+      },
     })
+
 
   try {
     const source = await getPlaylistUrl()
@@ -280,11 +314,16 @@ Deno.serve(async (req) => {
 
 
     if (!category && !q) {
-      return json({
-        total: index.total,
-        categories: index.categories,
-        updatedAt: new Date(index.at).toISOString(),
-      })
+      return json(
+        {
+          total: index.total,
+          categories: index.categories,
+          updatedAt: new Date(index.at).toISOString(),
+        },
+        200,
+        300,
+      )
+
     }
 
     const api = apiBase(source)
@@ -295,13 +334,10 @@ Deno.serve(async (req) => {
     if (category) {
       const kind = kindOf(category)
       const rawId = category.slice(category.indexOf(':') + 1)
-      const rows =
-        (await fetchJson<Record<string, unknown>[]>(
-          `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
-        )) ?? []
-      list = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
+      list = await getCategoryItems(api, kind, rawId, category)
       if (q) list = list.filter((s) => s.name.toLowerCase().includes(q))
     } else {
+
       const kindParam = url.searchParams.get('kind')
       const kind: Kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
       const cap = offset + limit
@@ -315,10 +351,15 @@ Deno.serve(async (req) => {
       })
     }
 
-    return json({
-      total: list.length,
-      channels: list.slice(offset, offset + limit).map((s) => shape(s, nameOf(s.categoryId))),
-    })
+    return json(
+      {
+        total: list.length,
+        channels: list.slice(offset, offset + limit).map((s) => shape(s, nameOf(s.categoryId))),
+      },
+      200,
+      category ? 120 : 0,
+    )
+
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 502)
   }

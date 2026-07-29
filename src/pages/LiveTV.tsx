@@ -42,7 +42,8 @@ function CategorySection({
   const gridClass = poster ? GRID_POSTER : GRID_LIVE;
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(eager);
-
+  // Paginate inside a category so huge groups never render thousands of nodes.
+  const [limit, setLimit] = useState(24);
 
   useEffect(() => {
     if (visible || !ref.current) return;
@@ -54,16 +55,20 @@ function CategorySection({
     return () => io.disconnect();
   }, [visible]);
 
-  const { data, isLoading } = useIptvChannels(category.id, visible);
+  const { data, isLoading, isFetching } = useIptvChannels(category.id, visible, limit);
+  const shown = data?.channels.length ?? 0;
+  const hasMore = !!data && data.total > shown;
 
   return (
     <section ref={ref}>
       <div className="mb-3 flex items-center gap-3">
         <span className="h-4 w-1 shrink-0 rounded-full" style={{ background: 'linear-gradient(#ff2d6f,#b026ff)' }} />
         <h2 className="truncate text-sm font-bold tracking-tight">{category.name}</h2>
-        <span className="shrink-0 rounded-full bg-white/[0.07] px-2 py-0.5 text-[10px] font-bold text-white/50">
-          {category.count}
-        </span>
+        {(data?.total ?? category.count) > 0 && (
+          <span className="shrink-0 rounded-full bg-white/[0.07] px-2 py-0.5 text-[10px] font-bold text-white/50">
+            {data?.total ?? category.count}
+          </span>
+        )}
         <span className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
       </div>
 
@@ -88,16 +93,23 @@ function CategorySection({
             )}
           </div>
 
-          {data.total > data.channels.length && (
-            <p className="mt-2 text-[10px] text-white/30">
-              Showing {data.channels.length} of {data.total} — refine with search.
-            </p>
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => setLimit((l) => l + 36)}
+              disabled={isFetching}
+              className="mx-auto mt-3 flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-1.5 text-[11px] font-bold text-white/70 transition hover:border-white/25 hover:text-white disabled:opacity-50"
+            >
+              {isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
+              Load more ({shown}/{data.total})
+            </button>
           )}
         </>
       )}
     </section>
   );
 }
+
 
 const TAB_META: Record<LiveTab, { path: string; title: string; heading: string; description: string }> = {
   direct: {
@@ -174,7 +186,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-base font-extrabold tracking-tight">{meta.heading}</h1>
             <p className="truncate text-[10px] uppercase tracking-[0.2em] text-white/35">
-              {index ? `${index.total.toLocaleString()} channels` : 'Streaming'}
+              {index ? `${categories.length.toLocaleString()} categories` : 'Streaming'}
             </p>
           </div>
           <span
@@ -245,7 +257,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
                 key={category.id}
                 category={category}
                 onPlay={openItem}
-                eager={i < 3}
+                eager={i < 2}
                 kind={playbackKind}
                 poster={usePoster}
               />
