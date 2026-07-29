@@ -186,7 +186,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-base font-extrabold tracking-tight">{meta.heading}</h1>
             <p className="truncate text-[10px] uppercase tracking-[0.2em] text-white/35">
-              {index ? `${index.total.toLocaleString()} channels` : 'Streaming'}
+              {index ? `${categories.length.toLocaleString()} categories` : 'Streaming'}
             </p>
           </div>
           <span
