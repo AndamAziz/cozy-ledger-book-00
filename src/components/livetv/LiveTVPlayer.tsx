@@ -1,8 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
-import { X, Loader2, AlertTriangle, Maximize2 } from 'lucide-react';
+import { X, Loader2, AlertTriangle, Maximize2, Settings2 } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
+
+interface QualityLevel {
+  /** hls.js level index, or -1 for auto */
+  index: number;
+  label: string;
+}
+
+/** Bucket a level height into a friendly label. */
+function labelForLevel(height?: number, bitrate?: number): string {
+  if (height && height > 0) return `${height}p`;
+  if (bitrate) return `${Math.round(bitrate / 1000)}kbps`;
+  return 'Auto';
+}
 
 interface Props {
   channel: IptvChannel;
@@ -12,8 +25,13 @@ interface Props {
 export function LiveTVPlayer({ channel, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading');
   const [attempt, setAttempt] = useState(0);
+  const [levels, setLevels] = useState<QualityLevel[]>([]);
+  const [selectedLevel, setSelectedLevel] = useState(-1);
+  const [autoLabel, setAutoLabel] = useState<string | null>(null);
+  const [qualityOpen, setQualityOpen] = useState(false);
   const accent = accentFor(channel.name);
 
   useEffect(() => {
@@ -22,6 +40,10 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
     const isVod = channel.kind === 'vod';
     const src = `${toPlayableUrl(channel.id, isVod ? 'vod' : 'live')}&_r=${attempt}`;
     setStatus('loading');
+    setLevels([]);
+    setSelectedLevel(-1);
+    setAutoLabel(null);
+    setQualityOpen(false);
 
     let hls: Hls | null = null;
     let usedNative = false;
@@ -34,6 +56,8 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
       usedNative = true;
       hls?.destroy();
       hls = null;
+      hlsRef.current = null;
+      setLevels([]);
       video.src = src;
       video.load();
       play();
@@ -49,9 +73,28 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
         manifestLoadingMaxRetry: 3,
         fragLoadingMaxRetry: 4,
       });
+      hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, play);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        const parsed = (hls?.levels ?? []).map((l, i) => ({
+          index: i,
+          label: labelForLevel(l.height, l.bitrate),
+          height: l.height ?? 0,
+        }));
+        // Sort high → low and drop duplicate labels.
+        const seen = new Set<string>();
+        const unique = parsed
+          .sort((a, b) => b.height - a.height)
+          .filter((l) => (seen.has(l.label) ? false : (seen.add(l.label), true)))
+          .map(({ index, label }) => ({ index, label }));
+        setLevels(unique.length > 1 ? unique : []);
+        play();
+      });
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_e, data) => {
+        const lvl = hls?.levels?.[data.level];
+        setAutoLabel(lvl ? labelForLevel(lvl.height, lvl.bitrate) : null);
+      });
       hls.on(Hls.Events.ERROR, (_e, data) => {
         if (!data.fatal) return;
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
@@ -82,6 +125,7 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('error', onError);
       hls?.destroy();
+      hlsRef.current = null;
       video.removeAttribute('src');
       video.load();
     };
@@ -92,6 +136,19 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  const pickLevel = (index: number) => {
+    setSelectedLevel(index);
+    setQualityOpen(false);
+    if (hlsRef.current) hlsRef.current.currentLevel = index;
+  };
+
+  const currentQualityLabel =
+    selectedLevel === -1
+      ? autoLabel
+        ? `Auto · ${autoLabel}`
+        : 'Auto'
+      : levels.find((l) => l.index === selectedLevel)?.label ?? 'Auto';
 
   const goFullscreen = () => {
     const el = shellRef.current;
@@ -117,6 +174,43 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
           <p className="truncate text-sm font-bold text-white">{channel.name}</p>
           <p className="truncate text-[10px] uppercase tracking-wider text-white/40">{channel.group}</p>
         </div>
+        {levels.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => setQualityOpen((o) => !o)}
+              aria-label="Quality"
+              aria-expanded={qualityOpen}
+              className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-bold text-white/70 transition hover:bg-white/10 hover:text-white active:scale-90"
+            >
+              <Settings2 className="h-4 w-4" />
+              <span className="hidden sm:inline">{currentQualityLabel}</span>
+            </button>
+            {qualityOpen && (
+              <div className="absolute right-0 top-full z-10 mt-2 min-w-[9rem] overflow-hidden rounded-xl border border-white/10 bg-black/90 py-1 backdrop-blur-xl">
+                <button
+                  onClick={() => pickLevel(-1)}
+                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold transition hover:bg-white/10 ${
+                    selectedLevel === -1 ? 'text-white' : 'text-white/60'
+                  }`}
+                >
+                  Auto
+                  {autoLabel && <span className="text-[10px] text-white/40">{autoLabel}</span>}
+                </button>
+                {levels.map((l) => (
+                  <button
+                    key={l.index}
+                    onClick={() => pickLevel(l.index)}
+                    className={`block w-full px-3 py-2 text-left text-xs font-semibold transition hover:bg-white/10 ${
+                      selectedLevel === l.index ? 'text-white' : 'text-white/60'
+                    }`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <button
           onClick={goFullscreen}
           aria-label="Fullscreen"
