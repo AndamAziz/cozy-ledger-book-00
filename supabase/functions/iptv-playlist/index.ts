@@ -1,92 +1,129 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 
-interface Channel {
-  id: string
+const UA = 'VLC/3.0.20 LibVLC/3.0.20'
+
+interface Stream {
+  stream_id: number
   name: string
-  logo: string | null
-  group: string
-  url: string
+  stream_icon: string
+  category_id: string
+}
+interface Category {
+  category_id: string
+  category_name: string
 }
 
-let cache: { at: number; data: unknown } | null = null
-const TTL = 10 * 60 * 1000
+interface Snapshot {
+  at: number
+  categories: { id: string; name: string; count: number }[]
+  byCat: Map<string, Stream[]>
+  all: Stream[]
+}
 
-function parseM3U(text: string): Channel[] {
-  const lines = text.split(/\r?\n/)
-  const out: Channel[] = []
-  let pending: Omit<Channel, 'url'> | null = null
-  let i = 0
-  for (const raw of lines) {
-    const line = raw.trim()
-    if (!line) continue
-    if (line.startsWith('#EXTINF')) {
-      const attrs: Record<string, string> = {}
-      for (const m of line.matchAll(/([a-zA-Z0-9-]+)="([^"]*)"/g)) attrs[m[1]] = m[2]
-      const name = line.split(',').slice(1).join(',').trim() || attrs['tvg-name'] || 'Channel'
-      pending = {
-        id: attrs['tvg-id'] || `ch-${i++}`,
-        name,
-        logo: attrs['tvg-logo'] || null,
-        group: attrs['group-title'] || 'Other',
-      }
-    } else if (!line.startsWith('#') && pending) {
-      out.push({ ...pending, id: `${pending.id}-${out.length}`, url: line })
-      pending = null
-    }
+const TTL = 30 * 60 * 1000
+let snapshot: Snapshot | null = null
+let loading: Promise<Snapshot> | null = null
+
+function apiBase() {
+  const raw = Deno.env.get('IPTV_PLAYLIST_URL') ?? ''
+  const u = new URL(raw)
+  const username = u.searchParams.get('username') ?? ''
+  const password = u.searchParams.get('password') ?? ''
+  return {
+    api: `${u.protocol}//${u.host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
   }
-  return out
 }
+
+async function build(): Promise<Snapshot> {
+  const { api } = apiBase()
+  const [catRes, streamRes] = await Promise.all([
+    fetch(`${api}&action=get_live_categories`, { headers: { 'User-Agent': UA } }),
+    fetch(`${api}&action=get_live_streams`, { headers: { 'User-Agent': UA } }),
+  ])
+  if (!catRes.ok || !streamRes.ok) throw new Error(`Upstream error (${catRes.status}/${streamRes.status})`)
+
+  const cats = (await catRes.json()) as Category[]
+  const streams = (await streamRes.json()) as Stream[]
+
+  const byCat = new Map<string, Stream[]>()
+  for (const s of streams) {
+    const arr = byCat.get(s.category_id) ?? []
+    arr.push(s)
+    byCat.set(s.category_id, arr)
+  }
+
+  const categories = cats
+    .map((c) => ({ id: c.category_id, name: c.category_name, count: byCat.get(c.category_id)?.length ?? 0 }))
+    .filter((c) => c.count > 0)
+
+  return { at: Date.now(), categories, byCat, all: streams }
+}
+
+async function getSnapshot(): Promise<Snapshot> {
+  if (snapshot && Date.now() - snapshot.at < TTL) return snapshot
+  if (!loading) {
+    loading = build()
+      .then((s) => {
+        snapshot = s
+        return s
+      })
+      .finally(() => {
+        loading = null
+      })
+  }
+  return loading
+}
+
+const shape = (s: Stream, group: string) => ({
+  id: String(s.stream_id),
+  name: s.name,
+  logo: s.stream_icon || null,
+  group,
+})
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  try {
-    const src = Deno.env.get('IPTV_PLAYLIST_URL')
-    if (!src) {
-      return new Response(JSON.stringify({ error: 'Playlist not configured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    if (cache && Date.now() - cache.at < TTL) {
-      return new Response(JSON.stringify(cache.data), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const res = await fetch(src, {
-      headers: { 'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20' },
-    })
-    if (!res.ok) {
-      return new Response(JSON.stringify({ error: `Playlist fetch failed (${res.status})` }), {
-        status: 502,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-    const text = await res.text()
-    const channels = parseM3U(text)
-
-    const groupMap = new Map<string, Channel[]>()
-    for (const c of channels) {
-      const arr = groupMap.get(c.group) ?? []
-      arr.push(c)
-      groupMap.set(c.group, arr)
-    }
-    const groups = [...groupMap.entries()]
-      .map(([name, items]) => ({ name, count: items.length, channels: items }))
-      .sort((a, b) => b.count - a.count)
-
-    const data = { total: channels.length, groups, updatedAt: new Date().toISOString() }
-    cache = { at: Date.now(), data }
-
-    return new Response(JSON.stringify(data), {
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+
+  try {
+    if (!Deno.env.get('IPTV_PLAYLIST_URL')) return json({ error: 'Playlist not configured' }, 500)
+
+    const url = new URL(req.url)
+    const category = url.searchParams.get('category')
+    const q = (url.searchParams.get('q') ?? '').trim().toLowerCase()
+    const limit = Math.min(Number(url.searchParams.get('limit') ?? 60) || 60, 200)
+    const offset = Math.max(Number(url.searchParams.get('offset') ?? 0) || 0, 0)
+
+    const snap = await getSnapshot()
+
+    if (!category && !q) {
+      return json({
+        total: snap.all.length,
+        categories: snap.categories,
+        updatedAt: new Date(snap.at).toISOString(),
+      })
+    }
+
+    const nameOf = (id: string) => snap.categories.find((c) => c.id === id)?.name ?? 'Other'
+
+    let list: Stream[]
+    if (category) {
+      list = snap.byCat.get(category) ?? []
+      if (q) list = list.filter((s) => s.name.toLowerCase().includes(q))
+    } else {
+      list = snap.all.filter((s) => s.name.toLowerCase().includes(q))
+    }
+
+    return json({
+      total: list.length,
+      channels: list.slice(offset, offset + limit).map((s) => shape(s, nameOf(s.category_id))),
     })
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return json({ error: e instanceof Error ? e.message : String(e) }, 502)
   }
 })
