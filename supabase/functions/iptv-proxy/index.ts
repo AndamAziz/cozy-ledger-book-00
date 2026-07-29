@@ -39,13 +39,15 @@ Deno.serve(async (req) => {
     } catch {
       return err('Invalid url', 400)
     }
-    // Only the provider's own hosts may be proxied.
-    if (upstream.host !== host) return err('Host not allowed', 403)
+    // Only the provider host or its HLS edge nodes may be proxied.
+    const isEdgeSegment = /^\/hls\//.test(upstream.pathname)
+    if (upstream.host !== host && !isEdgeSegment) return err('Host not allowed', 403)
   } else {
     return err('Missing id or u parameter', 400)
   }
 
-  const base = `${reqUrl.origin}${reqUrl.pathname}`
+  const publicBase = (Deno.env.get('SUPABASE_URL') ?? reqUrl.origin).replace(/\/$/, '')
+  const base = `${publicBase}/functions/v1/iptv-proxy`
   const apikey = reqUrl.searchParams.get('apikey')
   const proxied = (u: string) =>
     `${base}?u=${encodeURIComponent(u)}${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}`
