@@ -54,17 +54,86 @@ function creds(raw: string) {
 }
 
 
+/** Strips the Xtream username/password path segments before exposing a URL. */
+function redact(u: string) {
+  return u.replace(/\/(live|movie|series)\/[^/]+\/[^/]+\//, '/$1/***/***/')
+}
+
+type Attempt = {
+  url: string
+  ext: string
+  ua: 'mobile' | 'vlc'
+  status: number | null
+  contentType: string | null
+  ms: number
+  accepted?: boolean
+  error?: string
+}
+
+async function isAdminRequest(req: Request): Promise<boolean> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token) return false
+  try {
+    const { createClient } = await import('npm:@supabase/supabase-js@2')
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { auth: { persistSession: false } },
+    )
+    const { data: userData } = await admin.auth.getUser(token)
+    const user = userData?.user
+    if (!user) return false
+    const { data } = await admin.rpc('has_role', { _user_id: user.id, _role: 'admin' })
+    return !!data
+  } catch {
+    return false
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
+  const reqUrlEarly = new URL(req.url)
+  const debugParam = (reqUrlEarly.searchParams.get('debug') ?? '').toLowerCase()
+  // debug=1 → compact X-IPTV-Debug header. debug=json → admin-only JSON report.
+  const debugHeaderOn = debugParam === '1' || debugParam === 'true' || debugParam === 'json'
+  const debugJson = debugParam === 'json' && (await isAdminRequest(req))
+  const attempts: Attempt[] = []
+  let chosen: Attempt | null = null
+
+  const debugHeaders = (): Record<string, string> => {
+    if (!debugHeaderOn) return {}
+    const compact = attempts
+      .map((a) => `${a.ext || '-'}:${a.ua}:${a.status ?? a.error ?? 'err'}:${(a.contentType ?? '-').split(';')[0]}:${a.ms}ms${a.accepted ? ':CHOSEN' : ''}`)
+      .join(' | ')
+    return {
+      'X-IPTV-Debug': compact.slice(0, 1800) || 'no-attempts',
+      'X-IPTV-Debug-Chosen': chosen ? `${chosen.ext || '-'}:${chosen.status}:${(chosen.contentType ?? '-').split(';')[0]}` : 'none',
+      'Access-Control-Expose-Headers': 'X-IPTV-Debug, X-IPTV-Debug-Chosen, X-Final-URL',
+    }
+  }
+
+  const debugReport = (extra: Record<string, unknown> = {}, status = 200) =>
+    new Response(
+      JSON.stringify(
+        { attempts, chosen, candidateCount: attempts.length, ...extra },
+        null,
+        2,
+      ),
+      { status, headers: { ...corsHeaders, ...debugHeaders(), 'Content-Type': 'application/json' } },
+    )
+
   const err = (msg: string, status: number, code?: string) =>
-    new Response(JSON.stringify({ error: msg, code }), {
-      status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    debugJson
+      ? debugReport({ error: msg, code }, 200)
+      : new Response(JSON.stringify({ error: msg, code }), {
+          status,
+          headers: { ...corsHeaders, ...debugHeaders(), 'Content-Type': 'application/json' },
+        })
 
   const source = await getPlaylistUrl()
   if (!source) return err('Playlist not configured', 500)
+
 
   const reqUrl = new URL(req.url)
   const plain = !isXtreamUrl(source)
@@ -171,22 +240,42 @@ Deno.serve(async (req) => {
     // the player hanging on "Connecting to stream…", and failed responses are
     // drained so their upstream socket (and viewing slot) is released at once.
     const isSlot = (status: number) => status === 458 || status === 429 || status === 407
+    const record = (u: string, ua: 'mobile' | 'vlc', started: number, r: Response | null, error?: string) => {
+      const a: Attempt = {
+        url: redact(u),
+        ext: (new URL(u).pathname.match(/\.([a-z0-9]+)$/i)?.[1] ?? '').toLowerCase(),
+        ua,
+        status: r?.status ?? null,
+        contentType: r?.headers.get('content-type') ?? null,
+        ms: Date.now() - started,
+        ...(error ? { error } : {}),
+      }
+      attempts.push(a)
+      return a
+    }
     const tryFetch = async (u: string) => {
       try {
         const nextUrl = new URL(u)
         const primaryHeaders = buildUpstreamHeaders(req, nextUrl, plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase)
+        let t0 = Date.now()
         const first = await fetchUpstream(u, primaryHeaders, req.signal)
+        record(u, 'mobile', t0, first)
         if (first.ok || isSlot(first.status) || isGeoBlocked(first.status)) return first
         await first.body?.cancel()
 
         // Some older panels whitelist VLC/libVLC instead of ExoPlayer. Retry the
         // handshake once with VLC headers before marking the channel offline.
         const fallbackHeaders = { ...primaryHeaders, 'User-Agent': VLC_UA }
-        return await fetchUpstream(u, fallbackHeaders, req.signal)
-      } catch {
+        t0 = Date.now()
+        const second = await fetchUpstream(u, fallbackHeaders, req.signal)
+        record(u, 'vlc', t0, second)
+        return second
+      } catch (e) {
+        record(u, 'mobile', Date.now(), null, e instanceof Error ? e.message : String(e))
         return null
       }
     }
+
     const list = streamId ? candidates : [upstream.toString()]
     // A wrong container guess (e.g. .mp4 for an .mkv-only title) answers 200 with
     // an empty text/plain body, so a 200 alone is not proof of a real stream.
@@ -205,8 +294,15 @@ Deno.serve(async (req) => {
       if (next?.ok && isRealMedia(next, list[i])) {
         upstream = new URL(list[i])
         res = next
+        chosen = attempts[attempts.length - 1] ?? null
+        if (chosen) chosen.accepted = true
+        if (debugJson) {
+          await next.body?.cancel()
+          return debugReport({ kind, streamId, extHint, finalUrl: redact(finalUrlOf(next, list[i])) })
+        }
         break
       }
+
       if (next?.ok) {
         // Empty/HTML body: this container does not exist upstream — keep walking.
         await next.body?.cancel()
@@ -269,10 +365,12 @@ Deno.serve(async (req) => {
         status: 200,
         headers: {
           ...corsHeaders,
+          ...debugHeaders(),
           'Content-Type': 'application/vnd.apple.mpegurl',
           'Cache-Control': 'no-store',
         },
       })
+
     }
 
     // Provider slot limits come back as 458/429/407 — surface a readable message.
@@ -284,7 +382,7 @@ Deno.serve(async (req) => {
       return err(`This channel is offline right now (${res.status}). Try another channel.`, 502, 'OFFLINE')
     }
 
-    const out = new Headers(corsHeaders)
+    const out = new Headers({ ...corsHeaders, ...debugHeaders() })
 
     out.set('Content-Type', ct || 'video/mp2t')
     const len = res.headers.get('content-length')
