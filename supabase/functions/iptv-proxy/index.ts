@@ -54,17 +54,86 @@ function creds(raw: string) {
 }
 
 
+/** Strips the Xtream username/password path segments before exposing a URL. */
+function redact(u: string) {
+  return u.replace(/\/(live|movie|series)\/[^/]+\/[^/]+\//, '/$1/***/***/')
+}
+
+type Attempt = {
+  url: string
+  ext: string
+  ua: 'mobile' | 'vlc'
+  status: number | null
+  contentType: string | null
+  ms: number
+  accepted?: boolean
+  error?: string
+}
+
+async function isAdminRequest(req: Request): Promise<boolean> {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!token) return false
+  try {
+    const { createClient } = await import('npm:@supabase/supabase-js@2')
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { auth: { persistSession: false } },
+    )
+    const { data: userData } = await admin.auth.getUser(token)
+    const user = userData?.user
+    if (!user) return false
+    const { data } = await admin.rpc('has_role', { _user_id: user.id, _role: 'admin' })
+    return !!data
+  } catch {
+    return false
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
+  const reqUrlEarly = new URL(req.url)
+  const debugParam = (reqUrlEarly.searchParams.get('debug') ?? '').toLowerCase()
+  // debug=1 → compact X-IPTV-Debug header. debug=json → admin-only JSON report.
+  const debugHeaderOn = debugParam === '1' || debugParam === 'true' || debugParam === 'json'
+  const debugJson = debugParam === 'json' && (await isAdminRequest(req))
+  const attempts: Attempt[] = []
+  let chosen: Attempt | null = null
+
+  const debugHeaders = (): Record<string, string> => {
+    if (!debugHeaderOn) return {}
+    const compact = attempts
+      .map((a) => `${a.ext || '-'}:${a.ua}:${a.status ?? a.error ?? 'err'}:${(a.contentType ?? '-').split(';')[0]}:${a.ms}ms${a.accepted ? ':CHOSEN' : ''}`)
+      .join(' | ')
+    return {
+      'X-IPTV-Debug': compact.slice(0, 1800) || 'no-attempts',
+      'X-IPTV-Debug-Chosen': chosen ? `${chosen.ext || '-'}:${chosen.status}:${(chosen.contentType ?? '-').split(';')[0]}` : 'none',
+      'Access-Control-Expose-Headers': 'X-IPTV-Debug, X-IPTV-Debug-Chosen, X-Final-URL',
+    }
+  }
+
+  const debugReport = (extra: Record<string, unknown> = {}, status = 200) =>
+    new Response(
+      JSON.stringify(
+        { attempts, chosen, candidateCount: attempts.length, ...extra },
+        null,
+        2,
+      ),
+      { status, headers: { ...corsHeaders, ...debugHeaders(), 'Content-Type': 'application/json' } },
+    )
+
   const err = (msg: string, status: number, code?: string) =>
-    new Response(JSON.stringify({ error: msg, code }), {
-      status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    debugJson
+      ? debugReport({ error: msg, code }, 200)
+      : new Response(JSON.stringify({ error: msg, code }), {
+          status,
+          headers: { ...corsHeaders, ...debugHeaders(), 'Content-Type': 'application/json' },
+        })
 
   const source = await getPlaylistUrl()
   if (!source) return err('Playlist not configured', 500)
+
 
   const reqUrl = new URL(req.url)
   const plain = !isXtreamUrl(source)
