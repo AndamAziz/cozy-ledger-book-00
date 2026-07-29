@@ -65,7 +65,7 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
       video.removeAttribute('src');
       video.load();
     };
-  }, [channel]);
+  }, [channel, attempt]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
