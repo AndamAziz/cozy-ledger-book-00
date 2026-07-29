@@ -570,6 +570,7 @@ export function LiveTVPlayer({
                 <button
                   onClick={() => {
                     slotRetriesRef.current = 0;
+                    autoRetriesRef.current = 0;
                     setAttempt((a) => a + 1);
                   }}
                   className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
