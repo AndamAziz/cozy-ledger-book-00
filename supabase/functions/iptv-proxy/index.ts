@@ -6,9 +6,13 @@ const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 /** Connect timeout for the upstream handshake (headers only — the body streams freely). */
 const CONNECT_TIMEOUT_MS = 8000
 
-async function fetchUpstream(url: string, headers: Record<string, string>) {
+async function fetchUpstream(url: string, headers: Record<string, string>, clientSignal?: AbortSignal) {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), CONNECT_TIMEOUT_MS)
+  // Propagate client disconnects upstream: with single-slot provider accounts a
+  // lingering upstream socket keeps the only viewing slot busy forever.
+  const onAbort = () => ctrl.abort()
+  clientSignal?.addEventListener('abort', onAbort, { once: true })
   try {
     return await fetch(url, { headers, redirect: 'follow', signal: ctrl.signal })
   } finally {
@@ -16,6 +20,7 @@ async function fetchUpstream(url: string, headers: Record<string, string>) {
     clearTimeout(timer)
   }
 }
+
 
 function creds(raw: string) {
   const { host, username, password } = parseXtream(raw)
@@ -79,11 +84,15 @@ Deno.serve(async (req) => {
     if (!/^\d+$/.test(streamId)) return err('Invalid id', 400)
     const cred = `${protocol}//${host}`
     const live = `${cred}/live/${username}/${password}/${streamId}.m3u8`
+    // Some panels only expose raw MPEG-TS for live channels (no HLS packaging).
+    const liveTs = `${cred}/live/${username}/${password}/${streamId}.ts`
     const exts = [...new Set([extHint, 'mp4', 'mkv', 'avi'].filter(Boolean))]
     // Series episodes live under /series/, movies under /movie/ — try the likely one first.
     const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
     const vod = exts.flatMap((ext) => dirs.map((dir) => `${cred}/${dir}/${username}/${password}/${streamId}.${ext}`))
-    candidates = kind === 'live' ? [live] : kind === 'series' ? [...vod, live] : [live, ...vod]
+    candidates =
+      kind === 'live' ? [live, liveTs] : kind === 'series' ? [...vod, live] : [live, ...vod]
+
     upstream = new URL(candidates[0])
 
   } else if (passthrough) {
@@ -113,34 +122,47 @@ Deno.serve(async (req) => {
   if (range) headers['Range'] = range
 
   try {
-    // The provider limits concurrent sessions; a fresh session sometimes needs a retry.
-    // For VOD we also walk the candidate list (live → movie → series containers).
-    // Every attempt is bounded by CONNECT_TIMEOUT_MS so a dead origin can never
-    // leave the player hanging on "Connecting to stream…".
+    // Walk the candidate list once (live HLS → live TS → VOD containers). Every
+    // attempt is bounded by CONNECT_TIMEOUT_MS so a dead origin can never leave
+    // the player hanging on "Connecting to stream…", and failed responses are
+    // drained so their upstream socket (and viewing slot) is released at once.
     const tryFetch = async (u: string) => {
       try {
-        return await fetchUpstream(u, headers)
+        return await fetchUpstream(u, headers, req.signal)
       } catch {
         return null
       }
     }
+    const isSlot = (status: number) => status === 458 || status === 429 || status === 407
 
-    let res = await tryFetch(upstream.toString())
-    if ((!res || !res.ok) && streamId) {
-      outer: for (const candidate of candidates) {
-        for (let attempt = 0; attempt < (candidates.length > 1 ? 1 : 2); attempt++) {
-          await new Promise((r) => setTimeout(r, 400))
-          const next = await tryFetch(candidate)
-          if (next?.ok) {
-            upstream = new URL(candidate)
-            res = next
-            break outer
-          }
-          if (next) res = next
+    const list = streamId ? candidates : [upstream.toString()]
+    let res: Response | null = null
+    for (let i = 0; i < list.length; i++) {
+      if (req.signal.aborted) return err('Client disconnected', 499)
+      if (i > 0) await new Promise((r) => setTimeout(r, 300))
+      const next = await tryFetch(list[i])
+      if (next?.ok) {
+        upstream = new URL(list[i])
+        res = next
+        break
+      }
+      if (next) {
+        // Slot limits are account-wide: trying another container just burns more
+        // provider sessions, so surface it straight away.
+        if (isSlot(next.status)) {
+          await next.body?.cancel()
+          return err(
+            'All viewing slots are in use right now. Try again in a moment.',
+            502,
+            'SLOT_LIMIT',
+          )
         }
+        if (res) await res.body?.cancel()
+        res = next
       }
     }
     if (!res) return err('Stream timed out while connecting. Try again.', 504, 'TIMEOUT')
+
 
 
     const ct = res.headers.get('content-type') ?? ''
@@ -150,7 +172,7 @@ Deno.serve(async (req) => {
     if (isPlaylist) {
       const text = await res.text()
       if (!res.ok) {
-        const slot = res.status === 458 || res.status === 429
+        const slot = res.status === 458 || res.status === 429 || res.status === 407
         // 5xx / 521 / 404 mean the channel's own origin is down — not our error.
         const msg = slot
           ? 'All viewing slots are in use right now. Try again in a moment.'
@@ -181,10 +203,10 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Provider slot limits come back as 458/429 — surface a readable message.
+    // Provider slot limits come back as 458/429/407 — surface a readable message.
     if (!res.ok) {
       await res.body?.cancel()
-      const slot = res.status === 458 || res.status === 429
+      const slot = res.status === 458 || res.status === 429 || res.status === 407
       return err(
         slot
           ? 'All viewing slots are in use right now. Try again in a moment.'
