@@ -101,3 +101,15 @@ export function useIptvSearch(query: string, section: 'live' | 'vod' | 'series' 
   });
 }
 
+/** Season / episode structure for a single series. */
+export function useIptvSeriesInfo(seriesId: string | null) {
+  return useQuery({
+    queryKey: ['iptv-series', seriesId],
+    queryFn: () => get<IptvSeriesInfo>(`iptv-playlist?series=${encodeURIComponent(seriesId ?? '')}`),
+    enabled: !!seriesId,
+    staleTime: 30 * 60 * 1000,
+    retry: 1,
+  });
+}
+
+
