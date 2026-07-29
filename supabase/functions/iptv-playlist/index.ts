@@ -314,11 +314,16 @@ Deno.serve(async (req) => {
 
 
     if (!category && !q) {
-      return json({
-        total: index.total,
-        categories: index.categories,
-        updatedAt: new Date(index.at).toISOString(),
-      })
+      return json(
+        {
+          total: index.total,
+          categories: index.categories,
+          updatedAt: new Date(index.at).toISOString(),
+        },
+        200,
+        300,
+      )
+
     }
 
     const api = apiBase(source)
