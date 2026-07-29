@@ -82,25 +82,47 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
  * failed (timeout / error / non-array body) — an empty array is a valid answer.
  * Slow Xtream servers are common, so each call gets a retry with more headroom.
  */
-async function fetchJson<T>(url: string, timeoutMs = 25000, attempts = 2): Promise<T | null> {
+async function fetchJson<T>(url: string, timeoutMs = 15000, attempts = 2, tag = 'fetchJson'): Promise<T | null> {
   for (let i = 0; i < attempts; i++) {
+    const { res, diag } = await diagFetch(tag, url, { timeoutMs: timeoutMs * (i + 1), attempt: i + 1 })
+    if (!res) {
+      lastUpstreamDiag = diag
+      continue
+    }
+    let text = ''
     try {
-      const res = await egressFetch(url, {
-        headers: { 'User-Agent': UA },
-        signal: AbortSignal.timeout(timeoutMs * (i + 1)),
-      })
-      if (!res.ok) {
-        await res.body?.cancel()
-        continue
-      }
-      const json = await res.json()
+      text = await res.text()
+    } catch (e) {
+      const { kind, message } = classifyError(e)
+      lastUpstreamDiag = { ...diag, ok: false, kind, message }
+      logDiag(`${tag}:read`, lastUpstreamDiag)
+      continue
+    }
+    try {
+      const json = JSON.parse(text)
       if (Array.isArray(json)) return json as T
-    } catch {
-      // retry
+      lastUpstreamDiag = {
+        ...diag,
+        ok: false,
+        kind: 'parse_error',
+        bodySnippet: text.slice(0, 500),
+        message: 'Upstream returned JSON that is not an array',
+      }
+      logDiag(`${tag}:shape`, lastUpstreamDiag)
+    } catch (e) {
+      lastUpstreamDiag = {
+        ...diag,
+        ok: false,
+        kind: 'parse_error',
+        bodySnippet: text.slice(0, 500),
+        message: classifyError(e).message,
+      }
+      logDiag(`${tag}:parse`, lastUpstreamDiag)
     }
   }
   return null
 }
+
 
 
 
