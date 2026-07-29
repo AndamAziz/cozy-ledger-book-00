@@ -170,6 +170,9 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
     'User-Agent': UA,
     'Accept': '*/*',
     'Accept-Language': 'en-US,en;q=0.9',
+    // Avoid a compressed hop through the relay: a truncated gzip stream shows up
+    // as "error reading a body from connection" when the text is read.
+    'Accept-Encoding': 'identity',
     'Referer': `${parsedUrl.protocol}//${parsedUrl.host}/`,
     'Origin': `${parsedUrl.protocol}//${parsedUrl.host}`,
     'X-Requested-With': 'com.nathnetwork.xciptv',
@@ -179,7 +182,28 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
     if (prev.lastModified) headers['If-Modified-Since'] = prev.lastModified
   }
 
-  const res = await egressFetch(url, { headers, signal: AbortSignal.timeout(30_000) })
+  /**
+   * Pooled edge→relay connections are sometimes reused after the peer closed
+   * them, which only fails once the body is read. Retry the whole request a
+   * couple of times so a stale socket never surfaces as a dead playlist.
+   */
+  let res: Response | null = null
+  let body: string | null = null
+  let lastError: unknown = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      res = await egressFetch(url, { headers, signal: AbortSignal.timeout(30_000) })
+      if (res.status === 304 || !res.ok) break
+      body = await res.text()
+      break
+    } catch (e) {
+      lastError = e
+      res = null
+      body = null
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
+    }
+  }
+  if (!res) throw (lastError instanceof Error ? lastError : new Error('Playlist unavailable'))
 
   if (res.status === 304 && prev) {
     await res.body?.cancel()
@@ -192,11 +216,10 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
 
   // Same validator with a 200 response: skip the parse entirely.
   if (prev && prev.url === url && etag && etag === prev.etag) {
-    await res.body?.cancel()
     return { ...prev, at: Date.now(), lastModified: lastModified ?? prev.lastModified }
   }
 
-  const entries = parseM3U(await res.text())
+  const entries = parseM3U(body ?? '')
   if (!entries.length) throw new Error('Playlist contains no channels')
   const next = snapshot(url, entries, etag, lastModified)
   // Unchanged content: keep the previous object identity so derived caches stay warm.
@@ -205,6 +228,7 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
   }
   return next
 }
+
 
 /**
  * Fetch + parse a plain M3U playlist.

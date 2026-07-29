@@ -63,8 +63,12 @@ export function egressHeaders(base: HeadersInit = {}): Headers {
  * back to a direct fetch so metadata calls keep working even while the VPS is
  * offline.
  */
-export async function egressFetch(target: string, init: RequestInit = {}): Promise<Response> {
-  if (!hasEgressProxy()) {
+export async function egressFetch(
+  target: string,
+  init: RequestInit = {},
+  opts: { direct?: boolean } = {},
+): Promise<Response> {
+  if (opts.direct || !hasEgressProxy()) {
     return await fetch(target, { ...init, redirect: 'follow' })
   }
   try {
