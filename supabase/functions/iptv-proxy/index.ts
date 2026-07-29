@@ -39,7 +39,8 @@ async function fetchUpstream(url: string, headers: Record<string, string>, clien
   const onAbort = () => ctrl.abort()
   clientSignal?.addEventListener('abort', onAbort, { once: true })
   try {
-    return await fetch(url, { headers, redirect: 'follow', signal: ctrl.signal })
+    // egressUrl() is a no-op unless an allowed-country relay is configured.
+    return await fetch(egressUrl(url), { headers, redirect: 'follow', signal: ctrl.signal })
   } finally {
     // Cleared once headers are in, so large 4K bodies are never cut short.
     clearTimeout(timer)
