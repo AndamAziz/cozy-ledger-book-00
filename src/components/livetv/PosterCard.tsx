@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Clapperboard } from 'lucide-react';
 import type { IptvChannel } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
+import { useChannelHealth, useProviderHealth } from '@/hooks/useIptvHealth';
+import { HealthBadge } from './HealthBadge';
 
 interface Props {
   channel: IptvChannel;
@@ -13,6 +15,20 @@ export function PosterCard({ channel, onPlay }: Props) {
   const [failed, setFailed] = useState(false);
   const accent = accentFor(channel.name);
   const showPoster = !!channel.logo && !failed;
+  const { data: provider } = useProviderHealth();
+  // Series are containers (no direct stream), so only probe playable items.
+  const probeable = channel.kind !== 'series' && provider?.status === 'online' && (provider?.maxConnections ?? 0) > 1;
+  const health = useChannelHealth(channel, probeable);
+  const status =
+    channel.kind === 'series'
+      ? 'unknown'
+      : provider?.status === 'offline'
+        ? 'offline'
+        : provider?.status === 'slot_limit'
+          ? 'busy'
+          : health === 'unknown' && provider?.status === 'online'
+            ? 'online'
+            : health;
 
   return (
     <button
@@ -40,6 +56,7 @@ export function PosterCard({ channel, onPlay }: Props) {
           </span>
         )}
         <span className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/80 to-transparent" />
+        <HealthBadge status={status} className="absolute left-1.5 top-1.5 backdrop-blur-md" />
       </span>
 
       <span className="line-clamp-2 min-h-[2.2rem] px-2 py-2 text-[11px] font-semibold leading-tight text-white/90">

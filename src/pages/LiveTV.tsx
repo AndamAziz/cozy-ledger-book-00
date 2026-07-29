@@ -15,6 +15,7 @@ import { CategoryAccordion } from '@/components/livetv/CategoryAccordion';
 import { LiveTVPlayer } from '@/components/livetv/LiveTVPlayer';
 import { LiveBottomNav, type LiveTab } from '@/components/livetv/LiveBottomNav';
 import { SeriesDetail } from '@/components/livetv/SeriesDetail';
+import { useProviderHealth } from '@/hooks/useIptvHealth';
 
 function tabOf(category: IptvCategory): LiveTab {
   if (category.kind === 'vod') return 'movies';
@@ -147,6 +148,15 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const [playing, setPlaying] = useState<IptvChannel | null>(null);
   const [seriesItem, setSeriesItem] = useState<IptvChannel | null>(null);
   const [fullCategory, setFullCategory] = useState<IptvCategory | null>(null);
+  const { data: health } = useProviderHealth();
+  const healthTone =
+    health?.status === 'online'
+      ? { bg: '#28d17c26', fg: '#28d17c', label: 'Online' }
+      : health?.status === 'slot_limit'
+        ? { bg: '#f0b90b26', fg: '#f0b90b', label: 'Busy' }
+        : health?.status === 'offline'
+          ? { bg: '#ff2d6f26', fg: '#ff2d6f', label: 'Offline' }
+          : { bg: '#ffffff14', fg: '#ffffff8c', label: 'Checking' };
 
   // Series open a season/episode detail sheet; everything else plays directly.
   const openItem = (c: IptvChannel) => (c.kind === 'series' ? setSeriesItem(c) : setPlaying(c));
@@ -199,10 +209,11 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
             </p>
           </div>
           <span
+            title={health?.message ?? 'Checking provider…'}
             className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
-            style={{ background: '#ff2d6f26', color: '#ff2d6f' }}
+            style={{ background: healthTone.bg, color: healthTone.fg }}
           >
-            <SignalHigh className="h-3 w-3" /> HD
+            <SignalHigh className="h-3 w-3" /> {healthTone.label}
           </span>
         </div>
 
