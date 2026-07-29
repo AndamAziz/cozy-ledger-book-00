@@ -20,9 +20,13 @@ function labelForLevel(height?: number, bitrate?: number): string {
 interface Props {
   channel: IptvChannel;
   onClose: () => void;
+  /** Episodes of the current season — renders an inline switcher under the video. */
+  episodes?: IptvEpisode[];
+  currentEpisodeId?: string;
+  onSelectEpisode?: (episode: IptvEpisode) => void;
 }
 
-export function LiveTVPlayer({ channel, onClose }: Props) {
+export function LiveTVPlayer({ channel, onClose, episodes, currentEpisodeId, onSelectEpisode }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -37,8 +41,9 @@ export function LiveTVPlayer({ channel, onClose }: Props) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const isVod = channel.kind === 'vod';
-    const src = `${toPlayableUrl(channel.id, isVod ? 'vod' : 'live')}&_r=${attempt}`;
+    const isVod = channel.kind === 'vod' || channel.kind === 'series';
+    const src = `${toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext)}&_r=${attempt}`;
+
     setStatus('loading');
     setLevels([]);
     setSelectedLevel(-1);
