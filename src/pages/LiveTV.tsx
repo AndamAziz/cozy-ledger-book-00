@@ -22,19 +22,26 @@ function tabOf(category: IptvCategory): LiveTab {
 }
 
 
+const GRID_LIVE = 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8';
+const GRID_POSTER = 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7';
+
 function CategorySection({
   category,
   onPlay,
   eager,
   kind,
+  poster,
 }: {
   category: IptvCategory;
   onPlay: (c: IptvChannel) => void;
   eager: boolean;
   kind: 'live' | 'vod';
+  poster: boolean;
 }) {
+  const gridClass = poster ? GRID_POSTER : GRID_LIVE;
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(eager);
+
 
   useEffect(() => {
     if (visible || !ref.current) return;
@@ -60,18 +67,26 @@ function CategorySection({
       </div>
 
       {isLoading || !data ? (
-        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+        <div className={gridClass}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-[124px] animate-pulse rounded-2xl border border-white/5 bg-white/[0.03]" />
+            <div
+              key={i}
+              className={`animate-pulse rounded-2xl border border-white/5 bg-white/[0.03] ${poster ? 'h-[190px]' : 'h-[124px]'}`}
+            />
           ))}
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-            {data.channels.map((channel) => (
-              <ChannelCard key={channel.id} channel={{ ...channel, kind }} onPlay={onPlay} />
-            ))}
+          <div className={gridClass}>
+            {data.channels.map((channel) =>
+              poster ? (
+                <PosterCard key={channel.id} channel={{ ...channel, kind }} onPlay={onPlay} />
+              ) : (
+                <ChannelCard key={channel.id} channel={{ ...channel, kind }} onPlay={onPlay} />
+              ),
+            )}
           </div>
+
           {data.total > data.channels.length && (
             <p className="mt-2 text-[10px] text-white/30">
               Showing {data.channels.length} of {data.total} — refine with search.
