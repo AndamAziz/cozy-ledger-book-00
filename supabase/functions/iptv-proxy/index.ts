@@ -221,8 +221,13 @@ Deno.serve(async (req) => {
   const publicBase = (Deno.env.get('SUPABASE_URL') ?? reqUrl.origin).replace(/\/$/, '')
   const base = `${publicBase}/functions/v1/iptv-proxy`
   const apikey = reqUrl.searchParams.get('apikey')
+  // Segment/keys URLs are fetched by the player without headers, so the
+  // viewer's token has to ride along on the rewritten playlist entries.
+  const viewerToken = tokenFromRequest(req)
   const proxied = (u: string) =>
-    `${base}?u=${encodeURIComponent(u)}${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}`
+    `${base}?u=${encodeURIComponent(u)}` +
+    `${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}` +
+    `${viewerToken ? `&token=${encodeURIComponent(viewerToken)}` : ''}`
 
   const refererBase = plain ? `${upstream.protocol}//${upstream.host}/` : `${protocol}//${host}/`
   const wantsJson = (req.headers.get('accept') ?? '').toLowerCase().includes('application/json')
