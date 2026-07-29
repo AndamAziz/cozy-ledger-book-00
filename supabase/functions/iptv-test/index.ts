@@ -1,10 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { isXtreamUrl, parseXtream } from '../_shared/iptvConfig.ts'
+import { relayFetch, xtreamAuthError } from '../_shared/iptvFetch.ts'
 
-
-const UA = 'VLC/3.0.20 LibVLC/3.0.20'
-const TIMEOUT_MS = 15000
+const TIMEOUT_MS = 10_000
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -18,8 +17,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
   // --- Auth: admins only ---------------------------------------------------
-  const authHeader = req.headers.get('Authorization') ?? ''
-  const token = authHeader.replace(/^Bearer\s+/i, '')
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return json({ error: 'Unauthorized' }, 401)
 
   const admin = createClient(
@@ -50,43 +48,25 @@ Deno.serve(async (req) => {
   try {
     creds = parseXtream(raw)
   } catch (_) {
-    return json({ ok: false, error: 'That is not a valid URL' }, 200)
-  }
-  if (!/^https?:$/.test(creds.protocol)) {
-    return json({ ok: false, error: 'URL must start with http:// or https://' }, 200)
+    return json({ ok: false, error: 'That is not a valid URL' })
   }
 
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   const started = performance.now()
+  const latency = () => Math.round(performance.now() - started)
 
   // --- Plain M3U / M3U8 playlist (no Xtream credentials) -------------------
   if (!isXtreamUrl(raw)) {
-    try {
-      const res = await fetch(raw, {
-        headers: { 'User-Agent': UA },
-        redirect: 'follow',
-        signal: controller.signal,
-      })
-      if (!res.ok) return json({ ok: false, error: `Server responded with ${res.status}` }, 200)
-      const text = await res.text()
-      if (!/#EXTM3U|#EXTINF/i.test(text)) {
-        return json({ ok: false, error: 'That link did not return an M3U playlist' }, 200)
-      }
-      const channels = (text.match(/#EXTINF/gi) ?? []).length
-      if (!channels) return json({ ok: false, error: 'Connected, but no channels were returned' }, 200)
+    const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS })
+    if (!res.ok) return json({ ok: false, error: res.error ?? 'Could not reach the server', status: res.status })
+    if (!/#EXTM3U|#EXTINF/i.test(res.body)) {
       return json({
-        ok: true,
-        channels,
-        latency_ms: Math.round(performance.now() - started),
-        host: creds.host,
+        ok: false,
+        error: `That link did not return an M3U playlist (content-type: ${res.contentType ?? 'unknown'})`,
       })
-    } catch (e) {
-      const timedOut = (e as Error)?.name === 'AbortError'
-      return json({ ok: false, error: timedOut ? 'Connection timed out' : 'Could not reach the server' }, 200)
-    } finally {
-      clearTimeout(timer)
     }
+    const channels = (res.body.match(/#EXTINF/gi) ?? []).length
+    if (!channels) return json({ ok: false, error: 'Connected, but no channels were returned' })
+    return json({ ok: true, channels, latency_ms: latency(), host: creds.host, via: res.userAgent })
   }
 
   // --- Probe the Xtream playlist -------------------------------------------
@@ -94,35 +74,31 @@ Deno.serve(async (req) => {
     creds.username,
   )}&password=${encodeURIComponent(creds.password)}`
 
+  // 1. Account handshake: gives precise auth / connection-limit errors.
+  const auth = await relayFetch(api, { timeoutMs: TIMEOUT_MS })
+  if (!auth.ok) return json({ ok: false, error: auth.error ?? 'Could not reach the server', status: auth.status })
+  const authProblem = xtreamAuthError(auth.body)
+  if (authProblem) return json({ ok: false, error: authProblem })
+
+  // 2. Channel list.
+  const list = await relayFetch(`${api}&action=get_live_streams`, { timeoutMs: TIMEOUT_MS })
+  if (!list.ok) return json({ ok: false, error: list.error ?? 'Could not reach the server', status: list.status })
+
+  let parsed: unknown
   try {
-    const res = await fetch(`${api}&action=get_live_streams`, {
-      headers: { 'User-Agent': UA },
-      signal: controller.signal,
-    })
-    const text = await res.text()
-    if (!res.ok) return json({ ok: false, error: `Server responded with ${res.status}` }, 200)
-
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(text)
-    } catch (_) {
-      return json({ ok: false, error: 'Server did not return a channel list' }, 200)
-    }
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      return json({ ok: false, error: 'Connected, but no channels were returned' }, 200)
-    }
-
-    return json({
-      ok: true,
-      channels: parsed.length,
-      latency_ms: Math.round(performance.now() - started),
-      host: creds.host,
-    })
-  } catch (e) {
-    const timedOut = (e as Error)?.name === 'AbortError'
-    return json({ ok: false, error: timedOut ? 'Connection timed out' : 'Could not reach the server' }, 200)
-  } finally {
-    clearTimeout(timer)
+    parsed = JSON.parse(list.body)
+  } catch (_) {
+    return json({ ok: false, error: 'Server did not return a channel list (invalid JSON response)' })
   }
-})
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    return json({ ok: false, error: 'Connected, but no channels were returned' })
+  }
 
+  return json({
+    ok: true,
+    channels: parsed.length,
+    latency_ms: latency(),
+    host: creds.host,
+    via: list.userAgent,
+  })
+})
