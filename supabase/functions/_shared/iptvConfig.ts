@@ -135,9 +135,10 @@ export interface M3uSnapshot {
   lastModified: string | null
 }
 
-let m3uCache: M3uSnapshot | null = null
-let m3uLoading: Promise<M3uSnapshot> | null = null
-let revalidating = false
+const M3U_CACHE_MAX = 8
+const m3uCache = new Map<string, M3uSnapshot>()
+const m3uLoading = new Map<string, Promise<M3uSnapshot>>()
+const revalidating = new Set<string>()
 
 function snapshot(
   url: string,
