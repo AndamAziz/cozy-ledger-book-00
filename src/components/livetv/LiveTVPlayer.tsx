@@ -3,7 +3,12 @@ import Hls from 'hls.js';
 import { X, Loader2, AlertTriangle, Maximize2, Settings2, RefreshCw } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
-import { probeSlotLimit, slotRetryDelay, SLOT_MAX_RETRIES } from '@/lib/iptvSlotRetry';
+import {
+  probeStreamFailure,
+  slotRetryDelay,
+  SLOT_MAX_RETRIES,
+  GEO_BLOCK_MESSAGE,
+} from '@/lib/iptvSlotRetry';
 
 interface QualityLevel {
   /** hls.js level index, or -1 for auto */
