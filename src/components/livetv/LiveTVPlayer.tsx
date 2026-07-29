@@ -434,6 +434,28 @@ export function LiveTVPlayer({
       else void handleFailure();
     }, 2000);
 
+    /**
+     * Fast micro-stall watchdog: sampled every 500ms, so a freeze longer than
+     * 1.5s is nudged / skipped to the live edge immediately instead of sitting
+     * in a buffering spinner until the 15s escalation runs.
+     */
+    let microTime = 0;
+    let microFrozen = 0;
+    const microWatchdog = window.setInterval(() => {
+      if (cancelled || video.paused || video.readyState < 2) return;
+      if (video.currentTime > microTime + 0.01) {
+        microTime = video.currentTime;
+        microFrozen = 0;
+        nudges = 0;
+        return;
+      }
+      microFrozen += 500;
+      if (microFrozen < 1500) return;
+      microFrozen = 0;
+      nudge();
+    }, 500);
+
+
     const onPlaying = () => {
       window.clearTimeout(connectWatchdog);
       window.clearInterval(countdownTimer);
