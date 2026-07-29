@@ -41,7 +41,6 @@ export function ChannelCard({ channel, onPlay }: Props) {
       : provider?.status === 'slot_limit'
         ? 'busy'
         : health;
-  const offline = status === 'offline';
 
   return (
     <button
