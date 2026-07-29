@@ -268,13 +268,22 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
       await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
     }
   }
-  if (!res) throw (lastError instanceof Error ? lastError : new Error('Playlist unavailable'))
+  if (!res) {
+    // A direct stream link that refuses a plain GET is still playable through
+    // the proxy — expose it as one channel rather than killing the source.
+    if (isDirectStreamUrl(url)) return directStreamSnapshot(url)
+    throw (lastError instanceof Error ? lastError : new Error('Playlist unavailable'))
+  }
 
   if (res.status === 304 && prev) {
     await res.body?.cancel()
     return { ...prev, at: Date.now() }
   }
-  if (!res.ok) throw new Error(`Playlist unavailable (${res.status})`)
+  if (!res.ok) {
+    if (isDirectStreamUrl(url)) return directStreamSnapshot(url)
+    throw new Error(`Playlist unavailable (${res.status})`)
+  }
+
 
   const etag = res.headers.get('etag')
   const lastModified = res.headers.get('last-modified')
