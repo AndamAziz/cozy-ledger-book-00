@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
+import { egressUrl, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
 const MOBILE_UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const VLC_UA = 'VLC/3.0.20 LibVLC/3.0.20'
