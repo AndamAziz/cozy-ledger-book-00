@@ -115,6 +115,7 @@ export function LiveTVPlayer({
     let hls: Hls | null = null;
     let usedNative = false;
     let usedMpegts = false;
+    let usedHls = false;
     // When MPEG-TS is tried first (raw .ts links), fall back to native playback
     // instead of surfacing an error straight away.
     let mpegtsFallback: (() => void) | null = null;
