@@ -40,6 +40,7 @@ export function LiveTVPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const mpegtsRef = useRef<{ destroy: () => void; unload?: () => void; detachMediaElement?: () => void } | null>(null);
   const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading');
   const [errorKind, setErrorKind] = useState<'offline' | 'busy'>('offline');
   const [retryIn, setRetryIn] = useState<number | null>(null);
@@ -71,6 +72,7 @@ export function LiveTVPlayer({
 
     let hls: Hls | null = null;
     let usedNative = false;
+    let usedMpegts = false;
     let mediaRecoveries = 0;
     let networkRetries = 0;
     let cancelled = false;
@@ -125,7 +127,43 @@ export function LiveTVPlayer({
         hls.swapAudioCodec();
         hls.recoverMediaError();
       } else if (!usedNative) playNative();
-      else void handleFailure();
+      else void playMpegts();
+    };
+
+    // Last engine in the chain: MPEG-TS / raw transport-stream demuxing in MSE.
+    // Xtream VOD and live links are frequently .ts containers that <video> and
+    // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
+    const playMpegts = async () => {
+      if (usedMpegts) {
+        void handleFailure();
+        return;
+      }
+      usedMpegts = true;
+      try {
+        const mod: any = await import('mpegts.js');
+        const mpegts: any = mod.default ?? mod;
+        if (cancelled || !mpegts.isSupported()) {
+          void handleFailure();
+          return;
+        }
+        hls?.destroy();
+        hls = null;
+        hlsRef.current = null;
+        setLevels([]);
+        video.removeAttribute('src');
+        video.load();
+        const player = mpegts.createPlayer(
+          { type: 'mse', isLive: !isVod, url: src, cors: true },
+          { enableWorker: true, liveBufferLatencyChasing: !isVod, lazyLoad: false },
+        );
+        mpegtsRef.current = player;
+        player.on(mpegts.Events.ERROR, () => void handleFailure());
+        player.attachMediaElement(video);
+        player.load();
+        play();
+      } catch {
+        void handleFailure();
+      }
     };
 
     // VOD items can be progressive MP4/MKV rather than HLS — fall back to native playback.
@@ -138,6 +176,7 @@ export function LiveTVPlayer({
       setLevels([]);
       video.src = src;
       video.load();
+
       play();
     };
 
@@ -215,17 +254,17 @@ export function LiveTVPlayer({
           // reported straight away instead of stalling on a dead <video> src.
           if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
             if (isVod && !usedNative) playNative();
-            else void handleFailure();
+            else void playMpegts();
           } else if (networkRetries < 5) {
             networkRetries += 1;
             window.setTimeout(() => hls?.startLoad(), 1000 * networkRetries);
           } else if (isVod && !usedNative) playNative();
-          else void handleFailure();
+          else void playMpegts();
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
 
           recoverMedia();
         } else if (!usedNative) playNative();
-        else void handleFailure();
+        else void playMpegts();
       });
     } else {
       playNative();
@@ -237,7 +276,7 @@ export function LiveTVPlayer({
     const connectWatchdog = window.setTimeout(() => {
       if (cancelled || video.readyState >= 3) return
       if (!usedNative) playNative();
-      else void handleFailure();
+      else void playMpegts();
     }, 15000);
 
     const onPlaying = () => {
@@ -251,7 +290,7 @@ export function LiveTVPlayer({
     const onWaiting = () => setStatus((s) => (s === 'error' ? s : 'loading'));
     const onError = () => {
       if (!usedNative) playNative();
-      else void handleFailure();
+      else void playMpegts();
     };
     video.addEventListener('playing', onPlaying);
     video.addEventListener('waiting', onWaiting);
@@ -269,6 +308,12 @@ export function LiveTVPlayer({
       video.removeEventListener('error', onError);
       hls?.destroy();
       hlsRef.current = null;
+      try {
+        mpegtsRef.current?.unload?.();
+        mpegtsRef.current?.detachMediaElement?.();
+        mpegtsRef.current?.destroy();
+      } catch { /* engine already torn down */ }
+      mpegtsRef.current = null;
       // Releasing the element's source tears the proxied request down, which
       // frees the provider's viewing slot immediately.
       video.removeAttribute('src');
@@ -392,14 +437,7 @@ export function LiveTVPlayer({
               />
               <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
             </span>
-            <p className="text-xs font-semibold text-white/70">
-              {slotLimited ? 'All viewing slots busy' : 'Connecting to stream…'}
-            </p>
-            {slotLimited && (
-              <p className="text-[11px] font-medium text-white/45">
-                {retryIn ? `Reconnecting in ${retryIn}s…` : 'Reconnecting…'}
-              </p>
-            )}
+            <p className="text-xs font-semibold text-white/70">Connecting to stream…</p>
           </div>
         )}
 
@@ -409,21 +447,16 @@ export function LiveTVPlayer({
               <span
                 className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
                 style={{
-                  background: errorKind === 'busy' ? 'rgba(240,185,11,0.14)' : 'rgba(255,45,111,0.14)',
+                  background: 'rgba(255,45,111,0.14)',
                 }}
               >
-                <AlertTriangle
-                  className="h-6 w-6"
-                  style={{ color: errorKind === 'busy' ? '#f0b90b' : '#ff2d6f' }}
-                />
+                <AlertTriangle className="h-6 w-6" style={{ color: '#ff2d6f' }} />
               </span>
               <p className="text-sm font-extrabold tracking-tight text-white">
-                {errorKind === 'busy' ? 'All viewing slots are in use' : 'This channel is not responding'}
+                This channel is not responding
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                {errorKind === 'busy'
-                  ? 'Your provider allows a limited number of simultaneous streams. Close other devices, then retry.'
-                  : 'The source may be offline right now. Retry, or pick another channel.'}
+                The source may be unavailable right now. Retry, or pick another channel.
               </p>
               <div className="mt-4 flex justify-center gap-2">
                 <button
@@ -432,7 +465,7 @@ export function LiveTVPlayer({
                     setAttempt((a) => a + 1);
                   }}
                   className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
-                  style={{ background: errorKind === 'busy' ? '#f0b90b' : '#ff2d6f' }}
+                  style={{ background: '#ff2d6f' }}
                 >
                   <RefreshCw className="h-3.5 w-3.5" /> Retry
                 </button>

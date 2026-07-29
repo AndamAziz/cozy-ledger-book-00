@@ -148,13 +148,11 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const [playing, setPlaying] = useState<IptvChannel | null>(null);
   const [seriesItem, setSeriesItem] = useState<IptvChannel | null>(null);
   const [fullCategory, setFullCategory] = useState<IptvCategory | null>(null);
-  const { data: health, refetch: refetchHealth } = useProviderHealth();
+  const { data: health } = useProviderHealth();
   const healthTone =
-    health?.status === 'online'
+    health?.status === 'online' || health?.status === 'slot_limit'
       ? { bg: '#28d17c26', fg: '#28d17c', label: 'Online' }
-      : health?.status === 'slot_limit'
-        ? { bg: '#f0b90b26', fg: '#f0b90b', label: 'Busy' }
-        : health?.status === 'offline'
+      : health?.status === 'offline'
           ? { bg: '#ff2d6f26', fg: '#ff2d6f', label: 'Offline' }
           : { bg: '#ffffff14', fg: '#ffffff8c', label: 'Checking' };
 
