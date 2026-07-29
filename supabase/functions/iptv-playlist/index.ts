@@ -210,6 +210,39 @@ const ACTIONS: Record<Kind, [string, string]> = {
 }
 
 /**
+ * Xtream login handshake — the exact call native IPTV apps make first:
+ *   GET /player_api.php?username=…&password=…    (no action, no extra params)
+ * Returns `{ user_info: { auth, status, … } }`. A network failure is NOT fatal
+ * (the catalogue calls retry anyway); only an explicit auth rejection is.
+ */
+async function xtreamLogin(api: string): Promise<void> {
+  const { res, diag } = await diagFetch('login', api, {
+    timeoutMs: 15_000,
+    headers: { 'User-Agent': UA },
+  })
+  if (!res) {
+    lastUpstreamDiag = diag
+    return
+  }
+  let info: Record<string, unknown> | null = null
+  try {
+    const json = JSON.parse(await res.text())
+    info = (json?.user_info ?? null) as Record<string, unknown> | null
+  } catch {
+    return
+  }
+  if (!info) return
+  const status = String(info.status ?? '').toLowerCase()
+  const auth = Number(info.auth ?? 1)
+  if (auth === 0 || status === 'banned' || status === 'disabled' || status === 'expired') {
+    const msg = String(info.message ?? '').trim()
+    throw new Error(
+      `Your IPTV provider rejected these credentials (${status || 'auth failed'})${msg ? `: ${msg}` : ''}.`,
+    )
+  }
+}
+
+/**
  * Build the section/category index WITHOUT downloading the ~280k-item stream
  * catalogues: only the (tiny) category lists are fetched, so the first paint of
  * the app is a few KB instead of ~150MB of JSON. Item counts are resolved lazily
@@ -218,6 +251,10 @@ const ACTIONS: Record<Kind, [string, string]> = {
 async function buildIndex(source: string) {
   const api = apiBase(source)
   const categories: CategoryInfo[] = []
+
+  // Authenticate exactly like a native player before listing anything.
+  await xtreamLogin(api)
+
 
   const lists = await Promise.all(
     (['live', 'vod', 'series'] as Kind[]).map(async (kind) => ({
