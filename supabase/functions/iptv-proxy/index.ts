@@ -139,8 +139,10 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, ...debugHeaders(), 'Content-Type': 'application/json' },
         })
 
-  const source = await getPlaylistUrl()
-  if (!source) return err('Playlist not configured', 500)
+  // Every stream is served from the caller's OWN provider account.
+  const resolved = await resolveViewer(req)
+  if (!resolved.ok) return err(resolved.message, resolved.status, resolved.error)
+  const source = resolved.viewer.playlistUrl
 
 
   const reqUrl = new URL(req.url)
