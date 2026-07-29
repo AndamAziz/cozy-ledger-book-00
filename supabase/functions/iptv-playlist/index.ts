@@ -187,6 +187,31 @@ const kindOf = (categoryId: string): Kind => {
   return prefix === 'vod' || prefix === 'series' ? prefix : 'live'
 }
 
+// Per-category item cache: paging through one category never refetches upstream.
+const CATEGORY_TTL = 10 * 60 * 1000
+const CATEGORY_MAX = 12
+const categoryCache = new Map<string, { at: number; items: Item[] }>()
+
+async function getCategoryItems(api: string, kind: Kind, rawId: string, key: string): Promise<Item[]> {
+  const hit = categoryCache.get(key)
+  if (hit && Date.now() - hit.at < CATEGORY_TTL) return hit.items
+
+  const rows =
+    (await fetchJson<Record<string, unknown>[]>(
+      `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
+      20000,
+    )) ?? []
+  const items = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
+
+  categoryCache.set(key, { at: Date.now(), items })
+  if (categoryCache.size > CATEGORY_MAX) {
+    const oldest = [...categoryCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
+    if (oldest) categoryCache.delete(oldest[0])
+  }
+  return items
+}
+
+
 const shape = (s: Item, group: string) => ({
   id: s.id,
   name: s.name,
