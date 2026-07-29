@@ -463,7 +463,7 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
-        'Cache-Control': cacheSeconds ? `public, max-age=${cacheSeconds}` : 'no-store',
+        'Cache-Control': cacheSeconds ? `private, max-age=${cacheSeconds}` : 'no-store',
         ...(etag ? { ETag: etag } : {}),
       },
     })
@@ -485,7 +485,7 @@ Deno.serve(async (req) => {
       if (req.headers.get('if-none-match') === etag) {
         return new Response(null, {
           status: 304,
-          headers: { ...corsHeaders, ETag: etag, 'Cache-Control': 'public, max-age=60' },
+          headers: { ...corsHeaders, ETag: etag, 'Cache-Control': 'private, max-age=60' },
         })
       }
       return json(body, 200, url.searchParams.get('q') ? 0 : 120, etag)
