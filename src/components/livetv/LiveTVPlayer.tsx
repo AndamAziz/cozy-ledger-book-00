@@ -405,6 +405,7 @@ export function LiveTVPlayer({
       window.clearTimeout(retryTimer);
       window.clearTimeout(connectWatchdog);
       window.clearInterval(countdownTimer);
+      window.clearInterval(stallWatchdog);
 
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('waiting', onWaiting);
