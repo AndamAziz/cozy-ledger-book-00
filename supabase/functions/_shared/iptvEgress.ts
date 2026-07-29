@@ -58,14 +58,26 @@ export function egressHeaders(base: HeadersInit = {}): Headers {
 /**
  * Fetch an upstream IPTV URL through the relay (or directly when no relay is
  * configured). The response body is NOT buffered — callers stream it.
+ *
+ * If the relay itself is unreachable (down, DNS/TLS failure, timeout) we fall
+ * back to a direct fetch so metadata calls keep working even while the VPS is
+ * offline.
  */
-export function egressFetch(target: string, init: RequestInit = {}): Promise<Response> {
-  return fetch(egressUrl(target), {
-    ...init,
-    redirect: 'follow',
-    headers: egressHeaders(init.headers ?? {}),
-  })
+export async function egressFetch(target: string, init: RequestInit = {}): Promise<Response> {
+  if (!hasEgressProxy()) {
+    return await fetch(target, { ...init, redirect: 'follow' })
+  }
+  try {
+    return await fetch(egressUrl(target), {
+      ...init,
+      redirect: 'follow',
+      headers: egressHeaders(init.headers ?? {}),
+    })
+  } catch (_e) {
+    return await fetch(target, { ...init, redirect: 'follow' })
+  }
 }
+
 
 /**
  * The URL the relay actually ended up on, after following redirects. Used as
