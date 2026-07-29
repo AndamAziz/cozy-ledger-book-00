@@ -25,10 +25,12 @@ function CategorySection({
   category,
   onPlay,
   eager,
+  kind,
 }: {
   category: IptvCategory;
   onPlay: (c: IptvChannel) => void;
   eager: boolean;
+  kind: 'live' | 'vod';
 }) {
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(eager);
@@ -66,7 +68,7 @@ function CategorySection({
         <>
           <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {data.channels.map((channel) => (
-              <ChannelCard key={channel.id} channel={channel} onPlay={onPlay} />
+              <ChannelCard key={channel.id} channel={{ ...channel, kind }} onPlay={onPlay} />
             ))}
           </div>
           {data.total > data.channels.length && (
@@ -114,6 +116,8 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const [query, setQuery] = useState('');
   const [playing, setPlaying] = useState<IptvChannel | null>(null);
 
+  // Movies / Series / Replay items are on-demand containers, not live channels.
+  const playbackKind: 'live' | 'vod' = tab === 'direct' ? 'live' : 'vod';
   const searching = query.trim().length >= 2;
   const { data: results, isFetching: searchLoading } = useIptvSearch(query);
 
@@ -195,7 +199,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
             {searchLoading && <Loader2 className="mx-auto my-10 h-6 w-6 animate-spin text-[#ff2d6f]" />}
             <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
               {results?.channels.map((channel) => (
-                <ChannelCard key={channel.id} channel={channel} onPlay={setPlaying} />
+                <ChannelCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={setPlaying} />
               ))}
             </div>
             {results && results.channels.length === 0 && !searchLoading && (
@@ -205,7 +209,13 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
         ) : (
           <div className="space-y-7">
             {categories.map((category, i) => (
-              <CategorySection key={category.id} category={category} onPlay={setPlaying} eager={i < 3} />
+              <CategorySection
+                key={category.id}
+                category={category}
+                onPlay={setPlaying}
+                eager={i < 3}
+                kind={playbackKind}
+              />
             ))}
             {!isLoading && !error && categories.length === 0 && (
               <p className="py-24 text-center text-xs font-semibold text-white/40">No channels in this section.</p>
