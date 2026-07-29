@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Radio } from 'lucide-react';
 import type { IptvChannel } from '@/hooks/useIptvPlaylist';
+import { useChannelHealth, useProviderHealth } from '@/hooks/useIptvHealth';
+import { HealthBadge } from './HealthBadge';
 
 const ACCENTS = ['#ff2d6f', '#b026ff', '#ff7a18', '#00d4ff', '#28d17c', '#f0b90b'];
 
@@ -28,7 +30,18 @@ interface Props {
 export function ChannelCard({ channel, onPlay }: Props) {
   const [imgFailed, setImgFailed] = useState(false);
   const accent = accentFor(channel.name);
-  const offline = /offline|no signal|\bnot working\b/i.test(channel.name);
+  const { data: provider } = useProviderHealth();
+  const nameOffline = /offline|no signal|\bnot working\b/i.test(channel.name);
+  // Only probe individual streams while the provider itself is healthy.
+  const health = useChannelHealth(channel, provider?.status === 'online' && !nameOffline);
+  const status = nameOffline
+    ? 'offline'
+    : provider?.status === 'offline'
+      ? 'offline'
+      : provider?.status === 'slot_limit'
+        ? 'busy'
+        : health;
+  const offline = status === 'offline';
 
   return (
     <button
@@ -65,24 +78,20 @@ export function ChannelCard({ channel, onPlay }: Props) {
         {channel.name}
       </span>
 
-      <span
-        className={`relative z-10 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-          offline ? 'bg-white/10 text-white/50' : 'text-white'
-        }`}
-        style={offline ? undefined : { background: `${accent}26`, color: accent }}
-      >
-        {offline ? (
-          'Offline'
-        ) : (
-          <>
-            <span
-              className="h-1.5 w-1.5 animate-pulse rounded-full"
-              style={{ background: accent, boxShadow: `0 0 8px ${accent}` }}
-            />
-            Live
-          </>
-        )}
-      </span>
+      {status === 'unknown' ? (
+        <span
+          className="relative z-10 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+          style={{ background: `${accent}26`, color: accent }}
+        >
+          <span
+            className="h-1.5 w-1.5 animate-pulse rounded-full"
+            style={{ background: accent, boxShadow: `0 0 8px ${accent}` }}
+          />
+          Live
+        </span>
+      ) : (
+        <HealthBadge status={status} className="relative z-10" />
+      )}
 
       <Radio className="pointer-events-none absolute right-2 top-2 h-3 w-3 opacity-0 transition-opacity group-hover:opacity-60" style={{ color: accent }} />
     </button>
