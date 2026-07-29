@@ -288,6 +288,9 @@ async function getSeriesInfo(api: string, seriesId: string) {
 /** Stable series id derived from the series title, so it survives re-parses. */
 const seriesIdOf = (key: string) => 'sx' + [...key.toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36)
 
+/** Cheap synchronous hash used to fold the query string into the ETag. */
+const digest = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 17).toString(36)
+
 interface Browsable {
   id: string
   name: string
