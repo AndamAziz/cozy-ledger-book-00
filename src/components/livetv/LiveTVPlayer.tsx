@@ -59,6 +59,7 @@ export function LiveTVPlayer({
   const [qualityOpen, setQualityOpen] = useState(false);
   const [slotLimited, setSlotLimited] = useState(false);
   const slotRetriesRef = useRef(0);
+  const autoRetriesRef = useRef(0);
   const onSlotLimitRef = useRef(onSlotLimit);
   onSlotLimitRef.current = onSlotLimit;
 
