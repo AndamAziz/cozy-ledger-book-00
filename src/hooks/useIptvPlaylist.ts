@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-export type IptvKind = 'live' | 'vod';
+export type IptvKind = 'live' | 'vod' | 'series';
 
 export interface IptvChannel {
   id: string;
