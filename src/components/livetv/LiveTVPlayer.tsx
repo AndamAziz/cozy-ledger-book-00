@@ -65,6 +65,12 @@ export function LiveTVPlayer({
 
   const accent = accentFor(channel.name);
 
+  // A new channel starts with a clean retry budget.
+  useEffect(() => {
+    slotRetriesRef.current = 0;
+    autoRetriesRef.current = 0;
+  }, [channel.id]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
