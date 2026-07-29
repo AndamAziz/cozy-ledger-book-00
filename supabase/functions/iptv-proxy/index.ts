@@ -150,12 +150,14 @@ Deno.serve(async (req) => {
     if (isPlaylist) {
       const text = await res.text()
       if (!res.ok) {
-        const msg =
-          res.status === 458 || res.status === 429
-            ? 'All viewing slots are in use right now. Try again in a moment.'
-            : `Stream unavailable (${res.status})`
-        return err(msg, 502, res.status === 458 || res.status === 429 ? 'SLOT_LIMIT' : undefined)
+        const slot = res.status === 458 || res.status === 429
+        // 5xx / 521 / 404 mean the channel's own origin is down — not our error.
+        const msg = slot
+          ? 'All viewing slots are in use right now. Try again in a moment.'
+          : `This channel is offline right now (${res.status}). Try another channel.`
+        return err(msg, 502, slot ? 'SLOT_LIMIT' : 'OFFLINE')
       }
+
       const finalUrl = new URL(res.url || upstream.toString())
       const rewritten = text
         .split(/\r?\n/)
