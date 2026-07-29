@@ -181,3 +181,78 @@ export async function diagFetch(
     clearTimeout(timer)
   }
 }
+
+/**
+ * Streaming-friendly variant of {@link diagFetch}.
+ *
+ * Same redaction / classification / timeout guarantees, but the response is
+ * ALWAYS returned (even on a non-2xx status) and the body is never read, so the
+ * stream proxy can hand it straight to the player. The fetch itself is wrapped
+ * in try/catch, separately from any parsing the caller does afterwards.
+ */
+export async function diagFetchRaw(
+  tag: string,
+  url: string,
+  {
+    timeoutMs = 15_000,
+    attempt = 1,
+    headers = {},
+    method = 'GET',
+    signal,
+    direct = false,
+    onDiag,
+  }: {
+    timeoutMs?: number
+    attempt?: number
+    headers?: Record<string, string>
+    method?: string
+    signal?: AbortSignal
+    direct?: boolean
+    onDiag?: (d: UpstreamDiag) => void
+  } = {},
+): Promise<{ res: Response | null; diag: UpstreamDiag }> {
+  const safeUrl = redactUrl(url)
+  const started = performance.now()
+  const ctrl = new AbortController()
+  const timer = setTimeout(
+    () => ctrl.abort(new DOMException('Upstream timeout', 'TimeoutError')),
+    timeoutMs,
+  )
+  const onAbort = () => ctrl.abort()
+  signal?.addEventListener('abort', onAbort, { once: true })
+
+  try {
+    const res = await egressFetch(url, { method, headers, signal: ctrl.signal }, { direct })
+    const diag: UpstreamDiag = {
+      ok: res.ok,
+      ...(res.ok ? {} : { kind: 'http_error' as const }),
+      url: safeUrl,
+      status: res.status,
+      statusText: res.statusText,
+      durationMs: Math.round(performance.now() - started),
+      attempt,
+      headers: pickHeaders(res),
+      ...(res.ok ? {} : { message: `Upstream responded ${res.status} ${res.statusText}`.trim() }),
+    }
+    logDiag(tag, diag)
+    onDiag?.(diag)
+    return { res, diag }
+  } catch (e) {
+    const { kind, message } = classifyError(e)
+    const diag: UpstreamDiag = {
+      ok: false,
+      kind,
+      url: safeUrl,
+      status: 0,
+      durationMs: Math.round(performance.now() - started),
+      attempt,
+      message: kind === 'timeout' ? `Upstream timed out after ${timeoutMs} ms` : message,
+    }
+    logDiag(tag, diag)
+    onDiag?.(diag)
+    return { res: null, diag }
+  } finally {
+    clearTimeout(timer)
+    signal?.removeEventListener('abort', onAbort)
+  }
+}
