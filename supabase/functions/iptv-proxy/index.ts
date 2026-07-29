@@ -5,6 +5,16 @@ import { egressFetch, finalUrlOf, hasEgressProxy, isGeoBlocked, GEO_BLOCK_MESSAG
 import { absorbCookies, cookieHeaderFor, isCloudflareChallenge } from '../_shared/iptvCookies.ts'
 import { diagFetchRaw, type UpstreamDiag } from '../_shared/iptvDiag.ts'
 
+/**
+ * Browser playback needs explicit CORS on EVERY response — manifests, segments,
+ * keys and errors alike — otherwise hls.js/mpegts.js abort the fetch.
+ */
+const cors: Record<string, string> = {
+  ...corsHeaders,
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+}
+
 const MOBILE_UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const VLC_UA = 'VLC/3.0.20 LibVLC/3.0.20'
 // Cloudflare bot-management scores a real desktop Chrome UA + client hints much
@@ -111,6 +121,21 @@ async function primeBody(res: Response): Promise<ReadableStream<Uint8Array> | nu
 }
 
 
+/**
+ * Playlist vs segment vs key — logged as separate tags so a timing-out segment
+ * can be told apart from a rejected manifest in the function logs.
+ */
+export function resourceTag(url: string): 'stream-playlist' | 'stream-segment' | 'stream-key' {
+  try {
+    const p = new URL(url).pathname.toLowerCase()
+    if (/\.m3u8?$/.test(p)) return 'stream-playlist'
+    if (/\/key|\.key$/.test(p)) return 'stream-key'
+    return 'stream-segment'
+  } catch {
+    return 'stream-segment'
+  }
+}
+
 async function fetchUpstream(
   url: string,
   headers: Record<string, string>,
@@ -123,7 +148,7 @@ async function fetchUpstream(
   // `direct` is an admin-only diagnostic that bypasses the relay.
   // diagFetchRaw wraps the fetch itself in try/catch, applies the AbortController
   // timeout and logs the redacted URL / status / duration / headers / errorKind.
-  const { res, diag } = await diagFetchRaw('stream', url, {
+  const { res, diag } = await diagFetchRaw(resourceTag(url), url, {
     timeoutMs: CONNECT_TIMEOUT_MS,
     attempt,
     headers,
@@ -131,6 +156,7 @@ async function fetchUpstream(
     direct,
     onDiag,
   })
+
   if (!res) {
     const e = new Error(diag.message ?? 'Upstream request failed') as Error & { diag?: UpstreamDiag }
     e.diag = diag
@@ -233,7 +259,7 @@ async function isAdminRequest(req: Request): Promise<boolean> {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   const reqUrlEarly = new URL(req.url)
   const debugParam = (reqUrlEarly.searchParams.get('debug') ?? '').toLowerCase()
@@ -275,7 +301,7 @@ Deno.serve(async (req) => {
         null,
         2,
       ),
-      { status, headers: { ...corsHeaders, ...debugHeaders(), 'Content-Type': 'application/json' } },
+      { status, headers: { ...cors, ...debugHeaders(), 'Content-Type': 'application/json' } },
     )
 
   const err = (msg: string, status: number, code?: string) =>
@@ -283,7 +309,7 @@ Deno.serve(async (req) => {
       ? debugReport({ error: msg, code }, 200)
       : new Response(JSON.stringify({ error: msg, code, reqId: requestId, upstream: lastDiag }), {
           status,
-          headers: { ...corsHeaders, ...debugHeaders(), 'Content-Type': 'application/json' },
+          headers: { ...cors, ...debugHeaders(), 'Content-Type': 'application/json' },
         })
 
   // Every stream is served from the caller's OWN provider account.
@@ -603,7 +629,7 @@ Deno.serve(async (req) => {
       return new Response(rewritten, {
         status: 200,
         headers: {
-          ...corsHeaders,
+          ...cors,
           ...debugHeaders(),
           'Content-Type': 'application/vnd.apple.mpegurl',
           'Cache-Control': 'no-store',
@@ -634,9 +660,24 @@ Deno.serve(async (req) => {
     }
     if (body === null) return err('Stream connection dropped. Try again.', 502, 'BODY_ERROR')
 
-    const out = new Headers({ ...corsHeaders, ...debugHeaders() })
+    const out = new Headers({ ...cors, ...debugHeaders() })
 
-    out.set('Content-Type', ct || 'video/mp2t')
+    // Providers frequently serve segments as text/plain or octet-stream, which
+    // makes some browsers refuse the buffer — force the real media type.
+    const path = upstream.pathname.toLowerCase()
+    const byExt = /\.ts$/.test(path)
+      ? 'video/mp2t'
+      : /\.m4s$|\.mp4$/.test(path)
+        ? 'video/mp4'
+        : /\.aac$/.test(path)
+          ? 'audio/aac'
+          : /\.key$/.test(path)
+            ? 'application/octet-stream'
+            : ''
+    const upstreamCt = (ct || '').toLowerCase()
+    const ctUsable = upstreamCt.startsWith('video/') || upstreamCt.startsWith('audio/')
+    out.set('Content-Type', byExt || (ctUsable ? ct : 'video/mp2t'))
+
     const len = active.headers.get('content-length')
     if (len) out.set('Content-Length', len)
     const cr = active.headers.get('content-range')
