@@ -64,12 +64,16 @@ export function useIptvChannels(categoryId: string | null, enabled: boolean, lim
   });
 }
 
-export function useIptvSearch(query: string) {
+export function useIptvSearch(query: string, section: 'live' | 'vod' | 'series' = 'live') {
   const q = query.trim();
   return useQuery({
-    queryKey: ['iptv-search', q],
-    queryFn: () => get<{ total: number; channels: IptvChannel[] }>(`iptv-playlist?q=${encodeURIComponent(q)}&limit=90`),
+    queryKey: ['iptv-search', q, section],
+    queryFn: () =>
+      get<{ total: number; channels: IptvChannel[] }>(
+        `iptv-playlist?q=${encodeURIComponent(q)}&kind=${section}&limit=90`,
+      ),
     enabled: q.length >= 2,
     staleTime: 5 * 60 * 1000,
   });
 }
+

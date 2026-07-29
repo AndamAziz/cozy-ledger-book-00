@@ -134,8 +134,11 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
 
   // Movies / Series / Replay items are on-demand containers, not live channels.
   const playbackKind: 'live' | 'vod' = tab === 'direct' ? 'live' : 'vod';
+  const searchSection: 'live' | 'vod' | 'series' =
+    tab === 'movies' ? 'vod' : tab === 'series' ? 'series' : 'live';
   const searching = query.trim().length >= 2;
-  const { data: results, isFetching: searchLoading } = useIptvSearch(query);
+  const { data: results, isFetching: searchLoading } = useIptvSearch(query, searchSection);
+
 
   const usePoster = tab === 'movies' || tab === 'series';
 
