@@ -27,8 +27,8 @@ const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 /** CORS-safe, browser-playable HLS URL for a channel (credentials stay server-side). */
-export function toPlayableUrl(channelId: string): string {
-  return `${FN_BASE}/iptv-proxy?id=${encodeURIComponent(channelId)}&apikey=${ANON}`;
+export function toPlayableUrl(channelId: string, kind: IptvKind = 'live'): string {
+  return `${FN_BASE}/iptv-proxy?id=${encodeURIComponent(channelId)}&kind=${kind}&apikey=${ANON}`;
 }
 
 async function get<T>(path: string): Promise<T> {
