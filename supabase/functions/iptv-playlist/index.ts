@@ -248,11 +248,21 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
     `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
     25000,
   )
-  // Upstream failure: surface it instead of caching an empty Movies/Series grid.
-  if (rows === null) throw new Error('Your IPTV provider did not respond. Please try again.')
+  // Some Xtream panels either reject `category_id` or return an empty payload for
+  // it, while native IPTV apps recover by loading the full section and filtering
+  // locally. Do the same for Live, Movies and Series so one bad lazy endpoint
+  // does not leave the player with empty grids.
+  if (rows === null) {
+    const scanned = await scanCategory(api, kind, rawId)
+    if (scanned.length) {
+      categoryCache.set(key, { at: Date.now(), items: scanned })
+      return scanned
+    }
+    throw new Error('Your IPTV provider did not respond. Please try again.')
+  }
 
   let items = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
-  if (!items.length && kind !== 'live') {
+  if (!items.length) {
     try {
       items = await scanCategory(api, kind, rawId)
     } catch {
