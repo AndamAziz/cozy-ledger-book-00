@@ -153,6 +153,8 @@ Deno.serve(async (req) => {
       'SLOT_LIMIT',
     )
 
+  const geoBlockResponse = () => err(GEO_BLOCK_MESSAGE, isProbe ? 200 : 451, 'GEO_BLOCK')
+
   try {
     // Walk the candidate list once (live HLS → live TS → VOD containers). Every
     // attempt is bounded by CONNECT_TIMEOUT_MS so a dead origin can never leave
@@ -164,7 +166,7 @@ Deno.serve(async (req) => {
         const nextUrl = new URL(u)
         const primaryHeaders = buildUpstreamHeaders(req, nextUrl, plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase)
         const first = await fetchUpstream(u, primaryHeaders, req.signal)
-        if (first.ok || isSlot(first.status)) return first
+        if (first.ok || isSlot(first.status) || isGeoBlocked(first.status)) return first
         await first.body?.cancel()
 
         // Some older panels whitelist VLC/libVLC instead of ExoPlayer. Retry the
@@ -192,6 +194,12 @@ Deno.serve(async (req) => {
         if (isSlot(next.status)) {
           await next.body?.cancel()
           return slotLimitResponse()
+        }
+        // Geo restrictions are account/region-wide too — every other candidate
+        // will fail identically, so stop instead of burning provider sessions.
+        if (isGeoBlocked(next.status)) {
+          await next.body?.cancel()
+          return geoBlockResponse()
         }
         if (res) await res.body?.cancel()
         res = next
