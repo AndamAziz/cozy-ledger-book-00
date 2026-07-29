@@ -111,6 +111,21 @@ async function primeBody(res: Response): Promise<ReadableStream<Uint8Array> | nu
 }
 
 
+/**
+ * Playlist vs segment vs key — logged as separate tags so a timing-out segment
+ * can be told apart from a rejected manifest in the function logs.
+ */
+export function resourceTag(url: string): 'stream-playlist' | 'stream-segment' | 'stream-key' {
+  try {
+    const p = new URL(url).pathname.toLowerCase()
+    if (/\.m3u8?$/.test(p)) return 'stream-playlist'
+    if (/\/key|\.key$/.test(p)) return 'stream-key'
+    return 'stream-segment'
+  } catch {
+    return 'stream-segment'
+  }
+}
+
 async function fetchUpstream(
   url: string,
   headers: Record<string, string>,
@@ -123,7 +138,7 @@ async function fetchUpstream(
   // `direct` is an admin-only diagnostic that bypasses the relay.
   // diagFetchRaw wraps the fetch itself in try/catch, applies the AbortController
   // timeout and logs the redacted URL / status / duration / headers / errorKind.
-  const { res, diag } = await diagFetchRaw('stream', url, {
+  const { res, diag } = await diagFetchRaw(resourceTag(url), url, {
     timeoutMs: CONNECT_TIMEOUT_MS,
     attempt,
     headers,
@@ -131,6 +146,7 @@ async function fetchUpstream(
     direct,
     onDiag,
   })
+
   if (!res) {
     const e = new Error(diag.message ?? 'Upstream request failed') as Error & { diag?: UpstreamDiag }
     e.diag = diag
