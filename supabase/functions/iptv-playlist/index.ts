@@ -1,5 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { getPlaylistUrl, parseXtream } from '../_shared/iptvConfig.ts'
+import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U, type M3uEntry } from '../_shared/iptvConfig.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 
@@ -280,6 +280,112 @@ async function getSeriesInfo(api: string, seriesId: string) {
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * Plain M3U / M3U8 playlists (no Xtream API): everything is derived
+ * from the parsed #EXTINF entries held in the shared memory cache.
+ * ------------------------------------------------------------------ */
+
+/** Stable series id derived from the series title, so it survives re-parses. */
+const seriesIdOf = (key: string) => 'sx' + [...key.toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36)
+
+async function handlePlain(source: string, url: URL) {
+  const { entries } = await getM3U(source)
+
+  const seriesGroups = new Map<string, M3uEntry[]>()
+  for (const e of entries) {
+    if (e.kind === 'series' && e.seriesKey) {
+      const list = seriesGroups.get(e.seriesKey) ?? []
+      list.push(e)
+      seriesGroups.set(e.seriesKey, list)
+    }
+  }
+
+  const seriesId = url.searchParams.get('series')
+  if (seriesId) {
+    const key = [...seriesGroups.keys()].find((k) => seriesIdOf(k) === seriesId)
+    const eps = key ? seriesGroups.get(key)! : null
+    if (!eps) throw new Error('Series not found')
+    const bySeason = new Map<number, EpisodeOut[]>()
+    for (const e of eps) {
+      const season = e.season ?? 1
+      const list = bySeason.get(season) ?? []
+      list.push({
+        id: e.id,
+        season,
+        episode: e.episode ?? list.length + 1,
+        title: e.name,
+        cover: e.logo,
+        ext: (e.url.match(/\.([a-z0-9]{2,4})(?:\?|$)/i)?.[1] ?? 'mp4').toLowerCase(),
+        plot: null,
+        duration: null,
+      })
+      bySeason.set(season, list)
+    }
+    const seasons = [...bySeason.entries()]
+      .map(([season, episodes]) => ({ season, episodes: episodes.sort((a, b) => a.episode - b.episode) }))
+      .sort((a, b) => a.season - b.season)
+    return {
+      id: seriesId,
+      name: key!,
+      cover: eps.find((e) => e.logo)?.logo ?? null,
+      plot: null,
+      seasons,
+    }
+  }
+
+  // Series are collapsed into one browsable card per show.
+  const browsable: { id: string; name: string; logo: string | null; group: string; kind: Kind }[] = []
+  for (const e of entries) {
+    if (e.kind === 'series') continue
+    browsable.push({ id: e.id, name: e.name, logo: e.logo, group: e.group, kind: e.kind })
+  }
+  for (const [key, eps] of seriesGroups) {
+    browsable.push({
+      id: seriesIdOf(key),
+      name: key,
+      logo: eps.find((e) => e.logo)?.logo ?? null,
+      group: eps[0].group,
+      kind: 'series',
+    })
+  }
+
+  const category = url.searchParams.get('category')
+  const q = (url.searchParams.get('q') ?? '').trim().toLowerCase()
+  const limit = Math.min(Number(url.searchParams.get('limit') ?? 60) || 60, 200)
+  const offset = Math.max(Number(url.searchParams.get('offset') ?? 0) || 0, 0)
+
+  const catKey = (kind: Kind, group: string) => `${kind}:${group}`
+
+  if (!category && !q) {
+    const counts = new Map<string, { name: string; kind: Kind; count: number }>()
+    for (const b of browsable) {
+      const id = catKey(b.kind, b.group)
+      const hit = counts.get(id)
+      if (hit) hit.count++
+      else counts.set(id, { name: b.group, kind: b.kind, count: 1 })
+    }
+    return {
+      total: browsable.length,
+      categories: [...counts.entries()].map(([id, c]) => ({ id, name: c.name, kind: c.kind, count: c.count })),
+      updatedAt: new Date().toISOString(),
+    }
+  }
+
+  let list = browsable
+  if (category) list = list.filter((b) => catKey(b.kind, b.group) === category)
+  else {
+    const kindParam = url.searchParams.get('kind')
+    const kind: Kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
+    list = list.filter((b) => b.kind === kind)
+  }
+  if (q) list = list.filter((b) => b.name.toLowerCase().includes(q))
+
+  return {
+    total: list.length,
+    channels: list.slice(offset, offset + limit),
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -299,6 +405,13 @@ Deno.serve(async (req) => {
     if (!source) return json({ error: 'Playlist not configured' }, 500)
 
     const url = new URL(req.url)
+
+    // Public .m3u/.m3u8 links have no Xtream API — parse the playlist directly.
+    if (!isXtreamUrl(source)) {
+      const body = await handlePlain(source, url)
+      return json(body, 200, url.searchParams.get('q') ? 0 : 120)
+    }
+
     const seriesId = url.searchParams.get('series')
     if (seriesId) {
       if (!/^\d+$/.test(seriesId)) return json({ error: 'Invalid series id' }, 400)

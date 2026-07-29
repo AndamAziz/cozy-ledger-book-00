@@ -1,5 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { getPlaylistUrl, parseXtream } from '../_shared/iptvConfig.ts'
+import { getPlaylistUrl, parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
 
 const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 
@@ -36,7 +36,10 @@ Deno.serve(async (req) => {
   if (!source) return err('Playlist not configured', 500)
 
   const reqUrl = new URL(req.url)
-  const { host, protocol, username, password } = creds(source)
+  const plain = !isXtreamUrl(source)
+  const { host, protocol, username, password } = plain
+    ? { host: '', protocol: 'http:', username: '', password: '' }
+    : creds(source)
   const streamId = reqUrl.searchParams.get('id')
   const kindParam = reqUrl.searchParams.get('kind')
   const kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
@@ -46,7 +49,27 @@ Deno.serve(async (req) => {
   // Candidate upstreams: live HLS first, then Xtream VOD/series containers.
   let candidates: string[] = []
   let upstream: URL
-  if (streamId) {
+  // Plain M3U playlists: the id maps to a parsed #EXTINF entry URL.
+  let plainHosts: Set<string> | null = null
+  if (plain) {
+    try {
+      plainHosts = (await getM3U(source)).hosts
+    } catch (e) {
+      return err(e instanceof Error ? e.message : String(e), 502)
+    }
+  }
+
+  if (plain && streamId) {
+    const { byId } = await getM3U(source)
+    const entry = byId.get(streamId)
+    if (!entry) return err('Unknown stream id', 404)
+    try {
+      upstream = new URL(entry.url)
+    } catch {
+      return err('Invalid stream url', 502)
+    }
+    candidates = [entry.url]
+  } else if (streamId) {
     if (!/^\d+$/.test(streamId)) return err('Invalid id', 400)
     const cred = `${protocol}//${host}`
     const live = `${cred}/live/${username}/${password}/${streamId}.m3u8`
@@ -65,7 +88,8 @@ Deno.serve(async (req) => {
     }
     // Only the provider host or its HLS edge nodes may be proxied.
     const isEdgeSegment = /^\/hls\//.test(upstream.pathname)
-    if (upstream.host !== host && !isEdgeSegment) return err('Host not allowed', 403)
+    const allowed = plain ? !!plainHosts?.has(upstream.host) : upstream.host === host
+    if (!allowed && !isEdgeSegment) return err('Host not allowed', 403)
     candidates = [upstream.toString()]
   } else {
     return err('Missing id or u parameter', 400)
@@ -77,7 +101,8 @@ Deno.serve(async (req) => {
   const proxied = (u: string) =>
     `${base}?u=${encodeURIComponent(u)}${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}`
 
-  const headers: Record<string, string> = { 'User-Agent': UA, Referer: `${protocol}//${host}/` }
+  const headers: Record<string, string> = { 'User-Agent': UA }
+  if (!plain) headers['Referer'] = `${protocol}//${host}/`
   const range = req.headers.get('range')
   if (range) headers['Range'] = range
 
