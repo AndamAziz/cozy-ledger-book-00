@@ -705,6 +705,45 @@ Deno.serve(async (req) => {
     )
 
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : String(e) }, 502)
+    const { kind, message } = classifyError(e)
+    const upstream = lastUpstreamDiag
+    console.error(
+      `[iptv-playlist] ${JSON.stringify({
+        reqId,
+        failed: true,
+        errorKind: upstream?.kind ?? kind,
+        message: e instanceof Error ? e.message : String(e),
+        upstream: upstream
+          ? {
+              url: upstream.url,
+              status: upstream.status,
+              statusText: upstream.statusText,
+              durationMs: upstream.durationMs,
+              attempt: upstream.attempt,
+              headers: upstream.headers,
+              bodySnippet: upstream.bodySnippet,
+              message: upstream.message,
+            }
+          : null,
+      })}`,
+    )
+    return json(
+      {
+        error: e instanceof Error ? e.message : String(e),
+        reqId,
+        errorKind: upstream?.kind ?? kind,
+        upstream: upstream
+          ? {
+              url: upstream.url,
+              status: upstream.status,
+              statusText: upstream.statusText,
+              durationMs: upstream.durationMs,
+              message: upstream.message,
+            }
+          : null,
+      },
+      upstream?.kind === 'timeout' ? 504 : 502,
+    )
   }
 })
+
