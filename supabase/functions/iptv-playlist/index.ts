@@ -288,17 +288,76 @@ async function getSeriesInfo(api: string, seriesId: string) {
 /** Stable series id derived from the series title, so it survives re-parses. */
 const seriesIdOf = (key: string) => 'sx' + [...key.toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36)
 
-async function handlePlain(source: string, url: URL) {
-  const { entries } = await getM3U(source)
+/** Cheap synchronous hash used to fold the query string into the ETag. */
+const digest = (s: string) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 17).toString(36)
 
+interface Browsable {
+  id: string
+  name: string
+  logo: string | null
+  group: string
+  kind: Kind
+}
+interface PlainDerived {
+  version: string
+  seriesGroups: Map<string, M3uEntry[]>
+  browsable: Browsable[]
+  categories: { id: string; name: string; kind: Kind; count: number }[]
+}
+
+// Derived views are rebuilt only when the parsed playlist version changes, so
+// paging/searching a 280k-entry playlist never re-walks it from scratch.
+let plainDerived: PlainDerived | null = null
+
+const catKey = (kind: Kind, group: string) => `${kind}:${group}`
+
+function derive(version: string, entries: M3uEntry[]): PlainDerived {
   const seriesGroups = new Map<string, M3uEntry[]>()
+  const browsable: Browsable[] = []
+
   for (const e of entries) {
     if (e.kind === 'series' && e.seriesKey) {
       const list = seriesGroups.get(e.seriesKey) ?? []
       list.push(e)
       seriesGroups.set(e.seriesKey, list)
+      continue
     }
+    if (e.kind === 'series') continue
+    browsable.push({ id: e.id, name: e.name, logo: e.logo, group: e.group, kind: e.kind })
   }
+  for (const [key, eps] of seriesGroups) {
+    browsable.push({
+      id: seriesIdOf(key),
+      name: key,
+      logo: eps.find((e) => e.logo)?.logo ?? null,
+      group: eps[0].group,
+      kind: 'series',
+    })
+  }
+
+  const counts = new Map<string, { name: string; kind: Kind; count: number }>()
+  for (const b of browsable) {
+    const id = catKey(b.kind, b.group)
+    const hit = counts.get(id)
+    if (hit) hit.count++
+    else counts.set(id, { name: b.group, kind: b.kind, count: 1 })
+  }
+
+  return {
+    version,
+    seriesGroups,
+    browsable,
+    categories: [...counts.entries()].map(([id, c]) => ({ id, name: c.name, kind: c.kind, count: c.count })),
+  }
+}
+
+async function handlePlain(source: string, url: URL): Promise<{ body: unknown; version: string }> {
+  const snap = await getM3U(source)
+  if (!plainDerived || plainDerived.version !== snap.version) {
+    plainDerived = derive(snap.version, snap.entries)
+  }
+  const { seriesGroups, browsable, categories } = plainDerived
+  const version = snap.version
 
   const seriesId = url.searchParams.get('series')
   if (seriesId) {
@@ -325,28 +384,15 @@ async function handlePlain(source: string, url: URL) {
       .map(([season, episodes]) => ({ season, episodes: episodes.sort((a, b) => a.episode - b.episode) }))
       .sort((a, b) => a.season - b.season)
     return {
-      id: seriesId,
-      name: key!,
-      cover: eps.find((e) => e.logo)?.logo ?? null,
-      plot: null,
-      seasons,
+      version,
+      body: {
+        id: seriesId,
+        name: key!,
+        cover: eps.find((e) => e.logo)?.logo ?? null,
+        plot: null,
+        seasons,
+      },
     }
-  }
-
-  // Series are collapsed into one browsable card per show.
-  const browsable: { id: string; name: string; logo: string | null; group: string; kind: Kind }[] = []
-  for (const e of entries) {
-    if (e.kind === 'series') continue
-    browsable.push({ id: e.id, name: e.name, logo: e.logo, group: e.group, kind: e.kind })
-  }
-  for (const [key, eps] of seriesGroups) {
-    browsable.push({
-      id: seriesIdOf(key),
-      name: key,
-      logo: eps.find((e) => e.logo)?.logo ?? null,
-      group: eps[0].group,
-      kind: 'series',
-    })
   }
 
   const category = url.searchParams.get('category')
@@ -354,20 +400,14 @@ async function handlePlain(source: string, url: URL) {
   const limit = Math.min(Number(url.searchParams.get('limit') ?? 60) || 60, 200)
   const offset = Math.max(Number(url.searchParams.get('offset') ?? 0) || 0, 0)
 
-  const catKey = (kind: Kind, group: string) => `${kind}:${group}`
-
   if (!category && !q) {
-    const counts = new Map<string, { name: string; kind: Kind; count: number }>()
-    for (const b of browsable) {
-      const id = catKey(b.kind, b.group)
-      const hit = counts.get(id)
-      if (hit) hit.count++
-      else counts.set(id, { name: b.group, kind: b.kind, count: 1 })
-    }
     return {
-      total: browsable.length,
-      categories: [...counts.entries()].map(([id, c]) => ({ id, name: c.name, kind: c.kind, count: c.count })),
-      updatedAt: new Date().toISOString(),
+      version,
+      body: {
+        total: browsable.length,
+        categories,
+        updatedAt: new Date(snap.at).toISOString(),
+      },
     }
   }
 
@@ -381,21 +421,26 @@ async function handlePlain(source: string, url: URL) {
   if (q) list = list.filter((b) => b.name.toLowerCase().includes(q))
 
   return {
-    total: list.length,
-    channels: list.slice(offset, offset + limit),
+    version,
+    body: {
+      total: list.length,
+      channels: list.slice(offset, offset + limit),
+    },
   }
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  const json = (body: unknown, status = 200, cacheSeconds = 0) =>
+  const json = (body: unknown, status = 200, cacheSeconds = 0, etag?: string) =>
     new Response(JSON.stringify(body), {
       status,
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
         'Cache-Control': cacheSeconds ? `public, max-age=${cacheSeconds}` : 'no-store',
+        ...(etag ? { ETag: etag } : {}),
       },
     })
 
@@ -408,9 +453,18 @@ Deno.serve(async (req) => {
 
     // Public .m3u/.m3u8 links have no Xtream API — parse the playlist directly.
     if (!isXtreamUrl(source)) {
-      const body = await handlePlain(source, url)
-      return json(body, 200, url.searchParams.get('q') ? 0 : 120)
+      const { body, version } = await handlePlain(source, url)
+      // Version + query identify the payload: unchanged playlists answer 304.
+      const etag = `W/"${version}-${digest(url.search)}"`
+      if (req.headers.get('if-none-match') === etag) {
+        return new Response(null, {
+          status: 304,
+          headers: { ...corsHeaders, ETag: etag, 'Cache-Control': 'public, max-age=60' },
+        })
+      }
+      return json(body, 200, url.searchParams.get('q') ? 0 : 120, etag)
     }
+
 
     const seriesId = url.searchParams.get('series')
     if (seriesId) {
