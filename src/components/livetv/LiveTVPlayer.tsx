@@ -85,10 +85,12 @@ export function LiveTVPlayer({
 
   const accent = accentFor(channel.name);
 
-  // A new channel starts with a clean retry budget.
+  // A new channel starts with a clean retry budget and a fresh overlay lock.
   useEffect(() => {
     slotRetriesRef.current = 0;
     autoRetriesRef.current = 0;
+    playedOnceRef.current = false;
+    setPlayedOnce(false);
   }, [channel.id]);
 
   useEffect(() => {
