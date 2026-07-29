@@ -382,7 +382,7 @@ Deno.serve(async (req) => {
       return err(`This channel is offline right now (${res.status}). Try another channel.`, 502, 'OFFLINE')
     }
 
-    const out = new Headers(corsHeaders)
+    const out = new Headers({ ...corsHeaders, ...debugHeaders() })
 
     out.set('Content-Type', ct || 'video/mp2t')
     const len = res.headers.get('content-length')
