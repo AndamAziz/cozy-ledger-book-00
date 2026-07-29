@@ -89,12 +89,14 @@ async function fetchJson<T>(url: string, timeoutMs = 15000): Promise<T | null> {
  * materialising the whole payload. Returns early when `onRow` returns false.
  */
 async function scanArray(url: string, onRow: (row: Record<string, unknown>) => boolean) {
-  const res = await fetch(url, { headers: { 'User-Agent': UA } })
+  const deadline = Date.now() + 20_000
+  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20_000) })
   if (!res.ok || !res.body) return
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
   let done = false
+
 
   const handle = (fragment: string) => {
     const t = fragment.trim().replace(/^\[/, '').replace(/\]$/, '').trim()
