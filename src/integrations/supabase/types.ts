@@ -740,6 +740,48 @@ export type Database = {
           },
         ]
       }
+      iptv_sources: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          last_test: Json | null
+          name: string
+          playlist_enc: string | null
+          playlist_masked: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          last_test?: Json | null
+          name: string
+          playlist_enc?: string | null
+          playlist_masked?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          last_test?: Json | null
+          name?: string
+          playlist_enc?: string | null
+          playlist_masked?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       livetv_access: {
         Row: {
           activated_at: string | null

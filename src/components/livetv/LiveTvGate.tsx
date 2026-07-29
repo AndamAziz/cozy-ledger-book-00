@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, Lock, Server, ShieldCheck, Timer, ArrowLeft } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { StripeEmbeddedCheckout } from '@/components/StripeEmbeddedCheckout';
 import { useLiveTvAccess, formatCountdown } from '@/hooks/useLiveTvAccess';
 import { LiveTvStatusPanel } from '@/components/livetv/LiveTvStatusPanel';
+import { IptvSourceManager } from '@/components/livetv/IptvSourceManager';
 
 /** One-time £40 Live TV activation price (see payments catalogue). */
 const ACTIVATION_PRICE_ID = 'ctp_livetv_activation_4000gbp';
@@ -24,131 +23,12 @@ function BackHome() {
   );
 }
 
-/** Free, public iptv-org playlists users can add with one tap. */
-const FREE_SERVERS = [
-  { label: '🇮🇶 Iraq', url: 'https://iptv-org.github.io/iptv/countries/iq.m3u' },
-  { label: '🇬🇧 UK', url: 'https://iptv-org.github.io/iptv/countries/uk.m3u' },
-  { label: '🇹🇷 Turkey', url: 'https://iptv-org.github.io/iptv/countries/tr.m3u' },
-  { label: '🇺🇸 USA', url: 'https://iptv-org.github.io/iptv/countries/us.m3u' },
-  { label: 'Kurdish', url: 'https://iptv-org.github.io/iptv/languages/kur.m3u' },
-  { label: 'Sports', url: 'https://iptv-org.github.io/iptv/categories/sports.m3u' },
-  { label: 'News', url: 'https://iptv-org.github.io/iptv/categories/news.m3u' },
-  { label: 'All', url: 'https://iptv-org.github.io/iptv/index.m3u' },
-];
-
-/** Personal provider link editor — shown until the user saves their own URL. */
-function ServerForm({
-  maskedUrl,
-  onSaved,
-}: {
-  maskedUrl: string;
-  onSaved: () => void;
-}) {
-  const [url, setUrl] = useState('');
-  const [testing, setTesting] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const test = async () => {
-    setTesting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('iptv-test', { body: { url } });
-      if (error) throw error;
-      if (data?.ok) toast.success(data.message ?? 'Your IPTV server is reachable');
-      else toast.error(data?.message ?? 'Could not reach that IPTV server');
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Test failed');
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  const save = async () => {
-    const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
-      toast.error('Enter a full http(s) playlist or Xtream URL');
-      return;
-    }
-    setSaving(true);
-    // Stored through the vault function so the link is encrypted at rest and
-    // never written to a table the browser can read.
-    const { data, error } = await supabase.functions.invoke('iptv-server', {
-      body: { action: 'save', playlistUrl: trimmed },
-    });
-    setSaving(false);
-    if (error || data?.error) {
-      toast.error(data?.error ?? error?.message ?? 'Could not save your server');
-      return;
-    }
-    setUrl('');
-    toast.success('Your IPTV server was saved securely');
-    onSaved();
-  };
-
-  return (
-    <div className="w-full max-w-md space-y-3 text-left">
-      <input
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        dir="ltr"
-        placeholder="http://your-provider.tv/get.php?username=…&password=…"
-        className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.05] px-3 text-sm text-white placeholder:text-white/25 outline-none transition focus:border-[#ff2d6f]/60"
-      />
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={test}
-          disabled={testing || !url.trim()}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] py-2.5 text-xs font-bold text-white/75 transition hover:border-white/25 hover:text-white disabled:opacity-40"
-        >
-          {testing && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Test
-        </button>
-        <button
-          type="button"
-          onClick={save}
-          disabled={saving || !url.trim()}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-extrabold text-white transition disabled:opacity-40"
-          style={{ background: 'linear-gradient(90deg,#ff2d6f,#b026ff)' }}
-        >
-          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Save server
-        </button>
-      </div>
-      <div className="space-y-1.5">
-        <p className="text-[11px] font-extrabold uppercase tracking-wide text-white/45">
-          Free public servers
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {FREE_SERVERS.map((s) => (
-            <button
-              key={s.url}
-              type="button"
-              onClick={() => setUrl(s.url)}
-              className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-[11px] font-bold text-white/70 transition hover:border-[#ff2d6f]/50 hover:text-white"
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      {maskedUrl && (
-        <p dir="ltr" className="truncate text-[11px] font-bold text-white/45">
-          Saved: {maskedUrl}
-        </p>
-      )}
-
-      <p className="text-[11px] leading-relaxed text-white/40">
-        Your link is encrypted before it is stored, is never shown again in full, and is never
-        shared with other users.
-      </p>
-    </div>
-  );
-}
-
 /**
  * Gates the Live TV experience: sign-in → personal server → trial / paid access.
  * Renders `children` only when the account is fully entitled and configured.
  */
 export function LiveTvGate({ children }: { children: React.ReactNode }) {
-  const { user, access, server, hasServer, isLoading, refresh } = useLiveTvAccess();
+  const { user, access, hasServer, isLoading, refresh } = useLiveTvAccess();
   const [payOpen, setPayOpen] = useState(false);
   const [editServer, setEditServer] = useState(false);
 
@@ -225,20 +105,18 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Entitled but no personal provider link yet.
+  // Entitled but no personal provider link yet, or managing sources.
   if (!hasServer || editServer) {
     return (
-      <div className={SHELL}>
+      <div className={`${SHELL} py-10`}>
         <Server className="h-8 w-8 text-[#ff2d6f]" />
-        <h1 className="text-lg font-extrabold">Add your IPTV server</h1>
+        <h1 className="text-lg font-extrabold">Your IPTV sources</h1>
         <p className="max-w-sm text-xs leading-relaxed text-white/45">
-          Paste your personal M3U playlist or Xtream Codes URL. Live TV will stream only from your
-          own subscription.
+          Add one or more playlists (M3U or Xtream). Test a link before saving and switch between
+          sources any time — each one loads only its own channels.
         </p>
-        <ServerForm
-          maskedUrl={server?.masked ?? ''}
-          onSaved={() => {
-            setEditServer(false);
+        <IptvSourceManager
+          onChanged={() => {
             void refresh();
           }}
         />
@@ -248,13 +126,14 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
             onClick={() => setEditServer(false)}
             className="text-[11px] font-bold text-white/40 underline underline-offset-4"
           >
-            Cancel
+            Done — back to Live TV
           </button>
         )}
         <BackHome />
       </div>
     );
   }
+
 
   return (
     <>
@@ -270,7 +149,7 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
           onClick={() => setEditServer(true)}
           className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-bold text-white/60 transition hover:border-white/25 hover:text-white"
         >
-          <Server className="h-3 w-3" /> My server
+          <Server className="h-3 w-3" /> My sources
         </button>
       </div>
       {children}
