@@ -240,22 +240,42 @@ Deno.serve(async (req) => {
     // the player hanging on "Connecting to stream…", and failed responses are
     // drained so their upstream socket (and viewing slot) is released at once.
     const isSlot = (status: number) => status === 458 || status === 429 || status === 407
+    const record = (u: string, ua: 'mobile' | 'vlc', started: number, r: Response | null, error?: string) => {
+      const a: Attempt = {
+        url: redact(u),
+        ext: (new URL(u).pathname.match(/\.([a-z0-9]+)$/i)?.[1] ?? '').toLowerCase(),
+        ua,
+        status: r?.status ?? null,
+        contentType: r?.headers.get('content-type') ?? null,
+        ms: Date.now() - started,
+        ...(error ? { error } : {}),
+      }
+      attempts.push(a)
+      return a
+    }
     const tryFetch = async (u: string) => {
       try {
         const nextUrl = new URL(u)
         const primaryHeaders = buildUpstreamHeaders(req, nextUrl, plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase)
+        let t0 = Date.now()
         const first = await fetchUpstream(u, primaryHeaders, req.signal)
+        record(u, 'mobile', t0, first)
         if (first.ok || isSlot(first.status) || isGeoBlocked(first.status)) return first
         await first.body?.cancel()
 
         // Some older panels whitelist VLC/libVLC instead of ExoPlayer. Retry the
         // handshake once with VLC headers before marking the channel offline.
         const fallbackHeaders = { ...primaryHeaders, 'User-Agent': VLC_UA }
-        return await fetchUpstream(u, fallbackHeaders, req.signal)
-      } catch {
+        t0 = Date.now()
+        const second = await fetchUpstream(u, fallbackHeaders, req.signal)
+        record(u, 'vlc', t0, second)
+        return second
+      } catch (e) {
+        record(u, 'mobile', Date.now(), null, e instanceof Error ? e.message : String(e))
         return null
       }
     }
+
     const list = streamId ? candidates : [upstream.toString()]
     // A wrong container guess (e.g. .mp4 for an .mkv-only title) answers 200 with
     // an empty text/plain body, so a 200 alone is not proof of a real stream.
