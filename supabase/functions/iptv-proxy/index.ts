@@ -77,7 +77,12 @@ async function primeBody(res: Response): Promise<ReadableStream<Uint8Array> | nu
 }
 
 
-async function fetchUpstream(url: string, headers: Record<string, string>, clientSignal?: AbortSignal) {
+async function fetchUpstream(
+  url: string,
+  headers: Record<string, string>,
+  clientSignal?: AbortSignal,
+  direct = false,
+) {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), CONNECT_TIMEOUT_MS)
   // Propagate client disconnects upstream: with single-slot provider accounts a
@@ -86,7 +91,8 @@ async function fetchUpstream(url: string, headers: Record<string, string>, clien
   clientSignal?.addEventListener('abort', onAbort, { once: true })
   try {
     // All provider traffic exits through our own VPS relay (allowed country).
-    return await egressFetch(url, { headers, signal: ctrl.signal })
+    // `direct` is an admin-only diagnostic that bypasses the relay.
+    return await egressFetch(url, { headers, signal: ctrl.signal }, { direct })
   } finally {
     // Cleared once headers are in, so large 4K bodies are never cut short.
     clearTimeout(timer)
