@@ -32,19 +32,19 @@ export async function probeSlotLimit(url: string): Promise<boolean> {
     // Ask for a single byte and abort straight after, so the probe never holds
     // a second viewing slot open against the provider.
     const res = await fetch(url, { headers: { Accept: 'application/json', Range: 'bytes=0-0' } });
+    const ct = res.headers.get('content-type') ?? '';
     if (res.ok) {
+      if (ct.includes('json')) return isSlotLimitPayload(await res.json());
       await res.body?.cancel();
       return false;
     }
     if (isSlotLimitStatus(res.status)) {
-      const ct = res.headers.get('content-type') ?? '';
       if (!ct.includes('json')) {
         await res.body?.cancel();
         return true;
       }
       return isSlotLimitPayload(await res.json());
     }
-    const ct = res.headers.get('content-type') ?? '';
     if (!ct.includes('json')) {
       await res.body?.cancel();
       return false;

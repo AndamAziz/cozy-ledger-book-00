@@ -121,6 +121,15 @@ Deno.serve(async (req) => {
   if (!plain) headers['Referer'] = `${protocol}//${host}/`
   const range = req.headers.get('range')
   if (range) headers['Range'] = range
+  const wantsJson = (req.headers.get('accept') ?? '').toLowerCase().includes('application/json')
+  const isProbe = wantsJson && range === 'bytes=0-0'
+
+  const slotLimitResponse = () =>
+    err(
+      'All viewing slots are in use right now. Try again in a moment.',
+      isProbe ? 200 : SLOT_LIMIT_STATUS,
+      'SLOT_LIMIT',
+    )
 
   try {
     // Walk the candidate list once (live HLS → live TS → VOD containers). Every
@@ -152,11 +161,7 @@ Deno.serve(async (req) => {
         // provider sessions, so surface it straight away.
         if (isSlot(next.status)) {
           await next.body?.cancel()
-          return err(
-            'All viewing slots are in use right now. Try again in a moment.',
-            SLOT_LIMIT_STATUS,
-            'SLOT_LIMIT',
-          )
+          return slotLimitResponse()
         }
         if (res) await res.body?.cancel()
         res = next
@@ -178,7 +183,7 @@ Deno.serve(async (req) => {
         const msg = slot
           ? 'All viewing slots are in use right now. Try again in a moment.'
           : `This channel is offline right now (${res.status}). Try another channel.`
-        return err(msg, slot ? SLOT_LIMIT_STATUS : 502, slot ? 'SLOT_LIMIT' : 'OFFLINE')
+        return slot ? slotLimitResponse() : err(msg, 502, 'OFFLINE')
       }
 
       const finalUrl = new URL(res.url || upstream.toString())
@@ -208,13 +213,8 @@ Deno.serve(async (req) => {
     if (!res.ok) {
       await res.body?.cancel()
       const slot = res.status === 458 || res.status === 429 || res.status === 407
-      return err(
-        slot
-          ? 'All viewing slots are in use right now. Try again in a moment.'
-          : `This channel is offline right now (${res.status}). Try another channel.`,
-        slot ? SLOT_LIMIT_STATUS : 502,
-        slot ? 'SLOT_LIMIT' : 'OFFLINE',
-      )
+      if (slot) return slotLimitResponse()
+      return err(`This channel is offline right now (${res.status}). Try another channel.`, 502, 'OFFLINE')
     }
 
     const out = new Headers(corsHeaders)
