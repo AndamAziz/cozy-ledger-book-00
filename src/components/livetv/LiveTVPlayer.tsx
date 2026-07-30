@@ -12,6 +12,8 @@ import {
   autoRetryDelay,
   STALL_TIMEOUT_MS,
 } from '@/lib/iptvSlotRetry';
+import { isUnsupportedHevc } from '@/lib/codecSupport';
+
 
 interface QualityLevel {
   /** hls.js level index, or -1 for auto */
@@ -70,7 +72,9 @@ export function LiveTVPlayer({
     [],
   );
 
-  const [errorKind, setErrorKind] = useState<'offline' | 'busy' | 'geo'>('offline');
+  const [errorKind, setErrorKind] = useState<'offline' | 'busy' | 'geo' | 'codec'>('offline');
+  const [badCodec, setBadCodec] = useState<string | null>(null);
+
   const [retryIn, setRetryIn] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [levels, setLevels] = useState<QualityLevel[]>([]);
@@ -111,6 +115,7 @@ export function LiveTVPlayer({
     setSelectedLevel(-1);
     setAutoLabel(null);
     setQualityOpen(false);
+    setBadCodec(null);
 
     let hls: Hls | null = null;
     let usedNative = false;
@@ -124,11 +129,49 @@ export function LiveTVPlayer({
     let cancelled = false;
     let retryTimer = 0;
     let countdownTimer = 0;
+    // Set once an HEVC stream is confirmed undecodable here: every engine,
+    // watchdog and retry path becomes a no-op, so no spinner can come back.
+    let codecBlocked = false;
+
+    /**
+     * Codec gate. Called with whatever codec hint an engine surfaces (PMT/PAT
+     * media info from mpegts.js, level codecs from hls.js, buffer errors). Only
+     * HEVC that MediaSource refuses stops playback — H.264 falls straight
+     * through and keeps the existing engine chain.
+     */
+    const reportCodec = (codec?: string | null): boolean => {
+      if (codecBlocked) return true;
+      if (!isUnsupportedHevc(codec)) return false;
+      codecBlocked = true;
+      console.warn(`[LiveTVPlayer] unsupported codec in this browser: ${codec} (HEVC/H.265)`);
+      try {
+        hls?.destroy();
+      } catch { /* already gone */ }
+      hls = null;
+      hlsRef.current = null;
+      try {
+        mpegtsRef.current?.unload?.();
+        mpegtsRef.current?.detachMediaElement?.();
+        mpegtsRef.current?.destroy();
+      } catch { /* already gone */ }
+      mpegtsRef.current = null;
+      video.removeAttribute('src');
+      video.load();
+      window.clearTimeout(retryTimer);
+      window.clearInterval(countdownTimer);
+      setRetryIn(null);
+      setBadCodec(codec ?? 'HEVC');
+      setErrorKind('codec');
+      setStatusRaw('error');
+      return true;
+    };
+
 
     // A failure may just be the provider's session limit: refresh a few times,
     // then let the parent move on to the first available episode.
     const handleFailure = async () => {
-      if (cancelled) return;
+      if (cancelled || codecBlocked) return;
+
       const failure = await probeStreamFailure(src);
       if (cancelled) return;
       // A geo restriction is provider-wide: retrying or switching channel cannot help.
@@ -245,6 +288,7 @@ export function LiveTVPlayer({
     // Xtream VOD and live links are frequently .ts containers that <video> and
     // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
     const playMpegts = async () => {
+      if (codecBlocked) return;
       if (usedMpegts) {
         const next = mpegtsFallback;
         mpegtsFallback = null;
@@ -276,8 +320,18 @@ export function LiveTVPlayer({
           { enableWorker: true, liveBufferLatencyChasing: !isVod, lazyLoad: false },
         );
         mpegtsRef.current = player;
-        player.on(mpegts.Events.ERROR, (type: string, detail: string) => {
-          console.error(`[mpegts.js] ${type} · ${detail}`);
+        // PAT/PMT parsing result: the earliest reliable codec signal we get.
+        player.on(mpegts.Events.MEDIA_INFO, (info: Record<string, unknown>) => {
+          const codec = [info?.videoCodec, info?.mimeType, info?.metadata && (info.metadata as any)?.videoCodec]
+            .filter(Boolean)
+            .join(' ');
+          console.info(`[mpegts.js] media info · codec: ${codec || 'unknown'}`);
+          reportCodec(codec);
+        });
+        player.on(mpegts.Events.ERROR, (type: string, detail: string, info?: unknown) => {
+          console.error(`[mpegts.js] ${type} · ${detail}`, info ?? '');
+          // addSourceBuffer / decode failures often carry the codec string.
+          if (reportCodec(`${detail} ${JSON.stringify(info ?? '')}`)) return;
           const next = mpegtsFallback;
           mpegtsFallback = null;
           if (next) next();
@@ -296,7 +350,8 @@ export function LiveTVPlayer({
 
     // VOD items can be progressive MP4/MKV rather than HLS — fall back to native playback.
     const playNative = () => {
-      if (usedNative) return;
+      if (usedNative || codecBlocked) return;
+
       // Only Safari (and iOS WebViews) can decode an .m3u8 from a plain
       // <video src>. Everywhere else a native attempt would hang forever on
       // "Connecting to stream…", so hand HLS back to hls.js first. The proxy
@@ -320,6 +375,7 @@ export function LiveTVPlayer({
     };
 
     const startHls = () => {
+      if (codecBlocked) return;
       hls = new Hls({
         lowLatencyMode: !isVod,
         enableWorker: true,
@@ -358,6 +414,13 @@ export function LiveTVPlayer({
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // Codec advertised by the manifest — checked before hls.js ever calls
+        // addSourceBuffer, so an HEVC-only rendition never spins the player.
+        const codecs = (hls?.levels ?? [])
+          .map((l) => [l.videoCodec, (l as { codecSet?: string }).codecSet, l.attrs?.CODECS].filter(Boolean).join(','))
+          .join(',');
+        console.info(`[hls.js] manifest codecs: ${codecs || 'unknown'}`);
+        if (reportCodec(codecs)) return;
         const parsed = (hls?.levels ?? []).map((l, i) => ({
           index: i,
           label: labelForLevel(l.height, l.bitrate),
@@ -372,6 +435,7 @@ export function LiveTVPlayer({
         setLevels(unique.length > 1 ? unique : []);
         play();
       });
+
       hls.on(Hls.Events.LEVEL_SWITCHED, (_e, data) => {
         const lvl = hls?.levels?.[data.level];
         setAutoLabel(lvl ? labelForLevel(lvl.height, lvl.bitrate) : null);
@@ -381,6 +445,11 @@ export function LiveTVPlayer({
         const log = `[hls.js] ${data.fatal ? 'FATAL' : 'non-fatal'} ${data.type} · ${data.details}`;
         if (data.fatal) console.error(log, data);
         else console.warn(log);
+        // BUFFER_ADD_CODEC_ERROR / BUFFER_INCOMPATIBLE_CODECS_ERROR carry the
+        // rejected mime type — the HEVC signature on Chrome/Edge/Firefox.
+        const codecHint = `${(data as { mimeType?: string }).mimeType ?? ''} ${(data as unknown as { err?: { message?: string } }).err?.message ?? ''} ${data.reason ?? ''}`;
+        if (reportCodec(codecHint)) return;
+
         // Non-fatal: self-heal stalls/gaps instead of surfacing an error.
         if (!data.fatal) {
           const d = data.details;
@@ -460,7 +529,7 @@ export function LiveTVPlayer({
     // IPTV panels that require mobile-app headers, then move to the next
     // engine instead of spinning on "Connecting to stream…" forever.
     const connectWatchdog = window.setTimeout(() => {
-      if (cancelled || video.readyState >= 3) return;
+      if (cancelled || codecBlocked || video.readyState >= 3) return;
       if (!usedMpegts && (tsFirst || usedNative)) void playMpegts();
       else if (!usedNative) playNative();
       else void handleFailure();
@@ -471,7 +540,7 @@ export function LiveTVPlayer({
     let lastTime = 0;
     let stalledFor = 0;
     const stallWatchdog = window.setInterval(() => {
-      if (cancelled || video.paused || video.readyState < 2) return;
+      if (cancelled || codecBlocked || video.paused || video.readyState < 2) return;
       if (video.currentTime > lastTime + 0.05) {
         lastTime = video.currentTime;
         stalledFor = 0;
@@ -495,7 +564,7 @@ export function LiveTVPlayer({
     let microTime = 0;
     let microFrozen = 0;
     const microWatchdog = window.setInterval(() => {
-      if (cancelled || video.paused || video.readyState < 2) return;
+      if (cancelled || codecBlocked || video.paused || video.readyState < 2) return;
       if (video.currentTime > microTime + 0.01) {
         microTime = video.currentTime;
         microFrozen = 0;
@@ -527,10 +596,13 @@ export function LiveTVPlayer({
     };
     const onWaiting = () => {
       // Ignore spurious `waiting` while the clock is still advancing.
-      if (video.readyState >= 3) return;
+      if (codecBlocked || video.readyState >= 3) return;
       setStatus((s) => (s === 'error' ? s : 'loading'));
     };
     const onError = () => {
+      if (codecBlocked) return;
+      // A decode failure on the element itself is the last HEVC signature.
+      if (reportCodec(video.error?.message)) return;
       if (!usedNative) playNative();
       else void playMpegts();
     };
@@ -543,7 +615,7 @@ export function LiveTVPlayer({
 
     // Final safety net: if frames are decoding but no event surfaced, clear it.
     const overlayGuard = window.setInterval(() => {
-      if (cancelled) return;
+      if (cancelled || codecBlocked) return;
       if (video.readyState >= 2 && video.currentTime > 0 && !video.paused) onPlaying();
     }, 500);
 
@@ -711,27 +783,51 @@ export function LiveTVPlayer({
                 <AlertTriangle className="h-6 w-6" style={{ color: '#ff2d6f' }} />
               </span>
               <p className="text-sm font-extrabold tracking-tight text-white">
-                {errorKind === 'geo'
-                  ? 'Streaming blocked by the provider'
-                  : 'This channel is not responding'}
+                {errorKind === 'codec'
+                  ? 'This channel is not supported in your browser'
+                  : errorKind === 'geo'
+                    ? 'Streaming blocked by the provider'
+                    : 'This channel is not responding'}
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                {errorKind === 'geo'
-                  ? GEO_BLOCK_MESSAGE
-                  : 'The source may be unavailable right now. Retry, or pick another channel.'}
+                {errorKind === 'codec'
+                  ? 'It is broadcast in the HEVC (H.265) codec, which Chrome, Edge and Firefox cannot decode. Try Safari, or watch it in our mobile app.'
+                  : errorKind === 'geo'
+                    ? GEO_BLOCK_MESSAGE
+                    : 'The source may be unavailable right now. Retry, or pick another channel.'}
               </p>
+              {errorKind === 'codec' && badCodec && (
+                <p className="mt-2 inline-block rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 font-mono text-[10px] text-white/40">
+                  {badCodec.trim().slice(0, 48)}
+                </p>
+              )}
               <div className="mt-4 flex justify-center gap-2">
-                <button
-                  onClick={() => {
-                    slotRetriesRef.current = 0;
-                    autoRetriesRef.current = 0;
-                    setAttempt((a) => a + 1);
-                  }}
-                  className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
-                  style={{ background: '#ff2d6f' }}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" /> Retry
-                </button>
+                {errorKind === 'codec' ? (
+                  <a
+                    href="/livetv"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onClose();
+                    }}
+                    className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
+                    style={{ background: '#ff2d6f' }}
+                  >
+                    Pick another channel
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => {
+                      slotRetriesRef.current = 0;
+                      autoRetriesRef.current = 0;
+                      setAttempt((a) => a + 1);
+                    }}
+                    className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
+                    style={{ background: '#ff2d6f' }}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> Retry
+                  </button>
+                )}
+
                 <button
                   onClick={onClose}
                   className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 transition hover:border-white/40 hover:text-white active:scale-95"
