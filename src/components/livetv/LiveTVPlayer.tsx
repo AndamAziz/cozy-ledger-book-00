@@ -629,27 +629,29 @@ export function LiveTVPlayer({
 
       if (progressiveOnly) {
         // MP4 / MKV VOD: only the media element can decode these.
-        playNative();
+        playNative(`progressive container ${container}`);
         return;
       }
       if (isHlsUrl || container === 'hls') {
         // Explicit HLS: Safari plays it natively, everyone else uses hls.js.
-        if (nativeHls && !Hls.isSupported()) playNative();
+        // Locked to HLS — mpegts.js is excluded for the rest of this session.
+        hlsOnly = true;
+        if (nativeHls && !Hls.isSupported()) playNative('HLS, native only (no MSE)');
         else if (Hls.isSupported()) startHls();
-        else playNative();
+        else playNative('HLS, hls.js unsupported');
         return;
       }
       if (container === 'mpegts' || container === 'flv' || tsFirst || rawLiveFirst) {
         // Raw transport streams: mpegts.js first, native as the safety net.
         mpegtsFallback = () => {
           if (Hls.isSupported() && !tsFirst) startHls();
-          else playNative();
+          else playNative('mpegts.js failed, no hls.js');
         };
         void playMpegts();
         return;
       }
       if (Hls.isSupported()) startHls();
-      else playNative();
+      else playNative('unknown container, no hls.js');
     };
 
     // Live channels are started immediately: sniffing them would burn a
@@ -671,8 +673,15 @@ export function LiveTVPlayer({
     // engine instead of spinning on "Connecting to stream…" forever.
     const connectWatchdog = window.setTimeout(() => {
       if (cancelled || codecBlocked || video.readyState >= 3) return;
-      if (!usedMpegts && (tsFirst || usedNative)) void playMpegts();
-      else if (!usedNative) playNative();
+      // Segments are still arriving: the pipe is healthy, the media element is
+      // just slow to report readyState. Never swap engines in that case.
+      if (hlsActive()) {
+        console.info('[LiveTVPlayer] connect watchdog ignored — hls.js fragments still loading');
+        return;
+      }
+      console.warn('[LiveTVPlayer] connect watchdog fired after 18s without readyState ≥ 3');
+      if (!usedMpegts && !hlsOnly && (tsFirst || usedNative)) void playMpegts();
+      else if (!usedNative) playNative('connect watchdog: no frames after 18s');
       else void handleFailure();
     }, 18000);
 
