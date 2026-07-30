@@ -345,7 +345,7 @@ export function LiveTVPlayer({
       const next = mpegtsFallback;
       mpegtsFallback = null;
       if (next) next();
-      else if (!usedNative) playNative();
+      else if (!usedNative) playNative('mpegts.js chain exhausted');
       else void handleFailure();
     };
 
