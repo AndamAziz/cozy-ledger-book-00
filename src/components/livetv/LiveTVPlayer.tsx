@@ -717,11 +717,12 @@ export function LiveTVPlayer({
         console.info('[LiveTVPlayer] connect watchdog ignored — hls.js fragments still loading');
         return;
       }
-      console.warn('[LiveTVPlayer] connect watchdog fired after 18s without readyState ≥ 3');
+      console.warn(`[LiveTVPlayer] connect watchdog fired after ${CONNECT_TIMEOUT_MS}ms without readyState ≥ 3`);
       if (!usedMpegts && !hlsOnly && (tsFirst || usedNative)) void playMpegts();
-      else if (!usedNative) playNative('connect watchdog: no frames after 18s');
+      else if (!usedNative) playNative(`connect watchdog: no frames after ${CONNECT_TIMEOUT_MS}ms`);
       else void handleFailure();
-    }, 18000);
+    }, CONNECT_TIMEOUT_MS);
+
 
     // Stall watchdog: playback that freezes mid-stream (frozen currentTime)
     // escalates through the engine chain instead of buffering forever.
