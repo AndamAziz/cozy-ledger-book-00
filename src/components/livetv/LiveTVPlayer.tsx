@@ -94,6 +94,9 @@ export function LiveTVPlayer({
   const [slotLimited, setSlotLimited] = useState(false);
   const slotRetriesRef = useRef(0);
   const autoRetriesRef = useRef(0);
+  // Survives effect re-runs (retries, attempt bumps): once a channel is proven
+  // to be undecodable HEVC here, no engine may start again for that channel.
+  const codecBlockRef = useRef<{ id: string; codec: string } | null>(null);
   const onSlotLimitRef = useRef(onSlotLimit);
   onSlotLimitRef.current = onSlotLimit;
 
@@ -105,6 +108,9 @@ export function LiveTVPlayer({
     autoRetriesRef.current = 0;
     playedOnceRef.current = false;
     setPlayedOnce(false);
+    if (codecBlockRef.current && codecBlockRef.current.id !== channel.id) {
+      codecBlockRef.current = null;
+    }
   }, [channel.id]);
 
   useEffect(() => {
@@ -118,6 +124,18 @@ export function LiveTVPlayer({
     const extLower = (channel.ext ?? '').toLowerCase();
     const isHlsUrl = extLower === 'm3u8' || extLower === 'm3u' || /\.m3u8?(\?|$)/i.test(src);
 
+    // Already proven undecodable for this channel — show the honest error card
+    // immediately instead of restarting the engine chain and spinning forever.
+    if (codecBlockRef.current?.id === channel.id) {
+      video.removeAttribute('src');
+      video.load();
+      setBadCodec(codecBlockRef.current.codec);
+      setErrorKind('codec');
+      setStatusRaw('error');
+      setRetryIn(null);
+      return;
+    }
+
     setStatus('loading');
     setSlotLimited(false);
     setRetryIn(null);
@@ -127,6 +145,8 @@ export function LiveTVPlayer({
     setQualityOpen(false);
     setBadCodec(null);
     setBadContainer(null);
+
+
 
     let hls: Hls | null = null;
     let usedNative = false;
@@ -190,6 +210,7 @@ export function LiveTVPlayer({
       if (codecBlocked) return true;
       if (!isUnsupportedHevc(codec)) return false;
       codecBlocked = true;
+      codecBlockRef.current = { id: channel.id, codec: codec ?? 'HEVC' };
       console.warn(`[LiveTVPlayer] unsupported codec in this browser: ${codec} (HEVC/H.265)`);
       try {
         hls?.destroy();
