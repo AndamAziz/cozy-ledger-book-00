@@ -735,14 +735,11 @@ export function LiveTVPlayer({
       video.removeEventListener('timeupdate', onProgressSignal);
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('error', onError);
-      hls?.destroy();
-      hlsRef.current = null;
       try {
-        mpegtsRef.current?.unload?.();
-        mpegtsRef.current?.detachMediaElement?.();
-        mpegtsRef.current?.destroy();
-      } catch { /* engine already torn down */ }
-      mpegtsRef.current = null;
+        hls?.destroy();
+      } catch { /* already gone */ }
+      hlsRef.current = null;
+      destroyMpegts();
       // Releasing the element's source tears the proxied request down, which
       // frees the provider's viewing slot immediately.
       video.removeAttribute('src');
