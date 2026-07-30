@@ -783,27 +783,51 @@ export function LiveTVPlayer({
                 <AlertTriangle className="h-6 w-6" style={{ color: '#ff2d6f' }} />
               </span>
               <p className="text-sm font-extrabold tracking-tight text-white">
-                {errorKind === 'geo'
-                  ? 'Streaming blocked by the provider'
-                  : 'This channel is not responding'}
+                {errorKind === 'codec'
+                  ? 'This channel is not supported in your browser'
+                  : errorKind === 'geo'
+                    ? 'Streaming blocked by the provider'
+                    : 'This channel is not responding'}
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                {errorKind === 'geo'
-                  ? GEO_BLOCK_MESSAGE
-                  : 'The source may be unavailable right now. Retry, or pick another channel.'}
+                {errorKind === 'codec'
+                  ? 'It is broadcast in the HEVC (H.265) codec, which Chrome, Edge and Firefox cannot decode. Try Safari, or watch it in our mobile app.'
+                  : errorKind === 'geo'
+                    ? GEO_BLOCK_MESSAGE
+                    : 'The source may be unavailable right now. Retry, or pick another channel.'}
               </p>
+              {errorKind === 'codec' && badCodec && (
+                <p className="mt-2 inline-block rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 font-mono text-[10px] text-white/40">
+                  {badCodec.trim().slice(0, 48)}
+                </p>
+              )}
               <div className="mt-4 flex justify-center gap-2">
-                <button
-                  onClick={() => {
-                    slotRetriesRef.current = 0;
-                    autoRetriesRef.current = 0;
-                    setAttempt((a) => a + 1);
-                  }}
-                  className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
-                  style={{ background: '#ff2d6f' }}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" /> Retry
-                </button>
+                {errorKind === 'codec' ? (
+                  <a
+                    href="/livetv"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onClose();
+                    }}
+                    className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
+                    style={{ background: '#ff2d6f' }}
+                  >
+                    Pick another channel
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => {
+                      slotRetriesRef.current = 0;
+                      autoRetriesRef.current = 0;
+                      setAttempt((a) => a + 1);
+                    }}
+                    className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
+                    style={{ background: '#ff2d6f' }}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> Retry
+                  </button>
+                )}
+
                 <button
                   onClick={onClose}
                   className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 transition hover:border-white/40 hover:text-white active:scale-95"
