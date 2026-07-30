@@ -699,10 +699,11 @@ export function LiveTVPlayer({
       stalledFor += 2000;
       if (stalledFor < STALL_TIMEOUT_MS) return;
       stalledFor = 0;
+      console.warn(`[LiveTVPlayer] stall watchdog: currentTime frozen for ${STALL_TIMEOUT_MS}ms`);
       setStatus((s) => (s === 'error' ? s : 'loading'));
       if (hls) recoverMedia();
-      else if (!usedMpegts) void playMpegts();
-      else if (!usedNative) playNative();
+      else if (!usedMpegts && !hlsOnly) void playMpegts();
+      else if (!usedNative) playNative('stall watchdog: playback frozen');
       else void handleFailure();
     }, 2000);
 
