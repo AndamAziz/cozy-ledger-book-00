@@ -39,3 +39,8 @@ project_id = "jpatltcqhpclxenzvboa"
     verify_jwt = false
   [functions.check-price-alerts]
     verify_jwt = false
+  [functions.iptv-m3u-playlist]
+    verify_jwt = false
+  [functions.iptv-m3u-proxy]
+    verify_jwt = false
+
