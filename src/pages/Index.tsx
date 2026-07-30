@@ -193,6 +193,18 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
               <span className="font-bold text-foreground text-xs sm:text-sm truncate">Live TV 📺</span>
             </button>
 
+            {/* IPTV (M3U playlists) */}
+            <button
+              onClick={() => navigate('/iptv')}
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 hover:from-primary/30 hover:via-primary/20 hover:border-primary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-95 active:from-primary/30 active:via-primary/20 transition-all duration-200 touch-manipulation flex items-center justify-center gap-3 sm:gap-4 min-h-[66px] sm:min-h-[72px]"
+            >
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0 group-hover:shadow-lg group-hover:shadow-primary/40 transition-all duration-200">
+                <Tv className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
+              </div>
+              <span className="font-bold text-foreground text-xs sm:text-sm truncate">IPTV M3U 📡</span>
+            </button>
+
+
             {/* Live TV real-time status: trial countdown, activation, next step */}
             <div className="col-span-full">
               <LiveTvStatusPanel />
