@@ -444,8 +444,15 @@ export function LiveTVPlayer({
     };
 
     // VOD items can be progressive MP4/MKV rather than HLS — fall back to native playback.
-    const playNative = () => {
+    const playNative = (reason = 'unspecified') => {
       if (usedNative || codecBlocked) return;
+      // A healthy hls.js session (fragments still arriving) is never abandoned.
+      if (hlsActive()) {
+        console.info(
+          `[LiveTVPlayer] keeping hls.js — fragments still loading (native requested for: ${reason})`,
+        );
+        return;
+      }
 
       // Only Safari (and iOS WebViews) can decode an .m3u8 from a plain
       // <video src>. Everywhere else a native attempt would hang forever on
@@ -453,11 +460,12 @@ export function LiveTVPlayer({
       // URL hides the real container, so this applies to any non-progressive
       // stream, live or VOD.
       if (!nativeHls && !progressive && !usedHls && Hls.isSupported()) {
-        console.info('[LiveTVPlayer] no native HLS support → switching to hls.js');
+        console.info(`[LiveTVPlayer] no native HLS support → switching to hls.js (reason: ${reason})`);
         startHls();
         return;
       }
       usedNative = true;
+      logFallback('native <video src>', reason);
       console.info('[LiveTVPlayer] engine: native <video src>');
       hls?.destroy();
       hls = null;
