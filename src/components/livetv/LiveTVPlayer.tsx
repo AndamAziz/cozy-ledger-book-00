@@ -696,6 +696,12 @@ export function LiveTVPlayer({
       if (codecBlocked) return;
       // A decode failure on the element itself is the last HEVC signature.
       if (reportCodec(video.error?.message)) return;
+      // MP4/MKV that the media element refuses: no other engine can help.
+      if (progressiveOnly && usedNative) {
+        console.warn(`[LiveTVPlayer] native playback rejected container ${container}`);
+        blockContainer(container);
+        return;
+      }
       if (!usedNative) playNative();
       else void playMpegts();
     };
