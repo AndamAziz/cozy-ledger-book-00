@@ -596,10 +596,13 @@ export function LiveTVPlayer({
     };
     const onWaiting = () => {
       // Ignore spurious `waiting` while the clock is still advancing.
-      if (video.readyState >= 3) return;
+      if (codecBlocked || video.readyState >= 3) return;
       setStatus((s) => (s === 'error' ? s : 'loading'));
     };
     const onError = () => {
+      if (codecBlocked) return;
+      // A decode failure on the element itself is the last HEVC signature.
+      if (reportCodec(video.error?.message)) return;
       if (!usedNative) playNative();
       else void playMpegts();
     };
