@@ -124,6 +124,7 @@ export function LiveTVPlayer({
     setAutoLabel(null);
     setQualityOpen(false);
     setBadCodec(null);
+    setBadContainer(null);
 
     let hls: Hls | null = null;
     let usedNative = false;
@@ -140,6 +141,20 @@ export function LiveTVPlayer({
     // Set once an HEVC stream is confirmed undecodable here: every engine,
     // watchdog and retry path becomes a no-op, so no spinner can come back.
     let codecBlocked = false;
+    // Detected container. Progressive files (MP4/MKV) must never reach
+    // mpegts.js, which only demuxes MPEG-TS/FLV and crashes on anything else.
+    let container: Container = containerFromExt(channel.ext);
+    let progressiveOnly = isProgressiveContainer(container);
+
+    /** Surface a container we cannot decode at all, instead of spinning. */
+    const blockContainer = (label: string) => {
+      window.clearTimeout(retryTimer);
+      window.clearInterval(countdownTimer);
+      setRetryIn(null);
+      setBadContainer(label);
+      setErrorKind('container');
+      setStatusRaw('error');
+    };
 
     /**
      * Codec gate. Called with whatever codec hint an engine surfaces (PMT/PAT
