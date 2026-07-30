@@ -478,7 +478,7 @@ Deno.serve(async (req) => {
           u,
           buildUpstreamHeaders(req, nextUrl, referer, ua),
           req.signal,
-          directEgress,
+          useDirect,
           attemptNo,
           (d) => {
             lastDiag = d
