@@ -447,7 +447,7 @@ export function LiveTVPlayer({
         else console.warn(log);
         // BUFFER_ADD_CODEC_ERROR / BUFFER_INCOMPATIBLE_CODECS_ERROR carry the
         // rejected mime type — the HEVC signature on Chrome/Edge/Firefox.
-        const codecHint = `${(data as { mimeType?: string }).mimeType ?? ''} ${(data as { err?: Error }).err?.message ?? ''} ${data.reason ?? ''}`;
+        const codecHint = `${(data as { mimeType?: string }).mimeType ?? ''} ${(data as unknown as { err?: { message?: string } }).err?.message ?? ''} ${data.reason ?? ''}`;
         if (reportCodec(codecHint)) return;
 
         // Non-fatal: self-heal stalls/gaps instead of surfacing an error.
