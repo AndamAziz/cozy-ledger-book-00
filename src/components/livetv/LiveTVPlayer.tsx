@@ -878,20 +878,24 @@ export function LiveTVPlayer({
               <p className="text-sm font-extrabold tracking-tight text-white">
                 {errorKind === 'codec'
                   ? 'This channel is not supported in your browser'
-                  : errorKind === 'geo'
-                    ? 'Streaming blocked by the provider'
-                    : 'This channel is not responding'}
+                  : errorKind === 'container'
+                    ? 'This file format cannot be played here'
+                    : errorKind === 'geo'
+                      ? 'Streaming blocked by the provider'
+                      : 'This channel is not responding'}
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
                 {errorKind === 'codec'
                   ? 'It is broadcast in the HEVC (H.265) codec, which Chrome, Edge and Firefox cannot decode. Try Safari, or watch it in our mobile app.'
-                  : errorKind === 'geo'
-                    ? GEO_BLOCK_MESSAGE
-                    : 'The source may be unavailable right now. Retry, or pick another channel.'}
+                  : errorKind === 'container'
+                    ? 'The provider delivers this title in a container your browser cannot open. Try another episode or quality, or watch it in our mobile app.'
+                    : errorKind === 'geo'
+                      ? GEO_BLOCK_MESSAGE
+                      : 'The source may be unavailable right now. Retry, or pick another channel.'}
               </p>
-              {errorKind === 'codec' && badCodec && (
+              {((errorKind === 'codec' && badCodec) || (errorKind === 'container' && badContainer)) && (
                 <p className="mt-2 inline-block rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 font-mono text-[10px] text-white/40">
-                  {badCodec.trim().slice(0, 48)}
+                  {(errorKind === 'codec' ? badCodec! : badContainer!).trim().slice(0, 48)}
                 </p>
               )}
               <div className="mt-4 flex justify-center gap-2">
