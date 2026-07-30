@@ -13,6 +13,8 @@ import CryptoTracker from "./pages/CryptoTracker";
 import Movies from "./pages/Movies";
 import LiveTV from "./pages/LiveTV";
 import { LiveTvGate } from "./components/livetv/LiveTvGate";
+import M3uTV from "./pages/M3uTV";
+
 import PrayerTimes from "./pages/PrayerTimes";
 import Quran from "./pages/Quran";
 import GestureQA from "./pages/GestureQA";
@@ -48,7 +50,9 @@ const App = () => (
                 <Route path="/live-tv/movies" element={<LiveTvGate><LiveTV tab="movies" /></LiveTvGate>} />
                 <Route path="/live-tv/series" element={<LiveTvGate><LiveTV tab="series" /></LiveTvGate>} />
                 <Route path="/live-tv/replay" element={<LiveTvGate><LiveTV tab="replay" /></LiveTvGate>} />
+                <Route path="/iptv" element={<M3uTV />} />
                 <Route path="/prayer" element={<PrayerTimes />} />
+
                 <Route path="/quran" element={<Quran />} />
                 <Route path="/gesture-qa" element={<GestureQA />} />
                 <Route path="/bots" element={<Bots />} />
