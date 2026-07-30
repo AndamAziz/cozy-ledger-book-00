@@ -445,6 +445,11 @@ export function LiveTVPlayer({
         const log = `[hls.js] ${data.fatal ? 'FATAL' : 'non-fatal'} ${data.type} · ${data.details}`;
         if (data.fatal) console.error(log, data);
         else console.warn(log);
+        // BUFFER_ADD_CODEC_ERROR / BUFFER_INCOMPATIBLE_CODECS_ERROR carry the
+        // rejected mime type — the HEVC signature on Chrome/Edge/Firefox.
+        const codecHint = `${(data as { mimeType?: string }).mimeType ?? ''} ${(data as { err?: Error }).err?.message ?? ''} ${data.reason ?? ''}`;
+        if (reportCodec(codecHint)) return;
+
         // Non-fatal: self-heal stalls/gaps instead of surfacing an error.
         if (!data.fatal) {
           const d = data.details;
