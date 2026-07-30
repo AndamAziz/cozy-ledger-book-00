@@ -354,12 +354,24 @@ export function LiveTVPlayer({
     // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
     const playMpegts = async () => {
       if (codecBlocked) return;
-      // Hard gate: mpegts.js only handles MPEG-TS/FLV. Progressive MP4/MKV VOD
-      // files make it throw "Non MPEG-TS/FLV, Unsupported media type!" and then
-      // crash on its own torn-down state, so they never get here.
+      // Hard gate #1: an HLS stream is never a raw transport stream. Keep the
+      // hls.js session alive (or go native) instead of invoking a demuxer that
+      // is guaranteed to fail with "Non MPEG-TS/FLV".
+      if (hlsOnly) {
+        console.info('[LiveTVPlayer] skipping mpegts.js — container is HLS (mutually exclusive)');
+        if (hls) {
+          hls.startLoad();
+          return;
+        }
+        if (!usedNative) playNative('hls.js gone on an HLS stream');
+        else void handleFailure();
+        return;
+      }
+      // Hard gate #2: mpegts.js only handles MPEG-TS/FLV. Progressive MP4/MKV
+      // VOD files make it throw and crash on its own torn-down state.
       if (progressiveOnly) {
         console.info(`[LiveTVPlayer] skipping mpegts.js — container is ${container}`);
-        if (!usedNative) playNative();
+        if (!usedNative) playNative(`progressive container ${container}`);
         else void handleFailure();
         return;
       }
