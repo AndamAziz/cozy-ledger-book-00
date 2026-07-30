@@ -580,9 +580,21 @@ Deno.serve(async (req) => {
     const isPlaylist = ct.includes('mpegurl') || /\.m3u8?$/i.test(upstream.pathname)
     const chosenUrl = upstream.toString()
     // A pooled edge→relay connection can be dead on arrival; the failure only
-    // shows when the body is read. Re-open the same upstream a couple of times
-    // before telling the player the channel is down.
+    // shows when the body is read. Re-open the same upstream a bounded number of
+    // times — with backoff, and with the relay bypassed for third-party CDN
+    // hosts, since the relay hop is what drops these bodies — before telling the
+    // player the channel is down.
     const BODY_RETRIES = 2
+    const BODY_BACKOFF_MS = [400, 1200]
+    const thirdParty = isThirdPartyHost(upstream.host)
+    // Retry #1 keeps the relay (transient pooled-socket drop); retry #2 goes
+    // straight to the CDN when that host does not need the geo relay.
+    const retryDirect = (i: number) => thirdParty && i >= 1
+    const reopen = async (i: number) => {
+      await new Promise((r) => setTimeout(r, BODY_BACKOFF_MS[i] ?? 1200))
+      if (req.signal.aborted) return null
+      return await tryFetch(chosenUrl, { direct: retryDirect(i) })
+    }
 
     if (isPlaylist) {
       let text: string | null = null
@@ -593,13 +605,14 @@ Deno.serve(async (req) => {
           break
         } catch (_e) {
           if (i === BODY_RETRIES) break
-          const again = await tryFetch(chosenUrl)
+          const again = await reopen(i)
           if (!again) break
           current = again
         }
       }
       active = current
       if (text === null) return err('Stream connection dropped. Try again.', 502, 'BODY_ERROR')
+
 
       if (!active.ok) {
         const slot = active.status === 458 || active.status === 429 || active.status === 407
