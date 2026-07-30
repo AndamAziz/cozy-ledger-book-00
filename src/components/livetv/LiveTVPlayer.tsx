@@ -11,6 +11,8 @@ import {
   AUTO_MAX_RETRIES,
   autoRetryDelay,
   STALL_TIMEOUT_MS,
+  CONNECT_TIMEOUT_MS,
+
 } from '@/lib/iptvSlotRetry';
 import { isUnsupportedHevc } from '@/lib/codecSupport';
 import {
