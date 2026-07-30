@@ -589,17 +589,17 @@ export function LiveTVPlayer({
           // Live channels have no progressive fallback, so a failed manifest is
           // reported straight away instead of stalling on a dead <video> src.
           if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
-            if (isVod && !usedNative) playNative();
+            if (isVod && !usedNative) playNative(`hls.js fatal ${data.details}`);
             else void playMpegts();
           } else if (networkRetries < 5) {
             networkRetries += 1;
             window.setTimeout(() => hls?.startLoad(), 1000 * networkRetries);
-          } else if (isVod && !usedNative) playNative();
+          } else if (isVod && !usedNative) playNative(`hls.js fatal ${data.details} after 5 retries`);
           else void playMpegts();
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
 
           recoverMedia();
-        } else if (!usedNative) playNative();
+        } else if (!usedNative) playNative(`hls.js fatal ${data.type} · ${data.details}`);
         else void playMpegts();
       });
     };
