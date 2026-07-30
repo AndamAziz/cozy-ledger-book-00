@@ -154,7 +154,13 @@ export function LiveTVPlayer({
     // Timestamp of the last successfully loaded hls.js fragment — proof the
     // session is healthy, so no watchdog should abandon it for another engine.
     let lastFragAt = 0;
-    const hlsActive = () => !!hls && Date.now() - lastFragAt < 12000;
+    // Any sign of hls.js network progress (manifest, level, fragment start).
+    // Slow IPTV proxies can take >18s for the first fragment to *finish*, so
+    // "still loading" must count as alive or the player abandons a good stream.
+    let lastHlsActivityAt = 0;
+    const hlsActive = () =>
+      !!hls && (Date.now() - lastFragAt < 12000 || Date.now() - lastHlsActivityAt < 25000);
+
 
     /** Single place where every engine switch is logged with its trigger. */
     const logFallback = (to: string, reason: string) => {
