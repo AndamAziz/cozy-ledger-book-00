@@ -414,6 +414,13 @@ export function LiveTVPlayer({
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // Codec advertised by the manifest — checked before hls.js ever calls
+        // addSourceBuffer, so an HEVC-only rendition never spins the player.
+        const codecs = (hls?.levels ?? [])
+          .map((l) => [l.videoCodec, (l as { codecSet?: string }).codecSet, l.attrs?.CODECS].filter(Boolean).join(','))
+          .join(',');
+        console.info(`[hls.js] manifest codecs: ${codecs || 'unknown'}`);
+        if (reportCodec(codecs)) return;
         const parsed = (hls?.levels ?? []).map((l, i) => ({
           index: i,
           label: labelForLevel(l.height, l.bitrate),
@@ -428,6 +435,7 @@ export function LiveTVPlayer({
         setLevels(unique.length > 1 ? unique : []);
         play();
       });
+
       hls.on(Hls.Events.LEVEL_SWITCHED, (_e, data) => {
         const lvl = hls?.levels?.[data.level];
         setAutoLabel(lvl ? labelForLevel(lvl.height, lvl.bitrate) : null);
