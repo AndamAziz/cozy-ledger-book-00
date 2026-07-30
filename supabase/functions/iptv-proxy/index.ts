@@ -462,7 +462,7 @@ Deno.serve(async (req) => {
     // broadcaster CDNs that a 24/7 channel's playlist points at) are ordinary
     // public CDNs: they are not geo-blocked, so when the relay hop misbehaves we
     // may retry them straight from the edge.
-    const isThirdPartyHost = (h: string) => !!host && h !== host
+    const isThirdPartyHost = (h: string) => (plain ? !plainHosts?.has(h) : !!host && h !== host)
     const tryFetch = async (u: string, opts: { direct?: boolean } = {}) => {
       const nextUrl = new URL(u)
       const referer = plain ? `${nextUrl.protocol}//${nextUrl.host}/` : refererBase
