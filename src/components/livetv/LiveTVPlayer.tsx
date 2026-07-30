@@ -147,6 +147,20 @@ export function LiveTVPlayer({
     let progressiveOnly = isProgressiveContainer(container);
     // Progressive (non-segmented) payload: native <video> is the only engine.
     let progressive = progressiveOnly;
+    // True once the stream is confirmed to be HLS. HLS and MPEG-TS/FLV are
+    // mutually exclusive: mpegts.js must never be handed an .m3u8 playlist,
+    // and its "Non MPEG-TS/FLV" complaint must never raise a container error.
+    let hlsOnly = false;
+    // Timestamp of the last successfully loaded hls.js fragment — proof the
+    // session is healthy, so no watchdog should abandon it for another engine.
+    let lastFragAt = 0;
+    const hlsActive = () => !!hls && Date.now() - lastFragAt < 12000;
+
+    /** Single place where every engine switch is logged with its trigger. */
+    const logFallback = (to: string, reason: string) => {
+      const from = hls ? 'hls.js' : mpegtsRef.current ? 'mpegts.js' : usedNative ? 'native' : 'none';
+      console.warn(`[LiveTVPlayer] engine fallback ${from} → ${to} · reason: ${reason}`);
+    };
 
     /** Surface a container we cannot decode at all, instead of spinning. */
     const blockContainer = (label: string) => {
