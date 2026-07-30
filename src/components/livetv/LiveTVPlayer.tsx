@@ -569,26 +569,50 @@ export function LiveTVPlayer({
     // desktop/Android to avoid one-slot HLS segment storms. If no explicit HLS
     // extension is known, start with mpegts.js and only fall back to HLS/native.
     const rawLiveFirst = !isVod && extHint !== 'm3u8' && extHint !== 'm3u';
-    const progressive = ['mp4', 'm4v', 'mov', 'webm'].includes(extHint);
 
-    if (isHlsUrl) {
-      // Explicit HLS: Safari plays it natively, everyone else uses hls.js.
-      if (nativeHls && !Hls.isSupported()) playNative();
-      else if (Hls.isSupported()) startHls();
-      else playNative();
-    } else if (tsFirst || rawLiveFirst) {
-      // Raw transport streams: mpegts.js first, native as the safety net.
-      mpegtsFallback = () => {
-        if (Hls.isSupported() && !tsFirst) startHls();
+    /** Start the engine chain once the container is known. */
+    const startChain = () => {
+      if (cancelled || codecBlocked) return;
+      progressiveOnly = isProgressiveContainer(container);
+      progressive = progressiveOnly || ['mp4', 'm4v', 'mov', 'webm'].includes(extHint);
+      console.info(`[LiveTVPlayer] container: ${container} (ext: ${extHint || 'none'})`);
+
+      if (progressiveOnly) {
+        // MP4 / MKV VOD: only the media element can decode these.
+        playNative();
+        return;
+      }
+      if (isHlsUrl || container === 'hls') {
+        // Explicit HLS: Safari plays it natively, everyone else uses hls.js.
+        if (nativeHls && !Hls.isSupported()) playNative();
+        else if (Hls.isSupported()) startHls();
         else playNative();
-      };
-      void playMpegts();
-    } else if (progressive) {
-      playNative();
-    } else if (Hls.isSupported()) {
-      startHls();
+        return;
+      }
+      if (container === 'mpegts' || container === 'flv' || tsFirst || rawLiveFirst) {
+        // Raw transport streams: mpegts.js first, native as the safety net.
+        mpegtsFallback = () => {
+          if (Hls.isSupported() && !tsFirst) startHls();
+          else playNative();
+        };
+        void playMpegts();
+        return;
+      }
+      if (Hls.isSupported()) startHls();
+      else playNative();
+    };
+
+    // Live channels are started immediately: sniffing them would burn a
+    // provider viewing slot. VOD / series files are cheap to range-probe, and
+    // that is exactly where the container is unknown (mp4, mkv, avi…).
+    if (isVod && container === 'unknown') {
+      void probeContainer(src, channel.ext).then((detected) => {
+        if (cancelled) return;
+        container = detected;
+        startChain();
+      });
     } else {
-      playNative();
+      startChain();
     }
 
 
