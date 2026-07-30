@@ -170,7 +170,8 @@ export function LiveTVPlayer({
     // A failure may just be the provider's session limit: refresh a few times,
     // then let the parent move on to the first available episode.
     const handleFailure = async () => {
-      if (cancelled) return;
+      if (cancelled || codecBlocked) return;
+
       const failure = await probeStreamFailure(src);
       if (cancelled) return;
       // A geo restriction is provider-wide: retrying or switching channel cannot help.
