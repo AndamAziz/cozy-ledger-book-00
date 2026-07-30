@@ -529,7 +529,7 @@ export function LiveTVPlayer({
     // IPTV panels that require mobile-app headers, then move to the next
     // engine instead of spinning on "Connecting to stream…" forever.
     const connectWatchdog = window.setTimeout(() => {
-      if (cancelled || video.readyState >= 3) return;
+      if (cancelled || codecBlocked || video.readyState >= 3) return;
       if (!usedMpegts && (tsFirst || usedNative)) void playMpegts();
       else if (!usedNative) playNative();
       else void handleFailure();
@@ -540,7 +540,7 @@ export function LiveTVPlayer({
     let lastTime = 0;
     let stalledFor = 0;
     const stallWatchdog = window.setInterval(() => {
-      if (cancelled || video.paused || video.readyState < 2) return;
+      if (cancelled || codecBlocked || video.paused || video.readyState < 2) return;
       if (video.currentTime > lastTime + 0.05) {
         lastTime = video.currentTime;
         stalledFor = 0;
