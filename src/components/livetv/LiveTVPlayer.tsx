@@ -307,16 +307,48 @@ export function LiveTVPlayer({
     };
 
 
+    /** Tear a mpegts.js player down without ever throwing (its internals may
+     * already be half-destroyed when an "unsupported media type" fires). */
+    const destroyMpegts = () => {
+      const player = mpegtsRef.current;
+      mpegtsRef.current = null;
+      if (!player) return;
+      try {
+        player.unload?.();
+      } catch { /* already gone */ }
+      try {
+        player.detachMediaElement?.();
+      } catch { /* already gone */ }
+      try {
+        player.destroy();
+      } catch { /* already gone */ }
+    };
+
+    /** Move on from mpegts.js to whatever comes next in the chain. */
+    const afterMpegts = () => {
+      const next = mpegtsFallback;
+      mpegtsFallback = null;
+      if (next) next();
+      else if (!usedNative) playNative();
+      else void handleFailure();
+    };
+
     // Last engine in the chain: MPEG-TS / raw transport-stream demuxing in MSE.
     // Xtream VOD and live links are frequently .ts containers that <video> and
     // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
     const playMpegts = async () => {
       if (codecBlocked) return;
-      if (usedMpegts) {
-        const next = mpegtsFallback;
-        mpegtsFallback = null;
-        if (next) next();
+      // Hard gate: mpegts.js only handles MPEG-TS/FLV. Progressive MP4/MKV VOD
+      // files make it throw "Non MPEG-TS/FLV, Unsupported media type!" and then
+      // crash on its own torn-down state, so they never get here.
+      if (progressiveOnly) {
+        console.info(`[LiveTVPlayer] skipping mpegts.js — container is ${container}`);
+        if (!usedNative) playNative();
         else void handleFailure();
+        return;
+      }
+      if (usedMpegts) {
+        afterMpegts();
         return;
       }
       usedMpegts = true;
@@ -325,14 +357,13 @@ export function LiveTVPlayer({
         const mpegts: any = mod.default ?? mod;
         if (cancelled || !mpegts.isSupported()) {
           console.warn('[LiveTVPlayer] mpegts.js unsupported in this browser');
-          const next = mpegtsFallback;
-          mpegtsFallback = null;
-          if (next) next();
-          else void handleFailure();
+          afterMpegts();
           return;
         }
         console.info('[LiveTVPlayer] engine: mpegts.js (MSE)');
-        hls?.destroy();
+        try {
+          hls?.destroy();
+        } catch { /* already gone */ }
         hls = null;
         hlsRef.current = null;
         setLevels([]);
@@ -353,21 +384,34 @@ export function LiveTVPlayer({
         });
         player.on(mpegts.Events.ERROR, (type: string, detail: string, info?: unknown) => {
           console.error(`[mpegts.js] ${type} · ${detail}`, info ?? '');
+          const blob = `${type} ${detail} ${(() => {
+            try {
+              return JSON.stringify(info ?? '');
+            } catch {
+              return '';
+            }
+          })()}`;
+          // Container mismatch: the payload is not MPEG-TS/FLV at all. Tear the
+          // demuxer down safely and hand the stream to the media element.
+          if (/unsupported media type|non mpeg-ts\/flv/i.test(blob)) {
+            progressiveOnly = true;
+            destroyMpegts();
+            console.info('[LiveTVPlayer] container mismatch → native <video>');
+            if (!usedNative) playNative();
+            else blockContainer(container === 'unknown' ? 'unrecognised' : container);
+            return;
+          }
           // addSourceBuffer / decode failures often carry the codec string.
-          if (reportCodec(`${detail} ${JSON.stringify(info ?? '')}`)) return;
-          const next = mpegtsFallback;
-          mpegtsFallback = null;
-          if (next) next();
-          else void handleFailure();
+          if (reportCodec(blob)) return;
+          afterMpegts();
         });
         player.attachMediaElement(video);
         player.load();
         play();
-      } catch {
-        const next = mpegtsFallback;
-        mpegtsFallback = null;
-        if (next) next();
-        else void handleFailure();
+      } catch (err) {
+        console.error('[LiveTVPlayer] mpegts.js init failed', err);
+        destroyMpegts();
+        afterMpegts();
       }
     };
 
