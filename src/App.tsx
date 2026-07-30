@@ -13,6 +13,8 @@ import CryptoTracker from "./pages/CryptoTracker";
 import Movies from "./pages/Movies";
 import LiveTV from "./pages/LiveTV";
 import { LiveTvGate } from "./components/livetv/LiveTvGate";
+import M3uTV from "./pages/M3uTV";
+
 import PrayerTimes from "./pages/PrayerTimes";
 import Quran from "./pages/Quran";
 import GestureQA from "./pages/GestureQA";
