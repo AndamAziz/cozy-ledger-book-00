@@ -13,6 +13,13 @@ import {
   STALL_TIMEOUT_MS,
 } from '@/lib/iptvSlotRetry';
 import { isUnsupportedHevc } from '@/lib/codecSupport';
+import {
+  containerFromExt,
+  engineChain,
+  isProgressiveContainer,
+  probeContainer,
+  type Container,
+} from '@/lib/containerSniff';
 
 
 interface QualityLevel {
