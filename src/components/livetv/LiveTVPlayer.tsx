@@ -210,6 +210,7 @@ export function LiveTVPlayer({
       if (codecBlocked) return true;
       if (!isUnsupportedHevc(codec)) return false;
       codecBlocked = true;
+      codecBlockRef.current = { id: channel.id, codec: codec ?? 'HEVC' };
       console.warn(`[LiveTVPlayer] unsupported codec in this browser: ${codec} (HEVC/H.265)`);
       try {
         hls?.destroy();
