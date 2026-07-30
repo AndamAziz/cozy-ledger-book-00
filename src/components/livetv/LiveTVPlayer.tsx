@@ -281,7 +281,7 @@ export function LiveTVPlayer({
       else if (mediaRecoveries <= 3) {
         hls.swapAudioCodec();
         hls.recoverMediaError();
-      } else if (!usedNative) playNative();
+      } else if (!usedNative) playNative('hls.js media error recovery exhausted');
       else void playMpegts();
     };
 
