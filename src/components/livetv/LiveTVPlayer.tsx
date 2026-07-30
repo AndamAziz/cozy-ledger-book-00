@@ -615,7 +615,7 @@ export function LiveTVPlayer({
 
     // Final safety net: if frames are decoding but no event surfaced, clear it.
     const overlayGuard = window.setInterval(() => {
-      if (cancelled) return;
+      if (cancelled || codecBlocked) return;
       if (video.readyState >= 2 && video.currentTime > 0 && !video.paused) onPlaying();
     }, 500);
 
