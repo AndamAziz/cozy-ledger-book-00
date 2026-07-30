@@ -669,7 +669,7 @@ Deno.serve(async (req) => {
 
     let body = await primeBody(active)
     for (let i = 0; body === null && i < BODY_RETRIES; i++) {
-      const again = await tryFetch(chosenUrl)
+      const again = await reopen(i)
       if (!again) break
       if (!again.ok) {
         await again.body?.cancel()
@@ -678,6 +678,7 @@ Deno.serve(async (req) => {
       active = again
       body = await primeBody(again)
     }
+
     if (body === null) return err('Stream connection dropped. Try again.', 502, 'BODY_ERROR')
 
     const out = new Headers({ ...cors, ...debugHeaders() })
