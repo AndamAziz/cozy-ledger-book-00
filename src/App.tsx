@@ -50,7 +50,9 @@ const App = () => (
                 <Route path="/live-tv/movies" element={<LiveTvGate><LiveTV tab="movies" /></LiveTvGate>} />
                 <Route path="/live-tv/series" element={<LiveTvGate><LiveTV tab="series" /></LiveTvGate>} />
                 <Route path="/live-tv/replay" element={<LiveTvGate><LiveTV tab="replay" /></LiveTvGate>} />
+                <Route path="/iptv" element={<M3uTV />} />
                 <Route path="/prayer" element={<PrayerTimes />} />
+
                 <Route path="/quran" element={<Quran />} />
                 <Route path="/gesture-qa" element={<GestureQA />} />
                 <Route path="/bots" element={<Bots />} />
