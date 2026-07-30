@@ -752,15 +752,23 @@ export function LiveTVPlayer({
     };
     const onError = () => {
       if (codecBlocked) return;
+      const msg = video.error ? `code ${video.error.code}: ${video.error.message || 'no message'}` : 'unknown';
+      console.warn(`[LiveTVPlayer] <video> error · ${msg}`);
       // A decode failure on the element itself is the last HEVC signature.
       if (reportCodec(video.error?.message)) return;
+      // hls.js drives the media element via MSE; a transient element error while
+      // fragments keep arriving must not tear the working session down.
+      if (hlsActive()) {
+        console.info('[LiveTVPlayer] ignoring <video> error — hls.js session still healthy');
+        return;
+      }
       // MP4/MKV that the media element refuses: no other engine can help.
       if (progressiveOnly && usedNative) {
         console.warn(`[LiveTVPlayer] native playback rejected container ${container}`);
         blockContainer(container);
         return;
       }
-      if (!usedNative) playNative();
+      if (!usedNative) playNative(`<video> error · ${msg}`);
       else void playMpegts();
     };
     video.addEventListener('playing', onPlaying);
