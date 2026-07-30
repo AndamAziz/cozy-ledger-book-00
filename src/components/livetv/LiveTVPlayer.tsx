@@ -147,6 +147,20 @@ export function LiveTVPlayer({
     let progressiveOnly = isProgressiveContainer(container);
     // Progressive (non-segmented) payload: native <video> is the only engine.
     let progressive = progressiveOnly;
+    // True once the stream is confirmed to be HLS. HLS and MPEG-TS/FLV are
+    // mutually exclusive: mpegts.js must never be handed an .m3u8 playlist,
+    // and its "Non MPEG-TS/FLV" complaint must never raise a container error.
+    let hlsOnly = false;
+    // Timestamp of the last successfully loaded hls.js fragment — proof the
+    // session is healthy, so no watchdog should abandon it for another engine.
+    let lastFragAt = 0;
+    const hlsActive = () => !!hls && Date.now() - lastFragAt < 12000;
+
+    /** Single place where every engine switch is logged with its trigger. */
+    const logFallback = (to: string, reason: string) => {
+      const from = hls ? 'hls.js' : mpegtsRef.current ? 'mpegts.js' : usedNative ? 'native' : 'none';
+      console.warn(`[LiveTVPlayer] engine fallback ${from} → ${to} · reason: ${reason}`);
+    };
 
     /** Surface a container we cannot decode at all, instead of spinning. */
     const blockContainer = (label: string) => {
@@ -267,7 +281,7 @@ export function LiveTVPlayer({
       else if (mediaRecoveries <= 3) {
         hls.swapAudioCodec();
         hls.recoverMediaError();
-      } else if (!usedNative) playNative();
+      } else if (!usedNative) playNative('hls.js media error recovery exhausted');
       else void playMpegts();
     };
 
@@ -331,7 +345,7 @@ export function LiveTVPlayer({
       const next = mpegtsFallback;
       mpegtsFallback = null;
       if (next) next();
-      else if (!usedNative) playNative();
+      else if (!usedNative) playNative('mpegts.js chain exhausted');
       else void handleFailure();
     };
 
@@ -340,12 +354,24 @@ export function LiveTVPlayer({
     // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
     const playMpegts = async () => {
       if (codecBlocked) return;
-      // Hard gate: mpegts.js only handles MPEG-TS/FLV. Progressive MP4/MKV VOD
-      // files make it throw "Non MPEG-TS/FLV, Unsupported media type!" and then
-      // crash on its own torn-down state, so they never get here.
+      // Hard gate #1: an HLS stream is never a raw transport stream. Keep the
+      // hls.js session alive (or go native) instead of invoking a demuxer that
+      // is guaranteed to fail with "Non MPEG-TS/FLV".
+      if (hlsOnly) {
+        console.info('[LiveTVPlayer] skipping mpegts.js — container is HLS (mutually exclusive)');
+        if (hls) {
+          hls.startLoad();
+          return;
+        }
+        if (!usedNative) playNative('hls.js gone on an HLS stream');
+        else void handleFailure();
+        return;
+      }
+      // Hard gate #2: mpegts.js only handles MPEG-TS/FLV. Progressive MP4/MKV
+      // VOD files make it throw and crash on its own torn-down state.
       if (progressiveOnly) {
         console.info(`[LiveTVPlayer] skipping mpegts.js — container is ${container}`);
-        if (!usedNative) playNative();
+        if (!usedNative) playNative(`progressive container ${container}`);
         else void handleFailure();
         return;
       }
@@ -396,10 +422,19 @@ export function LiveTVPlayer({
           // Container mismatch: the payload is not MPEG-TS/FLV at all. Tear the
           // demuxer down safely and hand the stream to the media element.
           if (/unsupported media type|non mpeg-ts\/flv/i.test(blob)) {
-            progressiveOnly = true;
             destroyMpegts();
+            // On a confirmed HLS stream this is a false positive: mpegts.js was
+            // never the right engine, so it must not raise a container error.
+            if (hlsOnly || container === 'hls') {
+              console.info('[LiveTVPlayer] mpegts.js rejected an HLS playlist (expected) → hls.js');
+              if (hls) hls.startLoad();
+              else if (Hls.isSupported()) startHls();
+              else playNative('HLS with no hls.js support');
+              return;
+            }
+            progressiveOnly = true;
             console.info('[LiveTVPlayer] container mismatch → native <video>');
-            if (!usedNative) playNative();
+            if (!usedNative) playNative('mpegts.js reported a non-TS payload');
             else blockContainer(container === 'unknown' ? 'unrecognised' : container);
             return;
           }
@@ -418,8 +453,15 @@ export function LiveTVPlayer({
     };
 
     // VOD items can be progressive MP4/MKV rather than HLS — fall back to native playback.
-    const playNative = () => {
+    const playNative = (reason = 'unspecified') => {
       if (usedNative || codecBlocked) return;
+      // A healthy hls.js session (fragments still arriving) is never abandoned.
+      if (hlsActive()) {
+        console.info(
+          `[LiveTVPlayer] keeping hls.js — fragments still loading (native requested for: ${reason})`,
+        );
+        return;
+      }
 
       // Only Safari (and iOS WebViews) can decode an .m3u8 from a plain
       // <video src>. Everywhere else a native attempt would hang forever on
@@ -427,11 +469,12 @@ export function LiveTVPlayer({
       // URL hides the real container, so this applies to any non-progressive
       // stream, live or VOD.
       if (!nativeHls && !progressive && !usedHls && Hls.isSupported()) {
-        console.info('[LiveTVPlayer] no native HLS support → switching to hls.js');
+        console.info(`[LiveTVPlayer] no native HLS support → switching to hls.js (reason: ${reason})`);
         startHls();
         return;
       }
       usedNative = true;
+      logFallback('native <video src>', reason);
       console.info('[LiveTVPlayer] engine: native <video src>');
       hls?.destroy();
       hls = null;
@@ -509,6 +552,11 @@ export function LiveTVPlayer({
         const lvl = hls?.levels?.[data.level];
         setAutoLabel(lvl ? labelForLevel(lvl.height, lvl.bitrate) : null);
       });
+      // Proof of a healthy session: used by the watchdogs and playNative() so a
+      // working hls.js stream is never silently swapped for another engine.
+      hls.on(Hls.Events.FRAG_LOADED, () => {
+        lastFragAt = Date.now();
+      });
       hls.on(Hls.Events.ERROR, (_e, data) => {
         // Explicit fatal / non-fatal logging so playback issues are debuggable.
         const log = `[hls.js] ${data.fatal ? 'FATAL' : 'non-fatal'} ${data.type} · ${data.details}`;
@@ -546,17 +594,17 @@ export function LiveTVPlayer({
           // Live channels have no progressive fallback, so a failed manifest is
           // reported straight away instead of stalling on a dead <video> src.
           if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR) {
-            if (isVod && !usedNative) playNative();
+            if (isVod && !usedNative) playNative(`hls.js fatal ${data.details}`);
             else void playMpegts();
           } else if (networkRetries < 5) {
             networkRetries += 1;
             window.setTimeout(() => hls?.startLoad(), 1000 * networkRetries);
-          } else if (isVod && !usedNative) playNative();
+          } else if (isVod && !usedNative) playNative(`hls.js fatal ${data.details} after 5 retries`);
           else void playMpegts();
         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
 
           recoverMedia();
-        } else if (!usedNative) playNative();
+        } else if (!usedNative) playNative(`hls.js fatal ${data.type} · ${data.details}`);
         else void playMpegts();
       });
     };
@@ -581,27 +629,29 @@ export function LiveTVPlayer({
 
       if (progressiveOnly) {
         // MP4 / MKV VOD: only the media element can decode these.
-        playNative();
+        playNative(`progressive container ${container}`);
         return;
       }
       if (isHlsUrl || container === 'hls') {
         // Explicit HLS: Safari plays it natively, everyone else uses hls.js.
-        if (nativeHls && !Hls.isSupported()) playNative();
+        // Locked to HLS — mpegts.js is excluded for the rest of this session.
+        hlsOnly = true;
+        if (nativeHls && !Hls.isSupported()) playNative('HLS, native only (no MSE)');
         else if (Hls.isSupported()) startHls();
-        else playNative();
+        else playNative('HLS, hls.js unsupported');
         return;
       }
       if (container === 'mpegts' || container === 'flv' || tsFirst || rawLiveFirst) {
         // Raw transport streams: mpegts.js first, native as the safety net.
         mpegtsFallback = () => {
           if (Hls.isSupported() && !tsFirst) startHls();
-          else playNative();
+          else playNative('mpegts.js failed, no hls.js');
         };
         void playMpegts();
         return;
       }
       if (Hls.isSupported()) startHls();
-      else playNative();
+      else playNative('unknown container, no hls.js');
     };
 
     // Live channels are started immediately: sniffing them would burn a
@@ -623,8 +673,15 @@ export function LiveTVPlayer({
     // engine instead of spinning on "Connecting to stream…" forever.
     const connectWatchdog = window.setTimeout(() => {
       if (cancelled || codecBlocked || video.readyState >= 3) return;
-      if (!usedMpegts && (tsFirst || usedNative)) void playMpegts();
-      else if (!usedNative) playNative();
+      // Segments are still arriving: the pipe is healthy, the media element is
+      // just slow to report readyState. Never swap engines in that case.
+      if (hlsActive()) {
+        console.info('[LiveTVPlayer] connect watchdog ignored — hls.js fragments still loading');
+        return;
+      }
+      console.warn('[LiveTVPlayer] connect watchdog fired after 18s without readyState ≥ 3');
+      if (!usedMpegts && !hlsOnly && (tsFirst || usedNative)) void playMpegts();
+      else if (!usedNative) playNative('connect watchdog: no frames after 18s');
       else void handleFailure();
     }, 18000);
 
@@ -642,10 +699,11 @@ export function LiveTVPlayer({
       stalledFor += 2000;
       if (stalledFor < STALL_TIMEOUT_MS) return;
       stalledFor = 0;
+      console.warn(`[LiveTVPlayer] stall watchdog: currentTime frozen for ${STALL_TIMEOUT_MS}ms`);
       setStatus((s) => (s === 'error' ? s : 'loading'));
       if (hls) recoverMedia();
-      else if (!usedMpegts) void playMpegts();
-      else if (!usedNative) playNative();
+      else if (!usedMpegts && !hlsOnly) void playMpegts();
+      else if (!usedNative) playNative('stall watchdog: playback frozen');
       else void handleFailure();
     }, 2000);
 
@@ -694,15 +752,23 @@ export function LiveTVPlayer({
     };
     const onError = () => {
       if (codecBlocked) return;
+      const msg = video.error ? `code ${video.error.code}: ${video.error.message || 'no message'}` : 'unknown';
+      console.warn(`[LiveTVPlayer] <video> error · ${msg}`);
       // A decode failure on the element itself is the last HEVC signature.
       if (reportCodec(video.error?.message)) return;
+      // hls.js drives the media element via MSE; a transient element error while
+      // fragments keep arriving must not tear the working session down.
+      if (hlsActive()) {
+        console.info('[LiveTVPlayer] ignoring <video> error — hls.js session still healthy');
+        return;
+      }
       // MP4/MKV that the media element refuses: no other engine can help.
       if (progressiveOnly && usedNative) {
         console.warn(`[LiveTVPlayer] native playback rejected container ${container}`);
         blockContainer(container);
         return;
       }
-      if (!usedNative) playNative();
+      if (!usedNative) playNative(`<video> error · ${msg}`);
       else void playMpegts();
     };
     video.addEventListener('playing', onPlaying);
