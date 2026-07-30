@@ -79,8 +79,9 @@ export function LiveTVPlayer({
     [],
   );
 
-  const [errorKind, setErrorKind] = useState<'offline' | 'busy' | 'geo' | 'codec'>('offline');
+  const [errorKind, setErrorKind] = useState<'offline' | 'busy' | 'geo' | 'codec' | 'container'>('offline');
   const [badCodec, setBadCodec] = useState<string | null>(null);
+  const [badContainer, setBadContainer] = useState<string | null>(null);
 
   const [retryIn, setRetryIn] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
