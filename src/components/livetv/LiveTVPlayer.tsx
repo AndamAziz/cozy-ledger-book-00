@@ -115,6 +115,7 @@ export function LiveTVPlayer({
     setSelectedLevel(-1);
     setAutoLabel(null);
     setQualityOpen(false);
+    setBadCodec(null);
 
     let hls: Hls | null = null;
     let usedNative = false;
@@ -128,6 +129,43 @@ export function LiveTVPlayer({
     let cancelled = false;
     let retryTimer = 0;
     let countdownTimer = 0;
+    // Set once an HEVC stream is confirmed undecodable here: every engine,
+    // watchdog and retry path becomes a no-op, so no spinner can come back.
+    let codecBlocked = false;
+
+    /**
+     * Codec gate. Called with whatever codec hint an engine surfaces (PMT/PAT
+     * media info from mpegts.js, level codecs from hls.js, buffer errors). Only
+     * HEVC that MediaSource refuses stops playback — H.264 falls straight
+     * through and keeps the existing engine chain.
+     */
+    const reportCodec = (codec?: string | null): boolean => {
+      if (codecBlocked) return true;
+      if (!isUnsupportedHevc(codec)) return false;
+      codecBlocked = true;
+      console.warn(`[LiveTVPlayer] unsupported codec in this browser: ${codec} (HEVC/H.265)`);
+      try {
+        hls?.destroy();
+      } catch { /* already gone */ }
+      hls = null;
+      hlsRef.current = null;
+      try {
+        mpegtsRef.current?.unload?.();
+        mpegtsRef.current?.detachMediaElement?.();
+        mpegtsRef.current?.destroy();
+      } catch { /* already gone */ }
+      mpegtsRef.current = null;
+      video.removeAttribute('src');
+      video.load();
+      window.clearTimeout(retryTimer);
+      window.clearInterval(countdownTimer);
+      setRetryIn(null);
+      setBadCodec(codec ?? 'HEVC');
+      setErrorKind('codec');
+      setStatusRaw('error');
+      return true;
+    };
+
 
     // A failure may just be the provider's session limit: refresh a few times,
     // then let the parent move on to the first available episode.
