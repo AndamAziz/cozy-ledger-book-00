@@ -288,6 +288,7 @@ export function LiveTVPlayer({
     // Xtream VOD and live links are frequently .ts containers that <video> and
     // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
     const playMpegts = async () => {
+      if (codecBlocked) return;
       if (usedMpegts) {
         const next = mpegtsFallback;
         mpegtsFallback = null;
