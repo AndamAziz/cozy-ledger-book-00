@@ -474,11 +474,25 @@ export function LiveTVPlayer({
       // "Connecting to stream…", so hand HLS back to hls.js first. The proxy
       // URL hides the real container, so this applies to any non-progressive
       // stream, live or VOD.
-      if (!nativeHls && !progressive && !usedHls && Hls.isSupported()) {
-        console.info(`[LiveTVPlayer] no native HLS support → switching to hls.js (reason: ${reason})`);
-        startHls();
-        return;
+      if (!nativeHls && !progressive && Hls.isSupported()) {
+        if (!usedHls) {
+          console.info(`[LiveTVPlayer] no native HLS support → switching to hls.js (reason: ${reason})`);
+          startHls();
+          return;
+        }
+        // Confirmed HLS on a browser with no native HLS: <video src=".m3u8">
+        // can only produce MEDIA_ERR_SRC_NOT_SUPPORTED (code 4) and a retry
+        // loop. Restart hls.js loading instead of degrading to native.
+        if (hlsOnly || container === 'hls' || isHlsUrl) {
+          console.info(`[LiveTVPlayer] native skipped (HLS, no native support) → restarting hls.js loader · ${reason}`);
+          lastHlsActivityAt = Date.now();
+          try {
+            hls?.startLoad();
+          } catch { /* loader already gone */ }
+          return;
+        }
       }
+
       usedNative = true;
       logFallback('native <video src>', reason);
       console.info('[LiveTVPlayer] engine: native <video src>');
