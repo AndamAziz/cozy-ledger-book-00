@@ -13,6 +13,13 @@ import {
   STALL_TIMEOUT_MS,
 } from '@/lib/iptvSlotRetry';
 import { isUnsupportedHevc } from '@/lib/codecSupport';
+import {
+  containerFromExt,
+  engineChain,
+  isProgressiveContainer,
+  probeContainer,
+  type Container,
+} from '@/lib/containerSniff';
 
 
 interface QualityLevel {
@@ -72,8 +79,9 @@ export function LiveTVPlayer({
     [],
   );
 
-  const [errorKind, setErrorKind] = useState<'offline' | 'busy' | 'geo' | 'codec'>('offline');
+  const [errorKind, setErrorKind] = useState<'offline' | 'busy' | 'geo' | 'codec' | 'container'>('offline');
   const [badCodec, setBadCodec] = useState<string | null>(null);
+  const [badContainer, setBadContainer] = useState<string | null>(null);
 
   const [retryIn, setRetryIn] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -116,6 +124,7 @@ export function LiveTVPlayer({
     setAutoLabel(null);
     setQualityOpen(false);
     setBadCodec(null);
+    setBadContainer(null);
 
     let hls: Hls | null = null;
     let usedNative = false;
@@ -132,6 +141,22 @@ export function LiveTVPlayer({
     // Set once an HEVC stream is confirmed undecodable here: every engine,
     // watchdog and retry path becomes a no-op, so no spinner can come back.
     let codecBlocked = false;
+    // Detected container. Progressive files (MP4/MKV) must never reach
+    // mpegts.js, which only demuxes MPEG-TS/FLV and crashes on anything else.
+    let container: Container = containerFromExt(channel.ext);
+    let progressiveOnly = isProgressiveContainer(container);
+    // Progressive (non-segmented) payload: native <video> is the only engine.
+    let progressive = progressiveOnly;
+
+    /** Surface a container we cannot decode at all, instead of spinning. */
+    const blockContainer = (label: string) => {
+      window.clearTimeout(retryTimer);
+      window.clearInterval(countdownTimer);
+      setRetryIn(null);
+      setBadContainer(label);
+      setErrorKind('container');
+      setStatusRaw('error');
+    };
 
     /**
      * Codec gate. Called with whatever codec hint an engine surfaces (PMT/PAT
@@ -284,16 +309,48 @@ export function LiveTVPlayer({
     };
 
 
+    /** Tear a mpegts.js player down without ever throwing (its internals may
+     * already be half-destroyed when an "unsupported media type" fires). */
+    const destroyMpegts = () => {
+      const player = mpegtsRef.current;
+      mpegtsRef.current = null;
+      if (!player) return;
+      try {
+        player.unload?.();
+      } catch { /* already gone */ }
+      try {
+        player.detachMediaElement?.();
+      } catch { /* already gone */ }
+      try {
+        player.destroy();
+      } catch { /* already gone */ }
+    };
+
+    /** Move on from mpegts.js to whatever comes next in the chain. */
+    const afterMpegts = () => {
+      const next = mpegtsFallback;
+      mpegtsFallback = null;
+      if (next) next();
+      else if (!usedNative) playNative();
+      else void handleFailure();
+    };
+
     // Last engine in the chain: MPEG-TS / raw transport-stream demuxing in MSE.
     // Xtream VOD and live links are frequently .ts containers that <video> and
     // hls.js both refuse, but mpegts.js remuxes them to fMP4 on the fly.
     const playMpegts = async () => {
       if (codecBlocked) return;
-      if (usedMpegts) {
-        const next = mpegtsFallback;
-        mpegtsFallback = null;
-        if (next) next();
+      // Hard gate: mpegts.js only handles MPEG-TS/FLV. Progressive MP4/MKV VOD
+      // files make it throw "Non MPEG-TS/FLV, Unsupported media type!" and then
+      // crash on its own torn-down state, so they never get here.
+      if (progressiveOnly) {
+        console.info(`[LiveTVPlayer] skipping mpegts.js — container is ${container}`);
+        if (!usedNative) playNative();
         else void handleFailure();
+        return;
+      }
+      if (usedMpegts) {
+        afterMpegts();
         return;
       }
       usedMpegts = true;
@@ -302,14 +359,13 @@ export function LiveTVPlayer({
         const mpegts: any = mod.default ?? mod;
         if (cancelled || !mpegts.isSupported()) {
           console.warn('[LiveTVPlayer] mpegts.js unsupported in this browser');
-          const next = mpegtsFallback;
-          mpegtsFallback = null;
-          if (next) next();
-          else void handleFailure();
+          afterMpegts();
           return;
         }
         console.info('[LiveTVPlayer] engine: mpegts.js (MSE)');
-        hls?.destroy();
+        try {
+          hls?.destroy();
+        } catch { /* already gone */ }
         hls = null;
         hlsRef.current = null;
         setLevels([]);
@@ -330,21 +386,34 @@ export function LiveTVPlayer({
         });
         player.on(mpegts.Events.ERROR, (type: string, detail: string, info?: unknown) => {
           console.error(`[mpegts.js] ${type} · ${detail}`, info ?? '');
+          const blob = `${type} ${detail} ${(() => {
+            try {
+              return JSON.stringify(info ?? '');
+            } catch {
+              return '';
+            }
+          })()}`;
+          // Container mismatch: the payload is not MPEG-TS/FLV at all. Tear the
+          // demuxer down safely and hand the stream to the media element.
+          if (/unsupported media type|non mpeg-ts\/flv/i.test(blob)) {
+            progressiveOnly = true;
+            destroyMpegts();
+            console.info('[LiveTVPlayer] container mismatch → native <video>');
+            if (!usedNative) playNative();
+            else blockContainer(container === 'unknown' ? 'unrecognised' : container);
+            return;
+          }
           // addSourceBuffer / decode failures often carry the codec string.
-          if (reportCodec(`${detail} ${JSON.stringify(info ?? '')}`)) return;
-          const next = mpegtsFallback;
-          mpegtsFallback = null;
-          if (next) next();
-          else void handleFailure();
+          if (reportCodec(blob)) return;
+          afterMpegts();
         });
         player.attachMediaElement(video);
         player.load();
         play();
-      } catch {
-        const next = mpegtsFallback;
-        mpegtsFallback = null;
-        if (next) next();
-        else void handleFailure();
+      } catch (err) {
+        console.error('[LiveTVPlayer] mpegts.js init failed', err);
+        destroyMpegts();
+        afterMpegts();
       }
     };
 
@@ -502,26 +571,50 @@ export function LiveTVPlayer({
     // desktop/Android to avoid one-slot HLS segment storms. If no explicit HLS
     // extension is known, start with mpegts.js and only fall back to HLS/native.
     const rawLiveFirst = !isVod && extHint !== 'm3u8' && extHint !== 'm3u';
-    const progressive = ['mp4', 'm4v', 'mov', 'webm'].includes(extHint);
 
-    if (isHlsUrl) {
-      // Explicit HLS: Safari plays it natively, everyone else uses hls.js.
-      if (nativeHls && !Hls.isSupported()) playNative();
-      else if (Hls.isSupported()) startHls();
-      else playNative();
-    } else if (tsFirst || rawLiveFirst) {
-      // Raw transport streams: mpegts.js first, native as the safety net.
-      mpegtsFallback = () => {
-        if (Hls.isSupported() && !tsFirst) startHls();
+    /** Start the engine chain once the container is known. */
+    const startChain = () => {
+      if (cancelled || codecBlocked) return;
+      progressiveOnly = isProgressiveContainer(container);
+      progressive = progressiveOnly || ['mp4', 'm4v', 'mov', 'webm'].includes(extHint);
+      console.info(`[LiveTVPlayer] container: ${container} (ext: ${extHint || 'none'})`);
+
+      if (progressiveOnly) {
+        // MP4 / MKV VOD: only the media element can decode these.
+        playNative();
+        return;
+      }
+      if (isHlsUrl || container === 'hls') {
+        // Explicit HLS: Safari plays it natively, everyone else uses hls.js.
+        if (nativeHls && !Hls.isSupported()) playNative();
+        else if (Hls.isSupported()) startHls();
         else playNative();
-      };
-      void playMpegts();
-    } else if (progressive) {
-      playNative();
-    } else if (Hls.isSupported()) {
-      startHls();
+        return;
+      }
+      if (container === 'mpegts' || container === 'flv' || tsFirst || rawLiveFirst) {
+        // Raw transport streams: mpegts.js first, native as the safety net.
+        mpegtsFallback = () => {
+          if (Hls.isSupported() && !tsFirst) startHls();
+          else playNative();
+        };
+        void playMpegts();
+        return;
+      }
+      if (Hls.isSupported()) startHls();
+      else playNative();
+    };
+
+    // Live channels are started immediately: sniffing them would burn a
+    // provider viewing slot. VOD / series files are cheap to range-probe, and
+    // that is exactly where the container is unknown (mp4, mkv, avi…).
+    if (isVod && container === 'unknown') {
+      void probeContainer(src, channel.ext).then((detected) => {
+        if (cancelled) return;
+        container = detected;
+        startChain();
+      });
     } else {
-      playNative();
+      startChain();
     }
 
 
@@ -603,6 +696,12 @@ export function LiveTVPlayer({
       if (codecBlocked) return;
       // A decode failure on the element itself is the last HEVC signature.
       if (reportCodec(video.error?.message)) return;
+      // MP4/MKV that the media element refuses: no other engine can help.
+      if (progressiveOnly && usedNative) {
+        console.warn(`[LiveTVPlayer] native playback rejected container ${container}`);
+        blockContainer(container);
+        return;
+      }
       if (!usedNative) playNative();
       else void playMpegts();
     };
@@ -636,14 +735,11 @@ export function LiveTVPlayer({
       video.removeEventListener('timeupdate', onProgressSignal);
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('error', onError);
-      hls?.destroy();
-      hlsRef.current = null;
       try {
-        mpegtsRef.current?.unload?.();
-        mpegtsRef.current?.detachMediaElement?.();
-        mpegtsRef.current?.destroy();
-      } catch { /* engine already torn down */ }
-      mpegtsRef.current = null;
+        hls?.destroy();
+      } catch { /* already gone */ }
+      hlsRef.current = null;
+      destroyMpegts();
       // Releasing the element's source tears the proxied request down, which
       // frees the provider's viewing slot immediately.
       video.removeAttribute('src');
@@ -785,20 +881,24 @@ export function LiveTVPlayer({
               <p className="text-sm font-extrabold tracking-tight text-white">
                 {errorKind === 'codec'
                   ? 'This channel is not supported in your browser'
-                  : errorKind === 'geo'
-                    ? 'Streaming blocked by the provider'
-                    : 'This channel is not responding'}
+                  : errorKind === 'container'
+                    ? 'This file format cannot be played here'
+                    : errorKind === 'geo'
+                      ? 'Streaming blocked by the provider'
+                      : 'This channel is not responding'}
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
                 {errorKind === 'codec'
                   ? 'It is broadcast in the HEVC (H.265) codec, which Chrome, Edge and Firefox cannot decode. Try Safari, or watch it in our mobile app.'
-                  : errorKind === 'geo'
-                    ? GEO_BLOCK_MESSAGE
-                    : 'The source may be unavailable right now. Retry, or pick another channel.'}
+                  : errorKind === 'container'
+                    ? 'The provider delivers this title in a container your browser cannot open. Try another episode or quality, or watch it in our mobile app.'
+                    : errorKind === 'geo'
+                      ? GEO_BLOCK_MESSAGE
+                      : 'The source may be unavailable right now. Retry, or pick another channel.'}
               </p>
-              {errorKind === 'codec' && badCodec && (
+              {((errorKind === 'codec' && badCodec) || (errorKind === 'container' && badContainer)) && (
                 <p className="mt-2 inline-block rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 font-mono text-[10px] text-white/40">
-                  {badCodec.trim().slice(0, 48)}
+                  {(errorKind === 'codec' ? badCodec! : badContainer!).trim().slice(0, 48)}
                 </p>
               )}
               <div className="mt-4 flex justify-center gap-2">
