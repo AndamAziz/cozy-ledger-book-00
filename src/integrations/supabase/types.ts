@@ -740,6 +740,42 @@ export type Database = {
           },
         ]
       }
+      iptv_playlists: {
+        Row: {
+          channel_count: number | null
+          created_at: string
+          id: string
+          is_active: boolean
+          last_latency_ms: number | null
+          last_status: string | null
+          name: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          channel_count?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_latency_ms?: number | null
+          last_status?: string | null
+          name: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          channel_count?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_latency_ms?: number | null
+          last_status?: string | null
+          name?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       iptv_sources: {
         Row: {
           created_at: string
