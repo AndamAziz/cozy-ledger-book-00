@@ -24,6 +24,14 @@ export function autoRetryDelay(attempt: number): number {
 /** Milliseconds of frozen currentTime before playback is considered stalled. */
 export const STALL_TIMEOUT_MS = 15000;
 
+/**
+ * Milliseconds allowed for the very first frame before the engine chain
+ * escalates. Slow single-slot IPTV proxies routinely need 20–30s to deliver
+ * the first segments, so a short window abandoned healthy streams.
+ */
+export const CONNECT_TIMEOUT_MS = 40000;
+
+
 
 /** True when a proxy JSON payload signals the provider slot limit. */
 export function isSlotLimitPayload(payload: unknown): boolean {
