@@ -495,42 +495,60 @@ export function LiveTVPlayer({
     const startHls = () => {
       if (codecBlocked) return;
       hls = new Hls({
-        lowLatencyMode: !isVod,
+        // Low-latency mode multiplies parallel part requests, which the
+        // single-slot IPTV proxy cannot serve — it caused the 3–10s pending
+        // segment pile-up. Plain live mode keeps one request in flight.
+        lowLatencyMode: false,
         enableWorker: true,
-        backBufferLength: isVod ? 120 : 30,
+        backBufferLength: isVod ? 120 : 20,
         // Live: a tight, steadily-refilled buffer recovers from IPTV hiccups
         // faster than a huge one that takes ages to rebuild after a drop.
-        maxBufferLength: isVod ? 90 : 30,
-        maxMaxBufferLength: isVod ? 600 : 120,
-        maxBufferSize: 120 * 1000 * 1000,
+        maxBufferLength: isVod ? 60 : 16,
+        maxMaxBufferLength: isVod ? 600 : 60,
+        maxBufferSize: 60 * 1000 * 1000,
         maxBufferHole: 0.5,
         highBufferWatchdogPeriod: 1,
         nudgeOffset: 0.2,
         nudgeMaxRetry: 15,
+        // Start on the lowest rendition: the first frame arrives far sooner
+        // through a slow proxy, ABR climbs back up on its own.
+        startLevel: 0,
         // Stay ~3 segments behind the edge, but never drift more than 10;
         // slight speed-up catches up instead of seeking (no visible jump).
         liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 10,
+        liveMaxLatencyDurationCount: 12,
         maxLiveSyncPlaybackRate: 1.5,
         liveDurationInfinity: !isVod,
         // Bounded so a dead origin surfaces as a retryable error instead of an
         // endless "Connecting to stream…" spinner.
-        manifestLoadingTimeOut: 18000,
+        manifestLoadingTimeOut: 20000,
         manifestLoadingMaxRetry: 3,
         manifestLoadingRetryDelay: 700,
-        levelLoadingTimeOut: 18000,
-        levelLoadingMaxRetry: 3,
-        fragLoadingTimeOut: 30000,
-        fragLoadingMaxRetry: 6,
+        levelLoadingTimeOut: 20000,
+        levelLoadingMaxRetry: 4,
+        fragLoadingTimeOut: 40000,
+        fragLoadingMaxRetry: 8,
         fragLoadingRetryDelay: 800,
 
       });
 
       hlsRef.current = hls;
       usedHls = true;
+      lastHlsActivityAt = Date.now();
       console.info('[LiveTVPlayer] engine: hls.js (MSE)');
       hls.loadSource(src);
       hls.attachMedia(video);
+      // Every sign of network progress keeps the session "alive" for the
+      // watchdogs, even before the first fragment finishes downloading.
+      const markActivity = () => {
+        lastHlsActivityAt = Date.now();
+      };
+      hls.on(Hls.Events.MANIFEST_LOADED, markActivity);
+      hls.on(Hls.Events.LEVEL_LOADED, markActivity);
+      hls.on(Hls.Events.FRAG_LOADING, markActivity);
+      hls.on(Hls.Events.FRAG_BUFFERED, markActivity);
+      hls.on(Hls.Events.BUFFER_APPENDED, markActivity);
+
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         // Codec advertised by the manifest — checked before hls.js ever calls
         // addSourceBuffer, so an HEVC-only rendition never spins the player.
