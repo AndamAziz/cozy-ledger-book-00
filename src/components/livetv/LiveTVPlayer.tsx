@@ -564,7 +564,7 @@ export function LiveTVPlayer({
     let microTime = 0;
     let microFrozen = 0;
     const microWatchdog = window.setInterval(() => {
-      if (cancelled || video.paused || video.readyState < 2) return;
+      if (cancelled || codecBlocked || video.paused || video.readyState < 2) return;
       if (video.currentTime > microTime + 0.01) {
         microTime = video.currentTime;
         microFrozen = 0;
