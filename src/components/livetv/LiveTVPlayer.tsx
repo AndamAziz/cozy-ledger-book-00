@@ -552,6 +552,11 @@ export function LiveTVPlayer({
         const lvl = hls?.levels?.[data.level];
         setAutoLabel(lvl ? labelForLevel(lvl.height, lvl.bitrate) : null);
       });
+      // Proof of a healthy session: used by the watchdogs and playNative() so a
+      // working hls.js stream is never silently swapped for another engine.
+      hls.on(Hls.Events.FRAG_LOADED, () => {
+        lastFragAt = Date.now();
+      });
       hls.on(Hls.Events.ERROR, (_e, data) => {
         // Explicit fatal / non-fatal logging so playback issues are debuggable.
         const log = `[hls.js] ${data.fatal ? 'FATAL' : 'non-fatal'} ${data.type} · ${data.details}`;
