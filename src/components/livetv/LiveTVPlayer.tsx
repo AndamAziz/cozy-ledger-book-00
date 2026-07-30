@@ -422,10 +422,19 @@ export function LiveTVPlayer({
           // Container mismatch: the payload is not MPEG-TS/FLV at all. Tear the
           // demuxer down safely and hand the stream to the media element.
           if (/unsupported media type|non mpeg-ts\/flv/i.test(blob)) {
-            progressiveOnly = true;
             destroyMpegts();
+            // On a confirmed HLS stream this is a false positive: mpegts.js was
+            // never the right engine, so it must not raise a container error.
+            if (hlsOnly || container === 'hls') {
+              console.info('[LiveTVPlayer] mpegts.js rejected an HLS playlist (expected) → hls.js');
+              if (hls) hls.startLoad();
+              else if (Hls.isSupported()) startHls();
+              else playNative('HLS with no hls.js support');
+              return;
+            }
+            progressiveOnly = true;
             console.info('[LiveTVPlayer] container mismatch → native <video>');
-            if (!usedNative) playNative();
+            if (!usedNative) playNative('mpegts.js reported a non-TS payload');
             else blockContainer(container === 'unknown' ? 'unrecognised' : container);
             return;
           }
