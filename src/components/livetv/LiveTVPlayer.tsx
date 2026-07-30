@@ -145,6 +145,8 @@ export function LiveTVPlayer({
     // mpegts.js, which only demuxes MPEG-TS/FLV and crashes on anything else.
     let container: Container = containerFromExt(channel.ext);
     let progressiveOnly = isProgressiveContainer(container);
+    // Progressive (non-segmented) payload: native <video> is the only engine.
+    let progressive = progressiveOnly;
 
     /** Surface a container we cannot decode at all, instead of spinning. */
     const blockContainer = (label: string) => {
