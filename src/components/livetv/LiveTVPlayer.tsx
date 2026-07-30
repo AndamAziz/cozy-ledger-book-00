@@ -375,6 +375,7 @@ export function LiveTVPlayer({
     };
 
     const startHls = () => {
+      if (codecBlocked) return;
       hls = new Hls({
         lowLatencyMode: !isVod,
         enableWorker: true,
