@@ -320,8 +320,18 @@ export function LiveTVPlayer({
           { enableWorker: true, liveBufferLatencyChasing: !isVod, lazyLoad: false },
         );
         mpegtsRef.current = player;
-        player.on(mpegts.Events.ERROR, (type: string, detail: string) => {
-          console.error(`[mpegts.js] ${type} · ${detail}`);
+        // PAT/PMT parsing result: the earliest reliable codec signal we get.
+        player.on(mpegts.Events.MEDIA_INFO, (info: Record<string, unknown>) => {
+          const codec = [info?.videoCodec, info?.mimeType, info?.metadata && (info.metadata as any)?.videoCodec]
+            .filter(Boolean)
+            .join(' ');
+          console.info(`[mpegts.js] media info · codec: ${codec || 'unknown'}`);
+          reportCodec(codec);
+        });
+        player.on(mpegts.Events.ERROR, (type: string, detail: string, info?: unknown) => {
+          console.error(`[mpegts.js] ${type} · ${detail}`, info ?? '');
+          // addSourceBuffer / decode failures often carry the codec string.
+          if (reportCodec(`${detail} ${JSON.stringify(info ?? '')}`)) return;
           const next = mpegtsFallback;
           mpegtsFallback = null;
           if (next) next();
@@ -340,7 +350,8 @@ export function LiveTVPlayer({
 
     // VOD items can be progressive MP4/MKV rather than HLS — fall back to native playback.
     const playNative = () => {
-      if (usedNative) return;
+      if (usedNative || codecBlocked) return;
+
       // Only Safari (and iOS WebViews) can decode an .m3u8 from a plain
       // <video src>. Everywhere else a native attempt would hang forever on
       // "Connecting to stream…", so hand HLS back to hls.js first. The proxy
