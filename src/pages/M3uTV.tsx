@@ -10,9 +10,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Tv, Trash2, Search, Loader2, Play, Signal, ArrowLeft,
   ListVideo, CheckCircle2, AlertTriangle, Save, Gauge,
+  ChevronDown, Clapperboard, ShieldCheck,
 } from 'lucide-react';
+
 
 const DEFAULT_PLAYLIST = 'https://iptv-org.github.io/iptv/countries/br.m3u';
 const PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/iptv-m3u-proxy?url=`;
@@ -43,6 +53,11 @@ interface TestResult {
 const latencyTone = (ms: number) =>
   ms < 400 ? 'text-success' : ms < 1200 ? 'text-accent' : 'text-destructive';
 
+/** VOD items (movies/series files) get poster tiles; live channels get logo tiles. */
+const isMovieItem = (c?: Channel) =>
+  !!c && (/\.(mp4|mkv|avi|mov)(\?|$)/i.test(c.url) || /movie|film|vod|series|cinema/i.test(c.group));
+
+
 export default function M3uTV() {
   const { language } = useLanguage();
   const ku = language !== 'en';
@@ -60,6 +75,16 @@ export default function M3uTV() {
   const [playerError, setPlayerError] = useState(false);
   const [playerLoading, setPlayerLoading] = useState(false);
   const [useProxy, setUseProxy] = useState(false);
+  // Only the CEO account manages playlist links (add / delete).
+  const [isCeo, setIsCeo] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setIsCeo((data.user?.email ?? '').toLowerCase() === 'andam@outlook.com');
+    });
+  }, []);
+
+
 
   const [newName, setNewName] = useState('');
   const [newUrl, setNewUrl] = useState('');
@@ -96,7 +121,12 @@ export default function M3uTV() {
     retry: ku ? 'دووبارە' : 'Retry',
     live: ku ? 'ڕاستەوخۆ' : 'LIVE',
     back: ku ? 'گەڕانەوە' : 'Back',
+    choose: ku ? 'پلەیلیست هەڵبژێرە' : 'Choose playlist',
+    manage: ku ? 'بەڕێوەبردنی لینکەکان (CEO)' : 'Manage links (CEO)',
+    movies: ku ? 'فیلمەکان' : 'Movies',
+    ceoOnly: ku ? 'تەنها بەڕێوەبەری سەرەکی دەتوانێت لینک زیاد بکات' : 'Only the CEO can add or delete links',
   };
+
 
   /* ---------------- playlists ---------------- */
 
@@ -324,6 +354,23 @@ export default function M3uTV() {
     return map;
   }, [channels]);
 
+  /** Split the visible items into per-category sections (max 300 items shown). */
+  const sections = useMemo(() => {
+    const map = new Map<string, Channel[]>();
+    filtered.slice(0, 300).forEach((c) => {
+      const key = c.group || 'Other';
+      const list = map.get(key);
+      if (list) list.push(c);
+      else map.set(key, [c]);
+    });
+    return [...map.entries()].map(([name, items]) => ({
+      name,
+      items,
+      movie: isMovieItem(items[0]),
+    }));
+  }, [filtered]);
+
+
   /* ---------------- ui ---------------- */
 
   return (
@@ -421,90 +468,136 @@ export default function M3uTV() {
           </Card>
         </div>
 
-        {/* Playlist manager */}
+        {/* Playlist selector */}
         <Card className="space-y-4 p-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <ListVideo className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold">{T.playlists}</h2>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="ms-auto min-w-[190px] justify-between gap-2">
+                  <span className="truncate">
+                    {playlists.find((p) => p.id === activeId)?.name ?? T.choose}
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel className="text-xs">{T.playlists}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {playlists.map((pl) => (
+                  <DropdownMenuItem
+                    key={pl.id}
+                    onSelect={() => loadPlaylist(pl)}
+                    className="flex items-center gap-2"
+                  >
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${activeId === pl.id ? 'bg-primary' : 'bg-muted-foreground/40'}`} />
+                    <span className="truncate text-xs font-semibold">{pl.name}</span>
+                    <span className="ms-auto flex items-center gap-2 text-[10px]">
+                      {pl.channel_count != null && (
+                        <span className="text-muted-foreground">{pl.channel_count}</span>
+                      )}
+                      {pl.last_latency_ms != null && (
+                        <span className={latencyTone(pl.last_latency_ms)}>{pl.last_latency_ms}ms</span>
+                      )}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+                {playlists.length === 0 && (
+                  <DropdownMenuItem disabled className="text-xs">
+                    {T.noChannels}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {playlists.map((pl) => (
-              <div
-                key={pl.id}
-                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
-                  activeId === pl.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
-                }`}
-              >
-                <button type="button" onClick={() => loadPlaylist(pl)} className="font-semibold">
-                  {pl.name}
-                  {pl.last_latency_ms != null && (
-                    <span className={`ms-2 ${latencyTone(pl.last_latency_ms)}`}>{pl.last_latency_ms}ms</span>
-                  )}
-                  {pl.channel_count != null && (
-                    <span className="ms-1 text-muted-foreground">· {pl.channel_count}</span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  aria-label="delete"
-                  onClick={() => removePlaylist(pl.id)}
-                  className="opacity-50 transition hover:text-destructive hover:opacity-100"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+          {isCeo ? (
+            <div className="space-y-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <p className="text-xs font-bold">{T.manage}</p>
               </div>
-            ))}
-          </div>
 
-          <div className="space-y-2 rounded-xl border border-border/60 bg-muted/30 p-3">
-            <p className="text-xs font-bold text-muted-foreground">{T.addNew}</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder={T.nameHolder}
-                className="h-9 text-sm"
-              />
-              <Input
-                value={newUrl}
-                onChange={(e) => {
-                  setNewUrl(e.target.value);
-                  setTestResult(null);
-                }}
-                placeholder={T.urlHolder}
-                dir="ltr"
-                className="h-9 text-sm"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="secondary" onClick={() => runTest(newUrl)} disabled={testing || !newUrl.trim()}>
-                {testing ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Gauge className="me-1.5 h-3.5 w-3.5" />}
-                {T.test}
-              </Button>
-              <Button size="sm" onClick={savePlaylist} disabled={saving || !newUrl.trim()}>
-                {saving ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="me-1.5 h-3.5 w-3.5" />}
-                {T.save}
-              </Button>
-              {testResult && (
-                <span className="flex items-center gap-1.5 text-xs font-semibold">
-                  {testResult.ok ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                  ) : (
-                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                  )}
-                  {testResult.ok ? T.online : testResult.status === 'invalid' ? T.invalid : T.offline}
-                  <span className={latencyTone(testResult.latency_ms)}>{testResult.latency_ms}ms</span>
-                  {testResult.channel_count != null && (
-                    <span className="text-muted-foreground">
-                      · {testResult.channel_count} {T.channels}
+              {playlists.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {playlists.map((pl) => (
+                    <span
+                      key={pl.id}
+                      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
+                        activeId === pl.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
+                      }`}
+                    >
+                      <button type="button" onClick={() => loadPlaylist(pl)} className="font-semibold">
+                        {pl.name}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="delete"
+                        onClick={() => removePlaylist(pl.id)}
+                        className="opacity-50 transition hover:text-destructive hover:opacity-100"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3">
+                <p className="text-xs font-bold text-muted-foreground">{T.addNew}</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder={T.nameHolder}
+                    className="h-9 text-sm"
+                  />
+                  <Input
+                    value={newUrl}
+                    onChange={(e) => {
+                      setNewUrl(e.target.value);
+                      setTestResult(null);
+                    }}
+                    placeholder={T.urlHolder}
+                    dir="ltr"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => runTest(newUrl)} disabled={testing || !newUrl.trim()}>
+                    {testing ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Gauge className="me-1.5 h-3.5 w-3.5" />}
+                    {T.test}
+                  </Button>
+                  <Button size="sm" onClick={savePlaylist} disabled={saving || !newUrl.trim()}>
+                    {saving ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="me-1.5 h-3.5 w-3.5" />}
+                    {T.save}
+                  </Button>
+                  {testResult && (
+                    <span className="flex items-center gap-1.5 text-xs font-semibold">
+                      {testResult.ok ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                      ) : (
+                        <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                      )}
+                      {testResult.ok ? T.online : testResult.status === 'invalid' ? T.invalid : T.offline}
+                      <span className={latencyTone(testResult.latency_ms)}>{testResult.latency_ms}ms</span>
+                      {testResult.channel_count != null && (
+                        <span className="text-muted-foreground">
+                          · {testResult.channel_count} {T.channels}
+                        </span>
+                      )}
                     </span>
                   )}
-                </span>
-              )}
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">{T.ceoOnly}</p>
+          )}
         </Card>
+
 
         {/* Search + categories */}
         <div className="space-y-3">
@@ -542,7 +635,7 @@ export default function M3uTV() {
           </div>
         </div>
 
-        {/* Channels grid */}
+        {/* Channels — grouped section by section */}
         {loading ? (
           <div className="flex flex-col items-center gap-3 py-20 text-muted-foreground">
             <Loader2 className="h-7 w-7 animate-spin text-primary" />
@@ -551,34 +644,99 @@ export default function M3uTV() {
         ) : filtered.length === 0 ? (
           <p className="py-20 text-center text-xs font-semibold text-muted-foreground">{T.noChannels}</p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {filtered.slice(0, 300).map((ch, i) => (
-              <button
-                key={`${ch.url}-${i}`}
-                type="button"
-                onClick={() => playChannel(ch)}
-                className={`group relative overflow-hidden rounded-2xl border p-3 text-start transition-all ${
-                  current?.url === ch.url
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border/60 bg-card hover:border-primary/50'
-                }`}
-              >
-                <div className="mb-2 flex h-14 items-center justify-center">
-                  {ch.logo ? (
-                    <img src={ch.logo} alt={ch.name} loading="lazy" className="max-h-14 max-w-full object-contain" />
-                  ) : (
-                    <Tv className="h-7 w-7 text-muted-foreground" />
-                  )}
+          <div className="space-y-8">
+            {sections.map((section) => (
+              <section key={section.name} className="space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                      section.movie
+                        ? 'bg-gradient-to-br from-primary to-accent'
+                        : 'bg-gradient-to-br from-destructive to-pink-500'
+                    }`}
+                  >
+                    {section.movie ? (
+                      <Clapperboard className="h-4 w-4 text-primary-foreground" />
+                    ) : (
+                      <Tv className="h-4 w-4 text-destructive-foreground" />
+                    )}
+                  </span>
+                  <h3 className="truncate text-sm font-extrabold">{section.name}</h3>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {section.items.length} {section.movie ? T.movies : T.channels}
+                  </Badge>
+                  <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
                 </div>
-                <p className="truncate text-xs font-bold">{ch.name}</p>
-                <p className="truncate text-[10px] text-muted-foreground">{ch.group}</p>
-                <span className="absolute end-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <Play className="h-4 w-4 text-primary" />
-                </span>
-              </button>
+
+                {section.movie ? (
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+                    {section.items.map((ch, i) => (
+                      <button
+                        key={`${ch.url}-${i}`}
+                        type="button"
+                        onClick={() => playChannel(ch)}
+                        className={`group relative overflow-hidden rounded-xl border text-start shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+                          current?.url === ch.url ? 'border-primary ring-2 ring-primary/40' : 'border-border/60'
+                        }`}
+                      >
+                        <div className="relative w-full overflow-hidden bg-muted" style={{ aspectRatio: '2 / 3' }}>
+                          {ch.logo ? (
+                            <img
+                              src={ch.logo}
+                              alt={ch.name}
+                              loading="lazy"
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <Clapperboard className="h-7 w-7 text-muted-foreground" />
+                            </div>
+                          )}
+                          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-background/95 to-transparent" />
+                          <span className="absolute inset-0 flex items-center justify-center bg-background/40 opacity-0 backdrop-blur-[1px] transition-opacity group-hover:opacity-100">
+                            <Play className="h-7 w-7 text-primary" />
+                          </span>
+                        </div>
+                        <p className="line-clamp-2 min-h-[2.1rem] px-2 py-1.5 text-[11px] font-semibold leading-tight">
+                          {ch.name}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                    {section.items.map((ch, i) => (
+                      <button
+                        key={`${ch.url}-${i}`}
+                        type="button"
+                        onClick={() => playChannel(ch)}
+                        className={`group relative overflow-hidden rounded-2xl border p-3 text-start transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                          current?.url === ch.url
+                            ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
+                            : 'border-border/60 bg-card hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="mb-2 flex h-14 items-center justify-center">
+                          {ch.logo ? (
+                            <img src={ch.logo} alt={ch.name} loading="lazy" className="max-h-14 max-w-full object-contain" />
+                          ) : (
+                            <Tv className="h-7 w-7 text-muted-foreground" />
+                          )}
+                        </div>
+                        <p className="truncate text-xs font-bold">{ch.name}</p>
+                        <p className="truncate text-[10px] text-muted-foreground">{ch.group}</p>
+                        <span className="absolute end-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
+                          <Play className="h-4 w-4 text-primary" />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
             ))}
           </div>
         )}
+
       </div>
     </div>
   );
