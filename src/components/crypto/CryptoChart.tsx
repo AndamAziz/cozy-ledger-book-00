@@ -73,7 +73,20 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   useEffect(() => {
     try { localStorage.setItem('chart_show_ctp', String(showCTP)); } catch { /* ignore */ }
   }, [showCTP]);
+  // Minimum confidence a signal must reach before it is drawn (0 = show all).
+  const [minConf, setMinConf] = useState(() => {
+    try { return Number(localStorage.getItem('chart_ctp_min_conf') ?? '70') || 0; } catch { return 70; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('chart_ctp_min_conf', String(minConf)); } catch { /* ignore */ }
+  }, [minConf]);
+  const cycleMinConf = () => setMinConf((v) => {
+    const i = CONFIDENCE_STEPS.indexOf(v as typeof CONFIDENCE_STEPS[number]);
+    return CONFIDENCE_STEPS[(i + 1) % CONFIDENCE_STEPS.length];
+  });
   const confluence = useMemo(() => computeConfluence(candles), [candles]);
+  const ctpSignals = useMemo(() => filterByConfidence(confluence.signals, minConf), [confluence, minConf]);
+  const ctpLast = ctpSignals.length ? ctpSignals[ctpSignals.length - 1] : null;
   // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
   const [showTradeDetails, setShowTradeDetails] = useState(() => {
     try { return localStorage.getItem('chart_show_trade_details') === 'true'; } catch { return false; }
