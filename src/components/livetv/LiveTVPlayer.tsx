@@ -81,7 +81,12 @@ export function LiveTVPlayer({
     video.addEventListener('canplay', done);
     video.addEventListener('loadeddata', done);
 
-    if (!nativeMode && Hls.isSupported()) {
+    // Movies / episodes are progressive containers (mp4, mkv…): hls.js cannot
+    // parse them, so they play natively — exactly like the IPTV M3U module,
+    // which only engages hls.js for HLS manifests.
+    const isHls = (channel.kind ?? 'live') === 'live';
+
+    if (!nativeMode && isHls && Hls.isSupported()) {
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
       hlsRef.current = hls;
       hls.loadSource(src);
