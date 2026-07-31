@@ -565,7 +565,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, confluence]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, ctpSignals]);
 
   // Create / remove the RSI and MACD panes (and their data) when toggled or
   // when the chart is recreated. Each indicator gets its own pane below price.
