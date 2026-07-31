@@ -526,9 +526,21 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         text: `${sideText(m.side)}${countTag} ${fmtQty(m.qty)} @ $${fmtMarkerPrice(avgPrice)}`,
       };
     });
+    // CTP Confluence signals (EMA trend + RSI + MACD cross + price/EMA).
+    if (showCTP) {
+      for (const s of confluence.signals) {
+        markers.push({
+          time: s.time as Time,
+          position: s.side === 'buy' ? 'belowBar' : 'aboveBar',
+          color: s.side === 'buy' ? '#16c784' : '#ea3943',
+          shape: s.side === 'buy' ? 'arrowUp' : 'arrowDown',
+          text: `${s.side === 'buy' ? 'BUY' : 'SELL'} ${s.score}/4 · ${s.confidence}%`,
+        });
+      }
+    }
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, confluence]);
 
   // Create / remove the RSI and MACD panes (and their data) when toggled or
   // when the chart is recreated. Each indicator gets its own pane below price.
