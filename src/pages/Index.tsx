@@ -139,14 +139,14 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             {/* The Holy Quran — featured full-width card */}
             <button
               onClick={() => navigate('/quran')}
-              className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-gold via-primary to-gold p-[1px] shadow-xl transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+              className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-gold via-primary to-gold p-[1px] shadow-xl transition-all duration-200 ease-out hover:shadow-2xl hover:shadow-gold/20 active:scale-95 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
             >
-              <div className="flex items-center gap-4 rounded-[15px] bg-card/90 backdrop-blur-xl p-4 sm:p-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-gold to-primary shadow-[0_0_20px_hsl(var(--gold)/0.3)] transition-all group-hover:shadow-[0_0_28px_hsl(var(--gold)/0.4)]">
-                  <BookOpen className="h-6 w-6 text-gold-foreground" />
+              <div className="flex items-center gap-4 rounded-[15px] bg-card/90 backdrop-blur-xl p-4 sm:p-5 transition-colors duration-200 group-hover:bg-card/95">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-gold to-primary shadow-[0_0_20px_hsl(var(--gold)/0.3)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_28px_hsl(var(--gold)/0.4)]">
+                  <BookOpen className="h-6 w-6 text-gold-foreground transition-transform duration-200 group-hover:scale-110" />
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-base sm:text-lg font-bold text-foreground">{QURAN_LABEL[language] || QURAN_LABEL.en}</span>
+                  <span className="text-base sm:text-lg font-bold text-foreground transition-colors duration-200 group-hover:text-gold-foreground">{QURAN_LABEL[language] || QURAN_LABEL.en}</span>
                 </div>
               </div>
             </button>
@@ -158,93 +158,93 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
                 href="https://famelack.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="group relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all duration-200 ease-out hover:scale-[1.03] hover:-translate-y-1 hover:border-white/10 hover:bg-card/90 hover:shadow-xl active:scale-95 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
-                <div className="mb-3 rounded-xl bg-info/10 p-3 text-info shadow-[inset_0_0_12px_hsl(var(--info)/0.1)]">
-                  <Tv className="h-6 w-6" />
+                <div className="mb-3 rounded-xl bg-info/10 p-3 text-info shadow-[inset_0_0_12px_hsl(var(--info)/0.1)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_20px_hsl(var(--info)/0.3)]">
+                  <Tv className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />
                 </div>
-                <span className="text-sm font-semibold text-foreground text-center">TV</span>
+                <span className="text-sm font-semibold text-foreground text-center transition-colors duration-200 group-hover:text-info">TV</span>
               </a>
 
               {/* Sport Live */}
               <button
                 onClick={() => setSportOpen(true)}
-                className="relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="group relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all duration-200 ease-out hover:scale-[1.03] hover:-translate-y-1 hover:border-white/10 hover:bg-card/90 hover:shadow-xl active:scale-95 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
-                <div className="mb-3 rounded-xl bg-success/10 p-3 text-success shadow-[inset_0_0_12px_hsl(var(--success)/0.1)]">
-                  <Radio className="h-6 w-6" />
+                <div className="mb-3 rounded-xl bg-success/10 p-3 text-success shadow-[inset_0_0_12px_hsl(var(--success)/0.1)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_20px_hsl(var(--success)/0.3)]">
+                  <Radio className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />
                 </div>
-                <span className="text-sm font-semibold text-foreground text-center">Sport Live</span>
+                <span className="text-sm font-semibold text-foreground text-center transition-colors duration-200 group-hover:text-success">Sport Live</span>
               </button>
 
               {/* Movies */}
               <button
                 onClick={() => navigate('/movies')}
-                className="relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="group relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all duration-200 ease-out hover:scale-[1.03] hover:-translate-y-1 hover:border-white/10 hover:bg-card/90 hover:shadow-xl active:scale-95 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
-                <div className="mb-3 rounded-xl bg-accent/10 p-3 text-accent shadow-[inset_0_0_12px_hsl(var(--accent)/0.1)]">
-                  <Film className="h-6 w-6" />
+                <div className="mb-3 rounded-xl bg-accent/10 p-3 text-accent shadow-[inset_0_0_12px_hsl(var(--accent)/0.1)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_20px_hsl(var(--accent)/0.3)]">
+                  <Film className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />
                 </div>
-                <span className="text-sm font-semibold text-foreground text-center">Movies</span>
+                <span className="text-sm font-semibold text-foreground text-center transition-colors duration-200 group-hover:text-accent">Movies</span>
               </button>
 
               {/* Live TV */}
               <button
                 onClick={() => navigate('/live-tv')}
-                className="relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="group relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all duration-200 ease-out hover:scale-[1.03] hover:-translate-y-1 hover:border-white/10 hover:bg-card/90 hover:shadow-xl active:scale-95 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
-                <div className="mb-3 rounded-xl bg-destructive/10 p-3 text-destructive shadow-[inset_0_0_12px_hsl(var(--destructive)/0.1)]">
-                  <Tv className="h-6 w-6" />
+                <div className="mb-3 rounded-xl bg-destructive/10 p-3 text-destructive shadow-[inset_0_0_12px_hsl(var(--destructive)/0.1)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_20px_hsl(var(--destructive)/0.3)]">
+                  <Tv className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />
                 </div>
-                <span className="text-sm font-semibold text-foreground text-center">Live TV</span>
+                <span className="text-sm font-semibold text-foreground text-center transition-colors duration-200 group-hover:text-destructive">Live TV</span>
               </button>
 
               {/* IPTV M3U */}
               <button
                 onClick={() => navigate('/iptv')}
-                className="relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="group relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all duration-200 ease-out hover:scale-[1.03] hover:-translate-y-1 hover:border-white/10 hover:bg-card/90 hover:shadow-xl active:scale-95 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
-                <div className="mb-3 rounded-xl bg-primary/10 p-3 text-primary shadow-[inset_0_0_12px_hsl(var(--primary)/0.1)]">
-                  <Tv className="h-6 w-6" />
+                <div className="mb-3 rounded-xl bg-primary/10 p-3 text-primary shadow-[inset_0_0_12px_hsl(var(--primary)/0.1)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)]">
+                  <Tv className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />
                 </div>
-                <span className="text-sm font-semibold text-foreground text-center">IPTV M3U</span>
+                <span className="text-sm font-semibold text-foreground text-center transition-colors duration-200 group-hover:text-primary">IPTV M3U</span>
               </button>
 
               {/* Crypto Tracker */}
               <button
                 onClick={() => navigate('/crypto')}
-                className="relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="group relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all duration-200 ease-out hover:scale-[1.03] hover:-translate-y-1 hover:border-white/10 hover:bg-card/90 hover:shadow-xl active:scale-95 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
-                <div className="mb-3 rounded-xl bg-warning/10 p-3 text-warning shadow-[inset_0_0_12px_hsl(var(--warning)/0.1)]">
-                  <Bitcoin className="h-6 w-6" />
+                <div className="mb-3 rounded-xl bg-warning/10 p-3 text-warning shadow-[inset_0_0_12px_hsl(var(--warning)/0.1)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_20px_hsl(var(--warning)/0.3)]">
+                  <Bitcoin className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />
                 </div>
-                <span className="text-sm font-semibold text-foreground text-center">{t('cryptoTracker')}</span>
+                <span className="text-sm font-semibold text-foreground text-center transition-colors duration-200 group-hover:text-warning">{t('cryptoTracker')}</span>
               </button>
 
               {/* Prayer Times & Qibla */}
               <button
                 onClick={() => navigate('/prayer')}
-                className="relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="group relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all duration-200 ease-out hover:scale-[1.03] hover:-translate-y-1 hover:border-white/10 hover:bg-card/90 hover:shadow-xl active:scale-95 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
               >
-                <div className="mb-3 rounded-xl bg-primary/10 p-3 text-primary shadow-[inset_0_0_12px_hsl(var(--primary)/0.1)]">
-                  <Moon className="h-6 w-6" />
+                <div className="mb-3 rounded-xl bg-primary/10 p-3 text-primary shadow-[inset_0_0_12px_hsl(var(--primary)/0.1)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)]">
+                  <Moon className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />
                 </div>
-                <span className="text-xs sm:text-sm font-semibold text-foreground text-center leading-tight">{PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
+                <span className="text-xs sm:text-sm font-semibold text-foreground text-center leading-tight transition-colors duration-200 group-hover:text-primary">{PRAYER_LABEL[language] || PRAYER_LABEL.en}</span>
               </button>
 
               {/* Financial Management */}
               <button
                 onClick={() => setFinanceOpen((v) => !v)}
-                className="relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+                className="group relative flex flex-col items-center justify-center rounded-2xl bg-card/80 border border-white/5 shadow-lg p-4 sm:p-5 transition-all duration-200 ease-out hover:scale-[1.03] hover:-translate-y-1 hover:border-white/10 hover:bg-card/90 hover:shadow-xl active:scale-95 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
                 aria-expanded={financeOpen}
               >
                 <span className="absolute top-2 right-2 rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-tighter bg-success text-success-foreground">
                   New
                 </span>
-                <div className="mb-3 rounded-xl bg-success/10 p-3 text-success shadow-[inset_0_0_12px_hsl(var(--success)/0.1)]">
-                  <Wallet className="h-6 w-6" />
+                <div className="mb-3 rounded-xl bg-success/10 p-3 text-success shadow-[inset_0_0_12px_hsl(var(--success)/0.1)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_20px_hsl(var(--success)/0.3)]">
+                  <Wallet className="h-6 w-6 transition-transform duration-200 group-hover:scale-110" />
                 </div>
-                <span className="text-xs sm:text-sm font-semibold text-foreground text-center leading-tight">{t('financialManagement')}</span>
+                <span className="text-xs sm:text-sm font-semibold text-foreground text-center leading-tight transition-colors duration-200 group-hover:text-success">{t('financialManagement')}</span>
               </button>
             </div>
           </div>
