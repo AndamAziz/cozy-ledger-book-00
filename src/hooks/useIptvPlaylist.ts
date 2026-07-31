@@ -69,7 +69,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
 export function toPlayableUrl(channelId: string, kind: IptvKind = 'live', ext?: string): string {
   const extPart = ext ? `&ext=${encodeURIComponent(ext)}` : '';
   const tokenPart = accessToken ? `&token=${encodeURIComponent(accessToken)}` : '';
-  return `${FN_BASE}/iptv-proxy?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}&apikey=${ANON}${tokenPart}`;
+  return `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}&apikey=${ANON}${tokenPart}`;
 }
 
 
