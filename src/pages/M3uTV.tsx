@@ -76,11 +76,15 @@ export default function M3uTV() {
   const [playerLoading, setPlayerLoading] = useState(false);
   const [useProxy, setUseProxy] = useState(false);
   // Only the CEO account manages playlist links (add / delete).
+  // Every other signed-in user sees the same shared playlists, read-only.
   const [isCeo, setIsCeo] = useState(false);
+  const ceoRef = useRef(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setIsCeo((data.user?.email ?? '').toLowerCase() === 'andam@outlook.com');
+      const ceo = (data.user?.email ?? '').toLowerCase() === 'andam@outlook.com';
+      setIsCeo(ceo);
+      ceoRef.current = ceo;
     });
   }, []);
 
