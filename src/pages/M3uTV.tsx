@@ -589,7 +589,7 @@ export default function M3uTV() {
           </div>
         </div>
 
-        {/* Channels grid */}
+        {/* Channels — grouped section by section */}
         {loading ? (
           <div className="flex flex-col items-center gap-3 py-20 text-muted-foreground">
             <Loader2 className="h-7 w-7 animate-spin text-primary" />
@@ -598,34 +598,99 @@ export default function M3uTV() {
         ) : filtered.length === 0 ? (
           <p className="py-20 text-center text-xs font-semibold text-muted-foreground">{T.noChannels}</p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {filtered.slice(0, 300).map((ch, i) => (
-              <button
-                key={`${ch.url}-${i}`}
-                type="button"
-                onClick={() => playChannel(ch)}
-                className={`group relative overflow-hidden rounded-2xl border p-3 text-start transition-all ${
-                  current?.url === ch.url
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border/60 bg-card hover:border-primary/50'
-                }`}
-              >
-                <div className="mb-2 flex h-14 items-center justify-center">
-                  {ch.logo ? (
-                    <img src={ch.logo} alt={ch.name} loading="lazy" className="max-h-14 max-w-full object-contain" />
-                  ) : (
-                    <Tv className="h-7 w-7 text-muted-foreground" />
-                  )}
+          <div className="space-y-8">
+            {sections.map((section) => (
+              <section key={section.name} className="space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                      section.movie
+                        ? 'bg-gradient-to-br from-primary to-accent'
+                        : 'bg-gradient-to-br from-destructive to-pink-500'
+                    }`}
+                  >
+                    {section.movie ? (
+                      <Clapperboard className="h-4 w-4 text-primary-foreground" />
+                    ) : (
+                      <Tv className="h-4 w-4 text-destructive-foreground" />
+                    )}
+                  </span>
+                  <h3 className="truncate text-sm font-extrabold">{section.name}</h3>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {section.items.length} {section.movie ? T.movies : T.channels}
+                  </Badge>
+                  <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
                 </div>
-                <p className="truncate text-xs font-bold">{ch.name}</p>
-                <p className="truncate text-[10px] text-muted-foreground">{ch.group}</p>
-                <span className="absolute end-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <Play className="h-4 w-4 text-primary" />
-                </span>
-              </button>
+
+                {section.movie ? (
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+                    {section.items.map((ch, i) => (
+                      <button
+                        key={`${ch.url}-${i}`}
+                        type="button"
+                        onClick={() => playChannel(ch)}
+                        className={`group relative overflow-hidden rounded-xl border text-start shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+                          current?.url === ch.url ? 'border-primary ring-2 ring-primary/40' : 'border-border/60'
+                        }`}
+                      >
+                        <div className="relative w-full overflow-hidden bg-muted" style={{ aspectRatio: '2 / 3' }}>
+                          {ch.logo ? (
+                            <img
+                              src={ch.logo}
+                              alt={ch.name}
+                              loading="lazy"
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <Clapperboard className="h-7 w-7 text-muted-foreground" />
+                            </div>
+                          )}
+                          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-background/95 to-transparent" />
+                          <span className="absolute inset-0 flex items-center justify-center bg-background/40 opacity-0 backdrop-blur-[1px] transition-opacity group-hover:opacity-100">
+                            <Play className="h-7 w-7 text-primary" />
+                          </span>
+                        </div>
+                        <p className="line-clamp-2 min-h-[2.1rem] px-2 py-1.5 text-[11px] font-semibold leading-tight">
+                          {ch.name}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                    {section.items.map((ch, i) => (
+                      <button
+                        key={`${ch.url}-${i}`}
+                        type="button"
+                        onClick={() => playChannel(ch)}
+                        className={`group relative overflow-hidden rounded-2xl border p-3 text-start transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                          current?.url === ch.url
+                            ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
+                            : 'border-border/60 bg-card hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="mb-2 flex h-14 items-center justify-center">
+                          {ch.logo ? (
+                            <img src={ch.logo} alt={ch.name} loading="lazy" className="max-h-14 max-w-full object-contain" />
+                          ) : (
+                            <Tv className="h-7 w-7 text-muted-foreground" />
+                          )}
+                        </div>
+                        <p className="truncate text-xs font-bold">{ch.name}</p>
+                        <p className="truncate text-[10px] text-muted-foreground">{ch.group}</p>
+                        <span className="absolute end-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
+                          <Play className="h-4 w-4 text-primary" />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
             ))}
           </div>
         )}
+
       </div>
     </div>
   );
