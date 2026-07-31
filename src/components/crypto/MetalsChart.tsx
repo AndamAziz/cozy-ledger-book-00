@@ -1144,6 +1144,48 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
         />
         <div ref={chartContainerRef} className="absolute inset-0" />
 
+        {/* CTP confluence score panel (Pine-style table, bottom-start corner) */}
+        {showCTP && candles.length > 0 && (
+          <div className="absolute bottom-2 start-2 z-20 rounded-lg border border-white/10 bg-black/70 backdrop-blur px-2.5 py-1.5 text-[10px] leading-tight">
+            <div className="mb-1 font-bold tracking-wide text-[#f0b90b]">CTP CONFLUENCE</div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 tabular-nums">
+              <span className="text-[#848e9c]">{bi('بەرزبوونەوە', 'Bull')}</span>
+              <span className="text-end font-bold text-[#16c784]">{confluence.bullScore}/4</span>
+              <span className="text-[#848e9c]">{bi('داکشان', 'Bear')}</span>
+              <span className="text-end font-bold text-[#ea3943]">{confluence.bearScore}/4</span>
+              <span className="text-[#848e9c]">RSI</span>
+              <span className="text-end font-bold text-[#f0b90b]">{confluence.rsi}</span>
+              <span className="text-[#848e9c]">{bi('ئاڕاستە', 'Trend')}</span>
+              <span className={`text-end font-bold ${confluence.trend === 'up' ? 'text-[#16c784]' : confluence.trend === 'down' ? 'text-[#ea3943]' : 'text-[#848e9c]'}`}>
+                {confluence.trend === 'up' ? '▲ UP' : confluence.trend === 'down' ? '▼ DOWN' : '– FLAT'}
+              </span>
+            </div>
+            {confluence.last && (
+              <div className="mt-1.5 border-t border-white/10 pt-1.5">
+                <div className={`flex items-center justify-between gap-2 font-bold ${confluence.last.side === 'buy' ? 'text-[#16c784]' : 'text-[#ea3943]'}`}>
+                  <span>{confluence.last.side === 'buy' ? '▲ BUY' : '▼ SELL'}</span>
+                  <span className="tabular-nums">{confluence.last.score}/4 · {confluence.last.confidence}%</span>
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className={`h-full rounded-full ${confluence.last.side === 'buy' ? 'bg-[#16c784]' : 'bg-[#ea3943]'}`}
+                    style={{ width: `${confluence.last.confidence}%` }}
+                  />
+                </div>
+                <div className="mt-0.5 text-[9px] font-bold text-[#848e9c]">
+                  {confluence.last.confidence >= 80
+                    ? bi('سیگناڵی بەهێز', 'STRONG SIGNAL')
+                    : confluence.last.confidence >= 60
+                      ? bi('سیگناڵی مامناوەند', 'MEDIUM SIGNAL')
+                      : bi('سیگناڵی لاواز', 'WEAK SIGNAL')}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+
+
 
 
         {/* Depth-of-market ladder (MT5 style) overlaid on the right edge */}
