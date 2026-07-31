@@ -158,7 +158,9 @@ export default function M3uTV() {
         }
         setChannels(data.channels || []);
         setGroups(data.groups || []);
-        if (pl.id !== 'default') {
+        // Only the CEO may write playlist stats back (shared rows are read-only
+        // for everyone else), so skip the update for normal viewers.
+        if (pl.id !== 'default' && ceoRef.current) {
           await supabase
             .from('iptv_playlists')
             .update({
