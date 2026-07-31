@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, HistogramSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
