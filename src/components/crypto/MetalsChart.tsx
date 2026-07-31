@@ -807,7 +807,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
     }
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, confluence]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, ctpSignals]);
 
 
   // OHLC view of the metal candles for the indicator-series helpers.
