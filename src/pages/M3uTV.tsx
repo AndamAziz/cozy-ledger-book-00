@@ -468,90 +468,136 @@ export default function M3uTV() {
           </Card>
         </div>
 
-        {/* Playlist manager */}
+        {/* Playlist selector */}
         <Card className="space-y-4 p-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <ListVideo className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold">{T.playlists}</h2>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="ms-auto min-w-[190px] justify-between gap-2">
+                  <span className="truncate">
+                    {playlists.find((p) => p.id === activeId)?.name ?? T.choose}
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel className="text-xs">{T.playlists}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {playlists.map((pl) => (
+                  <DropdownMenuItem
+                    key={pl.id}
+                    onSelect={() => loadPlaylist(pl)}
+                    className="flex items-center gap-2"
+                  >
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${activeId === pl.id ? 'bg-primary' : 'bg-muted-foreground/40'}`} />
+                    <span className="truncate text-xs font-semibold">{pl.name}</span>
+                    <span className="ms-auto flex items-center gap-2 text-[10px]">
+                      {pl.channel_count != null && (
+                        <span className="text-muted-foreground">{pl.channel_count}</span>
+                      )}
+                      {pl.last_latency_ms != null && (
+                        <span className={latencyTone(pl.last_latency_ms)}>{pl.last_latency_ms}ms</span>
+                      )}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+                {playlists.length === 0 && (
+                  <DropdownMenuItem disabled className="text-xs">
+                    {T.noChannels}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {playlists.map((pl) => (
-              <div
-                key={pl.id}
-                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
-                  activeId === pl.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
-                }`}
-              >
-                <button type="button" onClick={() => loadPlaylist(pl)} className="font-semibold">
-                  {pl.name}
-                  {pl.last_latency_ms != null && (
-                    <span className={`ms-2 ${latencyTone(pl.last_latency_ms)}`}>{pl.last_latency_ms}ms</span>
-                  )}
-                  {pl.channel_count != null && (
-                    <span className="ms-1 text-muted-foreground">· {pl.channel_count}</span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  aria-label="delete"
-                  onClick={() => removePlaylist(pl.id)}
-                  className="opacity-50 transition hover:text-destructive hover:opacity-100"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+          {isCeo ? (
+            <div className="space-y-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <p className="text-xs font-bold">{T.manage}</p>
               </div>
-            ))}
-          </div>
 
-          <div className="space-y-2 rounded-xl border border-border/60 bg-muted/30 p-3">
-            <p className="text-xs font-bold text-muted-foreground">{T.addNew}</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder={T.nameHolder}
-                className="h-9 text-sm"
-              />
-              <Input
-                value={newUrl}
-                onChange={(e) => {
-                  setNewUrl(e.target.value);
-                  setTestResult(null);
-                }}
-                placeholder={T.urlHolder}
-                dir="ltr"
-                className="h-9 text-sm"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="secondary" onClick={() => runTest(newUrl)} disabled={testing || !newUrl.trim()}>
-                {testing ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Gauge className="me-1.5 h-3.5 w-3.5" />}
-                {T.test}
-              </Button>
-              <Button size="sm" onClick={savePlaylist} disabled={saving || !newUrl.trim()}>
-                {saving ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="me-1.5 h-3.5 w-3.5" />}
-                {T.save}
-              </Button>
-              {testResult && (
-                <span className="flex items-center gap-1.5 text-xs font-semibold">
-                  {testResult.ok ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                  ) : (
-                    <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                  )}
-                  {testResult.ok ? T.online : testResult.status === 'invalid' ? T.invalid : T.offline}
-                  <span className={latencyTone(testResult.latency_ms)}>{testResult.latency_ms}ms</span>
-                  {testResult.channel_count != null && (
-                    <span className="text-muted-foreground">
-                      · {testResult.channel_count} {T.channels}
+              {playlists.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {playlists.map((pl) => (
+                    <span
+                      key={pl.id}
+                      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
+                        activeId === pl.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
+                      }`}
+                    >
+                      <button type="button" onClick={() => loadPlaylist(pl)} className="font-semibold">
+                        {pl.name}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="delete"
+                        onClick={() => removePlaylist(pl.id)}
+                        className="opacity-50 transition hover:text-destructive hover:opacity-100"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3">
+                <p className="text-xs font-bold text-muted-foreground">{T.addNew}</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder={T.nameHolder}
+                    className="h-9 text-sm"
+                  />
+                  <Input
+                    value={newUrl}
+                    onChange={(e) => {
+                      setNewUrl(e.target.value);
+                      setTestResult(null);
+                    }}
+                    placeholder={T.urlHolder}
+                    dir="ltr"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => runTest(newUrl)} disabled={testing || !newUrl.trim()}>
+                    {testing ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Gauge className="me-1.5 h-3.5 w-3.5" />}
+                    {T.test}
+                  </Button>
+                  <Button size="sm" onClick={savePlaylist} disabled={saving || !newUrl.trim()}>
+                    {saving ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="me-1.5 h-3.5 w-3.5" />}
+                    {T.save}
+                  </Button>
+                  {testResult && (
+                    <span className="flex items-center gap-1.5 text-xs font-semibold">
+                      {testResult.ok ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                      ) : (
+                        <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                      )}
+                      {testResult.ok ? T.online : testResult.status === 'invalid' ? T.invalid : T.offline}
+                      <span className={latencyTone(testResult.latency_ms)}>{testResult.latency_ms}ms</span>
+                      {testResult.channel_count != null && (
+                        <span className="text-muted-foreground">
+                          · {testResult.channel_count} {T.channels}
+                        </span>
+                      )}
                     </span>
                   )}
-                </span>
-              )}
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">{T.ceoOnly}</p>
+          )}
         </Card>
+
 
         {/* Search + categories */}
         <div className="space-y-3">
