@@ -541,7 +541,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     });
     // CTP Confluence signals (EMA trend + RSI + MACD cross + price/EMA).
     if (showCTP) {
-      for (const s of confluence.signals) {
+      for (const s of ctpSignals) {
         const stars = '★'.repeat(s.score) + '☆'.repeat(Math.max(0, 4 - s.score));
         const strength = s.confidence >= 80
           ? bi('بەهێز', 'STRONG')
