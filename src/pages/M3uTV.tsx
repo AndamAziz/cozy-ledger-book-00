@@ -116,7 +116,12 @@ export default function M3uTV() {
     retry: ku ? 'دووبارە' : 'Retry',
     live: ku ? 'ڕاستەوخۆ' : 'LIVE',
     back: ku ? 'گەڕانەوە' : 'Back',
+    choose: ku ? 'پلەیلیست هەڵبژێرە' : 'Choose playlist',
+    manage: ku ? 'بەڕێوەبردنی لینکەکان (CEO)' : 'Manage links (CEO)',
+    movies: ku ? 'فیلمەکان' : 'Movies',
+    ceoOnly: ku ? 'تەنها بەڕێوەبەری سەرەکی دەتوانێت لینک زیاد بکات' : 'Only the CEO can add or delete links',
   };
+
 
   /* ---------------- playlists ---------------- */
 
