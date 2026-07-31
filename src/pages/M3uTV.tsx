@@ -76,11 +76,15 @@ export default function M3uTV() {
   const [playerLoading, setPlayerLoading] = useState(false);
   const [useProxy, setUseProxy] = useState(false);
   // Only the CEO account manages playlist links (add / delete).
+  // Every other signed-in user sees the same shared playlists, read-only.
   const [isCeo, setIsCeo] = useState(false);
+  const ceoRef = useRef(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setIsCeo((data.user?.email ?? '').toLowerCase() === 'andam@outlook.com');
+      const ceo = (data.user?.email ?? '').toLowerCase() === 'andam@outlook.com';
+      setIsCeo(ceo);
+      ceoRef.current = ceo;
     });
   }, []);
 
@@ -158,7 +162,9 @@ export default function M3uTV() {
         }
         setChannels(data.channels || []);
         setGroups(data.groups || []);
-        if (pl.id !== 'default') {
+        // Only the CEO may write playlist stats back (shared rows are read-only
+        // for everyone else), so skip the update for normal viewers.
+        if (pl.id !== 'default' && ceoRef.current) {
           await supabase
             .from('iptv_playlists')
             .update({
@@ -186,9 +192,11 @@ export default function M3uTV() {
         loadPlaylist(list[0]);
         return;
       }
+      // Seeding the first shared playlist is a CEO-only write.
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
-      if (uid) {
+      const isCeoUser = (userRes.user?.email ?? '').toLowerCase() === 'andam@outlook.com';
+      if (uid && isCeoUser) {
         const { data: inserted } = await supabase
           .from('iptv_playlists')
           .insert({ user_id: uid, name: 'Brazil', url: DEFAULT_PLAYLIST })
