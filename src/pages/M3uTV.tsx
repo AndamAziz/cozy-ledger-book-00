@@ -349,6 +349,23 @@ export default function M3uTV() {
     return map;
   }, [channels]);
 
+  /** Split the visible items into per-category sections (max 300 items shown). */
+  const sections = useMemo(() => {
+    const map = new Map<string, Channel[]>();
+    filtered.slice(0, 300).forEach((c) => {
+      const key = c.group || 'Other';
+      const list = map.get(key);
+      if (list) list.push(c);
+      else map.set(key, [c]);
+    });
+    return [...map.entries()].map(([name, items]) => ({
+      name,
+      items,
+      movie: isMovieItem(items[0]),
+    }));
+  }, [filtered]);
+
+
   /* ---------------- ui ---------------- */
 
   return (
