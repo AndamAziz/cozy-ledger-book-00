@@ -209,3 +209,16 @@ export function confidenceOf(score: number, rsiValue: number, side: 'buy' | 'sel
     : Math.max(0, Math.min(20, ((50 - rsiValue) / 20) * 20));
   return Math.round(base + momentum);
 }
+
+/**
+ * Selectable minimum-confidence thresholds for the chart UI. `0` shows every
+ * signal the engine fires; the higher steps hide the weaker ones so only the
+ * strongest BUY/SELL arrows stay on the chart.
+ */
+export const CONFIDENCE_STEPS = [0, 60, 70, 80, 90] as const;
+
+/** Keep only signals whose confidence reaches `minConfidence` (0 = keep all). */
+export function filterByConfidence(signals: ConfluenceSignal[], minConfidence: number): ConfluenceSignal[] {
+  if (!minConfidence) return signals;
+  return signals.filter((s) => s.confidence >= minConfidence);
+}

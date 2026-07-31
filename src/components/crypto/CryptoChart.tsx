@@ -5,7 +5,7 @@ import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAvera
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
-import { computeConfluence } from '@/lib/confluenceSignal';
+import { computeConfluence, CONFIDENCE_STEPS, filterByConfidence } from '@/lib/confluenceSignal';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
@@ -73,7 +73,20 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   useEffect(() => {
     try { localStorage.setItem('chart_show_ctp', String(showCTP)); } catch { /* ignore */ }
   }, [showCTP]);
+  // Minimum confidence a signal must reach before it is drawn (0 = show all).
+  const [minConf, setMinConf] = useState(() => {
+    try { return Number(localStorage.getItem('chart_ctp_min_conf') ?? '70') || 0; } catch { return 70; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('chart_ctp_min_conf', String(minConf)); } catch { /* ignore */ }
+  }, [minConf]);
+  const cycleMinConf = () => setMinConf((v) => {
+    const i = CONFIDENCE_STEPS.indexOf(v as typeof CONFIDENCE_STEPS[number]);
+    return CONFIDENCE_STEPS[(i + 1) % CONFIDENCE_STEPS.length];
+  });
   const confluence = useMemo(() => computeConfluence(candles), [candles]);
+  const ctpSignals = useMemo(() => filterByConfidence(confluence.signals, minConf), [confluence, minConf]);
+  const ctpLast = ctpSignals.length ? ctpSignals[ctpSignals.length - 1] : null;
   // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
   const [showTradeDetails, setShowTradeDetails] = useState(() => {
     try { return localStorage.getItem('chart_show_trade_details') === 'true'; } catch { return false; }
@@ -528,7 +541,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     });
     // CTP Confluence signals (EMA trend + RSI + MACD cross + price/EMA).
     if (showCTP) {
-      for (const s of confluence.signals) {
+      for (const s of ctpSignals) {
         const stars = '★'.repeat(s.score) + '☆'.repeat(Math.max(0, 4 - s.score));
         const strength = s.confidence >= 80
           ? bi('بەهێز', 'STRONG')
@@ -552,7 +565,7 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
 
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, confluence]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, ctpSignals]);
 
   // Create / remove the RSI and MACD panes (and their data) when toggled or
   // when the chart is recreated. Each indicator gets its own pane below price.
@@ -755,6 +768,17 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
             CTP {bi('سیگناڵ', 'Signals')}
           </button>
 
+          {/* Minimum-confidence gate for CTP signals */}
+          {showCTP && (
+            <button
+              onClick={cycleMinConf}
+              title={bi('کەمترین ڕێژەی متمانە', 'Minimum confidence')}
+              className="shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border bg-[#f0b90b1a] text-[#f0b90b] border-[#f0b90b55] transition-colors"
+            >
+              ≥ {minConf ? `${minConf}%` : bi('هەموو', 'All')}
+            </button>
+          )}
+
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
 
           {/* Trade journal opener */}
@@ -886,27 +910,36 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
                 {confluence.trend === 'up' ? '▲ UP' : confluence.trend === 'down' ? '▼ DOWN' : '– FLAT'}
               </span>
             </div>
-            {confluence.last && (
+            <div className="mt-1 flex items-center justify-between gap-3 text-[9px] text-[#848e9c]">
+              <span>{bi('کەمترین متمانە', 'Min conf.')}</span>
+              <span className="font-bold text-[#f0b90b]">{minConf ? `${minConf}%` : bi('هەموو', 'All')}</span>
+            </div>
+            {ctpLast ? (
               <div className="mt-1.5 border-t border-white/10 pt-1.5">
-                <div className={`flex items-center justify-between gap-2 font-bold ${confluence.last.side === 'buy' ? 'text-[#16c784]' : 'text-[#ea3943]'}`}>
-                  <span>{confluence.last.side === 'buy' ? '▲ BUY' : '▼ SELL'}</span>
-                  <span className="tabular-nums">{confluence.last.score}/4 · {confluence.last.confidence}%</span>
+                <div className={`flex items-center justify-between gap-2 font-bold ${ctpLast.side === 'buy' ? 'text-[#16c784]' : 'text-[#ea3943]'}`}>
+                  <span>{ctpLast.side === 'buy' ? '▲ BUY' : '▼ SELL'}</span>
+                  <span className="tabular-nums">{ctpLast.score}/4 · {ctpLast.confidence}%</span>
                 </div>
                 <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                   <div
-                    className={`h-full rounded-full ${confluence.last.side === 'buy' ? 'bg-[#16c784]' : 'bg-[#ea3943]'}`}
-                    style={{ width: `${confluence.last.confidence}%` }}
+                    className={`h-full rounded-full ${ctpLast.side === 'buy' ? 'bg-[#16c784]' : 'bg-[#ea3943]'}`}
+                    style={{ width: `${ctpLast.confidence}%` }}
                   />
                 </div>
                 <div className="mt-0.5 text-[9px] font-bold text-[#848e9c]">
-                  {confluence.last.confidence >= 80
+                  {ctpLast.confidence >= 80
                     ? bi('سیگناڵی بەهێز', 'STRONG SIGNAL')
-                    : confluence.last.confidence >= 60
+                    : ctpLast.confidence >= 60
                       ? bi('سیگناڵی مامناوەند', 'MEDIUM SIGNAL')
                       : bi('سیگناڵی لاواز', 'WEAK SIGNAL')}
                 </div>
               </div>
+            ) : (
+              <div className="mt-1.5 border-t border-white/10 pt-1.5 text-[9px] font-bold text-[#848e9c]">
+                {bi('هیچ سیگناڵێک لەم ئاستەدا نییە', 'No signal at this level')}
+              </div>
             )}
+
 
           </div>
         )}
