@@ -769,9 +769,33 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
         text: `${sideText(m.side)}${countTag} ${fmtQty(m.qty)} @ $${fmtMarkerPrice(avgPrice)}`,
       };
     });
+    // CTP Confluence signals (EMA trend + RSI + MACD cross + price/EMA).
+    if (showCTP) {
+      for (const s of confluence.signals) {
+        const stars = '★'.repeat(s.score) + '☆'.repeat(Math.max(0, 4 - s.score));
+        const strength = s.confidence >= 80
+          ? bi('بەهێز', 'STRONG')
+          : s.confidence >= 60
+            ? bi('مامناوەند', 'MEDIUM')
+            : bi('لاواز', 'WEAK');
+        const strong = s.confidence >= 80;
+        const medium = s.confidence >= 60;
+        const color = s.side === 'buy'
+          ? (strong ? '#00e07a' : medium ? '#16c784' : '#5fbf95')
+          : (strong ? '#ff2f45' : medium ? '#ea3943' : '#c2707a');
+        markers.push({
+          time: s.time as Time,
+          position: s.side === 'buy' ? 'belowBar' : 'aboveBar',
+          color,
+          shape: s.side === 'buy' ? 'arrowUp' : 'arrowDown',
+          text: `${s.side === 'buy' ? '▲ BUY' : '▼ SELL'} ${stars} ${s.confidence}% · ${strength}`,
+        });
+      }
+    }
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, confluence]);
+
 
   // OHLC view of the metal candles for the indicator-series helpers.
   const ohlcForIndicators = useMemo(
