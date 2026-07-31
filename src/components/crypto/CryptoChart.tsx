@@ -529,15 +529,27 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
     // CTP Confluence signals (EMA trend + RSI + MACD cross + price/EMA).
     if (showCTP) {
       for (const s of confluence.signals) {
+        const stars = '★'.repeat(s.score) + '☆'.repeat(Math.max(0, 4 - s.score));
+        const strength = s.confidence >= 80
+          ? bi('بەهێز', 'STRONG')
+          : s.confidence >= 60
+            ? bi('مامناوەند', 'MEDIUM')
+            : bi('لاواز', 'WEAK');
+        const strong = s.confidence >= 80;
+        const medium = s.confidence >= 60;
+        const color = s.side === 'buy'
+          ? (strong ? '#00e07a' : medium ? '#16c784' : '#5fbf95')
+          : (strong ? '#ff2f45' : medium ? '#ea3943' : '#c2707a');
         markers.push({
           time: s.time as Time,
           position: s.side === 'buy' ? 'belowBar' : 'aboveBar',
-          color: s.side === 'buy' ? '#16c784' : '#ea3943',
+          color,
           shape: s.side === 'buy' ? 'arrowUp' : 'arrowDown',
-          text: `${s.side === 'buy' ? 'BUY' : 'SELL'} ${s.score}/4 · ${s.confidence}%`,
+          text: `${s.side === 'buy' ? '▲ BUY' : '▼ SELL'} ${stars} ${s.confidence}% · ${strength}`,
         });
       }
     }
+
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
   }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, confluence]);
@@ -875,10 +887,27 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
               </span>
             </div>
             {confluence.last && (
-              <div className={`mt-1 border-t border-white/10 pt-1 font-bold ${confluence.last.side === 'buy' ? 'text-[#16c784]' : 'text-[#ea3943]'}`}>
-                {confluence.last.side === 'buy' ? 'BUY' : 'SELL'} · {confluence.last.confidence}%
+              <div className="mt-1.5 border-t border-white/10 pt-1.5">
+                <div className={`flex items-center justify-between gap-2 font-bold ${confluence.last.side === 'buy' ? 'text-[#16c784]' : 'text-[#ea3943]'}`}>
+                  <span>{confluence.last.side === 'buy' ? '▲ BUY' : '▼ SELL'}</span>
+                  <span className="tabular-nums">{confluence.last.score}/4 · {confluence.last.confidence}%</span>
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className={`h-full rounded-full ${confluence.last.side === 'buy' ? 'bg-[#16c784]' : 'bg-[#ea3943]'}`}
+                    style={{ width: `${confluence.last.confidence}%` }}
+                  />
+                </div>
+                <div className="mt-0.5 text-[9px] font-bold text-[#848e9c]">
+                  {confluence.last.confidence >= 80
+                    ? bi('سیگناڵی بەهێز', 'STRONG SIGNAL')
+                    : confluence.last.confidence >= 60
+                      ? bi('سیگناڵی مامناوەند', 'MEDIUM SIGNAL')
+                      : bi('سیگناڵی لاواز', 'WEAK SIGNAL')}
+                </div>
               </div>
             )}
+
           </div>
         )}
 
