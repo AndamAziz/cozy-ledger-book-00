@@ -53,6 +53,11 @@ interface TestResult {
 const latencyTone = (ms: number) =>
   ms < 400 ? 'text-success' : ms < 1200 ? 'text-accent' : 'text-destructive';
 
+/** VOD items (movies/series files) get poster tiles; live channels get logo tiles. */
+const isMovieItem = (c?: Channel) =>
+  !!c && (/\.(mp4|mkv|avi|mov)(\?|$)/i.test(c.url) || /movie|film|vod|series|cinema/i.test(c.group));
+
+
 export default function M3uTV() {
   const { language } = useLanguage();
   const ku = language !== 'en';
