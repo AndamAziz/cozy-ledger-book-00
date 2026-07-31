@@ -440,29 +440,39 @@ export default function M3uTV() {
               </div>
 
               {playlists.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {playlists.map((pl) => (
-                    <span
-                      key={pl.id}
-                      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
-                        activeId === pl.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
-                      }`}
-                    >
-                      <button type="button" onClick={() => loadPlaylist(pl)} className="font-semibold">
-                        {pl.name}
-                      </button>
-                      <button
-                        type="button"
-                        aria-label="delete"
-                        onClick={() => removePlaylist(pl.id)}
-                        className="opacity-50 transition hover:text-destructive hover:opacity-100"
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold text-muted-foreground">{T.visibleHint}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {playlists.map((pl) => (
+                      <span
+                        key={pl.id}
+                        className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
+                          activeId === pl.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
+                        } ${pl.is_active === false ? 'opacity-60' : ''}`}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </span>
-                  ))}
+                        <Checkbox
+                          checked={pl.is_active !== false}
+                          onCheckedChange={() => toggleVisible(pl)}
+                          aria-label={T.visibleHint}
+                          className="h-3.5 w-3.5"
+                        />
+                        <button type="button" onClick={() => loadPlaylist(pl)} className="font-semibold">
+                          {pl.name}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="delete"
+                          onClick={() => removePlaylist(pl.id)}
+                          className="opacity-50 transition hover:text-destructive hover:opacity-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
+
 
               <div className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3">
                 <p className="text-xs font-bold text-muted-foreground">{T.addNew}</p>
