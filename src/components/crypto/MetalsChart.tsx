@@ -102,6 +102,19 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
     () => computeConfluence(candles.map(c => ({ time: c.time as number, open: c.open, high: c.high, low: c.low, close: c.close, volume: (c as { volume?: number }).volume ?? 0 }))),
     [candles],
   );
+  // Minimum confidence a signal must reach before it is drawn (0 = show all).
+  const [minConf, setMinConf] = useState(() => {
+    try { return Number(localStorage.getItem('chart_ctp_min_conf') ?? '70') || 0; } catch { return 70; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('chart_ctp_min_conf', String(minConf)); } catch { /* ignore */ }
+  }, [minConf]);
+  const cycleMinConf = () => setMinConf((v) => {
+    const i = CONFIDENCE_STEPS.indexOf(v as typeof CONFIDENCE_STEPS[number]);
+    return CONFIDENCE_STEPS[(i + 1) % CONFIDENCE_STEPS.length];
+  });
+  const ctpSignals = useMemo(() => filterByConfidence(confluence.signals, minConf), [confluence, minConf]);
+  const ctpLast = ctpSignals.length ? ctpSignals[ctpSignals.length - 1] : null;
   // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
   const [showTradeDetails, setShowTradeDetails] = useState(() => {
     try { return localStorage.getItem('chart_show_trade_details') === 'true'; } catch { return false; }
