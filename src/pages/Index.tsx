@@ -18,7 +18,7 @@ import { InventoryTab } from '@/components/InventoryTab';
 import { SalesTab } from '@/components/SalesTab';
 import { ReportsTab } from '@/components/ReportsTab';
 import { HelpGuide } from '@/components/HelpGuide';
-import { LiveTvStatusPanel } from '@/components/livetv/LiveTvStatusPanel';
+
 import { SplashScreen } from '@/components/SplashScreen';
 import { OnboardingScreen } from '@/components/OnboardingScreen';
 import { ReviewForm } from '@/components/reviews/ReviewForm';
