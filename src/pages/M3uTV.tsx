@@ -10,9 +10,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Tv, Trash2, Search, Loader2, Play, Signal, ArrowLeft,
   ListVideo, CheckCircle2, AlertTriangle, Save, Gauge,
+  ChevronDown, Clapperboard, ShieldCheck,
 } from 'lucide-react';
+
 
 const DEFAULT_PLAYLIST = 'https://iptv-org.github.io/iptv/countries/br.m3u';
 const PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/iptv-m3u-proxy?url=`;
