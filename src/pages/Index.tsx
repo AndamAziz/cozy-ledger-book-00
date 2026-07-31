@@ -253,9 +253,6 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
                   aria-expanded={financeOpen}
                   className="group relative flex flex-col items-center justify-center rounded-[15px] bg-card/90 backdrop-blur-xl w-full h-full p-4 sm:p-5 transition-colors duration-200 hover:bg-card/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
                 >
-                  <span className="absolute top-2 right-2 rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-tighter bg-success text-success-foreground">
-                    New
-                  </span>
                   <div className="mb-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-success to-primary shadow-[0_0_20px_hsl(var(--success)/0.3)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_28px_hsl(var(--success)/0.4)]">
                     <Wallet className="h-6 w-6 text-white transition-transform duration-200 group-hover:scale-110" />
                   </div>
