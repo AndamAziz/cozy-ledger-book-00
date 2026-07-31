@@ -41,6 +41,7 @@ interface Playlist {
   last_status: string | null;
   last_latency_ms: number | null;
   channel_count: number | null;
+  is_active: boolean;
 }
 
 interface TestResult {
