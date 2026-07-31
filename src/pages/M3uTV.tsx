@@ -192,9 +192,11 @@ export default function M3uTV() {
         loadPlaylist(list[0]);
         return;
       }
+      // Seeding the first shared playlist is a CEO-only write.
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
-      if (uid) {
+      const isCeoUser = (userRes.user?.email ?? '').toLowerCase() === 'andam@outlook.com';
+      if (uid && isCeoUser) {
         const { data: inserted } = await supabase
           .from('iptv_playlists')
           .insert({ user_id: uid, name: 'Brazil', url: DEFAULT_PLAYLIST })
