@@ -11,6 +11,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -21,7 +26,7 @@ import {
 import {
   Tv, Trash2, Search, Loader2, Play, Signal, ArrowLeft,
   ListVideo, CheckCircle2, AlertTriangle, Save, Gauge,
-  ChevronDown, Clapperboard, ShieldCheck,
+  ChevronDown, Clapperboard, ShieldCheck, Settings2,
 } from 'lucide-react';
 
 
@@ -389,8 +394,8 @@ export default function M3uTV() {
           </Card>
         )}
 
-        {/* Playlist selector */}
-        <Card className="space-y-4 p-4">
+        {/* Playlist selector — always compact and visible */}
+        <Card className="p-4">
           <div className="flex flex-wrap items-center gap-3">
             <ListVideo className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold">{T.playlists}</h2>
@@ -434,98 +439,100 @@ export default function M3uTV() {
             </DropdownMenu>
           </div>
 
+          {/* Collapsible management panel (CEO only) */}
           {isCeo ? (
-            <div className="space-y-3 rounded-xl border border-primary/25 bg-primary/5 p-3">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <p className="text-xs font-bold">{T.manage}</p>
-              </div>
-
-              {playlists.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold text-muted-foreground">{T.visibleHint}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {playlists.map((pl) => (
-                      <span
-                        key={pl.id}
-                        className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
-                          activeId === pl.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
-                        } ${pl.is_active === false ? 'opacity-60' : ''}`}
+            <Collapsible defaultOpen={false} className="mt-3">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-between gap-2 px-2 text-xs font-semibold">
+                  <span className="flex items-center gap-2">
+                    <Settings2 className="h-3.5 w-3.5 text-primary" />
+                    {T.manage}
+                  </span>
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform group-data-[state=open]:rotate-180" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-3 rounded-xl border border-primary/25 bg-primary/5 p-3 data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+                <p className="text-[11px] font-semibold text-muted-foreground">{T.visibleHint}</p>
+                <div className="flex flex-wrap gap-2">
+                  {playlists.map((pl) => (
+                    <span
+                      key={pl.id}
+                      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
+                        activeId === pl.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
+                      } ${pl.is_active === false ? 'opacity-60' : ''}`}
+                    >
+                      <Checkbox
+                        checked={pl.is_active !== false}
+                        onCheckedChange={() => toggleVisible(pl)}
+                        aria-label={T.visibleHint}
+                        className="h-3.5 w-3.5"
+                      />
+                      <button type="button" onClick={() => loadPlaylist(pl)} className="font-semibold">
+                        {pl.name}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="delete"
+                        onClick={() => removePlaylist(pl.id)}
+                        className="opacity-50 transition hover:text-destructive hover:opacity-100"
                       >
-                        <Checkbox
-                          checked={pl.is_active !== false}
-                          onCheckedChange={() => toggleVisible(pl)}
-                          aria-label={T.visibleHint}
-                          className="h-3.5 w-3.5"
-                        />
-                        <button type="button" onClick={() => loadPlaylist(pl)} className="font-semibold">
-                          {pl.name}
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="delete"
-                          onClick={() => removePlaylist(pl.id)}
-                          className="opacity-50 transition hover:text-destructive hover:opacity-100"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                <div className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3">
+                  <p className="text-xs font-bold text-muted-foreground">{T.addNew}</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Input
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder={T.nameHolder}
+                      className="h-9 text-sm"
+                    />
+                    <Input
+                      value={newUrl}
+                      onChange={(e) => {
+                        setNewUrl(e.target.value);
+                        setTestResult(null);
+                      }}
+                      placeholder={T.urlHolder}
+                      dir="ltr"
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => runTest(newUrl)} disabled={testing || !newUrl.trim()}>
+                      {testing ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Gauge className="me-1.5 h-3.5 w-3.5" />}
+                      {T.test}
+                    </Button>
+                    <Button size="sm" onClick={savePlaylist} disabled={saving || !newUrl.trim()}>
+                      {saving ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="me-1.5 h-3.5 w-3.5" />}
+                      {T.save}
+                    </Button>
+                    {testResult && (
+                      <span className="flex items-center gap-1.5 text-xs font-semibold">
+                        {testResult.ok ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                        ) : (
+                          <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                        )}
+                        {testResult.ok ? T.online : testResult.status === 'invalid' ? T.invalid : T.offline}
+                        <span className={latencyTone(testResult.latency_ms)}>{testResult.latency_ms}ms</span>
+                        {testResult.channel_count != null && (
+                          <span className="text-muted-foreground">
+                            · {testResult.channel_count} {T.channels}
+                          </span>
+                        )}
                       </span>
-                    ))}
+                    )}
                   </div>
                 </div>
-              )}
-
-
-              <div className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3">
-                <p className="text-xs font-bold text-muted-foreground">{T.addNew}</p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder={T.nameHolder}
-                    className="h-9 text-sm"
-                  />
-                  <Input
-                    value={newUrl}
-                    onChange={(e) => {
-                      setNewUrl(e.target.value);
-                      setTestResult(null);
-                    }}
-                    placeholder={T.urlHolder}
-                    dir="ltr"
-                    className="h-9 text-sm"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => runTest(newUrl)} disabled={testing || !newUrl.trim()}>
-                    {testing ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Gauge className="me-1.5 h-3.5 w-3.5" />}
-                    {T.test}
-                  </Button>
-                  <Button size="sm" onClick={savePlaylist} disabled={saving || !newUrl.trim()}>
-                    {saving ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="me-1.5 h-3.5 w-3.5" />}
-                    {T.save}
-                  </Button>
-                  {testResult && (
-                    <span className="flex items-center gap-1.5 text-xs font-semibold">
-                      {testResult.ok ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                      ) : (
-                        <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                      )}
-                      {testResult.ok ? T.online : testResult.status === 'invalid' ? T.invalid : T.offline}
-                      <span className={latencyTone(testResult.latency_ms)}>{testResult.latency_ms}ms</span>
-                      {testResult.channel_count != null && (
-                        <span className="text-muted-foreground">
-                          · {testResult.channel_count} {T.channels}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+              </CollapsibleContent>
+            </Collapsible>
           ) : (
-            <p className="text-[11px] text-muted-foreground">{T.ceoOnly}</p>
+            <p className="mt-3 text-[11px] text-muted-foreground">{T.ceoOnly}</p>
           )}
         </Card>
 
