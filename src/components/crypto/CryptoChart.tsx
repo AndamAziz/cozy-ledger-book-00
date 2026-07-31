@@ -5,7 +5,7 @@ import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAvera
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
-import { computeConfluence } from '@/lib/confluenceSignal';
+import { computeConfluence, CONFIDENCE_STEPS, filterByConfidence } from '@/lib/confluenceSignal';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
