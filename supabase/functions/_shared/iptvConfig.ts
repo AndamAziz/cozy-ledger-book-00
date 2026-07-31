@@ -224,6 +224,124 @@ export function directStreamSnapshot(url: string): M3uSnapshot {
 }
 
 
+/* ------------------------------------------------------------------ *
+ * Shared (cross-isolate) snapshot cache
+ *
+ * Edge isolates are short-lived, so an in-memory cache alone means every cold
+ * start re-downloads the provider's whole playlist (tens of MB for accounts
+ * with big Movies/Series catalogues). That is what made /live-tv slow and made
+ * Movies/Series fail with "error reading a body from connection". Parsed
+ * snapshots are therefore persisted gzipped in the database and shared by all
+ * isolates.
+ * ------------------------------------------------------------------ */
+
+const SHARED_TTL = 6 * 60 * 60 * 1000
+
+const REST = () => {
+  const base = Deno.env.get('SUPABASE_URL')
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  return base && key ? { base: base.replace(/\/$/, ''), key } : null
+}
+
+async function gzip(text: string): Promise<string> {
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))
+  const buf = new Uint8Array(await new Response(stream).arrayBuffer())
+  let bin = ''
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000))
+  return btoa(bin)
+}
+
+async function gunzip(b64: string): Promise<string> {
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))
+  return await new Response(stream).text()
+}
+
+async function loadShared(url: string): Promise<M3uSnapshot | null> {
+  const rest = REST()
+  if (!rest) return null
+  try {
+    const res = await fetch(
+      `${rest.base}/rest/v1/iptv_playlist_cache?url_hash=eq.${hashId(url)}&select=entries_gz,etag,last_modified,updated_at`,
+      { headers: { apikey: rest.key, Authorization: `Bearer ${rest.key}` } },
+    )
+    if (!res.ok) return null
+    const rows = (await res.json()) as {
+      entries_gz: string
+      etag: string | null
+      last_modified: string | null
+      updated_at: string
+    }[]
+    const row = rows?.[0]
+    if (!row) return null
+    const at = Date.parse(row.updated_at)
+    if (!Number.isFinite(at) || Date.now() - at > SHARED_TTL) return null
+    const entries = JSON.parse(await gunzip(row.entries_gz)) as M3uEntry[]
+    if (!entries.length) return null
+    const snap = snapshot(url, entries, row.etag, row.last_modified)
+    return { ...snap, at }
+  } catch {
+    return null
+  }
+}
+
+async function saveShared(snap: M3uSnapshot): Promise<void> {
+  const rest = REST()
+  if (!rest || !snap.entries.length) return
+  try {
+    const entries_gz = await gzip(JSON.stringify(snap.entries))
+    await fetch(`${rest.base}/rest/v1/iptv_playlist_cache?on_conflict=url_hash`, {
+      method: 'POST',
+      headers: {
+        apikey: rest.key,
+        Authorization: `Bearer ${rest.key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify({
+        url_hash: hashId(snap.url),
+        version: snap.version,
+        entries_gz,
+        etag: snap.etag,
+        last_modified: snap.lastModified,
+        updated_at: new Date().toISOString(),
+      }),
+    })
+  } catch {
+    // caching is best-effort
+  }
+}
+
+/**
+ * Read the body chunk by chunk and keep whatever arrived when the connection
+ * drops mid-transfer. Huge playlists frequently get cut off by the provider;
+ * a partial playlist is far better than a failed section.
+ */
+async function readTolerant(res: Response): Promise<string> {
+  if (!res.body) return ''
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let text = ''
+  try {
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) break
+      text += decoder.decode(value, { stream: true })
+    }
+    text += decoder.decode()
+  } catch {
+    // truncated transfer — keep what we have
+  }
+  try {
+    await reader.cancel()
+  } catch {
+    // already closed
+  }
+  return text
+}
+
 /**
  * Conditional fetch: when the upstream answers 304 (or serves an identical
  * body) the previous parse is reused, so a refresh costs a few bytes instead
@@ -257,10 +375,13 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
   let lastError: unknown = null
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      res = await egressFetch(url, { headers, signal: AbortSignal.timeout(30_000) })
+      res = await egressFetch(url, { headers, signal: AbortSignal.timeout(45_000) })
       if (res.status === 304 || !res.ok) break
-      body = await res.text()
-      break
+      body = await readTolerant(res)
+      // A truncated read that still carries channels is good enough.
+      if (body.length) break
+      res = null
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
     } catch (e) {
       lastError = e
       res = null
@@ -268,6 +389,7 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
       await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
     }
   }
+
   if (!res) {
     // A direct stream link that refuses a plain GET is still playable through
     // the proxy — expose it as one channel rather than killing the source.
@@ -344,6 +466,7 @@ export async function getM3U(url: string): Promise<M3uSnapshot> {
       loadM3U(url, hit)
         .then((c) => {
           m3uCache.set(url, c)
+          return saveShared(c)
         })
         .catch(() => {
           // keep serving the stale snapshot
@@ -357,7 +480,15 @@ export async function getM3U(url: string): Promise<M3uSnapshot> {
 
   let pending = m3uLoading.get(url)
   if (!pending) {
-    pending = loadM3U(url, hit)
+    pending = (async () => {
+      // Cold isolate: reuse the snapshot another isolate already downloaded
+      // instead of pulling the entire catalogue from the provider again.
+      const shared = await loadShared(url)
+      if (shared) return shared
+      const fresh = await loadM3U(url, hit)
+      await saveShared(fresh)
+      return fresh
+    })()
       .then((c) => {
         m3uCache.set(url, c)
         if (m3uCache.size > M3U_CACHE_MAX) {
@@ -368,6 +499,7 @@ export async function getM3U(url: string): Promise<M3uSnapshot> {
       })
       .finally(() => {
         m3uLoading.delete(url)
+
       })
     m3uLoading.set(url, pending)
   }

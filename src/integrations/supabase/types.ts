@@ -740,6 +740,36 @@ export type Database = {
           },
         ]
       }
+      iptv_playlist_cache: {
+        Row: {
+          created_at: string
+          entries_gz: string
+          etag: string | null
+          last_modified: string | null
+          updated_at: string
+          url_hash: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          entries_gz: string
+          etag?: string | null
+          last_modified?: string | null
+          updated_at?: string
+          url_hash: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          entries_gz?: string
+          etag?: string | null
+          last_modified?: string | null
+          updated_at?: string
+          url_hash?: string
+          version?: string
+        }
+        Relationships: []
+      }
       iptv_playlists: {
         Row: {
           channel_count: number | null
