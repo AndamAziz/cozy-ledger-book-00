@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -123,6 +124,7 @@ export default function M3uTV() {
     choose: ku ? 'پلەیلیست هەڵبژێرە' : 'Choose playlist',
     manage: ku ? 'بەڕێوەبردنی لینکەکان (CEO)' : 'Manage links (CEO)',
     movies: ku ? 'فیلمەکان' : 'Movies',
+    visibleHint: ku ? 'تیک لەو سێرڤەرانە بکە کە دەتەوێت بەکارهێنەران بیانبینن' : 'Tick the servers users are allowed to see',
     ceoOnly: ku ? 'تەنها بەڕێوەبەری سەرەکی دەتوانێت لینک زیاد بکات' : 'Only the CEO can add or delete links',
   };
 
