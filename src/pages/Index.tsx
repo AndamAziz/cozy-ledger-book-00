@@ -139,14 +139,14 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             {/* The Holy Quran — featured full-width card */}
             <button
               onClick={() => navigate('/quran')}
-              className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-gold via-primary to-gold p-[1px] shadow-xl transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+              className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-gold via-primary to-gold p-[1px] shadow-xl transition-all duration-200 ease-out hover:shadow-2xl hover:shadow-gold/20 active:scale-95 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-1 focus-visible:ring-offset-background"
             >
-              <div className="flex items-center gap-4 rounded-[15px] bg-card/90 backdrop-blur-xl p-4 sm:p-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-gold to-primary shadow-[0_0_20px_hsl(var(--gold)/0.3)] transition-all group-hover:shadow-[0_0_28px_hsl(var(--gold)/0.4)]">
-                  <BookOpen className="h-6 w-6 text-gold-foreground" />
+              <div className="flex items-center gap-4 rounded-[15px] bg-card/90 backdrop-blur-xl p-4 sm:p-5 transition-colors duration-200 group-hover:bg-card/95">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-gold to-primary shadow-[0_0_20px_hsl(var(--gold)/0.3)] transition-all duration-200 group-hover:scale-110 group-hover:shadow-[0_0_28px_hsl(var(--gold)/0.4)]">
+                  <BookOpen className="h-6 w-6 text-gold-foreground transition-transform duration-200 group-hover:scale-110" />
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-base sm:text-lg font-bold text-foreground">{QURAN_LABEL[language] || QURAN_LABEL.en}</span>
+                  <span className="text-base sm:text-lg font-bold text-foreground transition-colors duration-200 group-hover:text-gold-foreground">{QURAN_LABEL[language] || QURAN_LABEL.en}</span>
                 </div>
               </div>
             </button>
