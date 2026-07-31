@@ -130,13 +130,30 @@ export default function M3uTV() {
   /* ---------------- playlists ---------------- */
 
   const fetchPlaylists = useCallback(async () => {
+    const { data: userRes } = await supabase.auth.getUser();
+    const ceo = (userRes.user?.email ?? '').toLowerCase() === 'andam@outlook.com';
+    ceoRef.current = ceo;
     const { data } = await supabase
       .from('iptv_playlists')
-      .select('id,name,url,last_status,last_latency_ms,channel_count')
+      .select('id,name,url,last_status,last_latency_ms,channel_count,is_active')
       .order('created_at', { ascending: true });
-    setPlaylists((data as Playlist[]) || []);
-    return (data as Playlist[]) || [];
+    // Viewers only see the servers the CEO ticked; the CEO sees every row.
+    const rows = ((data as Playlist[]) || []).filter((p) => ceo || p.is_active !== false);
+    setPlaylists(rows);
+    return rows;
   }, []);
+
+  /** CEO-only: tick/untick a server so it shows up for all other users. */
+  const toggleVisible = async (pl: Playlist) => {
+    const next = !pl.is_active;
+    setPlaylists((list) => list.map((p) => (p.id === pl.id ? { ...p, is_active: next } : p)));
+    const { error } = await supabase.from('iptv_playlists').update({ is_active: next }).eq('id', pl.id);
+    if (error) {
+      setPlaylists((list) => list.map((p) => (p.id === pl.id ? { ...p, is_active: !next } : p)));
+      toast({ title: T.offline, variant: 'destructive' });
+    }
+  };
+
 
   const loadPlaylist = useCallback(
     async (pl: { id: string; url: string }) => {
