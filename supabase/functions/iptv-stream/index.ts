@@ -114,18 +114,34 @@ Deno.serve(async (req) => {
   let upstream: Response | null = null
   let lastError = 'fetch failed'
   for (const target of candidates) {
-    try {
-      const res = await fetch(target, { headers, redirect: 'follow' })
-      if (res.ok || res.status === 206) {
-        upstream = res
-        break
+    // Direct hop first (fast, and what the M3U module does); the geo-relay is a
+    // fallback for hosts that block Supabase egress — VOD files are often served
+    // from a different, stricter host than the live edge.
+    for (const via of ['direct', 'relay'] as const) {
+      try {
+        const res =
+          via === 'direct'
+            ? await fetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(20_000) })
+            : await egressFetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(25_000) })
+        if (res.ok || res.status === 206) {
+          upstream = res
+          break
+        }
+        lastError = `HTTP ${res.status}`
+        await res.body?.cancel().catch(() => undefined)
+      } catch (e) {
+        lastError = e instanceof Error ? e.message : 'fetch failed'
       }
-      lastError = `HTTP ${res.status}`
-      await res.body?.cancel().catch(() => undefined)
-    } catch (e) {
-      lastError = e instanceof Error ? e.message : 'fetch failed'
     }
+    if (upstream) break
   }
+
+  if (!upstream) {
+    console.error(
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, lastError })}`,
+    )
+  }
+
 
   if (!upstream) return json({ error: lastError }, 502)
 
