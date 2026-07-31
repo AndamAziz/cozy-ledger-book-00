@@ -733,6 +733,16 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
             </button>
           ))}
 
+          {/* CTP Confluence Buy/Sell signal overlay */}
+          <button
+            onClick={() => setShowCTP(v => !v)}
+            className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+              showCTP ? 'bg-[#16c7841a] text-[#16c784] border-[#16c78455]' : 'text-[#848e9c] border-white/5 hover:text-white'
+            }`}
+          >
+            CTP {bi('سیگناڵ', 'Signals')}
+          </button>
+
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
 
           {/* Trade journal opener */}
