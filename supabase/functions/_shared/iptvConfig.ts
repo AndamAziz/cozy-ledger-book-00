@@ -466,6 +466,7 @@ export async function getM3U(url: string): Promise<M3uSnapshot> {
       loadM3U(url, hit)
         .then((c) => {
           m3uCache.set(url, c)
+          return saveShared(c)
         })
         .catch(() => {
           // keep serving the stale snapshot
@@ -479,7 +480,15 @@ export async function getM3U(url: string): Promise<M3uSnapshot> {
 
   let pending = m3uLoading.get(url)
   if (!pending) {
-    pending = loadM3U(url, hit)
+    pending = (async () => {
+      // Cold isolate: reuse the snapshot another isolate already downloaded
+      // instead of pulling the entire catalogue from the provider again.
+      const shared = await loadShared(url)
+      if (shared) return shared
+      const fresh = await loadM3U(url, hit)
+      await saveShared(fresh)
+      return fresh
+    })()
       .then((c) => {
         m3uCache.set(url, c)
         if (m3uCache.size > M3U_CACHE_MAX) {
@@ -490,6 +499,7 @@ export async function getM3U(url: string): Promise<M3uSnapshot> {
       })
       .finally(() => {
         m3uLoading.delete(url)
+
       })
     m3uLoading.set(url, pending)
   }
