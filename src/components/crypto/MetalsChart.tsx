@@ -99,7 +99,7 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
     try { localStorage.setItem('chart_show_ctp', String(showCTP)); } catch { /* ignore */ }
   }, [showCTP]);
   const confluence = useMemo(
-    () => computeConfluence(candles.map(c => ({ time: c.time as number, open: c.open, high: c.high, low: c.low, close: c.close }))),
+    () => computeConfluence(candles.map(c => ({ time: c.time as number, open: c.open, high: c.high, low: c.low, close: c.close, volume: (c as { volume?: number }).volume ?? 0 }))),
     [candles],
   );
   // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
