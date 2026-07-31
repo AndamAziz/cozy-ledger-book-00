@@ -11,6 +11,7 @@ import { computeChartPreset } from '@/lib/chartPreset';
 import { CHART_TIMEFRAMES } from '@/lib/timeframeFeed';
 import { computeIndicators, summarizeSignals, computeBuySellPct, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
+import { computeConfluence } from '@/lib/confluenceSignal';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
@@ -90,6 +91,17 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
   const [showMACD, setShowMACD] = useState(false);
   const [showDOM, setShowDOM] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
+  // CTP Confluence Buy/Sell signal overlay (EMA + RSI + MACD confluence).
+  const [showCTP, setShowCTP] = useState(() => {
+    try { return localStorage.getItem('chart_show_ctp') !== 'false'; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('chart_show_ctp', String(showCTP)); } catch { /* ignore */ }
+  }, [showCTP]);
+  const confluence = useMemo(
+    () => computeConfluence(candles.map(c => ({ time: c.time as number, open: c.open, high: c.high, low: c.low, close: c.close, volume: (c as { volume?: number }).volume ?? 0 }))),
+    [candles],
+  );
   // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
   const [showTradeDetails, setShowTradeDetails] = useState(() => {
     try { return localStorage.getItem('chart_show_trade_details') === 'true'; } catch { return false; }
@@ -757,9 +769,33 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
         text: `${sideText(m.side)}${countTag} ${fmtQty(m.qty)} @ $${fmtMarkerPrice(avgPrice)}`,
       };
     });
+    // CTP Confluence signals (EMA trend + RSI + MACD cross + price/EMA).
+    if (showCTP) {
+      for (const s of confluence.signals) {
+        const stars = '★'.repeat(s.score) + '☆'.repeat(Math.max(0, 4 - s.score));
+        const strength = s.confidence >= 80
+          ? bi('بەهێز', 'STRONG')
+          : s.confidence >= 60
+            ? bi('مامناوەند', 'MEDIUM')
+            : bi('لاواز', 'WEAK');
+        const strong = s.confidence >= 80;
+        const medium = s.confidence >= 60;
+        const color = s.side === 'buy'
+          ? (strong ? '#00e07a' : medium ? '#16c784' : '#5fbf95')
+          : (strong ? '#ff2f45' : medium ? '#ea3943' : '#c2707a');
+        markers.push({
+          time: s.time as Time,
+          position: s.side === 'buy' ? 'belowBar' : 'aboveBar',
+          color,
+          shape: s.side === 'buy' ? 'arrowUp' : 'arrowDown',
+          text: `${s.side === 'buy' ? '▲ BUY' : '▼ SELL'} ${stars} ${s.confidence}% · ${strength}`,
+        });
+      }
+    }
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, confluence]);
+
 
   // OHLC view of the metal candles for the indicator-series helpers.
   const ohlcForIndicators = useMemo(
@@ -957,6 +993,18 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
             </button>
           ))}
 
+          {/* CTP Confluence Buy/Sell signal overlay */}
+          <button
+            onClick={() => setShowCTP(v => !v)}
+            className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+              showCTP ? 'bg-[#16c7841a] text-[#16c784] border-[#16c78455]' : 'text-[#848e9c] border-white/5 hover:text-white'
+            }`}
+          >
+            CTP {bi('سیگناڵ', 'Signals')}
+          </button>
+
+
+
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
 
           {/* Trade journal opener */}
@@ -1095,6 +1143,48 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
           accentColor={accentColor}
         />
         <div ref={chartContainerRef} className="absolute inset-0" />
+
+        {/* CTP confluence score panel (Pine-style table, bottom-start corner) */}
+        {showCTP && candles.length > 0 && (
+          <div className="absolute bottom-2 start-2 z-20 rounded-lg border border-white/10 bg-black/70 backdrop-blur px-2.5 py-1.5 text-[10px] leading-tight">
+            <div className="mb-1 font-bold tracking-wide text-[#f0b90b]">CTP CONFLUENCE</div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 tabular-nums">
+              <span className="text-[#848e9c]">{bi('بەرزبوونەوە', 'Bull')}</span>
+              <span className="text-end font-bold text-[#16c784]">{confluence.bullScore}/4</span>
+              <span className="text-[#848e9c]">{bi('داکشان', 'Bear')}</span>
+              <span className="text-end font-bold text-[#ea3943]">{confluence.bearScore}/4</span>
+              <span className="text-[#848e9c]">RSI</span>
+              <span className="text-end font-bold text-[#f0b90b]">{confluence.rsi}</span>
+              <span className="text-[#848e9c]">{bi('ئاڕاستە', 'Trend')}</span>
+              <span className={`text-end font-bold ${confluence.trend === 'up' ? 'text-[#16c784]' : confluence.trend === 'down' ? 'text-[#ea3943]' : 'text-[#848e9c]'}`}>
+                {confluence.trend === 'up' ? '▲ UP' : confluence.trend === 'down' ? '▼ DOWN' : '– FLAT'}
+              </span>
+            </div>
+            {confluence.last && (
+              <div className="mt-1.5 border-t border-white/10 pt-1.5">
+                <div className={`flex items-center justify-between gap-2 font-bold ${confluence.last.side === 'buy' ? 'text-[#16c784]' : 'text-[#ea3943]'}`}>
+                  <span>{confluence.last.side === 'buy' ? '▲ BUY' : '▼ SELL'}</span>
+                  <span className="tabular-nums">{confluence.last.score}/4 · {confluence.last.confidence}%</span>
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className={`h-full rounded-full ${confluence.last.side === 'buy' ? 'bg-[#16c784]' : 'bg-[#ea3943]'}`}
+                    style={{ width: `${confluence.last.confidence}%` }}
+                  />
+                </div>
+                <div className="mt-0.5 text-[9px] font-bold text-[#848e9c]">
+                  {confluence.last.confidence >= 80
+                    ? bi('سیگناڵی بەهێز', 'STRONG SIGNAL')
+                    : confluence.last.confidence >= 60
+                      ? bi('سیگناڵی مامناوەند', 'MEDIUM SIGNAL')
+                      : bi('سیگناڵی لاواز', 'WEAK SIGNAL')}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+
 
 
 
