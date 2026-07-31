@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
+import { egressFetch } from '../_shared/iptvEgress.ts'
 
 /**
  * Lean Live TV stream proxy — a 1:1 copy of the playback pipeline used by the
