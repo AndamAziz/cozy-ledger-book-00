@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import Hls from 'hls.js';
+import M3uStreamView from '@/components/livetv/M3uStreamView';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,9 +72,6 @@ export default function M3uTV() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState<Channel | null>(null);
-  const [playerError, setPlayerError] = useState(false);
-  const [playerLoading, setPlayerLoading] = useState(false);
-  const [useProxy, setUseProxy] = useState(false);
   // Only the CEO account manages playlist links (add / delete).
   // Every other signed-in user sees the same shared playlists, read-only.
   const [isCeo, setIsCeo] = useState(false);
@@ -96,9 +93,6 @@ export default function M3uTV() {
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hlsRef = useRef<Hls | null>(null);
-  const playerBoxRef = useRef<HTMLDivElement | null>(null);
 
   const T = {
     title: ku ? 'تەلەڤیزیۆنی ڕاستەوخۆ' : 'LIVE TV',
@@ -286,62 +280,7 @@ export default function M3uTV() {
 
   /* ---------------- player ---------------- */
 
-  const playChannel = (ch: Channel) => {
-    setCurrent(ch);
-    setUseProxy(false);
-    setPlayerError(false);
-    setPlayerLoading(true);
-    setTimeout(() => playerBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
-  };
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !current) return;
-
-    hlsRef.current?.destroy();
-    hlsRef.current = null;
-
-    const src = useProxy ? `${PROXY_BASE}${encodeURIComponent(current.url)}` : current.url;
-    if (Hls.isSupported() && src.includes('.m3u8')) {
-      const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
-      hlsRef.current = hls;
-      hls.loadSource(src);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setPlayerLoading(false);
-        video.play().catch(() => {});
-      });
-      hls.on(Hls.Events.ERROR, (_e, data) => {
-        if (data.fatal) {
-          hls.destroy();
-          if (!useProxy) {
-            setUseProxy(true);
-          } else {
-            setPlayerLoading(false);
-            setPlayerError(true);
-          }
-        }
-      });
-    } else {
-      video.src = src;
-      video
-        .play()
-        .then(() => setPlayerLoading(false))
-        .catch(() => {
-          if (!useProxy) {
-            setUseProxy(true);
-          } else {
-            setPlayerLoading(false);
-            setPlayerError(true);
-          }
-        });
-    }
-
-    return () => {
-      hlsRef.current?.destroy();
-      hlsRef.current = null;
-    };
-  }, [current, useProxy]);
+  const playChannel = (ch: Channel) => setCurrent(ch);
 
   /* ---------------- derived ---------------- */
 
@@ -411,70 +350,24 @@ export default function M3uTV() {
           </div>
         </Card>
 
-        {/* Player */}
-        <div ref={playerBoxRef}>
-          <Card className="overflow-hidden">
-            <div className="relative aspect-video w-full bg-black">
-              {current ? (
-                <>
-                  <video
-                    ref={videoRef}
-                    controls
-                    autoPlay
-                    playsInline
-                    className="h-full w-full bg-black"
-                  />
-                  {playerLoading && !playerError && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                  )}
-                  {playerError && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center">
-                      <AlertTriangle className="h-7 w-7 text-destructive" />
-                      <p className="text-xs font-semibold text-white">{T.playError}</p>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          setPlayerError(false);
-                          setPlayerLoading(true);
-                          setUseProxy(false);
-                        }}
-                      >
-                        <Play className="me-1.5 h-3.5 w-3.5" />
-                        {T.retry}
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                  <Play className="h-8 w-8" />
-                  <p className="text-xs font-semibold">{T.selectHint}</p>
-                </div>
-              )}
-            </div>
-            {current && (
-              <div className="flex items-center gap-3 p-3">
-                {current.logo ? (
-                  <img src={current.logo} alt={current.name} loading="lazy" className="h-9 w-9 rounded object-contain" />
-                ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded bg-muted">
-                    <Tv className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold">{current.name}</p>
-                  <p className="truncate text-[11px] text-muted-foreground">{current.group}</p>
-                </div>
-                <Badge variant="destructive" className="text-[10px]">
-                  <Signal className="me-1 h-3 w-3" /> {T.live}
-                </Badge>
-              </div>
-            )}
+        {/* Built-in stream view */}
+        {current && (
+          <M3uStreamView
+            channel={current}
+            channels={filtered}
+            playlistName={playlists.find((p) => p.id === activeId)?.name ?? T.title}
+            ku={ku}
+            onSelect={(ch) => setCurrent(ch)}
+            onClose={() => setCurrent(null)}
+          />
+        )}
+
+        {!current && (
+          <Card className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
+            <Play className="h-8 w-8" />
+            <p className="text-xs font-semibold">{T.selectHint}</p>
           </Card>
-        </div>
+        )}
 
         {/* Playlist selector */}
         <Card className="space-y-4 p-4">
