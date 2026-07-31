@@ -11,6 +11,7 @@ import { computeChartPreset } from '@/lib/chartPreset';
 import { CHART_TIMEFRAMES } from '@/lib/timeframeFeed';
 import { computeIndicators, summarizeSignals, computeBuySellPct, bestIndicatorSettings, STANDARD_INDICATOR_SETTINGS } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
+import { computeConfluence } from '@/lib/confluenceSignal';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
