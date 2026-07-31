@@ -70,6 +70,16 @@ export default function M3uTV() {
   const [playerError, setPlayerError] = useState(false);
   const [playerLoading, setPlayerLoading] = useState(false);
   const [useProxy, setUseProxy] = useState(false);
+  // Only the CEO account manages playlist links (add / delete).
+  const [isCeo, setIsCeo] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setIsCeo((data.user?.email ?? '').toLowerCase() === 'andam@outlook.com');
+    });
+  }, []);
+
+
 
   const [newName, setNewName] = useState('');
   const [newUrl, setNewUrl] = useState('');
