@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -41,6 +42,7 @@ interface Playlist {
   last_status: string | null;
   last_latency_ms: number | null;
   channel_count: number | null;
+  is_active: boolean;
 }
 
 interface TestResult {
@@ -122,6 +124,7 @@ export default function M3uTV() {
     choose: ku ? 'پلەیلیست هەڵبژێرە' : 'Choose playlist',
     manage: ku ? 'بەڕێوەبردنی لینکەکان (CEO)' : 'Manage links (CEO)',
     movies: ku ? 'فیلمەکان' : 'Movies',
+    visibleHint: ku ? 'تیک لەو سێرڤەرانە بکە کە دەتەوێت بەکارهێنەران بیانبینن' : 'Tick the servers users are allowed to see',
     ceoOnly: ku ? 'تەنها بەڕێوەبەری سەرەکی دەتوانێت لینک زیاد بکات' : 'Only the CEO can add or delete links',
   };
 
@@ -129,13 +132,30 @@ export default function M3uTV() {
   /* ---------------- playlists ---------------- */
 
   const fetchPlaylists = useCallback(async () => {
+    const { data: userRes } = await supabase.auth.getUser();
+    const ceo = (userRes.user?.email ?? '').toLowerCase() === 'andam@outlook.com';
+    ceoRef.current = ceo;
     const { data } = await supabase
       .from('iptv_playlists')
-      .select('id,name,url,last_status,last_latency_ms,channel_count')
+      .select('id,name,url,last_status,last_latency_ms,channel_count,is_active')
       .order('created_at', { ascending: true });
-    setPlaylists((data as Playlist[]) || []);
-    return (data as Playlist[]) || [];
+    // Viewers only see the servers the CEO ticked; the CEO sees every row.
+    const rows = ((data as Playlist[]) || []).filter((p) => ceo || p.is_active !== false);
+    setPlaylists(rows);
+    return rows;
   }, []);
+
+  /** CEO-only: tick/untick a server so it shows up for all other users. */
+  const toggleVisible = async (pl: Playlist) => {
+    const next = !pl.is_active;
+    setPlaylists((list) => list.map((p) => (p.id === pl.id ? { ...p, is_active: next } : p)));
+    const { error } = await supabase.from('iptv_playlists').update({ is_active: next }).eq('id', pl.id);
+    if (error) {
+      setPlaylists((list) => list.map((p) => (p.id === pl.id ? { ...p, is_active: !next } : p)));
+      toast({ title: T.offline, variant: 'destructive' });
+    }
+  };
+
 
   const loadPlaylist = useCallback(
     async (pl: { id: string; url: string }) => {
@@ -194,7 +214,7 @@ export default function M3uTV() {
         const { data: inserted } = await supabase
           .from('iptv_playlists')
           .insert({ user_id: uid, name: 'Brazil', url: DEFAULT_PLAYLIST })
-          .select('id,name,url,last_status,last_latency_ms,channel_count')
+          .select('id,name,url,last_status,last_latency_ms,channel_count,is_active')
           .maybeSingle();
         if (inserted) {
           setPlaylists([inserted as Playlist]);
@@ -257,7 +277,7 @@ export default function M3uTV() {
         last_latency_ms: result.latency_ms,
         channel_count: result.channel_count ?? null,
       })
-      .select('id,name,url,last_status,last_latency_ms,channel_count')
+      .select('id,name,url,last_status,last_latency_ms,channel_count,is_active')
       .maybeSingle();
     setSaving(false);
     if (error || !data) {
@@ -422,29 +442,39 @@ export default function M3uTV() {
               </div>
 
               {playlists.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {playlists.map((pl) => (
-                    <span
-                      key={pl.id}
-                      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
-                        activeId === pl.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
-                      }`}
-                    >
-                      <button type="button" onClick={() => loadPlaylist(pl)} className="font-semibold">
-                        {pl.name}
-                      </button>
-                      <button
-                        type="button"
-                        aria-label="delete"
-                        onClick={() => removePlaylist(pl.id)}
-                        className="opacity-50 transition hover:text-destructive hover:opacity-100"
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold text-muted-foreground">{T.visibleHint}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {playlists.map((pl) => (
+                      <span
+                        key={pl.id}
+                        className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
+                          activeId === pl.id ? 'border-primary bg-primary/10' : 'border-border bg-muted/40'
+                        } ${pl.is_active === false ? 'opacity-60' : ''}`}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </span>
-                  ))}
+                        <Checkbox
+                          checked={pl.is_active !== false}
+                          onCheckedChange={() => toggleVisible(pl)}
+                          aria-label={T.visibleHint}
+                          className="h-3.5 w-3.5"
+                        />
+                        <button type="button" onClick={() => loadPlaylist(pl)} className="font-semibold">
+                          {pl.name}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="delete"
+                          onClick={() => removePlaylist(pl.id)}
+                          className="opacity-50 transition hover:text-destructive hover:opacity-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
+
 
               <div className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3">
                 <p className="text-xs font-bold text-muted-foreground">{T.addNew}</p>
