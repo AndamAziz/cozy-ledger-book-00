@@ -1,0 +1,161 @@
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
+import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
+
+/**
+ * Lean Live TV stream proxy — a 1:1 copy of the playback pipeline used by the
+ * IPTV M3U module (which plays flawlessly): a direct upstream fetch with a VLC
+ * User-Agent, playlist rewriting back through this same function, and raw
+ * pass-through for everything else. No relay hop, no cookie jar, no candidate
+ * probing chains — those are what made /live-tv stall.
+ *
+ * The only addition over iptv-m3u-proxy is credential resolution: the caller's
+ * own Xtream/M3U account is looked up server-side so credentials never reach
+ * the browser.
+ */
+
+const cors: Record<string, string> = {
+  ...corsHeaders,
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+}
+
+const UA = 'VLC/3.0.20 LibVLC/3.0.20'
+
+const SELF = (req: Request) =>
+  `${(Deno.env.get('SUPABASE_URL') || new URL(req.url).origin).replace(/\/$/, '')}/functions/v1/iptv-stream`
+
+function isHttp(u: string) {
+  try {
+    const p = new URL(u)
+    return p.protocol === 'http:' || p.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function rewritePlaylist(body: string, base: string, self: string, suffix: string) {
+  const abs = (raw: string) => {
+    try {
+      return `${self}?u=${encodeURIComponent(new URL(raw, base).toString())}${suffix}`
+    } catch {
+      return raw
+    }
+  }
+  return body
+    .split(/\r?\n/)
+    .map((line) => {
+      const t = line.trim()
+      if (!t) return line
+      if (t.startsWith('#')) return t.replace(/URI="([^"]+)"/g, (_m, u) => `URI="${abs(u)}"`)
+      return abs(t)
+    })
+    .join('\n')
+}
+
+const json = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, 'Content-Type': 'application/json' },
+  })
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+
+  const reqUrl = new URL(req.url)
+  const passthrough = reqUrl.searchParams.get('u')
+  const streamId = reqUrl.searchParams.get('id')
+  const kindParam = reqUrl.searchParams.get('kind')
+  const kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
+  const extHint = (reqUrl.searchParams.get('ext') ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase()
+
+  // Every stream is served from the caller's OWN provider account.
+  const resolved = await resolveViewer(req)
+  if (!resolved.ok) return json({ error: resolved.message, code: resolved.error }, resolved.status)
+  const source = resolved.viewer.playlistUrl
+  const plain = !isXtreamUrl(source)
+
+  // Candidate upstreams, in the order the M3U module proves reliable:
+  // HLS manifest first (segment-based, survives slow links), raw TS as backup.
+  let candidates: string[] = []
+  if (passthrough) {
+    if (!isHttp(passthrough)) return json({ error: 'Invalid url' }, 400)
+    candidates = [passthrough]
+  } else if (plain && streamId) {
+    const { byId, entries } = await getM3U(source)
+    let entry = byId.get(streamId)
+    if (!entry) {
+      const legacy = /^m(\d+)$/.exec(streamId)
+      if (legacy) entry = entries[Number(legacy[1])]
+    }
+    if (!entry) return json({ error: `Unknown stream id: ${streamId}` }, 404)
+    candidates = [entry.url]
+  } else if (streamId) {
+    if (!/^\d+$/.test(streamId)) return json({ error: 'Invalid id' }, 400)
+    const { host, protocol, username, password } = parseXtream(source)
+    const cred = `${protocol}//${host}`
+    if (kind === 'live') {
+      candidates = [
+        `${cred}/live/${username}/${password}/${streamId}.m3u8`,
+        `${cred}/live/${username}/${password}/${streamId}.ts`,
+      ]
+    } else {
+      const exts = [...new Set([extHint, 'mp4', 'mkv', 'avi'].filter(Boolean))]
+      const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
+      candidates = exts.flatMap((ext) => dirs.map((d) => `${cred}/${d}/${username}/${password}/${streamId}.${ext}`))
+    }
+  } else {
+    return json({ error: 'Missing id or u parameter' }, 400)
+  }
+
+  const range = req.headers.get('range')
+  const headers: Record<string, string> = { 'User-Agent': UA, Accept: '*/*', ...(range ? { Range: range } : {}) }
+
+  let upstream: Response | null = null
+  let lastError = 'fetch failed'
+  for (const target of candidates) {
+    try {
+      const res = await fetch(target, { headers, redirect: 'follow' })
+      if (res.ok || res.status === 206) {
+        upstream = res
+        break
+      }
+      lastError = `HTTP ${res.status}`
+      await res.body?.cancel().catch(() => undefined)
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : 'fetch failed'
+    }
+  }
+
+  if (!upstream) return json({ error: lastError }, 502)
+
+  const finalUrl = new URL(upstream.url)
+  const ct = upstream.headers.get('content-type') || ''
+  const isPlaylist = ct.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(finalUrl.pathname + finalUrl.search)
+
+  if (isPlaylist) {
+    const apikey = reqUrl.searchParams.get('apikey')
+    const token = tokenFromRequest(req)
+    const suffix =
+      `${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}` +
+      `${token ? `&token=${encodeURIComponent(token)}` : ''}`
+    const text = await upstream.text()
+    return new Response(rewritePlaylist(text, upstream.url, SELF(req), suffix), {
+      status: upstream.status,
+      headers: {
+        ...cors,
+        'Content-Type': 'application/vnd.apple.mpegurl',
+        'Cache-Control': 'no-store',
+      },
+    })
+  }
+
+  const out = new Headers(cors)
+  out.set('Content-Type', ct || 'application/octet-stream')
+  const cr = upstream.headers.get('content-range')
+  if (cr) out.set('Content-Range', cr)
+  out.set('Accept-Ranges', 'bytes')
+  out.set('Cache-Control', 'no-store')
+
+  return new Response(upstream.body, { status: upstream.status, headers: out })
+})
