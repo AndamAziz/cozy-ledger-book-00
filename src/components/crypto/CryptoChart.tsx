@@ -899,27 +899,36 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
                 {confluence.trend === 'up' ? '▲ UP' : confluence.trend === 'down' ? '▼ DOWN' : '– FLAT'}
               </span>
             </div>
-            {confluence.last && (
+            <div className="mt-1 flex items-center justify-between gap-3 text-[9px] text-[#848e9c]">
+              <span>{bi('کەمترین متمانە', 'Min conf.')}</span>
+              <span className="font-bold text-[#f0b90b]">{minConf ? `${minConf}%` : bi('هەموو', 'All')}</span>
+            </div>
+            {ctpLast ? (
               <div className="mt-1.5 border-t border-white/10 pt-1.5">
-                <div className={`flex items-center justify-between gap-2 font-bold ${confluence.last.side === 'buy' ? 'text-[#16c784]' : 'text-[#ea3943]'}`}>
-                  <span>{confluence.last.side === 'buy' ? '▲ BUY' : '▼ SELL'}</span>
-                  <span className="tabular-nums">{confluence.last.score}/4 · {confluence.last.confidence}%</span>
+                <div className={`flex items-center justify-between gap-2 font-bold ${ctpLast.side === 'buy' ? 'text-[#16c784]' : 'text-[#ea3943]'}`}>
+                  <span>{ctpLast.side === 'buy' ? '▲ BUY' : '▼ SELL'}</span>
+                  <span className="tabular-nums">{ctpLast.score}/4 · {ctpLast.confidence}%</span>
                 </div>
                 <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                   <div
-                    className={`h-full rounded-full ${confluence.last.side === 'buy' ? 'bg-[#16c784]' : 'bg-[#ea3943]'}`}
-                    style={{ width: `${confluence.last.confidence}%` }}
+                    className={`h-full rounded-full ${ctpLast.side === 'buy' ? 'bg-[#16c784]' : 'bg-[#ea3943]'}`}
+                    style={{ width: `${ctpLast.confidence}%` }}
                   />
                 </div>
                 <div className="mt-0.5 text-[9px] font-bold text-[#848e9c]">
-                  {confluence.last.confidence >= 80
+                  {ctpLast.confidence >= 80
                     ? bi('سیگناڵی بەهێز', 'STRONG SIGNAL')
-                    : confluence.last.confidence >= 60
+                    : ctpLast.confidence >= 60
                       ? bi('سیگناڵی مامناوەند', 'MEDIUM SIGNAL')
                       : bi('سیگناڵی لاواز', 'WEAK SIGNAL')}
                 </div>
               </div>
+            ) : (
+              <div className="mt-1.5 border-t border-white/10 pt-1.5 text-[9px] font-bold text-[#848e9c]">
+                {bi('هیچ سیگناڵێک لەم ئاستەدا نییە', 'No signal at this level')}
+              </div>
             )}
+
 
           </div>
         )}
