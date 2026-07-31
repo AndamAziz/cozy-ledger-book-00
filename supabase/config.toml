@@ -43,4 +43,7 @@ project_id = "jpatltcqhpclxenzvboa"
     verify_jwt = false
   [functions.iptv-m3u-proxy]
     verify_jwt = false
+  [functions.iptv-stream]
+    verify_jwt = false
+
 
