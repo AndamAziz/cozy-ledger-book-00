@@ -11,6 +11,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -21,7 +26,7 @@ import {
 import {
   Tv, Trash2, Search, Loader2, Play, Signal, ArrowLeft,
   ListVideo, CheckCircle2, AlertTriangle, Save, Gauge,
-  ChevronDown, Clapperboard, ShieldCheck,
+  ChevronDown, Clapperboard, ShieldCheck, Settings2,
 } from 'lucide-react';
 
 
