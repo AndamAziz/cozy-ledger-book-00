@@ -1016,6 +1016,17 @@ export function MetalsChart({ candles, isLoading, error, lastUpdated, onRetry, a
             CTP {bi('سیگناڵ', 'Signals')}
           </button>
 
+          {/* Minimum-confidence gate for CTP signals */}
+          {showCTP && (
+            <button
+              onClick={cycleMinConf}
+              title={bi('کەمترین ڕێژەی متمانە', 'Minimum confidence')}
+              className="shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border bg-[#f0b90b1a] text-[#f0b90b] border-[#f0b90b55] transition-colors"
+            >
+              ≥ {minConf ? `${minConf}%` : bi('هەموو', 'All')}
+            </button>
+          )}
+
 
 
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
