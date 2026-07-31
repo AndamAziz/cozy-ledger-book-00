@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries, AreaSeries, HistogramSeries, Time, createSeriesMarkers } from 'lightweight-charts';
 import { OHLCCandle, TIMEFRAMES, getDisplaySymbol, getSymbolFromPair } from '@/lib/krakenApi';
 import { calculateMA, calculateEMA, MA_PERIODS, MAType } from '@/lib/movingAverage';
 import { computeChartPreset } from '@/lib/chartPreset';
 import { computeIndicators, summarizeSignals, computeBuySellPct } from '@/lib/indicators';
 import { rsiSeries, macdSeries } from '@/lib/indicatorSeries';
+import { computeConfluence } from '@/lib/confluenceSignal';
 import { TradeControls, TradeSide, TradePct, askPrice, bidPrice } from '@/components/crypto/TradeControls';
 import { OrderBookPanel } from '@/components/crypto/OrderBookPanel';
 import { TradeJournalModal } from '@/components/crypto/TradeJournalModal';
@@ -65,6 +66,14 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [showMACD, setShowMACD] = useState(false);
   const [showDOM, setShowDOM] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
+  // CTP Confluence Buy/Sell signal overlay (EMA + RSI + MACD confluence).
+  const [showCTP, setShowCTP] = useState(() => {
+    try { return localStorage.getItem('chart_show_ctp') !== 'false'; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('chart_show_ctp', String(showCTP)); } catch { /* ignore */ }
+  }, [showCTP]);
+  const confluence = useMemo(() => computeConfluence(candles), [candles]);
   // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
   const [showTradeDetails, setShowTradeDetails] = useState(() => {
     try { return localStorage.getItem('chart_show_trade_details') === 'true'; } catch { return false; }
@@ -517,9 +526,21 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
         text: `${sideText(m.side)}${countTag} ${fmtQty(m.qty)} @ $${fmtMarkerPrice(avgPrice)}`,
       };
     });
+    // CTP Confluence signals (EMA trend + RSI + MACD cross + price/EMA).
+    if (showCTP) {
+      for (const s of confluence.signals) {
+        markers.push({
+          time: s.time as Time,
+          position: s.side === 'buy' ? 'belowBar' : 'aboveBar',
+          color: s.side === 'buy' ? '#16c784' : '#ea3943',
+          shape: s.side === 'buy' ? 'arrowUp' : 'arrowDown',
+          text: `${s.side === 'buy' ? 'BUY' : 'SELL'} ${s.score}/4 · ${s.confidence}%`,
+        });
+      }
+    }
     markers.sort((a, b) => (a.time as number) - (b.time as number));
     markersRef.current.setMarkers(markers);
-  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails]);
+  }, [buyLeg, sellLeg, seriesVersion, language, candles, currentPrice, showTradeDetails, showCTP, confluence]);
 
   // Create / remove the RSI and MACD panes (and their data) when toggled or
   // when the chart is recreated. Each indicator gets its own pane below price.
@@ -712,6 +733,16 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
             </button>
           ))}
 
+          {/* CTP Confluence Buy/Sell signal overlay */}
+          <button
+            onClick={() => setShowCTP(v => !v)}
+            className={`shrink-0 px-2.5 py-1 text-[10px] sm:text-xs font-bold rounded-md border transition-colors ${
+              showCTP ? 'bg-[#16c7841a] text-[#16c784] border-[#16c78455]' : 'text-[#848e9c] border-white/5 hover:text-white'
+            }`}
+          >
+            CTP {bi('سیگناڵ', 'Signals')}
+          </button>
+
           <div className="w-px h-4 bg-white/10 mx-1 self-center shrink-0" />
 
           {/* Trade journal opener */}
@@ -826,6 +857,32 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
           accentColor="#f0b90b"
         />
         <div ref={chartContainerRef} className="absolute inset-0" />
+
+        {/* CTP confluence score panel (Pine-style table, bottom-start corner) */}
+        {showCTP && candles.length > 0 && (
+          <div className="absolute bottom-2 start-2 z-20 rounded-lg border border-white/10 bg-black/70 backdrop-blur px-2.5 py-1.5 text-[10px] leading-tight">
+            <div className="mb-1 font-bold tracking-wide text-[#f0b90b]">CTP CONFLUENCE</div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 tabular-nums">
+              <span className="text-[#848e9c]">{bi('بەرزبوونەوە', 'Bull')}</span>
+              <span className="text-end font-bold text-[#16c784]">{confluence.bullScore}/4</span>
+              <span className="text-[#848e9c]">{bi('داکشان', 'Bear')}</span>
+              <span className="text-end font-bold text-[#ea3943]">{confluence.bearScore}/4</span>
+              <span className="text-[#848e9c]">RSI</span>
+              <span className="text-end font-bold text-[#f0b90b]">{confluence.rsi}</span>
+              <span className="text-[#848e9c]">{bi('ئاڕاستە', 'Trend')}</span>
+              <span className={`text-end font-bold ${confluence.trend === 'up' ? 'text-[#16c784]' : confluence.trend === 'down' ? 'text-[#ea3943]' : 'text-[#848e9c]'}`}>
+                {confluence.trend === 'up' ? '▲ UP' : confluence.trend === 'down' ? '▼ DOWN' : '– FLAT'}
+              </span>
+            </div>
+            {confluence.last && (
+              <div className={`mt-1 border-t border-white/10 pt-1 font-bold ${confluence.last.side === 'buy' ? 'text-[#16c784]' : 'text-[#ea3943]'}`}>
+                {confluence.last.side === 'buy' ? 'BUY' : 'SELL'} · {confluence.last.confidence}%
+              </div>
+            )}
+          </div>
+        )}
+
+
 
 
 
