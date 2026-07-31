@@ -599,40 +599,15 @@ export default function M3uTV() {
         </Card>
 
 
-        {/* Search + categories */}
-        <div className="space-y-3">
-          <div className="relative">
-            <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={T.search}
-              className="h-10 ps-9"
-            />
-          </div>
-          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-            <button
-              type="button"
-              onClick={() => setActiveGroup('all')}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                activeGroup === 'all' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70'
-              }`}
-            >
-              {T.all} · {channels.length}
-            </button>
-            {groups.map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setActiveGroup(g)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                  activeGroup === g ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/70'
-                }`}
-              >
-                {g} · {groupCounts[g]}
-              </button>
-            ))}
-          </div>
+        {/* Search */}
+        <div className="relative">
+          <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={T.search}
+            className="h-10 ps-9"
+          />
         </div>
 
         {/* Channels — grouped section by section */}
