@@ -610,7 +610,7 @@ export default function M3uTV() {
               className="h-10 ps-9"
             />
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
             <button
               type="button"
               onClick={() => setActiveGroup('all')}
@@ -669,7 +669,7 @@ export default function M3uTV() {
                 </div>
 
                 {section.movie ? (
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+                  <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9">
                     {section.items.map((ch, i) => (
                       <button
                         key={`${ch.url}-${i}`}
@@ -704,27 +704,26 @@ export default function M3uTV() {
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                  <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9">
                     {section.items.map((ch, i) => (
                       <button
                         key={`${ch.url}-${i}`}
                         type="button"
                         onClick={() => playChannel(ch)}
-                        className={`group relative overflow-hidden rounded-2xl border p-3 text-start transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                        className={`group relative overflow-hidden rounded-xl border p-2 text-center transition-all hover:-translate-y-0.5 hover:shadow-md ${
                           current?.url === ch.url
                             ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
                             : 'border-border/60 bg-card hover:border-primary/50'
                         }`}
                       >
-                        <div className="mb-2 flex h-14 items-center justify-center">
+                        <div className="mx-auto mb-1.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg bg-muted/40">
                           {ch.logo ? (
-                            <img src={ch.logo} alt={ch.name} loading="lazy" className="max-h-14 max-w-full object-contain" />
+                            <img src={ch.logo} alt={ch.name} loading="lazy" className="h-full w-full object-contain p-1.5" />
                           ) : (
-                            <Tv className="h-7 w-7 text-muted-foreground" />
+                            <Tv className="h-5 w-5 text-muted-foreground" />
                           )}
                         </div>
-                        <p className="truncate text-xs font-bold">{ch.name}</p>
-                        <p className="truncate text-[10px] text-muted-foreground">{ch.group}</p>
+                        <p className="line-clamp-2 min-h-[2rem] text-[11px] font-bold leading-tight">{ch.name}</p>
                         <span className="absolute end-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
                           <Play className="h-4 w-4 text-primary" />
                         </span>
