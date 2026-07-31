@@ -66,6 +66,14 @@ export function CryptoChart({ pair, candles, isLoading, currentPrice, interval, 
   const [showMACD, setShowMACD] = useState(false);
   const [showDOM, setShowDOM] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
+  // CTP Confluence Buy/Sell signal overlay (EMA + RSI + MACD confluence).
+  const [showCTP, setShowCTP] = useState(() => {
+    try { return localStorage.getItem('chart_show_ctp') !== 'false'; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('chart_show_ctp', String(showCTP)); } catch { /* ignore */ }
+  }, [showCTP]);
+  const confluence = useMemo(() => computeConfluence(candles), [candles]);
   // Toggle: show entry qty + price alongside live P/L on the chart, or just P/L.
   const [showTradeDetails, setShowTradeDetails] = useState(() => {
     try { return localStorage.getItem('chart_show_trade_details') === 'true'; } catch { return false; }
