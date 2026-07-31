@@ -146,7 +146,6 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
                   <BookOpen className="h-6 w-6 text-gold-foreground" />
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-primary">{t('premium') || 'Premium'}</span>
                   <span className="text-base sm:text-lg font-bold text-foreground">{QURAN_LABEL[language] || QURAN_LABEL.en}</span>
                 </div>
               </div>
