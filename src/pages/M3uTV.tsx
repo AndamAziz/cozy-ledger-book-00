@@ -212,7 +212,7 @@ export default function M3uTV() {
         const { data: inserted } = await supabase
           .from('iptv_playlists')
           .insert({ user_id: uid, name: 'Brazil', url: DEFAULT_PLAYLIST })
-          .select('id,name,url,last_status,last_latency_ms,channel_count')
+          .select('id,name,url,last_status,last_latency_ms,channel_count,is_active')
           .maybeSingle();
         if (inserted) {
           setPlaylists([inserted as Playlist]);
@@ -275,7 +275,7 @@ export default function M3uTV() {
         last_latency_ms: result.latency_ms,
         channel_count: result.channel_count ?? null,
       })
-      .select('id,name,url,last_status,last_latency_ms,channel_count')
+      .select('id,name,url,last_status,last_latency_ms,channel_count,is_active')
       .maybeSingle();
     setSaving(false);
     if (error || !data) {
