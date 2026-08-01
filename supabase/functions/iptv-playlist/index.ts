@@ -278,11 +278,12 @@ async function buildIndex(source: string) {
 }
 
 
-async function getIndex(source: string): Promise<IndexSnapshot> {
-  const hit = indexCache.get(source)
+async function getIndex(source: string, force = false): Promise<IndexSnapshot> {
+  const hit = force ? undefined : indexCache.get(source)
+  if (force) indexCache.delete(source)
   // Partial snapshots (a section failed upstream) are only trusted for a minute.
   if (hit && Date.now() - hit.at < (hit.partial ? 60_000 : TTL)) return hit
-  let pending = indexLoading.get(source)
+  let pending = force ? undefined : indexLoading.get(source)
   if (!pending) {
     pending = buildIndex(source)
       .then((i) => {
@@ -560,7 +561,10 @@ function derive(version: string, entries: M3uEntry[]): PlainDerived {
 }
 
 async function handlePlain(source: string, url: URL): Promise<{ body: unknown; version: string }> {
-  const snap = await getM3U(source)
+  // `refresh=1` bypasses every cache layer: used after a source is added/changed
+  // so the new catalogue shows up immediately instead of after the 30m TTL.
+  const force = url.searchParams.get('refresh') === '1'
+  const snap = await getM3U(source, force)
   let plainDerived = plainDerivedCache.get(snap.version)
   if (!plainDerived) {
     plainDerived = derive(snap.version, snap.entries)
@@ -703,7 +707,7 @@ Deno.serve(async (req) => {
     const limit = Math.min(Number(url.searchParams.get('limit') ?? 60) || 60, 200)
     const offset = Math.max(Number(url.searchParams.get('offset') ?? 0) || 0, 0)
 
-    const index = await getIndex(source)
+    const index = await getIndex(source, url.searchParams.get('refresh') === '1')
 
 
     if (!category && !q) {
