@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Search, SignalHigh, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, SignalHigh, AlertTriangle, RotateCw } from 'lucide-react';
 import {
   useIptvIndex,
   useIptvRefresh,
