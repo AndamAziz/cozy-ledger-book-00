@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export type IptvKind = 'live' | 'vod' | 'series';
@@ -134,3 +134,22 @@ export function useIptvSeriesInfo(seriesId: string | null) {
 }
 
 
+
+/**
+ * Hard refresh: re-downloads the catalogue upstream (bypassing every server
+ * cache) and drops all client caches, so a newly added/updated source or a
+ * previously truncated download is reflected immediately.
+ */
+export function useIptvRefresh() {
+  const qc = useQueryClient();
+  return async () => {
+    try {
+      await get<IptvIndex>('iptv-playlist?refresh=1');
+    } finally {
+      qc.removeQueries({ queryKey: ['iptv-index'] });
+      qc.removeQueries({ queryKey: ['iptv-channels'] });
+      qc.removeQueries({ queryKey: ['iptv-search'] });
+      await qc.refetchQueries({ queryKey: ['iptv-index'] });
+    }
+  };
+}

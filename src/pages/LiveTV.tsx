@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Search, SignalHigh, AlertTriangle } from 'lucide-react';
 import {
   useIptvIndex,
+  useIptvRefresh,
   useIptvChannels,
   useIptvSearch,
   type IptvCategory,
@@ -142,6 +143,16 @@ const TAB_META: Record<LiveTab, { path: string; title: string; heading: string; 
 
 export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const { data: index, isLoading, error } = useIptvIndex();
+  const refreshCatalogue = useIptvRefresh();
+  const [refreshing, setRefreshing] = useState(false);
+  const doRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshCatalogue();
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const navigate = useNavigate();
   const meta = TAB_META[tab];
   const [query, setQuery] = useState('');
@@ -206,6 +217,15 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
               {index ? `${categories.length.toLocaleString()} categories` : 'Streaming'}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={doRefresh}
+            disabled={refreshing}
+            aria-label="Reload channel list"
+            className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90 disabled:opacity-50"
+          >
+            <RotateCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
           <span
             title={health?.message ?? 'Checking provider…'}
             className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
