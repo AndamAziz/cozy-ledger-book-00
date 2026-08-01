@@ -236,6 +236,8 @@ export function directStreamSnapshot(url: string): M3uSnapshot {
  * ------------------------------------------------------------------ */
 
 const SHARED_TTL = 6 * 60 * 60 * 1000
+/** Last-known-good catalogues remain safe to serve during a provider outage. */
+const SHARED_STALE_MAX = 7 * 24 * 60 * 60 * 1000
 
 const REST = () => {
   const base = Deno.env.get('SUPABASE_URL')
@@ -259,7 +261,7 @@ async function gunzip(b64: string): Promise<string> {
   return await new Response(stream).text()
 }
 
-async function loadShared(url: string): Promise<M3uSnapshot | null> {
+async function loadShared(url: string, maxAge = SHARED_TTL): Promise<M3uSnapshot | null> {
   const rest = REST()
   if (!rest) return null
   try {
@@ -277,7 +279,7 @@ async function loadShared(url: string): Promise<M3uSnapshot | null> {
     const row = rows?.[0]
     if (!row) return null
     const at = Date.parse(row.updated_at)
-    if (!Number.isFinite(at) || Date.now() - at > SHARED_TTL) return null
+    if (!Number.isFinite(at) || Date.now() - at > maxAge) return null
     const entries = JSON.parse(await gunzip(row.entries_gz)) as M3uEntry[]
     if (!entries.length) return null
     const snap = snapshot(url, entries, row.etag, row.last_modified)
@@ -499,9 +501,19 @@ export async function getM3U(url: string): Promise<M3uSnapshot> {
       // instead of pulling the entire catalogue from the provider again.
       const shared = await loadShared(url)
       if (shared) return shared
-      const fresh = await loadM3U(url, hit)
-      await saveShared(fresh)
-      return fresh
+
+      // Keep a last-known-good snapshot in reserve. Relay/provider 5xx responses
+      // are often brief; returning an older valid catalogue is preferable to a
+      // blank Live TV screen while the upstream recovers.
+      const stale = hit ?? (await loadShared(url, SHARED_STALE_MAX))
+      try {
+        const fresh = await loadM3U(url, stale)
+        await saveShared(fresh)
+        return fresh
+      } catch (error) {
+        if (stale) return stale
+        throw error
+      }
     })()
       .then((c) => {
         m3uCache.set(url, c)
