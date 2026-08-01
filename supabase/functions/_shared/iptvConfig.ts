@@ -357,7 +357,7 @@ async function readTolerant(res: Response): Promise<{ text: string; truncated: b
  * body) the previous parse is reused, so a refresh costs a few bytes instead
  * of re-downloading and re-parsing the whole playlist.
  */
-async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapshot> {
+async function loadM3U(url: string, prev: M3uSnapshot | null, force = false): Promise<M3uSnapshot> {
   const parsedUrl = new URL(url)
   const headers: Record<string, string> = {
     'User-Agent': UA,
@@ -370,7 +370,7 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
     'Origin': `${parsedUrl.protocol}//${parsedUrl.host}`,
     'X-Requested-With': 'com.nathnetwork.xciptv',
   }
-  if (prev && prev.url === url) {
+  if (!force && prev && prev.url === url) {
     if (prev.etag) headers['If-None-Match'] = prev.etag
     if (prev.lastModified) headers['If-Modified-Since'] = prev.lastModified
   }
@@ -378,19 +378,22 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
   /**
    * Pooled edge→relay connections are sometimes reused after the peer closed
    * them, which only fails once the body is read. Retry the whole request a
-   * couple of times so a stale socket never surfaces as a dead playlist.
+   * couple of times so a stale socket never surfaces as a dead playlist —
+   * and so a mid-transfer cut never becomes the cached catalogue.
    */
   let res: Response | null = null
   let body: string | null = null
+  let partial = false
   let lastError: unknown = null
-  for (let attempt = 0; attempt < 3; attempt++) {
+  const ATTEMPTS = 4
+  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     try {
-      res = await egressFetch(url, { headers, signal: AbortSignal.timeout(45_000) })
+      res = await egressFetch(url, { headers, signal: AbortSignal.timeout(60_000) })
       if (res.status === 304) break
       // 5xx / 429 from the relay or panel are usually transient — retry instead
       // of surfacing them as a permanently dead playlist.
       if (!res.ok) {
-        if ((res.status >= 500 || res.status === 429) && attempt < 2) {
+        if ((res.status >= 500 || res.status === 429) && attempt < ATTEMPTS - 1) {
           await res.body?.cancel().catch(() => {})
           const retried = res
           res = null
@@ -400,42 +403,52 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
         }
         break
       }
-      body = await readTolerant(res)
-      // A truncated read that still carries channels is good enough.
-      if (body.length) break
+      const read = await readTolerant(res)
+      // Keep the longest body seen so far: a later attempt may cut off earlier.
+      if (read.text.length > (body?.length ?? 0)) {
+        body = read.text
+        partial = read.truncated
+      }
+      // A complete read wins immediately; a truncated one is retried because a
+      // fragment would otherwise be cached as the whole catalogue.
+      if (read.text.length && !read.truncated) {
+        partial = false
+        break
+      }
+      if (attempt === ATTEMPTS - 1) break
 
+      lastError = new Error('Playlist transfer was truncated')
       res = null
-      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)))
     } catch (e) {
       lastError = e
       res = null
-      body = null
       await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
     }
   }
 
-  if (!res) {
+  if (!res && body === null) {
     // A direct stream link that refuses a plain GET is still playable through
     // the proxy — expose it as one channel rather than killing the source.
     if (isDirectStreamUrl(url)) return directStreamSnapshot(url)
     throw (lastError instanceof Error ? lastError : new Error('Playlist unavailable'))
   }
 
-  if (res.status === 304 && prev) {
+  if (res && res.status === 304 && prev) {
     await res.body?.cancel()
     return { ...prev, at: Date.now() }
   }
-  if (!res.ok) {
+  if (res && !res.ok && body === null) {
     if (isDirectStreamUrl(url)) return directStreamSnapshot(url)
     throw new Error(`Playlist unavailable (${res.status})`)
   }
 
 
-  const etag = res.headers.get('etag')
-  const lastModified = res.headers.get('last-modified')
+  const etag = res?.headers.get('etag') ?? null
+  const lastModified = res?.headers.get('last-modified') ?? null
 
   // Same validator with a 200 response: skip the parse entirely.
-  if (prev && prev.url === url && etag && etag === prev.etag) {
+  if (!force && prev && prev.url === url && etag && etag === prev.etag) {
     return { ...prev, at: Date.now(), lastModified: lastModified ?? prev.lastModified }
   }
 
@@ -446,9 +459,24 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
   const entries = parseM3U(body ?? '')
   // Some providers hand out a bare stream URL (or a body we cannot parse) —
   // treat that as a single channel instead of failing the whole source.
-  if (!entries.length) return directStreamSnapshot(url)
+  if (!entries.length) {
+    if (prev?.entries.length) return { ...prev, at: Date.now() }
+    return directStreamSnapshot(url)
+  }
 
-  const next = snapshot(url, entries, etag, lastModified)
+  // A truncated download that lost most of the catalogue must never replace a
+  // known-good snapshot (this is what reduced a 5k-channel source to ~78).
+  if (partial && prev && prev.entries.length > entries.length * 1.2) {
+    console.warn(
+      `[iptv] truncated playlist ignored: ${entries.length} entries vs cached ${prev.entries.length}`,
+    )
+    return { ...prev, at: Date.now() }
+  }
+  if (partial) {
+    console.warn(`[iptv] playlist truncated mid-transfer, kept ${entries.length} entries`)
+  }
+
+  const next = { ...snapshot(url, entries, partial ? null : etag, partial ? null : lastModified), partial }
   // Unchanged content: keep the previous object identity so derived caches stay warm.
   if (prev && prev.url === url && prev.version === next.version) {
     return { ...prev, at: Date.now(), etag, lastModified }
@@ -465,7 +493,8 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
  * Cached per playlist URL: every user streams from their own server, so a
  * single-slot cache would thrash between accounts.
  */
-export async function getM3U(url: string): Promise<M3uSnapshot> {
+export async function getM3U(url: string, force = false): Promise<M3uSnapshot> {
+
   // Direct media links (.ts / .mp4 / extension-less Xtream stream paths) are
   // never downloaded here — a raw feed would stream forever. Wrap them as a
   // one-channel playlist immediately. `.m3u8` is still fetched: it may be a
