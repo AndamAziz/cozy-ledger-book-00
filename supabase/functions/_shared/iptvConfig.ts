@@ -376,10 +376,24 @@ async function loadM3U(url: string, prev: M3uSnapshot | null): Promise<M3uSnapsh
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       res = await egressFetch(url, { headers, signal: AbortSignal.timeout(45_000) })
-      if (res.status === 304 || !res.ok) break
+      if (res.status === 304) break
+      // 5xx / 429 from the relay or panel are usually transient — retry instead
+      // of surfacing them as a permanently dead playlist.
+      if (!res.ok) {
+        if ((res.status >= 500 || res.status === 429) && attempt < 2) {
+          await res.body?.cancel().catch(() => {})
+          const retried = res
+          res = null
+          lastError = new Error(`Playlist unavailable (${retried.status})`)
+          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)))
+          continue
+        }
+        break
+      }
       body = await readTolerant(res)
       // A truncated read that still carries channels is good enough.
       if (body.length) break
+
       res = null
       await new Promise((r) => setTimeout(r, 250 * (attempt + 1)))
     } catch (e) {
