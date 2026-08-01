@@ -72,15 +72,27 @@ export async function egressFetch(
     return await fetch(target, { ...init, redirect: 'follow' })
   }
   try {
-    return await fetch(egressUrl(target), {
+    const res = await fetch(egressUrl(target), {
       ...init,
       redirect: 'follow',
       headers: egressHeaders(init.headers ?? {}),
     })
+    // The relay is up but could not reach the provider (502/504/503): retry the
+    // request directly so metadata keeps working while the VPS misbehaves.
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      await res.body?.cancel().catch(() => {})
+      try {
+        return await fetch(target, { ...init, redirect: 'follow' })
+      } catch {
+        return res
+      }
+    }
+    return res
   } catch (_e) {
     return await fetch(target, { ...init, redirect: 'follow' })
   }
 }
+
 
 
 /**
