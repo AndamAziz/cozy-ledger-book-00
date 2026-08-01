@@ -319,30 +319,38 @@ async function saveShared(snap: M3uSnapshot): Promise<void> {
 /**
  * Read the body chunk by chunk and keep whatever arrived when the connection
  * drops mid-transfer. Huge playlists frequently get cut off by the provider;
- * a partial playlist is far better than a failed section.
+ * a partial playlist is far better than a failed section, but the caller must
+ * know it was truncated so a 78-channel fragment never replaces a 5k catalogue.
  */
-async function readTolerant(res: Response): Promise<string> {
-  if (!res.body) return ''
+async function readTolerant(res: Response): Promise<{ text: string; truncated: boolean }> {
+  if (!res.body) return { text: '', truncated: false }
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
+  const expected = Number(res.headers.get('content-length') ?? '') || 0
   let text = ''
+  let bytes = 0
+  let truncated = false
   try {
     for (;;) {
       const { value, done } = await reader.read()
       if (done) break
+      bytes += value.byteLength
       text += decoder.decode(value, { stream: true })
     }
     text += decoder.decode()
   } catch {
     // truncated transfer — keep what we have
+    truncated = true
   }
+  if (expected && bytes < expected) truncated = true
   try {
     await reader.cancel()
   } catch {
     // already closed
   }
-  return text
+  return { text, truncated }
 }
+
 
 /**
  * Conditional fetch: when the upstream answers 304 (or serves an identical
