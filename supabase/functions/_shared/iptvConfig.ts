@@ -509,14 +509,16 @@ export async function getM3U(url: string, force = false): Promise<M3uSnapshot> {
 
   const hit = m3uCache.get(url) ?? null
 
+  // A truncated snapshot is never treated as fresh — refetch it right away so a
+  // fragment of the catalogue cannot linger for hours.
+  const usable = hit && !hit.partial ? hit : null
 
+  if (!force && usable && Date.now() - usable.at < M3U_TTL) return usable
 
-  if (hit && Date.now() - hit.at < M3U_TTL) return hit
-
-  if (hit && Date.now() - hit.at < M3U_STALE_MAX) {
+  if (!force && usable && Date.now() - usable.at < M3U_STALE_MAX) {
     if (!revalidating.has(url)) {
       revalidating.add(url)
-      loadM3U(url, hit)
+      loadM3U(url, usable)
         .then((c) => {
           m3uCache.set(url, c)
           return saveShared(c)
@@ -528,23 +530,25 @@ export async function getM3U(url: string, force = false): Promise<M3uSnapshot> {
           revalidating.delete(url)
         })
     }
-    return hit
+    return usable
   }
 
-  let pending = m3uLoading.get(url)
+  let pending = force ? undefined : m3uLoading.get(url)
   if (!pending) {
     pending = (async () => {
       // Cold isolate: reuse the snapshot another isolate already downloaded
       // instead of pulling the entire catalogue from the provider again.
-      const shared = await loadShared(url)
-      if (shared) return shared
+      if (!force) {
+        const shared = await loadShared(url)
+        if (shared) return shared
+      }
 
       // Keep a last-known-good snapshot in reserve. Relay/provider 5xx responses
       // are often brief; returning an older valid catalogue is preferable to a
       // blank Live TV screen while the upstream recovers.
-      const stale = hit ?? (await loadShared(url, SHARED_STALE_MAX))
+      const stale = usable ?? (await loadShared(url, SHARED_STALE_MAX))
       try {
-        const fresh = await loadM3U(url, stale)
+        const fresh = await loadM3U(url, stale, force)
         await saveShared(fresh)
         return fresh
       } catch (error) {
@@ -552,6 +556,7 @@ export async function getM3U(url: string, force = false): Promise<M3uSnapshot> {
         throw error
       }
     })()
+
       .then((c) => {
         m3uCache.set(url, c)
         if (m3uCache.size > M3U_CACHE_MAX) {
