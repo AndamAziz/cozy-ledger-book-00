@@ -117,7 +117,14 @@ export function parseM3U(text: string): M3uEntry[] {
     const line = raw.trim()
     if (!line) continue
     if (/^#EXTINF/i.test(line)) {
-      const name = (line.split(',').slice(1).join(',') || attr(line, 'tvg-name')).trim() || 'Untitled'
+      // The display name is everything after the LAST attribute value, because
+      // attributes themselves often contain commas (group-title="News, Sport").
+      const lastQuote = line.lastIndexOf('"')
+      const tail = lastQuote >= 0 ? line.slice(lastQuote + 1) : line
+      const comma = tail.indexOf(',')
+      const rawName = comma >= 0 ? tail.slice(comma + 1) : lastQuote >= 0 ? '' : tail.split(',').slice(1).join(',')
+      const name = (rawName || attr(line, 'tvg-name')).trim() || 'Untitled'
+
       pending = {
         name,
         logo: attr(line, 'tvg-logo') || attr(line, 'logo'),
