@@ -163,6 +163,8 @@ export interface M3uSnapshot {
   version: string
   etag: string | null
   lastModified: string | null
+  /** True when the transfer was cut short — such a snapshot is never persisted. */
+  partial?: boolean
 }
 
 const M3U_CACHE_MAX = 8
@@ -291,7 +293,8 @@ async function loadShared(url: string, maxAge = SHARED_TTL): Promise<M3uSnapshot
 
 async function saveShared(snap: M3uSnapshot): Promise<void> {
   const rest = REST()
-  if (!rest || !snap.entries.length) return
+  // Never persist a truncated catalogue: it would be served to every isolate.
+  if (!rest || !snap.entries.length || snap.partial) return
   try {
     const entries_gz = await gzip(JSON.stringify(snap.entries))
     await fetch(`${rest.base}/rest/v1/iptv_playlist_cache?on_conflict=url_hash`, {
