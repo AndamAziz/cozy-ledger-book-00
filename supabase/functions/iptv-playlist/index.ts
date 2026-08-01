@@ -283,7 +283,7 @@ async function getIndex(source: string, force = false): Promise<IndexSnapshot> {
   if (force) indexCache.delete(source)
   // Partial snapshots (a section failed upstream) are only trusted for a minute.
   if (hit && Date.now() - hit.at < (hit.partial ? 60_000 : TTL)) return hit
-  let pending = indexLoading.get(source)
+  let pending = force ? undefined : indexLoading.get(source)
   if (!pending) {
     pending = buildIndex(source)
       .then((i) => {
