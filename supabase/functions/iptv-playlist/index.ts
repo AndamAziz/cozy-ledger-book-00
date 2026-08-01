@@ -707,7 +707,7 @@ Deno.serve(async (req) => {
     const limit = Math.min(Number(url.searchParams.get('limit') ?? 60) || 60, 200)
     const offset = Math.max(Number(url.searchParams.get('offset') ?? 0) || 0, 0)
 
-    const index = await getIndex(source)
+    const index = await getIndex(source, url.searchParams.get('refresh') === '1')
 
 
     if (!category && !q) {
