@@ -449,10 +449,13 @@ export function IptvSourceManager({
           ))}
         </div>
       </div>
-      <p className="text-[10px] leading-relaxed opacity-40">
-        Each source keeps its own channels and credentials — nothing is mixed. Links are encrypted
-        before storage and never shown in full again.
-      </p>
+      )}
+      {canManage && (
+        <p className="text-[10px] leading-relaxed opacity-40">
+          Each source keeps its own channels and credentials — nothing is mixed. Links are encrypted
+          before storage and never shown in full again.
+        </p>
+      )}
     </div>
   );
 }
