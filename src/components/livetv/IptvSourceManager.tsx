@@ -348,8 +348,198 @@ export function IptvSourceManager({
     }
   };
 
+  /** CEO directory of every account holding a provider link. */
+  const loadDirectory = useCallback(async () => {
+    setDirLoading(true);
+    try {
+      const data = await call({ action: 'assigned_directory' });
+      setDirectory((data?.users ?? []) as DirectoryUser[]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not load assigned users');
+      setDirectory([]);
+    } finally {
+      setDirLoading(false);
+    }
+  }, []);
+
+  const saveUserSource = async (targetUserId: string, s: IptvSource) => {
+    const trimmed = dirUrl.trim();
+    if (trimmed && !/^https?:\/\//i.test(trimmed)) {
+      toast.error('Enter a full http(s) playlist or Xtream URL');
+      return;
+    }
+    setBusy(`dir-save-${s.id}`);
+    try {
+      await call({
+        action: 'save_source',
+        userId: targetUserId,
+        id: s.id,
+        name: dirName.trim() || s.name,
+        playlistUrl: trimmed,
+      });
+      toast.success('Server updated for that user');
+      setDirEditing(null);
+      setDirName('');
+      setDirUrl('');
+      await loadDirectory();
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not update that server');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const deleteUserSource = async (targetUserId: string, s: IptvSource, email: string) => {
+    setBusy(`dir-del-${s.id}`);
+    try {
+      await call({ action: 'delete_source', userId: targetUserId, id: s.id });
+      toast.success(`“${s.name}” deleted from ${email}`);
+      await loadDirectory();
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not delete that server');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <div className={`w-full space-y-3 text-left ${compact ? '' : 'max-w-md'}`}>
+      {canManage && !userId && (
+        <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !dirOpen;
+                setDirOpen(next);
+                if (next && directory.length === 0) void loadDirectory();
+              }}
+              className="flex flex-1 items-center gap-2 text-[11px] font-extrabold uppercase tracking-wide"
+            >
+              <Users className="h-3.5 w-3.5 text-emerald-400" />
+              Users with a server
+              {directory.length > 0 && (
+                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] text-emerald-300">
+                  {directory.length}
+                </span>
+              )}
+              <ChevronDown
+                className={`ms-auto h-3.5 w-3.5 transition ${dirOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {dirOpen && (
+              <button
+                type="button"
+                onClick={() => void loadDirectory()}
+                disabled={dirLoading}
+                className="rounded-full border border-white/10 p-1.5 opacity-70 transition hover:opacity-100 disabled:opacity-40"
+                aria-label="Refresh list"
+              >
+                <RefreshCw className={`h-3 w-3 ${dirLoading ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+          </div>
+
+          {dirOpen && (
+            <div className="space-y-2">
+              {dirLoading ? (
+                <p className="flex items-center gap-1 text-[10px] opacity-60">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+                </p>
+              ) : directory.length === 0 ? (
+                <p className="text-[10px] opacity-50">
+                  No user has a provider link yet — assign one from a source below.
+                </p>
+              ) : (
+                directory.map((u) => (
+                  <div
+                    key={u.userId}
+                    className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.04] p-2.5"
+                  >
+                    <p dir="ltr" className="truncate text-[11px] font-extrabold text-emerald-200">
+                      {u.email || u.userId}
+                    </p>
+                    {u.sources.map((s) => (
+                      <div key={s.id} className="space-y-1 rounded-lg border border-white/10 p-2">
+                        <div className="flex items-center gap-2">
+                          <RadioTower className="h-3 w-3 shrink-0 text-[#ff2d6f]" />
+                          <span className="truncate text-[11px] font-bold">{s.name}</span>
+                          {s.is_active && (
+                            <span className="ms-auto shrink-0 text-[9px] font-extrabold text-emerald-400">
+                              ACTIVE
+                            </span>
+                          )}
+                        </div>
+                        <p dir="ltr" className="truncate text-[9px] opacity-50">
+                          {s.playlist_masked}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = dirEditing === s.id ? null : s.id;
+                              setDirEditing(next);
+                              setDirName(next ? s.name : '');
+                              setDirUrl('');
+                            }}
+                            className="flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-bold opacity-80 transition hover:opacity-100"
+                          >
+                            <Pencil className="h-3 w-3" /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void deleteUserSource(u.userId, s, u.email)}
+                            disabled={busy === `dir-del-${s.id}`}
+                            className="flex items-center gap-1 rounded-full border border-rose-500/30 px-2.5 py-1 text-[10px] font-bold text-rose-400 transition hover:border-rose-500/60 disabled:opacity-40"
+                          >
+                            {busy === `dir-del-${s.id}` ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3 w-3" />
+                            )}
+                            Delete
+                          </button>
+                        </div>
+                        {dirEditing === s.id && (
+                          <div className="space-y-1.5 pt-1">
+                            <input
+                              value={dirName}
+                              onChange={(e) => setDirName(e.target.value)}
+                              placeholder="Server name"
+                              className="h-8 w-full rounded-lg border border-white/10 bg-white/[0.05] px-2 text-[11px] outline-none focus:border-emerald-400/60"
+                            />
+                            <input
+                              value={dirUrl}
+                              onChange={(e) => setDirUrl(e.target.value)}
+                              dir="ltr"
+                              placeholder="New link (leave empty to keep current)"
+                              className="h-8 w-full rounded-lg border border-white/10 bg-white/[0.05] px-2 text-[11px] outline-none focus:border-emerald-400/60"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => void saveUserSource(u.userId, s)}
+                              disabled={busy === `dir-save-${s.id}`}
+                              className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 py-1.5 text-[11px] font-extrabold text-black transition disabled:opacity-40"
+                            >
+                              {busy === `dir-save-${s.id}` && (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              )}
+                              Save changes
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-6">
           <Loader2 className="h-5 w-5 animate-spin text-[#ff2d6f]" />
