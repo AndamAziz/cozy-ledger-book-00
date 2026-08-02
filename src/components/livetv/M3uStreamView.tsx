@@ -252,7 +252,7 @@ export default function M3uStreamView({
         </div>
 
         {/* Channel stream list */}
-        <div className="flex min-h-0 flex-col gap-2 lg:w-80">
+        <div className="flex min-h-0 flex-col gap-2 lg:w-80 lg:shrink-0 lg:rounded-2xl lg:border lg:border-border/50 lg:bg-card/40 lg:p-3">
           <div className="relative">
             <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -265,7 +265,8 @@ export default function M3uStreamView({
           <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             {T.upNext} · {channels.length}
           </p>
-          <div className="space-y-1.5 lg:max-h-[60vh] lg:overflow-y-auto">
+          <div className="space-y-1.5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pe-1">
+
             {list.length === 0 && (
               <p className="py-6 text-center text-xs text-muted-foreground">{T.none}</p>
             )}
