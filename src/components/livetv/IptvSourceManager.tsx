@@ -7,6 +7,8 @@ import {
   Plus,
   RadioTower,
   Trash2,
+  UserPlus,
+
   Wifi,
   XCircle,
   Zap,
@@ -138,6 +140,48 @@ export function IptvSourceManager({
   // Per-row stream-resolver probe (does not block the row UI).
   const [rowTesting, setRowTesting] = useState<string | null>(null);
   const [rowTest, setRowTest] = useState<Record<string, RowTestResult>>({});
+  // CEO: assign one of my sources to another account.
+  const [assignFor, setAssignFor] = useState<string | null>(null);
+  const [assignQuery, setAssignQuery] = useState('');
+  const [assignResults, setAssignResults] = useState<{ id: string; email: string }[]>([]);
+  const [assignPicked, setAssignPicked] = useState<{ id: string; email: string } | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [assignedNote, setAssignedNote] = useState<{ sourceId: string; email: string } | null>(null);
+
+  const searchUsers = useCallback(async (q: string) => {
+    const query = q.trim();
+    if (query.length < 2) {
+      setAssignResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const data = await call({ action: 'search_users', query });
+      setAssignResults((data?.users ?? []) as { id: string; email: string }[]);
+    } catch {
+      setAssignResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  const assignSource = async (s: IptvSource) => {
+    if (!assignPicked) return;
+    setBusy(`assign-${s.id}`);
+    try {
+      const data = await call({ action: 'assign_source', id: s.id, targetUserId: assignPicked.id });
+      const email = (data?.email as string) || assignPicked.email;
+      setAssignedNote({ sourceId: s.id, email });
+      toast.success(`“${s.name}” assigned to ${email} and set as their active server`);
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not assign that source');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+
 
   const testStream = async (s: IptvSource) => {
     setRowTesting(s.id);
@@ -342,6 +386,20 @@ export function IptvSourceManager({
                 )}
                 {canManage && (
                   <>
+                    {!userId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAssignFor((cur) => (cur === s.id ? null : s.id));
+                          setAssignQuery('');
+                          setAssignResults([]);
+                          setAssignPicked(null);
+                        }}
+                        className="flex items-center gap-1 rounded-full border border-emerald-500/30 px-3 py-1 text-[10px] font-bold text-emerald-300 transition hover:border-emerald-400/70"
+                      >
+                        <UserPlus className="h-3 w-3" /> Assign to user
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -365,7 +423,72 @@ export function IptvSourceManager({
                   </>
                 )}
               </div>
+              {canManage && !userId && assignFor === s.id && (
+                <div className="mt-2 space-y-2 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wide text-emerald-300">
+                    Assign “{s.name}” to a user
+                  </p>
+                  <input
+                    value={assignQuery}
+                    onChange={(e) => {
+                      setAssignQuery(e.target.value);
+                      setAssignPicked(null);
+                      void searchUsers(e.target.value);
+                    }}
+                    dir="ltr"
+                    placeholder="Search by email…"
+                    className="h-9 w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 text-xs outline-none focus:border-emerald-400/60"
+                  />
+                  {searching && (
+                    <p className="flex items-center gap-1 text-[10px] opacity-60">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Searching…
+                    </p>
+                  )}
+                  {!searching && assignQuery.trim().length >= 2 && assignResults.length === 0 && (
+                    <p className="text-[10px] opacity-50">No account matches that email.</p>
+                  )}
+                  {assignResults.length > 0 && (
+                    <div className="max-h-40 space-y-1 overflow-y-auto">
+                      {assignResults.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => setAssignPicked(u)}
+                          dir="ltr"
+                          className={`block w-full truncate rounded-lg border px-2.5 py-1.5 text-start text-[11px] font-bold transition ${
+                            assignPicked?.id === u.id
+                              ? 'border-emerald-400/70 bg-emerald-500/15 text-emerald-200'
+                              : 'border-white/10 bg-white/[0.04] opacity-80 hover:opacity-100'
+                          }`}
+                        >
+                          {u.email}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void assignSource(s)}
+                    disabled={!assignPicked || busy === `assign-${s.id}`}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 py-2 text-[11px] font-extrabold text-black transition disabled:opacity-40"
+                  >
+                    {busy === `assign-${s.id}` ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-3.5 w-3.5" />
+                    )}
+                    {assignPicked ? `Assign to ${assignPicked.email}` : 'Pick a user first'}
+                  </button>
+                  {assignedNote && assignedNote.sourceId === s.id && (
+                    <p className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-[10px] font-extrabold text-emerald-300">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Assigned & activated for{' '}
+                      <span dir="ltr">{assignedNote.email}</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
           ))}
           {sources.length === 0 && (
             <p className="text-[11px] opacity-50">

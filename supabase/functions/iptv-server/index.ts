@@ -192,6 +192,79 @@ Deno.serve(async (req) => {
 
   switch (action) {
 
+    // ---- CEO: assign one of my servers to a specific user ------------
+    case 'search_users': {
+      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      const q = String(body.query ?? '').trim().toLowerCase()
+      if (q.length < 2) return json({ users: [] })
+      const found: { id: string; email: string }[] = []
+      for (let page = 1; page <= 5 && found.length < 20; page++) {
+        const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 })
+        if (error) break
+        for (const u of data?.users ?? []) {
+          const email = (u.email ?? '').toLowerCase()
+          if (email.includes(q)) found.push({ id: u.id, email: u.email ?? '' })
+          if (found.length >= 20) break
+        }
+        if ((data?.users ?? []).length < 200) break
+      }
+      return json({ users: found })
+    }
+
+    case 'assign_source': {
+      if (!isCeo) return json({ error: 'Only the CEO can assign servers' }, 403)
+      const id = String(body.id ?? '')
+      const targetId = String(body.targetUserId ?? '')
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
+      if (!/^[0-9a-f-]{36}$/i.test(targetId)) return json({ error: 'Pick a user first' }, 400)
+
+      const { data: src } = await db
+        .from('iptv_sources')
+        .select('name, kind, playlist_enc, playlist_masked, last_test')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (!src?.playlist_enc) return json({ error: 'That source no longer exists' }, 404)
+
+      const { data: targetUser } = await db.auth.admin.getUserById(targetId)
+      if (!targetUser?.user) return json({ error: 'That user does not exist' }, 404)
+      const targetEmail = targetUser.user.email ?? ''
+
+      // One row per (user, masked url): replace instead of duplicating.
+      const { data: existing } = await db
+        .from('iptv_sources')
+        .select('id')
+        .eq('user_id', targetId)
+        .eq('playlist_masked', String(src.playlist_masked ?? ''))
+        .maybeSingle()
+
+      let newId = existing?.id as string | undefined
+      const payload = {
+        name: String(src.name ?? 'Assigned source'),
+        kind: String(src.kind ?? 'm3u'),
+        playlist_enc: src.playlist_enc,
+        playlist_masked: String(src.playlist_masked ?? ''),
+        last_test: src.last_test ?? null,
+        updated_at: new Date().toISOString(),
+      }
+      if (newId) {
+        await db.from('iptv_sources').update(payload).eq('id', newId).eq('user_id', targetId)
+      } else {
+        const { data: ins, error } = await db
+          .from('iptv_sources')
+          .insert({ ...payload, user_id: targetId, created_by: user.id })
+          .select('id')
+          .single()
+        if (error) return json({ error: 'Could not assign that source' }, 500)
+        newId = ins.id as string
+      }
+
+      const ok = await setActive(targetId, newId!)
+      if (!ok) return json({ error: 'Assigned but could not activate it' }, 500)
+      return json({ ok: true, email: targetEmail, name: payload.name })
+    }
+
+
     case 'admin_save': {
       if (!isCeo) return json({ error: 'Forbidden' }, 403)
       const targetId = String(body.userId ?? '')
