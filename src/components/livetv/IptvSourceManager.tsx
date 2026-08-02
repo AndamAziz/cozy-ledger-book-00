@@ -340,35 +340,44 @@ export function IptvSourceManager({
                     <Zap className="h-3 w-3" /> Use this
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingId(s.id);
-                    setName(s.name);
-                    setUrl('');
-                    setTest(null);
-                  }}
-                  className="flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-[10px] font-bold opacity-80 transition hover:opacity-100"
-                >
-                  <Pencil className="h-3 w-3" /> Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void remove(s)}
-                  disabled={busy === s.id}
-                  className="flex items-center gap-1 rounded-full border border-rose-500/30 px-3 py-1 text-[10px] font-bold text-rose-400 transition hover:border-rose-500/60 disabled:opacity-40"
-                >
-                  <Trash2 className="h-3 w-3" /> Delete
-                </button>
+                {canManage && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(s.id);
+                        setName(s.name);
+                        setUrl('');
+                        setTest(null);
+                      }}
+                      className="flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-[10px] font-bold opacity-80 transition hover:opacity-100"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void remove(s)}
+                      disabled={busy === s.id}
+                      className="flex items-center gap-1 rounded-full border border-rose-500/30 px-3 py-1 text-[10px] font-bold text-rose-400 transition hover:border-rose-500/60 disabled:opacity-40"
+                    >
+                      <Trash2 className="h-3 w-3" /> Delete
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
           {sources.length === 0 && (
-            <p className="text-[11px] opacity-50">No sources yet — add your first playlist below.</p>
+            <p className="text-[11px] opacity-50">
+              {canManage
+                ? 'No sources yet — add your first playlist below.'
+                : 'No provider link assigned to your account yet — the admin will add one for you.'}
+            </p>
           )}
         </div>
       )}
 
+      {canManage && (
       <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
         <p className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wide opacity-60">
           <Plus className="h-3.5 w-3.5" /> {editingId ? 'Edit source' : 'Add a source'}
