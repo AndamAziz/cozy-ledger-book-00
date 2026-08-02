@@ -52,16 +52,19 @@ export function LiveTVPlayer({
   const [selectedLevel, setSelectedLevel] = useState(-1);
   const [autoLabel, setAutoLabel] = useState<string | null>(null);
   const [qualityOpen, setQualityOpen] = useState(false);
+  const [barOpen, setBarOpen] = useState(true);
 
   const accent = accentFor(channel.name);
 
-  // New channel / episode → back to the preferred engine.
+  // New channel / episode → back to the preferred engine and show the top bar.
   useEffect(() => {
     setNativeMode(false);
     setAttempt(0);
     setLevels([]);
     setSelectedLevel(-1);
     setAutoLabel(null);
+    setBarOpen(true);
+    setQualityOpen(false);
   }, [channel.id]);
 
   useEffect(() => {
@@ -160,77 +163,92 @@ export function LiveTVPlayer({
     else video?.webkitEnterFullscreen?.();
   };
 
+  // Auto-hide the top banner after a few seconds; reveal it only on video tap.
+  useEffect(() => {
+    if (!barOpen) return;
+    const t = setTimeout(() => setBarOpen(false), 4000);
+    return () => clearTimeout(t);
+  }, [barOpen]);
+
+  const revealBar = () => setBarOpen(true);
+
   return (
     <div className="fixed inset-0 z-[90] flex flex-col bg-black/95 backdrop-blur-xl">
-      <header className="flex items-center gap-3 px-4 py-3">
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-[11px] font-extrabold text-white"
-          style={{ background: `linear-gradient(140deg, ${accent}, ${accent}55)` }}
-        >
-          {channel.logo ? (
-            <img src={channel.logo} alt="" className="h-full w-full object-contain p-0.5" />
-          ) : (
-            initialsFor(channel.name)
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-white">{channel.name}</p>
-          <p className="truncate text-[10px] uppercase tracking-wider text-white/40">{channel.group}</p>
-        </div>
-        {levels.length > 0 && (
-          <div className="relative">
-            <button
-              onClick={() => setQualityOpen((o) => !o)}
-              aria-label="Quality"
-              aria-expanded={qualityOpen}
-              className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-bold text-white/70 transition hover:bg-white/10 hover:text-white active:scale-90"
-            >
-              <Settings2 className="h-4 w-4" />
-              <span className="hidden sm:inline">{currentQualityLabel}</span>
-            </button>
-            {qualityOpen && (
-              <div className="absolute right-0 top-full z-10 mt-2 min-w-[9rem] overflow-hidden rounded-xl border border-white/10 bg-black/90 py-1 backdrop-blur-xl">
-                <button
-                  onClick={() => pickLevel(-1)}
-                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold transition hover:bg-white/10 ${
-                    selectedLevel === -1 ? 'text-white' : 'text-white/60'
-                  }`}
-                >
-                  Auto
-                  {autoLabel && <span className="text-[10px] text-white/40">{autoLabel}</span>}
-                </button>
-                {levels.map((l) => (
+      {barOpen && (
+        <header className="flex animate-fade-in items-center gap-3 px-4 py-3">
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-[11px] font-extrabold text-white"
+            style={{ background: `linear-gradient(140deg, ${accent}, ${accent}55)` }}
+          >
+            {channel.logo ? (
+              <img src={channel.logo} alt="" className="h-full w-full object-contain p-0.5" />
+            ) : (
+              initialsFor(channel.name)
+            )}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-white">{channel.name}</p>
+            <p className="truncate text-[10px] uppercase tracking-wider text-white/40">{channel.group}</p>
+          </div>
+          {levels.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setQualityOpen((o) => !o)}
+                aria-label="Quality"
+                aria-expanded={qualityOpen}
+                className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-[11px] font-bold text-white/70 transition hover:bg-white/10 hover:text-white active:scale-90"
+              >
+                <Settings2 className="h-4 w-4" />
+                <span className="hidden sm:inline">{currentQualityLabel}</span>
+              </button>
+              {qualityOpen && (
+                <div className="absolute right-0 top-full z-10 mt-2 min-w-[9rem] overflow-hidden rounded-xl border border-white/10 bg-black/90 py-1 backdrop-blur-xl">
                   <button
-                    key={l.index}
-                    onClick={() => pickLevel(l.index)}
-                    className={`block w-full px-3 py-2 text-left text-xs font-semibold transition hover:bg-white/10 ${
-                      selectedLevel === l.index ? 'text-white' : 'text-white/60'
+                    onClick={() => pickLevel(-1)}
+                    className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold transition hover:bg-white/10 ${
+                      selectedLevel === -1 ? 'text-white' : 'text-white/60'
                     }`}
                   >
-                    {l.label}
+                    Auto
+                    {autoLabel && <span className="text-[10px] text-white/40">{autoLabel}</span>}
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        <button
-          onClick={goFullscreen}
-          aria-label="Fullscreen"
-          className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
-        >
-          <Maximize2 className="h-5 w-5" />
-        </button>
-        <button
-          onClick={onClose}
-          aria-label="Close player"
-          className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </header>
+                  {levels.map((l) => (
+                    <button
+                      key={l.index}
+                      onClick={() => pickLevel(l.index)}
+                      className={`block w-full px-3 py-2 text-left text-xs font-semibold transition hover:bg-white/10 ${
+                        selectedLevel === l.index ? 'text-white' : 'text-white/60'
+                      }`}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          <button
+            onClick={goFullscreen}
+            aria-label="Fullscreen"
+            className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
+          >
+            <Maximize2 className="h-5 w-5" />
+          </button>
+          <button
+            onClick={onClose}
+            aria-label="Close player"
+            className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </header>
+      )}
 
-      <div ref={shellRef} className="relative flex flex-1 items-center justify-center bg-black">
+      <div
+        ref={shellRef}
+        onPointerDown={revealBar}
+        className="relative flex flex-1 items-center justify-center bg-black"
+      >
         <video
           ref={videoRef}
           className="h-full max-h-full w-full object-contain"
