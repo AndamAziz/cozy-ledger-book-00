@@ -92,6 +92,16 @@ export default function M3uTV() {
     });
   }, []);
 
+  // Top banner hides itself after a few idle seconds; tapping the video shows it again.
+  const [bannerOpen, setBannerOpen] = useState(true);
+  useEffect(() => {
+    if (!bannerOpen) return;
+    const t = setTimeout(() => setBannerOpen(false), 4000);
+    return () => clearTimeout(t);
+  }, [bannerOpen]);
+
+
+
 
 
   const [newName, setNewName] = useState('');
