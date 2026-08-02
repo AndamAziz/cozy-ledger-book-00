@@ -232,6 +232,10 @@ export default function M3uStreamView({
               autoPlay
               playsInline
               muted={muted}
+              onPlaying={() => {
+                setError(false);
+                setLoadingStream(false);
+              }}
               className="h-full w-full bg-black"
             />
 
