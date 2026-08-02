@@ -287,30 +287,33 @@ export default function M3uTV() {
   );
   const syncingRef = useRef(false);
 
-  /** Silently re-reads the active source and merges any newly added channels. */
-  const syncActive = useCallback(async (url: string) => {
-    if (!url || syncingRef.current) return;
-    syncingRef.current = true;
-    try {
-      const { data } = await supabase.functions.invoke('iptv-m3u-playlist', {
-        body: { action: 'load', url },
-      });
-      const fresh = (data?.ok ? (data.channels as Channel[]) : null) ?? null;
-      if (fresh?.length) {
-        setChannels((prev) => {
-          if (!prev.length) return fresh;
-          const seen = new Set(prev.map((c) => c.url));
-          const added = fresh.filter((c) => !seen.has(c.url));
-          return added.length ? [...prev, ...added] : prev;
-        });
-        if (Array.isArray(data.groups) && data.groups.length) setGroups(data.groups);
+  /** Silently re-reads the whole active source and merges any newly added channels. */
+  const syncActive = useCallback(
+    async (url: string) => {
+      if (!url || syncingRef.current) return;
+      syncingRef.current = true;
+      try {
+        // refresh=true bypasses the server cache so brand-new channels appear at once.
+        const res = await fetchAllChannels(url, undefined, true);
+        const fresh = res?.channels ?? [];
+        if (fresh.length) {
+          setChannels((prev) => {
+            if (!prev.length) return fresh;
+            const seen = new Set(prev.map((c) => c.url));
+            const added = fresh.filter((c) => !seen.has(c.url));
+            return added.length ? [...prev, ...added] : prev;
+          });
+          if (res?.groups.length) setGroups(res.groups);
+        }
+      } catch {
+        /* background sync stays silent */
+      } finally {
+        syncingRef.current = false;
       }
-    } catch {
-      /* background sync stays silent */
-    } finally {
-      syncingRef.current = false;
-    }
-  }, []);
+    },
+    [fetchAllChannels],
+  );
+
 
   useEffect(() => {
     if (!activeUrl) return;
