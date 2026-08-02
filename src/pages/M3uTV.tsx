@@ -242,6 +242,54 @@ export default function M3uTV() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ---------------- auto-sync with the provider ---------------- */
+
+  const activeUrl = useMemo(
+    () => playlists.find((p) => p.id === activeId)?.url ?? '',
+    [playlists, activeId],
+  );
+  const syncingRef = useRef(false);
+
+  /** Silently re-reads the active source and merges any newly added channels. */
+  const syncActive = useCallback(async (url: string) => {
+    if (!url || syncingRef.current) return;
+    syncingRef.current = true;
+    try {
+      const { data } = await supabase.functions.invoke('iptv-m3u-playlist', {
+        body: { action: 'load', url },
+      });
+      const fresh = (data?.ok ? (data.channels as Channel[]) : null) ?? null;
+      if (fresh?.length) {
+        setChannels((prev) => {
+          if (!prev.length) return fresh;
+          const seen = new Set(prev.map((c) => c.url));
+          const added = fresh.filter((c) => !seen.has(c.url));
+          return added.length ? [...prev, ...added] : prev;
+        });
+        if (Array.isArray(data.groups) && data.groups.length) setGroups(data.groups);
+      }
+    } catch {
+      /* background sync stays silent */
+    } finally {
+      syncingRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!activeUrl) return;
+    const tick = () => {
+      if (document.visibilityState === 'visible') void syncActive(activeUrl);
+    };
+    const id = window.setInterval(tick, 5 * 60_000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [activeUrl, syncActive]);
+
+
+
   const runTest = async (url: string, silent = false) => {
     if (!url.trim()) return null;
     setTesting(true);
