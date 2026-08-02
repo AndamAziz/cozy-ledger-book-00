@@ -304,6 +304,7 @@ Deno.serve(async (req) => {
     }
 
     case 'delete_source': {
+      if (!isCeo) return json({ error: 'Only the CEO can delete provider links' }, 403)
       const targetId = ownerId()
       if (!targetId) return json({ error: 'Forbidden' }, 403)
       const id = String(body.id ?? '')
