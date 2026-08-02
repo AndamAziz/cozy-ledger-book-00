@@ -163,17 +163,25 @@ export function LiveTVPlayer({
     else video?.webkitEnterFullscreen?.();
   };
 
-  // Auto-hide the top banner after a few seconds; reveal it only on video tap.
+  // Auto-hide the top banner after a few seconds on touch/handheld layouts only.
+  // On desktop the chrome stays put — that is the standard player behaviour.
+  const isDesktop = useIsMobile() === false;
   useEffect(() => {
+    if (isDesktop) {
+      setBarOpen(true);
+      return;
+    }
     if (!barOpen) return;
     const t = setTimeout(() => setBarOpen(false), 4000);
     return () => clearTimeout(t);
-  }, [barOpen]);
+  }, [barOpen, isDesktop]);
 
   const revealBar = () => setBarOpen(true);
 
   return (
-    <div className="fixed inset-0 z-[90] flex flex-col bg-black/95 backdrop-blur-xl">
+    <div className="fixed inset-0 z-[90] flex flex-col bg-black/95 backdrop-blur-xl md:bg-[#07070b]/97 lg:flex-row lg:items-stretch">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+
       {barOpen && (
         <header className="flex animate-fade-in items-center gap-3 px-4 py-3">
           <span
