@@ -3,6 +3,8 @@ import Hls from 'hls.js';
 import { X, Loader2, AlertTriangle, Maximize2, Settings2, RefreshCw } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 interface QualityLevel {
   /** hls.js level index, or -1 for auto */
