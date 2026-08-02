@@ -3,6 +3,8 @@ import Hls from 'hls.js';
 import { X, Loader2, AlertTriangle, Maximize2, Settings2, RefreshCw } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
+import { useLogoFallback } from '@/lib/logoFallback';
+
 
 
 interface QualityLevel {
@@ -56,6 +58,8 @@ export function LiveTVPlayer({
   const [barOpen, setBarOpen] = useState(true);
 
   const accent = accentFor(channel.name);
+  const headerLogo = useLogoFallback(channel.logo);
+
 
   // New channel / episode → back to the preferred engine and show the top bar.
   useEffect(() => {
