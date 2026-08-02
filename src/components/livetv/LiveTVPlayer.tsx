@@ -185,7 +185,7 @@ export function LiveTVPlayer({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
 
       {barOpen && (
-        <header className="flex animate-fade-in items-center gap-3 px-4 py-3">
+        <header className="flex shrink-0 animate-fade-in items-center gap-3 px-4 py-3 md:border-b md:border-white/10 md:bg-white/[0.03] md:px-6 md:py-4">
           <span
             className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-[11px] font-extrabold text-white"
             style={{ background: `linear-gradient(140deg, ${accent}, ${accent}55)` }}
