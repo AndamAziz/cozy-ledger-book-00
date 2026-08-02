@@ -166,14 +166,14 @@ export default function M3uStreamView({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm">
-      {/* Top bar — auto-hides a few seconds after playback starts, returns on video tap */}
+      {/* Top bar — auto-hides a few seconds after playback starts, returns on tap / mouse move */}
       {barOpen && (
-        <div className="flex animate-fade-in items-center gap-3 border-b border-border/60 px-3 py-2.5">
+        <div className="flex animate-fade-in items-center gap-3 border-b border-border/60 bg-card/40 px-3 py-2.5 backdrop-blur md:px-6">
           <Button variant="ghost" size="icon" onClick={onClose} aria-label={T.close}>
             <X className="h-5 w-5" />
           </Button>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-extrabold">{channel.name}</p>
+            <p className="truncate text-sm font-extrabold md:text-base">{channel.name}</p>
             <p className="truncate text-[11px] text-muted-foreground">
               {playlistName} · {channel.group}
             </p>
@@ -185,13 +185,14 @@ export default function M3uStreamView({
       )}
 
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3 lg:flex-row">
+      <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 overflow-y-auto p-3 md:p-6 lg:flex-row lg:gap-6 lg:overflow-hidden">
         {/* Player */}
-        <div className="lg:flex-1">
+        <div className="flex min-w-0 flex-col lg:flex-1">
           <div
             ref={shellRef}
             onPointerDown={revealBar}
-            className="relative aspect-video w-full overflow-hidden rounded-xl bg-black"
+            onMouseMove={revealBar}
+            className="relative aspect-video w-full overflow-hidden rounded-xl border border-border/50 bg-black shadow-2xl md:rounded-2xl"
           >
 
             <video
@@ -202,6 +203,7 @@ export default function M3uStreamView({
               muted={muted}
               className="h-full w-full bg-black"
             />
+
             {loadingStream && !error && (
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
