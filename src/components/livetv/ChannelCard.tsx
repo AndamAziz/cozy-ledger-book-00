@@ -1,8 +1,9 @@
-import { useState } from 'react';
 import { Radio } from 'lucide-react';
 import type { IptvChannel } from '@/hooks/useIptvPlaylist';
 import { useChannelHealth, useProviderHealth } from '@/hooks/useIptvHealth';
 import { HealthBadge } from './HealthBadge';
+import { useLogoFallback } from '@/lib/logoFallback';
+
 
 const ACCENTS = ['#ff2d6f', '#b026ff', '#ff7a18', '#00d4ff', '#28d17c', '#f0b90b'];
 
@@ -28,8 +29,9 @@ interface Props {
 }
 
 export function ChannelCard({ channel, onPlay }: Props) {
-  const [imgFailed, setImgFailed] = useState(false);
+  const logo = useLogoFallback(channel.logo);
   const accent = accentFor(channel.name);
+
   const { data: provider } = useProviderHealth();
   const nameOffline = /offline|no signal|\bnot working\b/i.test(channel.name);
   // Single-slot accounts can't spare a connection for probing — trust the provider check.
@@ -61,21 +63,23 @@ export function ChannelCard({ channel, onPlay }: Props) {
       <span
         className="relative z-10 flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl text-sm font-extrabold tracking-tight text-white"
         style={{
-          background: imgFailed || !channel.logo ? `linear-gradient(140deg, ${accent}, ${accent}55)` : 'rgba(0,0,0,0.35)',
+          background: logo.src ? 'rgba(0,0,0,0.35)' : `linear-gradient(140deg, ${accent}, ${accent}55)`,
         }}
       >
-        {channel.logo && !imgFailed ? (
+        {logo.src ? (
           <img
-            src={channel.logo}
+            key={logo.src}
+            src={logo.src}
             alt={`${channel.name} logo`}
             loading="lazy"
             className="h-full w-full object-contain p-1"
-            onError={() => setImgFailed(true)}
+            onError={logo.onError}
           />
         ) : (
           initialsFor(channel.name)
         )}
       </span>
+
 
       <span className="relative z-10 line-clamp-2 min-h-[2.1rem] text-[11px] font-semibold leading-tight text-white/90">
         {channel.name}

@@ -1,9 +1,10 @@
-import { useState } from 'react';
 import { Clapperboard } from 'lucide-react';
 import type { IptvChannel } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 import { useChannelHealth, useProviderHealth } from '@/hooks/useIptvHealth';
 import { HealthBadge } from './HealthBadge';
+import { useLogoFallback } from '@/lib/logoFallback';
+
 
 interface Props {
   channel: IptvChannel;
@@ -12,9 +13,10 @@ interface Props {
 
 /** Tall 2:3 poster tile used for Movies / Series / Replay items. */
 export function PosterCard({ channel, onPlay }: Props) {
-  const [failed, setFailed] = useState(false);
+  const logo = useLogoFallback(channel.logo);
   const accent = accentFor(channel.name);
-  const showPoster = !!channel.logo && !failed;
+  const showPoster = !!logo.src;
+
   const { data: provider } = useProviderHealth();
   // Series are containers (no direct stream), so only probe playable items.
   const probeable = channel.kind !== 'series' && provider?.status === 'online' && (provider?.maxConnections ?? 0) > 1;
@@ -40,12 +42,14 @@ export function PosterCard({ channel, onPlay }: Props) {
       <span className="relative block w-full overflow-hidden" style={{ aspectRatio: '2 / 3' }}>
         {showPoster ? (
           <img
-            src={channel.logo as string}
+            key={logo.src as string}
+            src={logo.src as string}
             alt={`${channel.name} poster`}
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
-            onError={() => setFailed(true)}
+            onError={logo.onError}
           />
+
         ) : (
           <span
             className="flex h-full w-full flex-col items-center justify-center gap-1.5"
