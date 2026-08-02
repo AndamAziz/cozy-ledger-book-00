@@ -339,6 +339,48 @@ Deno.serve(async (req) => {
       return json({ ok: true, email })
     }
 
+    /**
+     * CEO directory: every account (other than the CEO) that currently holds
+     * at least one provider link, with all of their sources.
+     */
+    case 'assigned_directory': {
+      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      const { data: rows } = await db
+        .from('iptv_sources')
+        .select('id, user_id, name, kind, playlist_masked, is_active, updated_at')
+        .neq('user_id', user.id)
+        .order('created_at')
+
+      const emails = new Map<string, string>()
+      for (let page = 1; page <= 10; page++) {
+        const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 })
+        if (error) break
+        for (const u of data?.users ?? []) emails.set(u.id, u.email ?? '')
+        if ((data?.users ?? []).length < 200) break
+      }
+
+      const byUser = new Map<
+        string,
+        { userId: string; email: string; sources: Record<string, unknown>[] }
+      >()
+      for (const r of rows ?? []) {
+        const uid = r.user_id as string
+        if (!byUser.has(uid)) {
+          byUser.set(uid, { userId: uid, email: emails.get(uid) ?? '', sources: [] })
+        }
+        byUser.get(uid)!.sources.push({
+          id: r.id,
+          name: r.name,
+          kind: r.kind,
+          playlist_masked: r.playlist_masked,
+          is_active: r.is_active,
+          updated_at: r.updated_at,
+        })
+      }
+
+      const users = [...byUser.values()].sort((a, b) => a.email.localeCompare(b.email))
+      return json({ users })
+    }
 
 
     case 'admin_save': {
