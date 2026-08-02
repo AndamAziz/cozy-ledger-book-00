@@ -466,8 +466,9 @@ export default function M3uTV() {
           </Card>
         )}
 
-        {/* Playlist selector — always compact and visible */}
-        <Card className="p-4">
+        {/* Source management — CEO only, hidden and unreachable for other users */}
+        {isCeo && (
+          <Card className="p-4">
           <div className="flex flex-wrap items-center gap-3">
             <ListVideo className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold">{T.playlists}</h2>
