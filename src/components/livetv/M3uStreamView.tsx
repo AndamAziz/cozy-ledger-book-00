@@ -151,32 +151,54 @@ export default function M3uStreamView({
     return channels.filter((c) => !q || c.name.toLowerCase().includes(q)).slice(0, 200);
   }, [channels, query]);
 
+  /* top bar auto-hide */
+  const [barOpen, setBarOpen] = useState(true);
+  useEffect(() => {
+    if (!barOpen) return;
+    const t = setTimeout(() => setBarOpen(false), 4000);
+    return () => clearTimeout(t);
+  }, [barOpen]);
+  const revealBar = () => {
+    setBarOpen(true);
+    onVideoTap?.();
+  };
+
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm">
-      {/* Top bar */}
-      <div className="flex items-center gap-3 border-b border-border/60 px-3 py-2.5">
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label={T.close}>
-          <X className="h-5 w-5" />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-extrabold">{channel.name}</p>
-          <p className="truncate text-[11px] text-muted-foreground">
-            {playlistName} · {channel.group}
-          </p>
+      {/* Top bar — auto-hides a few seconds after playback starts, returns on video tap */}
+      {barOpen ? (
+        <div className="flex animate-fade-in items-center gap-3 border-b border-border/60 px-3 py-2.5">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label={T.close}>
+            <X className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-extrabold">{channel.name}</p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {playlistName} · {channel.group}
+            </p>
+          </div>
+          <Badge variant="destructive" className="text-[10px]">
+            <Signal className="me-1 h-3 w-3" /> {T.live}
+          </Badge>
         </div>
-        <Badge variant="destructive" className="text-[10px]">
-          <Signal className="me-1 h-3 w-3" /> {T.live}
-        </Badge>
-      </div>
+      ) : (
+        <div className="px-1 py-1">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label={T.close}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3 lg:flex-row">
         {/* Player */}
         <div className="lg:flex-1">
           <div
             ref={shellRef}
-            onPointerDown={onVideoTap}
+            onPointerDown={revealBar}
             className="relative aspect-video w-full overflow-hidden rounded-xl bg-black"
           >
+
             <video
               ref={videoRef}
               controls
