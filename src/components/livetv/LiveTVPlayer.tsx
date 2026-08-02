@@ -52,16 +52,19 @@ export function LiveTVPlayer({
   const [selectedLevel, setSelectedLevel] = useState(-1);
   const [autoLabel, setAutoLabel] = useState<string | null>(null);
   const [qualityOpen, setQualityOpen] = useState(false);
+  const [barOpen, setBarOpen] = useState(true);
 
   const accent = accentFor(channel.name);
 
-  // New channel / episode → back to the preferred engine.
+  // New channel / episode → back to the preferred engine and show the top bar.
   useEffect(() => {
     setNativeMode(false);
     setAttempt(0);
     setLevels([]);
     setSelectedLevel(-1);
     setAutoLabel(null);
+    setBarOpen(true);
+    setQualityOpen(false);
   }, [channel.id]);
 
   useEffect(() => {
