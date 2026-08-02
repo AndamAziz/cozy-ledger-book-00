@@ -320,7 +320,7 @@ export default function M3uTV() {
     const tick = () => {
       if (document.visibilityState === 'visible') void syncActive(activeUrl);
     };
-    const id = window.setInterval(tick, 5 * 60_000);
+    const id = window.setInterval(tick, 2 * 60_000);
     document.addEventListener('visibilitychange', tick);
     return () => {
       window.clearInterval(id);
