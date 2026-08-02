@@ -5,10 +5,12 @@ interface Props {
   name: string;
   logo: string | null;
   className?: string;
+  imageClassName?: string;
+  placeholderClassName?: string;
 }
 
 /** Small square channel logo with automatic extension fallback + clean placeholder. */
-export function ChannelLogo({ name, logo, className }: Props) {
+export function ChannelLogo({ name, logo, className, imageClassName, placeholderClassName }: Props) {
   const img = useLogoFallback(logo);
   return (
     <span
@@ -23,11 +25,11 @@ export function ChannelLogo({ name, logo, className }: Props) {
           src={img.src}
           alt={`${name} logo`}
           loading="lazy"
-          className="h-full w-full object-contain p-0.5"
+          className={imageClassName ?? 'h-full w-full object-contain p-0.5'}
           onError={img.onError}
         />
       ) : (
-        <Tv className="h-4 w-4 text-muted-foreground" />
+        <Tv className={placeholderClassName ?? 'h-4 w-4 text-muted-foreground'} aria-hidden="true" />
       )}
     </span>
   );
