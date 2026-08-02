@@ -512,9 +512,8 @@ export default function M3uTV() {
             </DropdownMenu>
           </div>
 
-          {/* Collapsible management panel (CEO only) */}
-          {isCeo ? (
-            <Collapsible defaultOpen={false} className="mt-3">
+          {/* Collapsible management panel */}
+          <Collapsible defaultOpen={false} className="mt-3">
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="w-full justify-between gap-2 px-2 text-xs font-semibold">
                   <span className="flex items-center gap-2">
