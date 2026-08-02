@@ -61,7 +61,14 @@ interface TestResult {
   at?: string;
 }
 
+interface DirectoryUser {
+  userId: string;
+  email: string;
+  sources: IptvSource[];
+}
+
 /** Ready-made sources for one-tap setup. */
+
 const PRESETS = [
   { label: 'Source A — Iraq (public M3U)', url: 'https://iptv-org.github.io/iptv/countries/iq.m3u' },
   {
