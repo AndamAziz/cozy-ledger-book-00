@@ -172,7 +172,11 @@ export default function M3uStreamView({
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3 lg:flex-row">
         {/* Player */}
         <div className="lg:flex-1">
-          <div ref={shellRef} className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+          <div
+            ref={shellRef}
+            onPointerDown={onVideoTap}
+            className="relative aspect-video w-full overflow-hidden rounded-xl bg-black"
+          >
             <video
               ref={videoRef}
               controls
