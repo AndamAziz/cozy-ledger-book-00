@@ -7,6 +7,8 @@ import {
   X, Tv, Play, Loader2, AlertTriangle, SkipBack, SkipForward,
   Maximize2, RefreshCw, Signal, Search, Volume2, VolumeX,
 } from 'lucide-react';
+import { ChannelLogo } from './ChannelLogo';
+
 
 const PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/iptv-m3u-proxy?url=`;
 
@@ -281,13 +283,8 @@ export default function M3uStreamView({
                     : 'border-border/50 bg-card hover:border-primary/40'
                 }`}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded bg-muted/50">
-                  {c.logo ? (
-                    <img src={c.logo} alt={c.name} loading="lazy" className="h-full w-full object-contain p-0.5" />
-                  ) : (
-                    <Tv className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </span>
+                <ChannelLogo name={c.name} logo={c.logo} />
+
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-bold">{c.name}</span>
                   <span className="block truncate text-[10px] text-muted-foreground">{c.group}</span>
