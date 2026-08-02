@@ -155,6 +155,14 @@ export function IptvSourceManager({
     { id: string; email: string; isActive: boolean }[]
   >([]);
   const [loadingAssigned, setLoadingAssigned] = useState(false);
+  // CEO directory: every account holding a provider link.
+  const [dirOpen, setDirOpen] = useState(false);
+  const [dirLoading, setDirLoading] = useState(false);
+  const [directory, setDirectory] = useState<DirectoryUser[]>([]);
+  const [dirEditing, setDirEditing] = useState<string | null>(null);
+  const [dirName, setDirName] = useState('');
+  const [dirUrl, setDirUrl] = useState('');
+
 
   const loadAssigned = useCallback(async (sourceId: string) => {
     setLoadingAssigned(true);
