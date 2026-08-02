@@ -412,26 +412,38 @@ export default function M3uTV() {
       </Helmet>
 
       <div className="mx-auto max-w-6xl space-y-5 px-4 py-5">
-        {/* Hero */}
-        <Card className="flex items-center gap-4 border-destructive/30 bg-gradient-to-br from-destructive/15 via-primary/10 to-transparent p-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')} aria-label={T.back}>
+        {/* Hero — auto-hides after a few idle seconds, returns on video tap */}
+        {bannerOpen ? (
+          <Card className="flex animate-fade-in items-center gap-4 border-destructive/30 bg-gradient-to-br from-destructive/15 via-primary/10 to-transparent p-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/')} aria-label={T.back}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-destructive to-pink-500 shadow-md">
+              <Tv className="h-6 w-6 text-destructive-foreground" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className="truncate text-base font-extrabold">{T.title}</h1>
+                <Badge variant="destructive" className="text-[10px]">{T.live}</Badge>
+              </div>
+              <p className="truncate text-xs text-muted-foreground">{T.subtitle}</p>
+            </div>
+            <div className="text-end">
+              <p className="text-lg font-extrabold">{channels.length}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{T.channels}</p>
+            </div>
+          </Card>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            aria-label={T.back}
+            className="text-muted-foreground"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-destructive to-pink-500 shadow-md">
-            <Tv className="h-6 w-6 text-destructive-foreground" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="truncate text-base font-extrabold">{T.title}</h1>
-              <Badge variant="destructive" className="text-[10px]">{T.live}</Badge>
-            </div>
-            <p className="truncate text-xs text-muted-foreground">{T.subtitle}</p>
-          </div>
-          <div className="text-end">
-            <p className="text-lg font-extrabold">{channels.length}</p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{T.channels}</p>
-          </div>
-        </Card>
+        )}
 
         {/* Built-in stream view */}
         {current && (
@@ -442,8 +454,10 @@ export default function M3uTV() {
             ku={ku}
             onSelect={(ch) => setCurrent(ch)}
             onClose={() => setCurrent(null)}
+            onVideoTap={() => setBannerOpen(true)}
           />
         )}
+
 
         {!current && (
           <Card className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
