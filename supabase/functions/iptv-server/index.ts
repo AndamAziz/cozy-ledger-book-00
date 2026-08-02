@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
   switch (action) {
 
     case 'admin_save': {
-      if (!isAdmin) return json({ error: 'Forbidden' }, 403)
+      if (!isCeo) return json({ error: 'Forbidden' }, 403)
       const targetId = String(body.userId ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(targetId)) return json({ error: 'Invalid user' }, 400)
       return await store(targetId, String(body.playlistUrl ?? ''))
@@ -203,9 +203,11 @@ Deno.serve(async (req) => {
       return json(await readMasked(user.id))
 
     case 'save':
+      if (!isCeo) return json({ error: 'Forbidden' }, 403)
       return await store(user.id, String(body.playlistUrl ?? ''))
 
     case 'clear':
+      if (!isCeo) return json({ error: 'Forbidden' }, 403)
       return await store(user.id, '')
 
     case 'admin_list': {
