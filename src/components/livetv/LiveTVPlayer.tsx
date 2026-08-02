@@ -3,7 +3,6 @@ import Hls from 'hls.js';
 import { X, Loader2, AlertTriangle, Maximize2, Settings2, RefreshCw } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 
 interface QualityLevel {
@@ -251,6 +250,7 @@ export function LiveTVPlayer({
 
       <div
         onPointerDown={revealBar}
+        onMouseMove={revealBar}
         className="flex min-h-0 flex-1 items-center justify-center bg-black md:bg-transparent md:p-5 lg:p-7"
       >
         <div
