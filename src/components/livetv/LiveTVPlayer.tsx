@@ -3,6 +3,8 @@ import Hls from 'hls.js';
 import { X, Loader2, AlertTriangle, Maximize2, Settings2, RefreshCw } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 interface QualityLevel {
   /** hls.js level index, or -1 for auto */
@@ -163,19 +165,27 @@ export function LiveTVPlayer({
     else video?.webkitEnterFullscreen?.();
   };
 
-  // Auto-hide the top banner after a few seconds; reveal it only on video tap.
+  // Auto-hide the top banner after a few seconds on touch/handheld layouts only.
+  // On desktop the chrome stays put — that is the standard player behaviour.
+  const isDesktop = useIsMobile() === false;
   useEffect(() => {
+    if (isDesktop) {
+      setBarOpen(true);
+      return;
+    }
     if (!barOpen) return;
     const t = setTimeout(() => setBarOpen(false), 4000);
     return () => clearTimeout(t);
-  }, [barOpen]);
+  }, [barOpen, isDesktop]);
 
   const revealBar = () => setBarOpen(true);
 
   return (
-    <div className="fixed inset-0 z-[90] flex flex-col bg-black/95 backdrop-blur-xl">
+    <div className="fixed inset-0 z-[90] flex flex-col bg-black/95 backdrop-blur-xl md:bg-[#07070b]/97 lg:flex-row lg:items-stretch">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+
       {barOpen && (
-        <header className="flex animate-fade-in items-center gap-3 px-4 py-3">
+        <header className="flex shrink-0 animate-fade-in items-center gap-3 px-4 py-3 md:border-b md:border-white/10 md:bg-white/[0.03] md:px-6 md:py-4">
           <span
             className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-[11px] font-extrabold text-white"
             style={{ background: `linear-gradient(140deg, ${accent}, ${accent}55)` }}
@@ -245,10 +255,13 @@ export function LiveTVPlayer({
       )}
 
       <div
-        ref={shellRef}
         onPointerDown={revealBar}
-        className="relative flex flex-1 items-center justify-center bg-black"
+        className="flex min-h-0 flex-1 items-center justify-center bg-black md:bg-transparent md:p-5 lg:p-7"
       >
+        <div
+          ref={shellRef}
+          className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black md:h-auto md:max-h-full md:aspect-video md:max-w-[1400px] md:rounded-2xl md:border md:border-white/10 md:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
+        >
         <video
           ref={videoRef}
           className="h-full max-h-full w-full object-contain"
@@ -256,6 +269,7 @@ export function LiveTVPlayer({
           autoPlay
           controls
         />
+
 
         {loading && !error && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45 backdrop-blur-[2px]">
@@ -306,12 +320,15 @@ export function LiveTVPlayer({
             </div>
           </div>
         )}
+        </div>
+      </div>
       </div>
 
+
       {episodes && episodes.length > 0 && (
-        <div className="shrink-0 border-t border-white/10 bg-black/60 px-3 py-2.5 pb-[calc(env(safe-area-inset-bottom)+0.625rem)]">
+        <aside className="shrink-0 border-t border-white/10 bg-black/60 px-3 py-2.5 pb-[calc(env(safe-area-inset-bottom)+0.625rem)] lg:w-72 lg:overflow-y-auto lg:border-l lg:border-t-0 lg:px-4 lg:py-5">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">Episodes</p>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-x-visible">
             {episodes.map((ep) => {
               const active = ep.id === currentEpisodeId;
               return (
@@ -320,20 +337,21 @@ export function LiveTVPlayer({
                   type="button"
                   onClick={() => onSelectEpisode?.(ep)}
                   title={ep.title}
-                  className={`shrink-0 rounded-xl border px-3 py-2 text-left transition active:scale-95 ${
+                  className={`shrink-0 rounded-xl border px-3 py-2 text-left transition active:scale-95 lg:w-full ${
                     active
                       ? 'border-[#ff2d6f] bg-[#ff2d6f]/15 text-white'
                       : 'border-white/10 bg-white/[0.05] text-white/70 hover:border-white/30 hover:text-white'
                   }`}
                 >
                   <span className="block text-[11px] font-extrabold">E{ep.episode}</span>
-                  <span className="block max-w-[8rem] truncate text-[10px] text-white/50">{ep.title}</span>
+                  <span className="block max-w-[8rem] truncate text-[10px] text-white/50 lg:max-w-full">{ep.title}</span>
                 </button>
               );
             })}
           </div>
-        </div>
+        </aside>
       )}
     </div>
   );
+
 }
