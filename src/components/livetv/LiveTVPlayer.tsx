@@ -184,11 +184,18 @@ export function LiveTVPlayer({
             className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-[11px] font-extrabold text-white"
             style={{ background: `linear-gradient(140deg, ${accent}, ${accent}55)` }}
           >
-            {channel.logo ? (
-              <img src={channel.logo} alt="" className="h-full w-full object-contain p-0.5" />
+            {headerLogo.src ? (
+              <img
+                key={headerLogo.src}
+                src={headerLogo.src}
+                alt=""
+                className="h-full w-full object-contain p-0.5"
+                onError={headerLogo.onError}
+              />
             ) : (
               initialsFor(channel.name)
             )}
+
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-white">{channel.name}</p>
