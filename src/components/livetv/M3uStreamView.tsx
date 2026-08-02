@@ -24,10 +24,12 @@ interface Props {
   ku: boolean;
   onSelect: (ch: StreamChannel) => void;
   onClose: () => void;
+  /** Fired when the user taps the video area (used to reveal the top banner). */
+  onVideoTap?: () => void;
 }
 
 export default function M3uStreamView({
-  channel, channels, playlistName, ku, onSelect, onClose,
+  channel, channels, playlistName, ku, onSelect, onClose, onVideoTap,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
