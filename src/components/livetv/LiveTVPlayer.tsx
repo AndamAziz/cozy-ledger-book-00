@@ -3,7 +3,6 @@ import Hls from 'hls.js';
 import { X, Loader2, AlertTriangle, Maximize2, Settings2, RefreshCw } from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 
 interface QualityLevel {
@@ -165,18 +164,13 @@ export function LiveTVPlayer({
     else video?.webkitEnterFullscreen?.();
   };
 
-  // Auto-hide the top banner after a few seconds on touch/handheld layouts only.
-  // On desktop the chrome stays put — that is the standard player behaviour.
-  const isDesktop = useIsMobile() === false;
+  // Auto-hide the top banner after a few seconds on every device (mobile + desktop).
   useEffect(() => {
-    if (isDesktop) {
-      setBarOpen(true);
-      return;
-    }
     if (!barOpen) return;
     const t = setTimeout(() => setBarOpen(false), 4000);
     return () => clearTimeout(t);
-  }, [barOpen, isDesktop]);
+  }, [barOpen]);
+
 
   const revealBar = () => setBarOpen(true);
 
@@ -256,6 +250,7 @@ export function LiveTVPlayer({
 
       <div
         onPointerDown={revealBar}
+        onMouseMove={revealBar}
         className="flex min-h-0 flex-1 items-center justify-center bg-black md:bg-transparent md:p-5 lg:p-7"
       >
         <div
