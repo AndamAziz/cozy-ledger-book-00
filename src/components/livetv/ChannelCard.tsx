@@ -1,8 +1,9 @@
-import { useState } from 'react';
 import { Radio } from 'lucide-react';
 import type { IptvChannel } from '@/hooks/useIptvPlaylist';
 import { useChannelHealth, useProviderHealth } from '@/hooks/useIptvHealth';
 import { HealthBadge } from './HealthBadge';
+import { useLogoFallback } from '@/lib/logoFallback';
+
 
 const ACCENTS = ['#ff2d6f', '#b026ff', '#ff7a18', '#00d4ff', '#28d17c', '#f0b90b'];
 

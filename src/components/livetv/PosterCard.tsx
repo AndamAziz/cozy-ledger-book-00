@@ -1,9 +1,10 @@
-import { useState } from 'react';
 import { Clapperboard } from 'lucide-react';
 import type { IptvChannel } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 import { useChannelHealth, useProviderHealth } from '@/hooks/useIptvHealth';
 import { HealthBadge } from './HealthBadge';
+import { useLogoFallback } from '@/lib/logoFallback';
+
 
 interface Props {
   channel: IptvChannel;
