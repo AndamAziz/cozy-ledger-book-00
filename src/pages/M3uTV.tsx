@@ -603,10 +603,10 @@ export default function M3uTV() {
                 </div>
               </CollapsibleContent>
             </Collapsible>
-          ) : (
-            <p className="mt-3 text-[11px] text-muted-foreground">{T.ceoOnly}</p>
-          )}
-        </Card>
+            </Collapsible>
+          </Card>
+        )}
+
 
 
         {/* Search */}
