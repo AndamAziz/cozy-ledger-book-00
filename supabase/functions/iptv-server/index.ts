@@ -44,6 +44,8 @@ Deno.serve(async (req) => {
   const action = String(body.action ?? 'get')
   const { data: isAdminData } = await db.rpc('has_role', { _user_id: user.id, _role: 'admin' })
   const isAdmin = !!isAdminData
+  // Only the CEO may create, replace or delete provider links — for anyone.
+  const isCeo = (user.email ?? '').toLowerCase() === 'andam@outlook.com'
 
   /** Encrypts + stores, returning the masked preview. Never logs the URL. */
   const store = async (userId: string, rawUrl: string) => {
@@ -191,7 +193,7 @@ Deno.serve(async (req) => {
   switch (action) {
 
     case 'admin_save': {
-      if (!isAdmin) return json({ error: 'Forbidden' }, 403)
+      if (!isCeo) return json({ error: 'Forbidden' }, 403)
       const targetId = String(body.userId ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(targetId)) return json({ error: 'Invalid user' }, 400)
       return await store(targetId, String(body.playlistUrl ?? ''))
@@ -201,9 +203,11 @@ Deno.serve(async (req) => {
       return json(await readMasked(user.id))
 
     case 'save':
+      if (!isCeo) return json({ error: 'Forbidden' }, 403)
       return await store(user.id, String(body.playlistUrl ?? ''))
 
     case 'clear':
+      if (!isCeo) return json({ error: 'Forbidden' }, 403)
       return await store(user.id, '')
 
     case 'admin_list': {
@@ -247,6 +251,7 @@ Deno.serve(async (req) => {
 
 
     case 'save_source': {
+      if (!isCeo) return json({ error: 'Only the CEO can add or change provider links' }, 403)
       const targetId = ownerId()
       if (!targetId) return json({ error: 'Forbidden' }, 403)
       const id = typeof body.id === 'string' ? body.id : null
@@ -299,6 +304,7 @@ Deno.serve(async (req) => {
     }
 
     case 'delete_source': {
+      if (!isCeo) return json({ error: 'Only the CEO can delete provider links' }, 403)
       const targetId = ownerId()
       if (!targetId) return json({ error: 'Forbidden' }, 403)
       const id = String(body.id ?? '')

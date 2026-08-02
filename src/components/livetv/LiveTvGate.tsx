@@ -105,17 +105,46 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const isCeo = (user.email ?? '').toLowerCase() === 'andam@outlook.com';
+
+  // Regular users can never add a link — the CEO assigns one to their account.
+  if (!hasServer && !isCeo) {
+    return (
+      <div className={SHELL}>
+        <Server className="h-8 w-8 text-[#ff2d6f]" />
+        <h1 className="text-lg font-extrabold">No provider link yet</h1>
+        <p className="max-w-sm text-xs leading-relaxed text-white/45">
+          Live TV is enabled for your account, but the admin has not assigned a provider link to it
+          yet. Contact us on Telegram <span dir="ltr">@AndamAziz</span> or email{' '}
+          <span dir="ltr">info@andam.uk</span> and it will be added for you.
+        </p>
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          className="text-[11px] font-bold text-white/40 underline underline-offset-4"
+        >
+          Refresh status
+        </button>
+        <BackHome />
+      </div>
+    );
+  }
+
   // Entitled but no personal provider link yet, or managing sources.
   if (!hasServer || editServer) {
     return (
       <div className={`${SHELL} py-10`}>
         <Server className="h-8 w-8 text-[#ff2d6f]" />
-        <h1 className="text-lg font-extrabold">Your IPTV sources</h1>
+        <h1 className="text-lg font-extrabold">
+          {isCeo ? 'Your IPTV sources' : 'Your channels source'}
+        </h1>
         <p className="max-w-sm text-xs leading-relaxed text-white/45">
-          Add one or more playlists (M3U or Xtream). Test a link before saving and switch between
-          sources any time — each one loads only its own channels.
+          {isCeo
+            ? 'Add one or more playlists (M3U or Xtream). Test a link before saving and switch between sources any time — each one loads only its own channels.'
+            : 'Switch between the sources assigned to your account. Only the admin can add or change links.'}
         </p>
         <IptvSourceManager
+          canManage={isCeo}
           onChanged={() => {
             void refresh();
           }}
