@@ -147,6 +147,22 @@ export function IptvSourceManager({
   const [assignPicked, setAssignPicked] = useState<{ id: string; email: string } | null>(null);
   const [searching, setSearching] = useState(false);
   const [assignedNote, setAssignedNote] = useState<{ sourceId: string; email: string } | null>(null);
+  const [assignedUsers, setAssignedUsers] = useState<
+    { id: string; email: string; isActive: boolean }[]
+  >([]);
+  const [loadingAssigned, setLoadingAssigned] = useState(false);
+
+  const loadAssigned = useCallback(async (sourceId: string) => {
+    setLoadingAssigned(true);
+    try {
+      const data = await call({ action: 'assigned_users', id: sourceId });
+      setAssignedUsers((data?.users ?? []) as { id: string; email: string; isActive: boolean }[]);
+    } catch {
+      setAssignedUsers([]);
+    } finally {
+      setLoadingAssigned(false);
+    }
+  }, []);
 
   const searchUsers = useCallback(async (q: string) => {
     const query = q.trim();
@@ -173,6 +189,7 @@ export function IptvSourceManager({
       const email = (data?.email as string) || assignPicked.email;
       setAssignedNote({ sourceId: s.id, email });
       toast.success(`“${s.name}” assigned to ${email} and set as their active server`);
+      await loadAssigned(s.id);
       onChanged?.();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not assign that source');
@@ -180,6 +197,22 @@ export function IptvSourceManager({
       setBusy(null);
     }
   };
+
+  const unassignSource = async (s: IptvSource, target: { id: string; email: string }) => {
+    setBusy(`unassign-${target.id}`);
+    try {
+      await call({ action: 'unassign_source', id: s.id, targetUserId: target.id });
+      toast.success(`“${s.name}” revoked from ${target.email}`);
+      setAssignedNote(null);
+      await loadAssigned(s.id);
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not revoke that source');
+    } finally {
+      setBusy(null);
+    }
+  };
+
 
 
 
