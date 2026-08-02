@@ -165,18 +165,13 @@ export function LiveTVPlayer({
     else video?.webkitEnterFullscreen?.();
   };
 
-  // Auto-hide the top banner after a few seconds on touch/handheld layouts only.
-  // On desktop the chrome stays put — that is the standard player behaviour.
-  const isDesktop = useIsMobile() === false;
+  // Auto-hide the top banner after a few seconds on every device (mobile + desktop).
   useEffect(() => {
-    if (isDesktop) {
-      setBarOpen(true);
-      return;
-    }
     if (!barOpen) return;
     const t = setTimeout(() => setBarOpen(false), 4000);
     return () => clearTimeout(t);
-  }, [barOpen, isDesktop]);
+  }, [barOpen]);
+
 
   const revealBar = () => setBarOpen(true);
 
