@@ -7,6 +7,7 @@ import {
   Plus,
   RadioTower,
   Trash2,
+  UserMinus,
   UserPlus,
 
   Wifi,
@@ -423,10 +424,14 @@ export function IptvSourceManager({
                       <button
                         type="button"
                         onClick={() => {
-                          setAssignFor((cur) => (cur === s.id ? null : s.id));
+                          const next = assignFor === s.id ? null : s.id;
+                          setAssignFor(next);
                           setAssignQuery('');
                           setAssignResults([]);
                           setAssignPicked(null);
+                          setAssignedNote(null);
+                          setAssignedUsers([]);
+                          if (next) void loadAssigned(s.id);
                         }}
                         className="flex items-center gap-1 rounded-full border border-emerald-500/30 px-3 py-1 text-[10px] font-bold text-emerald-300 transition hover:border-emerald-400/70"
                       >
