@@ -309,7 +309,6 @@ export default function M3uStreamView({
           </div>
         </div>
       </div>
-    </div>
     </div>,
     document.body,
   );
