@@ -117,11 +117,14 @@ export function IptvSourceManager({
   userId,
   onChanged,
   compact = false,
+  canManage = true,
 }: {
   /** Admin only: manage another account's sources. */
   userId?: string;
   onChanged?: () => void;
   compact?: boolean;
+  /** CEO only: add / edit / delete links. Others can just switch source. */
+  canManage?: boolean;
 }) {
   const qc = useQueryClient();
   const [sources, setSources] = useState<IptvSource[]>([]);
