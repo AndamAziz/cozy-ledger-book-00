@@ -264,6 +264,82 @@ Deno.serve(async (req) => {
       return json({ ok: true, email: targetEmail, name: payload.name })
     }
 
+    /** Everyone (except the CEO) currently holding a copy of one of my sources. */
+    case 'assigned_users': {
+      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      const id = String(body.id ?? '')
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
+      const { data: src } = await db
+        .from('iptv_sources')
+        .select('playlist_masked')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (!src) return json({ users: [] })
+      const { data: rows } = await db
+        .from('iptv_sources')
+        .select('user_id, is_active')
+        .eq('playlist_masked', String(src.playlist_masked ?? ''))
+        .neq('user_id', user.id)
+      const users = await Promise.all(
+        (rows ?? []).map(async (r) => {
+          const { data } = await db.auth.admin.getUserById(r.user_id as string)
+          return {
+            id: r.user_id as string,
+            email: data?.user?.email ?? '',
+            isActive: !!r.is_active,
+          }
+        }),
+      )
+      return json({ users })
+    }
+
+    /** Revokes a source from one user: deletes their copy and re-points playback. */
+    case 'unassign_source': {
+      if (!isCeo) return json({ error: 'Only the CEO can revoke servers' }, 403)
+      const id = String(body.id ?? '')
+      const targetId = String(body.targetUserId ?? '')
+      if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(targetId)) {
+        return json({ error: 'Invalid request' }, 400)
+      }
+      if (targetId === user.id) return json({ error: 'Use Delete for your own sources' }, 400)
+
+      const { data: src } = await db
+        .from('iptv_sources')
+        .select('playlist_masked')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (!src) return json({ error: 'That source no longer exists' }, 404)
+
+      const { data: targetRow } = await db
+        .from('iptv_sources')
+        .select('id, is_active')
+        .eq('user_id', targetId)
+        .eq('playlist_masked', String(src.playlist_masked ?? ''))
+        .maybeSingle()
+
+      const { data: targetUser } = await db.auth.admin.getUserById(targetId)
+      const email = targetUser?.user?.email ?? ''
+      if (!targetRow) return json({ ok: true, email, alreadyRevoked: true })
+
+      await db.from('iptv_sources').delete().eq('id', targetRow.id as string).eq('user_id', targetId)
+
+      if (targetRow.is_active) {
+        const { data: next } = await db
+          .from('iptv_sources')
+          .select('id')
+          .eq('user_id', targetId)
+          .order('created_at')
+          .limit(1)
+          .maybeSingle()
+        if (next?.id) await setActive(targetId, next.id as string)
+        else await store(targetId, '')
+      }
+      return json({ ok: true, email })
+    }
+
+
 
     case 'admin_save': {
       if (!isCeo) return json({ error: 'Forbidden' }, 403)

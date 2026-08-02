@@ -7,6 +7,7 @@ import {
   Plus,
   RadioTower,
   Trash2,
+  UserMinus,
   UserPlus,
 
   Wifi,
@@ -147,6 +148,22 @@ export function IptvSourceManager({
   const [assignPicked, setAssignPicked] = useState<{ id: string; email: string } | null>(null);
   const [searching, setSearching] = useState(false);
   const [assignedNote, setAssignedNote] = useState<{ sourceId: string; email: string } | null>(null);
+  const [assignedUsers, setAssignedUsers] = useState<
+    { id: string; email: string; isActive: boolean }[]
+  >([]);
+  const [loadingAssigned, setLoadingAssigned] = useState(false);
+
+  const loadAssigned = useCallback(async (sourceId: string) => {
+    setLoadingAssigned(true);
+    try {
+      const data = await call({ action: 'assigned_users', id: sourceId });
+      setAssignedUsers((data?.users ?? []) as { id: string; email: string; isActive: boolean }[]);
+    } catch {
+      setAssignedUsers([]);
+    } finally {
+      setLoadingAssigned(false);
+    }
+  }, []);
 
   const searchUsers = useCallback(async (q: string) => {
     const query = q.trim();
@@ -173,6 +190,7 @@ export function IptvSourceManager({
       const email = (data?.email as string) || assignPicked.email;
       setAssignedNote({ sourceId: s.id, email });
       toast.success(`“${s.name}” assigned to ${email} and set as their active server`);
+      await loadAssigned(s.id);
       onChanged?.();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not assign that source');
@@ -180,6 +198,22 @@ export function IptvSourceManager({
       setBusy(null);
     }
   };
+
+  const unassignSource = async (s: IptvSource, target: { id: string; email: string }) => {
+    setBusy(`unassign-${target.id}`);
+    try {
+      await call({ action: 'unassign_source', id: s.id, targetUserId: target.id });
+      toast.success(`“${s.name}” revoked from ${target.email}`);
+      setAssignedNote(null);
+      await loadAssigned(s.id);
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not revoke that source');
+    } finally {
+      setBusy(null);
+    }
+  };
+
 
 
 
@@ -390,10 +424,14 @@ export function IptvSourceManager({
                       <button
                         type="button"
                         onClick={() => {
-                          setAssignFor((cur) => (cur === s.id ? null : s.id));
+                          const next = assignFor === s.id ? null : s.id;
+                          setAssignFor(next);
                           setAssignQuery('');
                           setAssignResults([]);
                           setAssignPicked(null);
+                          setAssignedNote(null);
+                          setAssignedUsers([]);
+                          if (next) void loadAssigned(s.id);
                         }}
                         className="flex items-center gap-1 rounded-full border border-emerald-500/30 px-3 py-1 text-[10px] font-bold text-emerald-300 transition hover:border-emerald-400/70"
                       >
@@ -485,7 +523,48 @@ export function IptvSourceManager({
                       <span dir="ltr">{assignedNote.email}</span>
                     </p>
                   )}
+
+                  <div className="space-y-1.5 border-t border-white/10 pt-2">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wide opacity-60">
+                      Assigned users
+                    </p>
+                    {loadingAssigned ? (
+                      <p className="flex items-center gap-1 text-[10px] opacity-60">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+                      </p>
+                    ) : assignedUsers.length === 0 ? (
+                      <p className="text-[10px] opacity-50">Not assigned to anyone yet.</p>
+                    ) : (
+                      assignedUsers.map((u) => (
+                        <div
+                          key={u.id}
+                          className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5"
+                        >
+                          <span dir="ltr" className="truncate text-[11px] font-bold">
+                            {u.email}
+                          </span>
+                          {u.isActive && (
+                            <span className="text-[9px] font-extrabold text-emerald-400">ACTIVE</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => void unassignSource(s, u)}
+                            disabled={busy === `unassign-${u.id}`}
+                            className="ms-auto flex shrink-0 items-center gap-1 rounded-full border border-rose-500/30 px-2.5 py-1 text-[10px] font-bold text-rose-400 transition hover:border-rose-500/60 disabled:opacity-40"
+                          >
+                            {busy === `unassign-${u.id}` ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <UserMinus className="h-3 w-3" />
+                            )}
+                            Revoke
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
+
               )}
             </div>
 
