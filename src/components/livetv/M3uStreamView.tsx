@@ -289,7 +289,7 @@ export default function M3uStreamView({
               <button
                 key={`${c.url}-${i}`}
                 type="button"
-                onClick={() => onSelect(c)}
+                onClick={() => handleSelect(c)}
                 className={`flex w-full items-center gap-2.5 rounded-lg border p-2 text-start transition ${
                   c.url === channel.url
                     ? 'border-primary bg-primary/10'
