@@ -165,29 +165,24 @@ export default function M3uStreamView({
     onVideoTap?.();
   };
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  /** pick a channel from the list and bring the player back into view */
+  const handleSelect = (c: StreamChannel) => {
+    onSelect(c);
+    setBarOpen(true);
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      shellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm">
-      {/* Top bar — auto-hides a few seconds after playback starts, returns on tap / mouse move */}
-      {barOpen && (
-        <div className="flex animate-fade-in items-center gap-3 border-b border-border/60 bg-card/40 px-3 py-2.5 backdrop-blur md:px-6">
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label={T.close}>
-            <X className="h-5 w-5" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-extrabold md:text-base">{channel.name}</p>
-            <p className="truncate text-[11px] text-muted-foreground">
-              {playlistName} · {channel.group}
-            </p>
-          </div>
-          <Badge variant="destructive" className="text-[10px]">
-            <Signal className="me-1 h-3 w-3" /> {T.live}
-          </Badge>
-        </div>
-      )}
-
-
-      <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 overflow-y-auto p-3 md:p-6 lg:flex-row lg:gap-6 lg:overflow-hidden">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      <div
+        ref={scrollRef}
+        className="relative mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 overflow-y-auto p-3 md:p-6 lg:flex-row lg:gap-6 lg:overflow-hidden"
+      >
         {/* Player */}
         <div className="flex min-w-0 flex-col lg:flex-1">
           <div
@@ -196,6 +191,24 @@ export default function M3uStreamView({
             onMouseMove={revealBar}
             className="relative aspect-video w-full overflow-hidden rounded-xl border border-border/50 bg-black shadow-2xl md:rounded-2xl"
           >
+            {/* Top bar — overlays the video, auto-hides, returns on tap / mouse move */}
+            {barOpen && (
+              <div className="absolute inset-x-0 top-0 z-20 flex animate-fade-in items-center gap-3 bg-gradient-to-b from-black/85 to-transparent px-2 py-2 md:px-4">
+                <Button variant="ghost" size="icon" onClick={onClose} aria-label={T.close} className="text-white hover:bg-white/10">
+                  <X className="h-5 w-5" />
+                </Button>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-extrabold text-white md:text-base">{channel.name}</p>
+                  <p className="truncate text-[11px] text-white/70">
+                    {playlistName} · {channel.group}
+                  </p>
+                </div>
+                <Badge variant="destructive" className="text-[10px]">
+                  <Signal className="me-1 h-3 w-3" /> {T.live}
+                </Badge>
+              </div>
+            )}
+
 
             <video
               ref={videoRef}
