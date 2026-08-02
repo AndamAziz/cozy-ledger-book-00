@@ -251,6 +251,7 @@ Deno.serve(async (req) => {
 
 
     case 'save_source': {
+      if (!isCeo) return json({ error: 'Only the CEO can add or change provider links' }, 403)
       const targetId = ownerId()
       if (!targetId) return json({ error: 'Forbidden' }, 403)
       const id = typeof body.id === 'string' ? body.id : null
