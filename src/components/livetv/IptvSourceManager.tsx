@@ -140,6 +140,48 @@ export function IptvSourceManager({
   // Per-row stream-resolver probe (does not block the row UI).
   const [rowTesting, setRowTesting] = useState<string | null>(null);
   const [rowTest, setRowTest] = useState<Record<string, RowTestResult>>({});
+  // CEO: assign one of my sources to another account.
+  const [assignFor, setAssignFor] = useState<string | null>(null);
+  const [assignQuery, setAssignQuery] = useState('');
+  const [assignResults, setAssignResults] = useState<{ id: string; email: string }[]>([]);
+  const [assignPicked, setAssignPicked] = useState<{ id: string; email: string } | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [assignedNote, setAssignedNote] = useState<{ sourceId: string; email: string } | null>(null);
+
+  const searchUsers = useCallback(async (q: string) => {
+    const query = q.trim();
+    if (query.length < 2) {
+      setAssignResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const data = await call({ action: 'search_users', query });
+      setAssignResults((data?.users ?? []) as { id: string; email: string }[]);
+    } catch {
+      setAssignResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  const assignSource = async (s: IptvSource) => {
+    if (!assignPicked) return;
+    setBusy(`assign-${s.id}`);
+    try {
+      const data = await call({ action: 'assign_source', id: s.id, targetUserId: assignPicked.id });
+      const email = (data?.email as string) || assignPicked.email;
+      setAssignedNote({ sourceId: s.id, email });
+      toast.success(`“${s.name}” assigned to ${email} and set as their active server`);
+      onChanged?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not assign that source');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+
 
   const testStream = async (s: IptvSource) => {
     setRowTesting(s.id);
