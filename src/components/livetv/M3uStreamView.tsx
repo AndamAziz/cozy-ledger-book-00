@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Hls from 'hls.js';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -177,8 +178,8 @@ export default function M3uStreamView({
   };
 
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex flex-col overscroll-contain bg-background">
       <div
         ref={scrollRef}
         className="relative mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 overflow-y-auto p-3 md:p-6 lg:flex-row lg:gap-6 lg:overflow-hidden"
@@ -309,5 +310,7 @@ export default function M3uStreamView({
         </div>
       </div>
     </div>
+    </div>,
+    document.body,
   );
 }
