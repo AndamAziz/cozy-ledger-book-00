@@ -602,8 +602,7 @@ export default function M3uTV() {
                   </div>
                 </div>
               </CollapsibleContent>
-            </Collapsible>
-            </Collapsible>
+          </Collapsible>
           </Card>
         )}
 
