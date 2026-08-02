@@ -163,6 +163,15 @@ export function LiveTVPlayer({
     else video?.webkitEnterFullscreen?.();
   };
 
+  // Auto-hide the top banner after a few seconds; reveal it only on video tap.
+  useEffect(() => {
+    if (!barOpen) return;
+    const t = setTimeout(() => setBarOpen(false), 4000);
+    return () => clearTimeout(t);
+  }, [barOpen]);
+
+  const revealBar = () => setBarOpen(true);
+
   return (
     <div className="fixed inset-0 z-[90] flex flex-col bg-black/95 backdrop-blur-xl">
       <header className="flex items-center gap-3 px-4 py-3">
