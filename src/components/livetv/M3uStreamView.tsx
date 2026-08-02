@@ -151,6 +151,19 @@ export default function M3uStreamView({
     return channels.filter((c) => !q || c.name.toLowerCase().includes(q)).slice(0, 200);
   }, [channels, query]);
 
+  /* top bar auto-hide */
+  const [barOpen, setBarOpen] = useState(true);
+  useEffect(() => {
+    if (!barOpen) return;
+    const t = setTimeout(() => setBarOpen(false), 4000);
+    return () => clearTimeout(t);
+  }, [barOpen]);
+  const revealBar = () => {
+    setBarOpen(true);
+    onVideoTap?.();
+  };
+
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm">
       {/* Top bar — auto-hides a few seconds after playback starts, returns on video tap */}
