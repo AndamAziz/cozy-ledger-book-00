@@ -318,11 +318,10 @@ export function LiveTVPlayer({
             </div>
           </div>
         )}
-      </div>
-
         </div>
       </div>
       </div>
+
 
       {episodes && episodes.length > 0 && (
         <aside className="shrink-0 border-t border-white/10 bg-black/60 px-3 py-2.5 pb-[calc(env(safe-area-inset-bottom)+0.625rem)] lg:w-72 lg:overflow-y-auto lg:border-l lg:border-t-0 lg:px-4 lg:py-5">
