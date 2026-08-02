@@ -19,6 +19,11 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:8080",
     trace: "on-first-retry",
+    // Allows running against a pre-installed browser binary in sandboxes where
+    // `npx playwright install` cannot fetch the version-matched build.
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
+      : undefined,
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
