@@ -92,6 +92,16 @@ export default function M3uTV() {
     });
   }, []);
 
+  // Top banner hides itself after a few idle seconds; tapping the video shows it again.
+  const [bannerOpen, setBannerOpen] = useState(true);
+  useEffect(() => {
+    if (!bannerOpen) return;
+    const t = setTimeout(() => setBannerOpen(false), 4000);
+    return () => clearTimeout(t);
+  }, [bannerOpen]);
+
+
+
 
 
   const [newName, setNewName] = useState('');
@@ -232,6 +242,54 @@ export default function M3uTV() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ---------------- auto-sync with the provider ---------------- */
+
+  const activeUrl = useMemo(
+    () => playlists.find((p) => p.id === activeId)?.url ?? '',
+    [playlists, activeId],
+  );
+  const syncingRef = useRef(false);
+
+  /** Silently re-reads the active source and merges any newly added channels. */
+  const syncActive = useCallback(async (url: string) => {
+    if (!url || syncingRef.current) return;
+    syncingRef.current = true;
+    try {
+      const { data } = await supabase.functions.invoke('iptv-m3u-playlist', {
+        body: { action: 'load', url },
+      });
+      const fresh = (data?.ok ? (data.channels as Channel[]) : null) ?? null;
+      if (fresh?.length) {
+        setChannels((prev) => {
+          if (!prev.length) return fresh;
+          const seen = new Set(prev.map((c) => c.url));
+          const added = fresh.filter((c) => !seen.has(c.url));
+          return added.length ? [...prev, ...added] : prev;
+        });
+        if (Array.isArray(data.groups) && data.groups.length) setGroups(data.groups);
+      }
+    } catch {
+      /* background sync stays silent */
+    } finally {
+      syncingRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!activeUrl) return;
+    const tick = () => {
+      if (document.visibilityState === 'visible') void syncActive(activeUrl);
+    };
+    const id = window.setInterval(tick, 5 * 60_000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [activeUrl, syncActive]);
+
+
+
   const runTest = async (url: string, silent = false) => {
     if (!url.trim()) return null;
     setTesting(true);
@@ -354,26 +412,38 @@ export default function M3uTV() {
       </Helmet>
 
       <div className="mx-auto max-w-6xl space-y-5 px-4 py-5">
-        {/* Hero */}
-        <Card className="flex items-center gap-4 border-destructive/30 bg-gradient-to-br from-destructive/15 via-primary/10 to-transparent p-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')} aria-label={T.back}>
+        {/* Hero — auto-hides after a few idle seconds, returns on video tap */}
+        {bannerOpen ? (
+          <Card className="flex animate-fade-in items-center gap-4 border-destructive/30 bg-gradient-to-br from-destructive/15 via-primary/10 to-transparent p-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/')} aria-label={T.back}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-destructive to-pink-500 shadow-md">
+              <Tv className="h-6 w-6 text-destructive-foreground" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className="truncate text-base font-extrabold">{T.title}</h1>
+                <Badge variant="destructive" className="text-[10px]">{T.live}</Badge>
+              </div>
+              <p className="truncate text-xs text-muted-foreground">{T.subtitle}</p>
+            </div>
+            <div className="text-end">
+              <p className="text-lg font-extrabold">{channels.length}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{T.channels}</p>
+            </div>
+          </Card>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            aria-label={T.back}
+            className="text-muted-foreground"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-destructive to-pink-500 shadow-md">
-            <Tv className="h-6 w-6 text-destructive-foreground" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="truncate text-base font-extrabold">{T.title}</h1>
-              <Badge variant="destructive" className="text-[10px]">{T.live}</Badge>
-            </div>
-            <p className="truncate text-xs text-muted-foreground">{T.subtitle}</p>
-          </div>
-          <div className="text-end">
-            <p className="text-lg font-extrabold">{channels.length}</p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{T.channels}</p>
-          </div>
-        </Card>
+        )}
 
         {/* Built-in stream view */}
         {current && (
@@ -384,8 +454,10 @@ export default function M3uTV() {
             ku={ku}
             onSelect={(ch) => setCurrent(ch)}
             onClose={() => setCurrent(null)}
+            onVideoTap={() => setBannerOpen(true)}
           />
         )}
+
 
         {!current && (
           <Card className="flex flex-col items-center justify-center gap-2 py-10 text-muted-foreground">
@@ -394,8 +466,9 @@ export default function M3uTV() {
           </Card>
         )}
 
-        {/* Playlist selector — always compact and visible */}
-        <Card className="p-4">
+        {/* Source management — CEO only, hidden and unreachable for other users */}
+        {isCeo && (
+          <Card className="p-4">
           <div className="flex flex-wrap items-center gap-3">
             <ListVideo className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold">{T.playlists}</h2>
@@ -439,9 +512,8 @@ export default function M3uTV() {
             </DropdownMenu>
           </div>
 
-          {/* Collapsible management panel (CEO only) */}
-          {isCeo ? (
-            <Collapsible defaultOpen={false} className="mt-3">
+          {/* Collapsible management panel */}
+          <Collapsible defaultOpen={false} className="mt-3">
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="w-full justify-between gap-2 px-2 text-xs font-semibold">
                   <span className="flex items-center gap-2">
@@ -530,11 +602,10 @@ export default function M3uTV() {
                   </div>
                 </div>
               </CollapsibleContent>
-            </Collapsible>
-          ) : (
-            <p className="mt-3 text-[11px] text-muted-foreground">{T.ceoOnly}</p>
-          )}
-        </Card>
+          </Collapsible>
+          </Card>
+        )}
+
 
 
         {/* Search */}
