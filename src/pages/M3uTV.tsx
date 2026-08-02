@@ -172,6 +172,38 @@ export default function M3uTV() {
   };
 
 
+  /** Pulls the whole playlist, page by page, so 40k+ channel sources arrive complete. */
+  const fetchAllChannels = useCallback(
+    async (
+      url: string,
+      onPage?: (channels: Channel[], groups: string[], total: number) => void,
+      refresh = false,
+    ): Promise<{ channels: Channel[]; groups: string[]; latency: number; total: number } | null> => {
+      const PAGE = 4000;
+      const out: Channel[] = [];
+      let groups: string[] = [];
+      let latency = 0;
+      let total = 0;
+
+      for (let offset = 0; offset < 200_000; offset += PAGE) {
+        const { data, error } = await supabase.functions.invoke('iptv-m3u-playlist', {
+          body: { action: 'load', url, offset, limit: PAGE, refresh: refresh && offset === 0 },
+        });
+        if (error) throw error;
+        if (!data?.ok) return offset === 0 ? null : { channels: out, groups, latency, total };
+        const page = (data.channels as Channel[]) || [];
+        out.push(...page);
+        if (Array.isArray(data.groups) && data.groups.length) groups = data.groups;
+        latency = data.latency_ms ?? latency;
+        total = data.total ?? data.channel_count ?? out.length;
+        onPage?.(out.slice(), groups, total);
+        if (!data.has_more || page.length === 0) break;
+      }
+      return { channels: out, groups, latency, total };
+    },
+    [],
+  );
+
   const loadPlaylist = useCallback(
     async (pl: { id: string; url: string }) => {
       setLoading(true);
@@ -179,18 +211,22 @@ export default function M3uTV() {
       setActiveGroup('all');
       setQuery('');
       try {
-        const { data, error } = await supabase.functions.invoke('iptv-m3u-playlist', {
-          body: { action: 'load', url: pl.url },
+        let first = true;
+        const res = await fetchAllChannels(pl.url, (chans, grps) => {
+          setChannels(chans);
+          if (grps.length) setGroups(grps);
+          // Show the first page immediately; later pages stream in behind it.
+          if (first) {
+            first = false;
+            setLoading(false);
+          }
         });
-        if (error) throw error;
-        if (!data?.ok) {
+        if (!res) {
           setChannels([]);
           setGroups([]);
           toast({ title: T.offline, variant: 'destructive' });
           return;
         }
-        setChannels(data.channels || []);
-        setGroups(data.groups || []);
         // Only the CEO may write playlist stats back (shared rows are read-only
         // for everyone else), so skip the update for normal viewers.
         if (pl.id !== 'default' && ceoRef.current) {
@@ -198,8 +234,8 @@ export default function M3uTV() {
             .from('iptv_playlists')
             .update({
               last_status: 'online',
-              last_latency_ms: data.latency_ms,
-              channel_count: data.channel_count,
+              last_latency_ms: res.latency,
+              channel_count: res.total,
             })
             .eq('id', pl.id);
           fetchPlaylists();
@@ -211,8 +247,9 @@ export default function M3uTV() {
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [fetchPlaylists, toast],
+    [fetchAllChannels, fetchPlaylists, toast],
   );
+
 
   useEffect(() => {
     (async () => {
