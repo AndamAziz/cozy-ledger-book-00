@@ -81,11 +81,18 @@ export default function M3uStreamView({
     const video = videoRef.current;
     if (!video) return;
 
+    let cancelled = false;
+
     hlsRef.current?.destroy();
     hlsRef.current = null;
 
+    // Every (re)start of playback clears any stale error from a previous channel.
+    setError(false);
+    setLoadingStream(true);
+
     const src = useProxy ? `${PROXY_BASE}${encodeURIComponent(channel.url)}` : channel.url;
     const fail = () => {
+      if (cancelled) return;
       if (!useProxy) setUseProxy(true);
       else {
         setLoadingStream(false);
@@ -99,7 +106,9 @@ export default function M3uStreamView({
       hls.loadSource(src);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (cancelled) return;
         setLoadingStream(false);
+        setError(false);
         video.play().catch(() => {});
       });
       hls.on(Hls.Events.ERROR, (_e, data) => {
@@ -110,20 +119,26 @@ export default function M3uStreamView({
       });
     } else {
       video.src = src;
-      video.play().then(() => setLoadingStream(false)).catch(fail);
+      video
+        .play()
+        .then(() => {
+          if (cancelled) return;
+          setLoadingStream(false);
+          setError(false);
+        })
+        .catch(fail);
     }
 
     return () => {
+      cancelled = true;
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
   }, [channel.url, useProxy, attempt]);
 
-  /* reset state whenever the user switches channel */
+  /* reset the proxy fallback whenever the user switches channel */
   useEffect(() => {
     setUseProxy(false);
-    setError(false);
-    setLoadingStream(true);
   }, [channel.url]);
 
   /* keyboard shortcuts */
@@ -217,6 +232,10 @@ export default function M3uStreamView({
               autoPlay
               playsInline
               muted={muted}
+              onPlaying={() => {
+                setError(false);
+                setLoadingStream(false);
+              }}
               className="h-full w-full bg-black"
             />
 
