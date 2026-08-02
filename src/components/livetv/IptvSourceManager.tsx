@@ -518,7 +518,48 @@ export function IptvSourceManager({
                       <span dir="ltr">{assignedNote.email}</span>
                     </p>
                   )}
+
+                  <div className="space-y-1.5 border-t border-white/10 pt-2">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wide opacity-60">
+                      Assigned users
+                    </p>
+                    {loadingAssigned ? (
+                      <p className="flex items-center gap-1 text-[10px] opacity-60">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+                      </p>
+                    ) : assignedUsers.length === 0 ? (
+                      <p className="text-[10px] opacity-50">Not assigned to anyone yet.</p>
+                    ) : (
+                      assignedUsers.map((u) => (
+                        <div
+                          key={u.id}
+                          className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5"
+                        >
+                          <span dir="ltr" className="truncate text-[11px] font-bold">
+                            {u.email}
+                          </span>
+                          {u.isActive && (
+                            <span className="text-[9px] font-extrabold text-emerald-400">ACTIVE</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => void unassignSource(s, u)}
+                            disabled={busy === `unassign-${u.id}`}
+                            className="ms-auto flex shrink-0 items-center gap-1 rounded-full border border-rose-500/30 px-2.5 py-1 text-[10px] font-bold text-rose-400 transition hover:border-rose-500/60 disabled:opacity-40"
+                          >
+                            {busy === `unassign-${u.id}` ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <UserMinus className="h-3 w-3" />
+                            )}
+                            Revoke
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
+
               )}
             </div>
 
