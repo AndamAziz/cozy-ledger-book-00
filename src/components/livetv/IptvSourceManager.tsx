@@ -7,6 +7,8 @@ import {
   Plus,
   RadioTower,
   Trash2,
+  UserPlus,
+
   Wifi,
   XCircle,
   Zap,
