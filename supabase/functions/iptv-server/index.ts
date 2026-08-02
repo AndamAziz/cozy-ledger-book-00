@@ -44,6 +44,8 @@ Deno.serve(async (req) => {
   const action = String(body.action ?? 'get')
   const { data: isAdminData } = await db.rpc('has_role', { _user_id: user.id, _role: 'admin' })
   const isAdmin = !!isAdminData
+  // Only the CEO may create, replace or delete provider links — for anyone.
+  const isCeo = (user.email ?? '').toLowerCase() === 'andam@outlook.com'
 
   /** Encrypts + stores, returning the masked preview. Never logs the URL. */
   const store = async (userId: string, rawUrl: string) => {
