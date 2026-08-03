@@ -93,13 +93,18 @@ export default function M3uTV() {
     });
   }, []);
 
-  // Top banner hides itself after a few idle seconds; tapping the video shows it again.
+  // Top banner only auto-hides while a channel is actually playing; while browsing
+  // it stays visible so the channel count of the active server is always shown.
   const [bannerOpen, setBannerOpen] = useState(true);
   useEffect(() => {
-    if (!bannerOpen) return;
+    if (!bannerOpen || !current) return;
     const t = setTimeout(() => setBannerOpen(false), 4000);
     return () => clearTimeout(t);
-  }, [bannerOpen]);
+  }, [bannerOpen, current]);
+  useEffect(() => {
+    if (!current) setBannerOpen(true);
+  }, [current]);
+
 
 
 
