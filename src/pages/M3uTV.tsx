@@ -497,6 +497,64 @@ export default function M3uTV() {
           </Button>
         )}
 
+        {/* Searchable channel picker */}
+        {channels.length > 0 && (
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={pickerOpen}
+                className="h-11 w-full justify-between gap-2 rounded-xl bg-card/60 backdrop-blur"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-xs font-semibold">
+                    {current ? current.name : T.search}
+                  </span>
+                </span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              className="w-[min(92vw,32rem)] p-0"
+              dir={ku ? 'rtl' : 'ltr'}
+            >
+              <Command>
+                <CommandInput placeholder={T.search} />
+                <CommandList className="max-h-72">
+                  <CommandEmpty>{T.noChannels}</CommandEmpty>
+                  <CommandGroup heading={`${channels.length.toLocaleString()} ${T.channels}`}>
+                    {channels.slice(0, 800).map((ch, i) => (
+                      <CommandItem
+                        key={`${ch.url}-${i}`}
+                        value={`${ch.name} ${ch.group}`}
+                        onSelect={() => {
+                          setCurrent(ch);
+                          setPickerOpen(false);
+                        }}
+                        className="gap-2"
+                      >
+                        <ChannelLogo
+                          src={ch.logo}
+                          name={ch.name}
+                          className="h-6 w-6 shrink-0"
+                        />
+                        <span className="truncate text-xs font-semibold">{ch.name}</span>
+                        <span className="ms-auto truncate text-[10px] text-muted-foreground">
+                          {ch.group}
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )}
+
+
         {/* Built-in stream view */}
         {current && (
           <M3uStreamView
