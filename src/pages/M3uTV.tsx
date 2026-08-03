@@ -93,13 +93,18 @@ export default function M3uTV() {
     });
   }, []);
 
-  // Top banner hides itself after a few idle seconds; tapping the video shows it again.
+  // Top banner only auto-hides while a channel is actually playing; while browsing
+  // it stays visible so the channel count of the active server is always shown.
   const [bannerOpen, setBannerOpen] = useState(true);
   useEffect(() => {
-    if (!bannerOpen) return;
+    if (!bannerOpen || !current) return;
     const t = setTimeout(() => setBannerOpen(false), 4000);
     return () => clearTimeout(t);
-  }, [bannerOpen]);
+  }, [bannerOpen, current]);
+  useEffect(() => {
+    if (!current) setBannerOpen(true);
+  }, [current]);
+
 
 
 
@@ -124,6 +129,8 @@ export default function M3uTV() {
     search: ku ? 'گەڕان بەدوای کەناڵ...' : 'Search channels...',
     all: ku ? 'هەموو' : 'All',
     channels: ku ? 'کەناڵ' : 'channels',
+    categories: ku ? 'بەش' : 'categories',
+
     noChannels: ku ? 'هیچ کەناڵێک نەدۆزرایەوە' : 'No channels found',
     selectHint: ku ? 'کەناڵێک هەڵبژێرە بۆ بینین' : 'Pick a channel to start watching',
     online: ku ? 'چالاک' : 'Online',
@@ -467,12 +474,16 @@ export default function M3uTV() {
                 <h1 className="truncate text-base font-extrabold">{T.title}</h1>
                 <Badge variant="destructive" className="text-[10px]">{T.live}</Badge>
               </div>
-              <p className="truncate text-xs text-muted-foreground">{T.subtitle}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {playlists.find((p) => p.id === activeId)?.name ?? T.subtitle}
+                {Object.keys(groupCounts).length > 0 && ` · ${Object.keys(groupCounts).length} ${T.categories}`}
+              </p>
             </div>
             <div className="text-end">
-              <p className="text-lg font-extrabold">{channels.length}</p>
+              <p className="text-lg font-extrabold">{channels.length.toLocaleString()}</p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{T.channels}</p>
             </div>
+
           </Card>
         ) : (
           <Button
