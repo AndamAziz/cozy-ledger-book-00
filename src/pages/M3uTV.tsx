@@ -106,6 +106,7 @@ export default function M3uTV() {
   // it stays visible so the channel count of the active server is always shown.
   const [bannerOpen, setBannerOpen] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [groupPickerOpen, setGroupPickerOpen] = useState(false);
   useEffect(() => {
     if (!bannerOpen || !current) return;
     const t = setTimeout(() => setBannerOpen(false), 4000);
@@ -434,6 +435,11 @@ export default function M3uTV() {
     );
   }, [channels, activeGroup, query]);
 
+  const groupChannels = useMemo(
+    () => (activeGroup === 'all' ? channels : channels.filter((c) => c.group === activeGroup)),
+    [channels, activeGroup],
+  );
+
   const groupCounts = useMemo(() => {
     const map: Record<string, number> = {};
     channels.forEach((c) => {
@@ -507,8 +513,71 @@ export default function M3uTV() {
           </Button>
         )}
 
-        {/* Searchable channel picker */}
+        {/* Searchable group + channel pickers */}
         {channels.length > 0 && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Popover open={groupPickerOpen} onOpenChange={setGroupPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={groupPickerOpen}
+                className="h-11 w-full justify-between gap-2 rounded-xl bg-card/60 backdrop-blur sm:w-64"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <ListVideo className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-xs font-semibold">
+                    {activeGroup === 'all'
+                      ? `${ku ? 'هەموو بەشەکان' : 'All categories'} (${Object.keys(groupCounts).length})`
+                      : activeGroup}
+                  </span>
+                </span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[min(92vw,24rem)] p-0" dir={ku ? 'rtl' : 'ltr'}>
+              <Command>
+                <CommandInput placeholder={ku ? 'گەڕان بەدوای بەش...' : 'Search categories...'} />
+                <CommandList className="max-h-72">
+                  <CommandEmpty>{ku ? 'هیچ بەشێک نەدۆزرایەوە' : 'No categories found'}</CommandEmpty>
+                  <CommandGroup heading={`${Object.keys(groupCounts).length} ${T.categories}`}>
+                    <CommandItem
+                      value="__all__ all categories"
+                      onSelect={() => {
+                        setActiveGroup('all');
+                        setGroupPickerOpen(false);
+                      }}
+                      className="gap-2"
+                    >
+                      <span className="truncate text-xs font-semibold">
+                        {ku ? 'هەموو بەشەکان' : 'All categories'}
+                      </span>
+                      <span className="ms-auto text-[10px] text-muted-foreground">
+                        {channels.length.toLocaleString()}
+                      </span>
+                    </CommandItem>
+                    {Object.entries(groupCounts)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([g, n]) => (
+                        <CommandItem
+                          key={g}
+                          value={g}
+                          onSelect={() => {
+                            setActiveGroup(g);
+                            setGroupPickerOpen(false);
+                          }}
+                          className="gap-2"
+                        >
+                          <span className="truncate text-xs font-semibold">{g}</span>
+                          <span className="ms-auto text-[10px] text-muted-foreground">{n}</span>
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
           <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -535,8 +604,12 @@ export default function M3uTV() {
                 <CommandInput placeholder={T.search} />
                 <CommandList className="max-h-72">
                   <CommandEmpty>{T.noChannels}</CommandEmpty>
-                  <CommandGroup heading={`${channels.length.toLocaleString()} ${T.channels}`}>
-                    {channels.slice(0, 800).map((ch, i) => (
+                  <CommandGroup
+                    heading={`${groupChannels.length.toLocaleString()} ${T.channels}${
+                      activeGroup === 'all' ? '' : ` · ${activeGroup}`
+                    }`}
+                  >
+                    {groupChannels.slice(0, 800).map((ch, i) => (
                       <CommandItem
                         key={`${ch.url}-${i}`}
                         value={`${ch.name} ${ch.group}`}
@@ -562,6 +635,7 @@ export default function M3uTV() {
               </Command>
             </PopoverContent>
           </Popover>
+        </div>
         )}
 
 
