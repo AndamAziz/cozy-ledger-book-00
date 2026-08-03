@@ -8,6 +8,8 @@ import {
 import { accentFor, initialsFor } from './ChannelCard';
 import { LiveTVPlayer } from './LiveTVPlayer';
 import { firstAvailableEpisode } from '@/lib/iptvSlotRetry';
+import ErrorBoundary from '@/components/ErrorBoundary';
+
 
 interface Props {
   series: IptvChannel;
