@@ -129,6 +129,8 @@ export default function M3uTV() {
     search: ku ? 'گەڕان بەدوای کەناڵ...' : 'Search channels...',
     all: ku ? 'هەموو' : 'All',
     channels: ku ? 'کەناڵ' : 'channels',
+    categories: ku ? 'بەش' : 'categories',
+
     noChannels: ku ? 'هیچ کەناڵێک نەدۆزرایەوە' : 'No channels found',
     selectHint: ku ? 'کەناڵێک هەڵبژێرە بۆ بینین' : 'Pick a channel to start watching',
     online: ku ? 'چالاک' : 'Online',
