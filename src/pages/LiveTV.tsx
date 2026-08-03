@@ -331,7 +331,12 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
       <LiveBottomNav active={tab} onChange={(t) => navigate(TAB_META[t].path)} />
 
       {seriesItem && <SeriesDetail series={seriesItem} onClose={() => setSeriesItem(null)} />}
-      {playing && <LiveTVPlayer channel={playing} onClose={() => setPlaying(null)} />}
+      {playing && (
+        <ErrorBoundary>
+          <LiveTVPlayer channel={playing} onClose={() => setPlaying(null)} />
+        </ErrorBoundary>
+      )}
+
     </div>
   );
 }
