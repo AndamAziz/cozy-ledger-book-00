@@ -11,6 +11,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import {
   Collapsible,
   CollapsibleContent,
@@ -96,6 +105,7 @@ export default function M3uTV() {
   // Top banner only auto-hides while a channel is actually playing; while browsing
   // it stays visible so the channel count of the active server is always shown.
   const [bannerOpen, setBannerOpen] = useState(true);
+  const [pickerOpen, setPickerOpen] = useState(false);
   useEffect(() => {
     if (!bannerOpen || !current) return;
     const t = setTimeout(() => setBannerOpen(false), 4000);
@@ -537,7 +547,7 @@ export default function M3uTV() {
                         className="gap-2"
                       >
                         <ChannelLogo
-                          src={ch.logo}
+                          logo={ch.logo}
                           name={ch.name}
                           className="h-6 w-6 shrink-0"
                         />
