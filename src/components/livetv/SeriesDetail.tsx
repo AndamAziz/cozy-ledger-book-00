@@ -212,15 +212,18 @@ export function SeriesDetail({ series, onClose }: Props) {
       </div>
 
       {currentEpisode && (
-        <LiveTVPlayer
-          channel={episodeChannel(series, currentEpisode)}
-          onClose={() => setCurrentEpisode(null)}
-          episodes={episodes}
-          currentEpisodeId={currentEpisode.id}
-          onSelectEpisode={playEpisode}
-          onSlotLimit={handleSlotLimit}
-        />
+        <ErrorBoundary>
+          <LiveTVPlayer
+            channel={episodeChannel(series, currentEpisode)}
+            onClose={() => setCurrentEpisode(null)}
+            episodes={episodes}
+            currentEpisodeId={currentEpisode.id}
+            onSelectEpisode={playEpisode}
+            onSlotLimit={handleSlotLimit}
+          />
+        </ErrorBoundary>
       )}
+
     </div>
   );
 }
