@@ -17,6 +17,8 @@ import { LiveTVPlayer } from '@/components/livetv/LiveTVPlayer';
 import { LiveBottomNav, type LiveTab } from '@/components/livetv/LiveBottomNav';
 import { SeriesDetail } from '@/components/livetv/SeriesDetail';
 import { useProviderHealth } from '@/hooks/useIptvHealth';
+import ErrorBoundary from '@/components/ErrorBoundary';
+
 
 function tabOf(category: IptvCategory): LiveTab {
   if (category.kind === 'vod') return 'movies';
@@ -331,7 +333,12 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
       <LiveBottomNav active={tab} onChange={(t) => navigate(TAB_META[t].path)} />
 
       {seriesItem && <SeriesDetail series={seriesItem} onClose={() => setSeriesItem(null)} />}
-      {playing && <LiveTVPlayer channel={playing} onClose={() => setPlaying(null)} />}
+      {playing && (
+        <ErrorBoundary>
+          <LiveTVPlayer channel={playing} onClose={() => setPlaying(null)} />
+        </ErrorBoundary>
+      )}
+
     </div>
   );
 }

@@ -76,14 +76,30 @@ export function LiveTVPlayer({
     const video = videoRef.current;
     if (!video) return;
 
-    hlsRef.current?.destroy();
-    hlsRef.current = null;
+    // Destroying hls.js is guarded: a throw here used to bubble up, hit the
+    // error boundary and tear the whole player down mid-playback.
+    const safeDestroy = () => {
+      const inst = hlsRef.current;
+      hlsRef.current = null;
+      if (!inst) return;
+      try {
+        inst.destroy();
+      } catch (err) {
+        console.warn('hls destroy failed', err);
+      }
+    };
+
+    safeDestroy();
 
     setLoading(true);
     setError(false);
 
     const src = toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext);
     const done = () => setLoading(false);
+    const onMediaError = () => {
+      setLoading(false);
+      setError(true);
+    };
 
     video.addEventListener('playing', done);
     video.addEventListener('canplay', done);
@@ -93,12 +109,21 @@ export function LiveTVPlayer({
     // parse them, so they play natively — exactly like the IPTV M3U module,
     // which only engages hls.js for HLS manifests.
     const isHls = (channel.kind ?? 'live') === 'live';
+    let disposed = false;
 
     if (!nativeMode && isHls && Hls.isSupported()) {
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
       hlsRef.current = hls;
-      hls.loadSource(src);
-      hls.attachMedia(video);
+      let recovered = 0;
+      try {
+        hls.loadSource(src);
+        hls.attachMedia(video);
+      } catch (err) {
+        console.warn('hls init failed', err);
+        safeDestroy();
+        setNativeMode(true);
+        return;
+      }
       hls.on(Hls.Events.MANIFEST_PARSED, (_e, data) => {
         setLoading(false);
         setLevels(
@@ -111,36 +136,58 @@ export function LiveTVPlayer({
         if (lvl) setAutoLabel(labelForLevel(lvl.height, lvl.bitrate));
       });
       hls.on(Hls.Events.ERROR, (_e, data) => {
-        if (!data.fatal) return;
-        hls.destroy();
-        hlsRef.current = null;
-        setNativeMode(true);
+        if (!data.fatal || disposed) return;
+        // Try in-place recovery first (network hiccup / decoder glitch) so a
+        // brief drop no longer kills the session.
+        if (recovered < 2) {
+          recovered += 1;
+          try {
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              hls.recoverMediaError();
+              return;
+            }
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              hls.startLoad();
+              return;
+            }
+          } catch (err) {
+            console.warn('hls recovery failed', err);
+          }
+        }
+        // Never destroy synchronously inside the handler — hls.js is still on
+        // the stack and throwing there crashed the player.
+        setTimeout(() => {
+          if (disposed) return;
+          safeDestroy();
+          setNativeMode(true);
+        }, 0);
       });
     } else {
       video.src = src;
-      video
-        .play()
-        .then(() => setLoading(false))
-        .catch(() => {
-          setLoading(false);
-          setError(true);
-        });
-      video.addEventListener('error', () => {
+      video.addEventListener('error', onMediaError);
+      video.play().catch(() => {
+        // Autoplay rejection is not a stream failure — the user can hit play.
         setLoading(false);
-        setError(true);
       });
     }
 
     return () => {
+      disposed = true;
       video.removeEventListener('playing', done);
       video.removeEventListener('canplay', done);
       video.removeEventListener('loadeddata', done);
-      hlsRef.current?.destroy();
-      hlsRef.current = null;
-      video.removeAttribute('src');
-      video.load();
+      video.removeEventListener('error', onMediaError);
+      safeDestroy();
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      } catch (err) {
+        console.warn('video teardown failed', err);
+      }
     };
   }, [channel.id, channel.kind, channel.ext, nativeMode, attempt]);
+
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();

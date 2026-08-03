@@ -8,6 +8,8 @@ import {
 import { accentFor, initialsFor } from './ChannelCard';
 import { LiveTVPlayer } from './LiveTVPlayer';
 import { firstAvailableEpisode } from '@/lib/iptvSlotRetry';
+import ErrorBoundary from '@/components/ErrorBoundary';
+
 
 interface Props {
   series: IptvChannel;
@@ -212,15 +214,18 @@ export function SeriesDetail({ series, onClose }: Props) {
       </div>
 
       {currentEpisode && (
-        <LiveTVPlayer
-          channel={episodeChannel(series, currentEpisode)}
-          onClose={() => setCurrentEpisode(null)}
-          episodes={episodes}
-          currentEpisodeId={currentEpisode.id}
-          onSelectEpisode={playEpisode}
-          onSlotLimit={handleSlotLimit}
-        />
+        <ErrorBoundary>
+          <LiveTVPlayer
+            channel={episodeChannel(series, currentEpisode)}
+            onClose={() => setCurrentEpisode(null)}
+            episodes={episodes}
+            currentEpisodeId={currentEpisode.id}
+            onSelectEpisode={playEpisode}
+            onSlotLimit={handleSlotLimit}
+          />
+        </ErrorBoundary>
       )}
+
     </div>
   );
 }
