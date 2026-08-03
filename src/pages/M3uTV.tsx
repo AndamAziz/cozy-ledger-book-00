@@ -472,12 +472,16 @@ export default function M3uTV() {
                 <h1 className="truncate text-base font-extrabold">{T.title}</h1>
                 <Badge variant="destructive" className="text-[10px]">{T.live}</Badge>
               </div>
-              <p className="truncate text-xs text-muted-foreground">{T.subtitle}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {playlists.find((p) => p.id === activeId)?.name ?? T.subtitle}
+                {Object.keys(groupCounts).length > 0 && ` · ${Object.keys(groupCounts).length} ${T.categories}`}
+              </p>
             </div>
             <div className="text-end">
-              <p className="text-lg font-extrabold">{channels.length}</p>
+              <p className="text-lg font-extrabold">{channels.length.toLocaleString()}</p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{T.channels}</p>
             </div>
+
           </Card>
         ) : (
           <Button
