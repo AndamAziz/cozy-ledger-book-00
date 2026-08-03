@@ -17,6 +17,8 @@ import { LiveTVPlayer } from '@/components/livetv/LiveTVPlayer';
 import { LiveBottomNav, type LiveTab } from '@/components/livetv/LiveBottomNav';
 import { SeriesDetail } from '@/components/livetv/SeriesDetail';
 import { useProviderHealth } from '@/hooks/useIptvHealth';
+import ErrorBoundary from '@/components/ErrorBoundary';
+
 
 function tabOf(category: IptvCategory): LiveTab {
   if (category.kind === 'vod') return 'movies';
