@@ -231,7 +231,7 @@ export default function CryptoTracker() {
 
       <div className="h-[100dvh] flex flex-col bg-[#0a0e17] text-white overflow-hidden">
         {/* Top bar — clean: logo left, live ticker center, bell right */}
-        <header className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] bg-[#0d1117] shrink-0">
+        <header className="flex items-center gap-2 px-3 py-2 border-b border-[#1a1e2e] bg-[#0d1117] shrink-0 safe-area-top" style={{ paddingInlineStart: 'max(var(--sal), 0.75rem)', paddingInlineEnd: 'max(var(--sar), 0.75rem)' }}>
           {/* Logo / app name */}
           <button
             onClick={() => navigate('/')}

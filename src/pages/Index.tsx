@@ -93,8 +93,8 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
         <meta property="og:url" content="https://andam.uk/" />
       </Helmet>
 
-      <main className="min-h-screen min-h-[100dvh] p-1.5 sm:p-3 md:p-6 safe-area-inset">
-        <div className="max-w-5xl mx-auto">
+      <main className="min-h-screen min-h-[100dvh] p-1.5 sm:p-3 md:p-6 safe-area-inset safe-area-top overflow-x-hidden">
+        <div className="max-w-5xl mx-auto min-w-0">
           {/* Live price ticker */}
           <PriceTickerBar />
 

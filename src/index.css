@@ -97,9 +97,18 @@ html[lang='ckb'] textarea {
     @apply border-border;
   }
 
+  :root {
+    /* Safe-area tokens (resolve to 0px when the UA reports no inset) */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+  }
+
   html {
     direction: rtl;
     -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
   }
 
   body {
@@ -111,14 +120,26 @@ html[lang='ckb'] textarea {
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
-  /* Safe area for notched devices */
+}
+
+/* Safe-area utilities — in the utilities layer so they are not overridden by
+   Tailwind padding utilities (`p-1.5`) on the same element. They only add the
+   device insets as *margin*, so existing element padding is preserved. */
+@layer utilities {
   .safe-area-inset {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
+    margin-top: var(--sat);
+    margin-bottom: var(--sab);
+    margin-left: var(--sal);
+    margin-right: var(--sar);
+  }
+
+  /* Guarantees clearance from the status bar even when the inset reports 0 */
+  .safe-area-top {
+    margin-top: max(var(--sat), 0.5rem);
   }
 }
 
@@ -351,15 +372,8 @@ html[lang='ckb'] textarea {
   from { transform: translate3d(0, 0, 0); }
   to { transform: translate3d(-50%, 0, 0); }
 }
-@keyframes ticker-scroll-rtl {
-  from { transform: translate3d(-50%, 0, 0); }
-  to { transform: translate3d(0, 0, 0); }
-}
 .ticker-track {
-  position: relative;
-  inset-inline-start: 0;
   display: inline-flex;
-  min-width: max-content;
   width: max-content;
   will-change: transform;
   direction: ltr;
@@ -369,18 +383,28 @@ html[lang='ckb'] textarea {
   display: flex;
   flex: 0 0 auto;
 }
+/* RTL: same keyframes played backwards — never starts at an offset,
+   so the leading items are always on-screen (no left-edge clipping). */
 .ticker-track-rtl {
-  animation-name: ticker-scroll-rtl;
+  animation-direction: reverse;
 }
 /* Pause on hover/touch so users can read while interacting */
 .ticker-mask:hover .ticker-track,
 .ticker-mask:active .ticker-track {
   animation-play-state: paused;
 }
-/* Subtle fade on both edges */
+/* Subtle fixed-width fade on both edges (px, not %, so narrow phones
+   don't lose a large slice of the first item) */
 .ticker-mask {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  max-width: 100%;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+}
+@media (min-width: 640px) {
+  .ticker-mask {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .ticker-track { animation: none; }

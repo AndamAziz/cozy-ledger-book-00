@@ -138,7 +138,7 @@ export function PriceTickerBar() {
   if (items.length === 0) return null;
 
   return (
-    <div className="ticker-mask relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl py-2.5 mb-3 sm:mb-5 no-print" dir="ltr">
+    <div className="ticker-mask relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-secondary/40 via-secondary/20 to-transparent backdrop-blur-xl py-2.5 mb-3 sm:mb-5 no-print" dir="ltr">
       <div
         className={cn("ticker-track", dir === "rtl" && "ticker-track-rtl")}
         dir="ltr"
