@@ -126,22 +126,20 @@ html[lang='ckb'] textarea {
 
 }
 
-/* Safe-area utilities — must live in the utilities layer so they are not
-   overridden by Tailwind padding utilities like `p-1.5` on the same element. */
+/* Safe-area utilities — in the utilities layer so they are not overridden by
+   Tailwind padding utilities (`p-1.5`) on the same element. They only add the
+   device insets as *margin*, so existing element padding is preserved. */
 @layer utilities {
-  /* Adds the device insets on top of whatever padding the element already has,
-     so it never removes existing Tailwind padding. */
   .safe-area-inset {
-    padding-top: max(var(--sat), 0px);
-    padding-bottom: max(var(--sab), 0px);
-    padding-left: max(var(--sal), 0px);
-    padding-right: max(var(--sar), 0px);
+    margin-top: var(--sat);
+    margin-bottom: var(--sab);
+    margin-left: var(--sal);
+    margin-right: var(--sar);
   }
 
-  /* Guarantees clearance from the status bar even when the inset is 0 */
-  .safe-area-top,
-  .safe-area-inset.safe-area-top {
-    padding-top: max(var(--sat), 0.5rem);
+  /* Guarantees clearance from the status bar even when the inset reports 0 */
+  .safe-area-top {
+    margin-top: max(var(--sat), 0.5rem);
   }
 }
 
