@@ -44,13 +44,13 @@ export default function Bots() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background">
+    <div className="min-h-[100dvh] bg-background safe-area-inset overflow-x-hidden">
       <Helmet>
         <title>Trading Bots — AI Gold, Crypto & Forex</title>
         <meta name="description" content="Create AI trading bots for Gold, Crypto and Forex with live demo balance, auto take-profit and stop-loss." />
       </Helmet>
 
-      <div className="mx-auto max-w-[430px] px-3 pb-24 pt-3">
+      <div className="mx-auto min-w-0 max-w-[430px] px-3 pb-24 pt-3 safe-area-top">
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
