@@ -475,7 +475,7 @@ export default function M3uTV() {
         <link rel="canonical" href="/iptv" />
       </Helmet>
 
-      <div className="mx-auto max-w-6xl space-y-5 px-4 py-5">
+      <div className="wide-shell page-shell space-y-4 py-4 sm:space-y-5 sm:py-5">
         {/* Hero — auto-hides after a few idle seconds, returns on video tap */}
         {bannerOpen ? (
           <Card className="flex animate-fade-in items-center gap-4 border-destructive/30 bg-gradient-to-br from-destructive/15 via-primary/10 to-transparent p-4">

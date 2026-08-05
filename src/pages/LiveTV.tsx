@@ -204,7 +204,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
         <link rel="canonical" href={meta.path} />
       </Helmet>
 
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07070b]/90 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07070b]/90 safe-x pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur-xl">
         <div className="mb-3 flex items-center gap-3">
           <Link
             to="/"
@@ -249,7 +249,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-6 pt-4">
+      <main className="wide-shell flex-1 safe-x pb-6 pt-4">
 
 
 

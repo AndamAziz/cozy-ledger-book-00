@@ -50,7 +50,7 @@ export default function Bots() {
         <meta name="description" content="Create AI trading bots for Gold, Crypto and Forex with live demo balance, auto take-profit and stop-loss." />
       </Helmet>
 
-      <div className="mx-auto max-w-[430px] px-3 pb-24 pt-3">
+      <div className="mx-auto w-full max-w-[430px] page-shell pb-24 pt-3 lg:max-w-[720px] 2xl:max-w-[860px]">
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">

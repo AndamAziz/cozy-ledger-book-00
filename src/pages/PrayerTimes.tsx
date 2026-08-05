@@ -373,8 +373,8 @@ export default function PrayerTimes() {
         <meta name="description" content={s.subtitle} />
       </Helmet>
 
-      <div className="min-h-screen min-h-[100dvh] p-1.5 sm:p-3 md:p-6 safe-area-inset" dir={dir}>
-        <div className="max-w-2xl mx-auto">
+      <div className="min-h-screen min-h-[100dvh] py-1.5 sm:py-3 md:py-6 page-shell" dir={dir}>
+        <div className="page-content-narrow">
           {/* Header */}
           <div className="flex items-center gap-3 mb-4">
             <button

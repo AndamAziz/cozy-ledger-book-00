@@ -62,7 +62,7 @@ const Quran = () => {
         <html lang={language} />
       </Helmet>
 
-      <div className="max-w-3xl mx-auto p-3 sm:p-5">
+      <div className="page-content-narrow page-shell py-3 sm:py-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="text-foreground">
