@@ -28,8 +28,8 @@ function tabOf(category: IptvCategory): LiveTab {
 }
 
 
-const GRID_LIVE = 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8';
-const GRID_POSTER = 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7';
+const GRID_LIVE = 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 2xl:grid-cols-9 sm:gap-3 lg:gap-4';
+const GRID_POSTER = 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 2xl:grid-cols-8 sm:gap-3 lg:gap-4';
 
 function CategorySection({
   category,
