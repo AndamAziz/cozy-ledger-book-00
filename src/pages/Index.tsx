@@ -93,8 +93,9 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
         <meta property="og:url" content="https://andam.uk/" />
       </Helmet>
 
-      <main className="min-h-screen min-h-[100dvh] p-1.5 sm:p-3 md:p-6 safe-area-inset">
-        <div className="max-w-5xl mx-auto">
+      <main className="min-h-screen min-h-[100dvh] py-1.5 sm:py-3 md:py-6 page-shell">
+        <div className="page-content">
+
           {/* Live price ticker */}
           <PriceTickerBar />
 
@@ -152,7 +153,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             </button>
 
             {/* Main launcher grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-4 gap-2.5 sm:gap-3 lg:gap-4">
               {/* TV */}
               <div className="rounded-2xl bg-gradient-to-br from-info to-primary p-[1px] shadow-lg transition-all duration-200 ease-out hover:shadow-xl hover:shadow-info/20 active:scale-95 active:brightness-95">
                 <a

@@ -11,7 +11,7 @@ const TABS: { key: LiveTab; label: string; icon: typeof Tv }[] = [
 
 export function LiveBottomNav({ active, onChange }: { active: LiveTab; onChange: (t: LiveTab) => void }) {
   return (
-    <nav className="sticky bottom-0 z-40 flex items-stretch border-t border-white/10 bg-[#0a0a0f]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+    <nav className="sticky bottom-0 z-40 flex items-stretch border-t border-white/10 bg-[#0a0a0f]/95 safe-x pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
       {TABS.map(({ key, label, icon: Icon }) => {
         const isActive = active === key;
         return (
@@ -22,7 +22,7 @@ export function LiveBottomNav({ active, onChange }: { active: LiveTab; onChange:
               onChange(key);
             }}
             aria-current={isActive ? 'page' : undefined}
-            className="relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 transition-colors"
+            className="relative flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 transition-colors 2xl:min-h-[74px]"
             style={{ color: isActive ? '#ff2d6f' : 'rgba(255,255,255,0.45)' }}
           >
             {isActive && (
@@ -32,10 +32,10 @@ export function LiveBottomNav({ active, onChange }: { active: LiveTab; onChange:
               />
             )}
             <Icon
-              className="h-[21px] w-[21px]"
+              className="h-[21px] w-[21px] 2xl:h-7 2xl:w-7"
               style={isActive ? { filter: 'drop-shadow(0 0 8px #ff2d6f)' } : undefined}
             />
-            <span className={`text-[10px] leading-none ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
+            <span className={`text-[10px] leading-none 2xl:text-xs ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
           </button>
         );
       })}

@@ -60,8 +60,8 @@ const Reviews = () => {
         <meta name="description" content={i18n.subtitle} />
       </Helmet>
 
-      <div className="min-h-screen min-h-[100dvh] bg-gradient-to-br from-background via-background to-primary/5 safe-area-inset">
-        <div className="max-w-2xl mx-auto px-4 py-5 sm:py-8">
+      <div className="min-h-screen min-h-[100dvh] bg-gradient-to-br from-background via-background to-primary/5 page-shell">
+        <div className="page-content-narrow py-5 sm:py-8">
           <div className="flex items-center gap-2 mb-5">
             <Button
               variant="ghost"

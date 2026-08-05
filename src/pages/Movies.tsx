@@ -901,13 +901,13 @@ export default function Movies() {
           background: "rgba(10,10,15,0.9)",
           backdropFilter: "blur(14px)",
           borderBottom: `1px solid ${C.border}`,
-          padding: "12px 16px",
+          padding: "12px 0",
         }}
+        className="page-shell"
       >
         <div
+          className="wide-shell"
           style={{
-            maxWidth: 1200,
-            margin: "0 auto",
             display: "flex",
             alignItems: "center",
             gap: 12,
@@ -952,7 +952,7 @@ export default function Movies() {
       </header>
 
       {/* Content */}
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "18px 10px 120px" }}>
+      <main className="wide-shell page-shell" style={{ paddingTop: 18, paddingBottom: 120 }}>
         {/* ===== SEARCH VIEW ===== */}
         {view === "search" && (
           <>
@@ -1366,7 +1366,7 @@ export default function Movies() {
 
 function Grid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-4">
+    <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2 sm:gap-4">
       {children}
     </div>
   );

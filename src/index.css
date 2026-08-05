@@ -456,3 +456,112 @@ html[lang='ckb'] textarea {
 }
 
 
+
+/* =====================================================================
+   Global responsive layout system — phones (with notch safe areas),
+   tablets, laptops/desktops and large-screen / smart-TV displays.
+   Pure CSS; no native-only APIs, works the same inside an Android WebView.
+   ===================================================================== */
+
+html,
+body {
+  /* `clip` (not `hidden`) so `position: sticky` headers keep working */
+  overflow-x: clip;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+/* Legibility at 10-foot viewing distance on TV browsers.
+   rem-based Tailwind sizing scales up automatically. */
+@media (min-width: 1600px) {
+  html { font-size: 17.5px; }
+}
+@media (min-width: 1920px) {
+  html { font-size: 19px; }
+}
+
+/* Remote/touch friendly hit areas on very large screens */
+@media (min-width: 1600px) {
+  button,
+  a[role="button"],
+  [role="button"],
+  .tap-target {
+    min-height: 2.75rem;
+  }
+}
+
+@layer utilities {
+  /* Outer page padding: respects notches/status bars, grows with viewport,
+     and adds overscan margins on TVs. */
+  .page-shell {
+    padding-left: max(0.375rem, env(safe-area-inset-left));
+    padding-right: max(0.375rem, env(safe-area-inset-right));
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  @media (min-width: 640px) {
+    .page-shell {
+      padding-left: max(1rem, env(safe-area-inset-left));
+      padding-right: max(1rem, env(safe-area-inset-right));
+    }
+  }
+  @media (min-width: 1024px) {
+    .page-shell {
+      padding-left: max(1.5rem, env(safe-area-inset-left));
+      padding-right: max(1.5rem, env(safe-area-inset-right));
+    }
+  }
+  @media (min-width: 1600px) {
+    .page-shell {
+      padding-left: max(3rem, env(safe-area-inset-left));
+      padding-right: max(3rem, env(safe-area-inset-right));
+      padding-top: max(1.5rem, env(safe-area-inset-top));
+      padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    }
+  }
+  @media (min-width: 1920px) {
+    /* extra overscan margin for TV panels that crop the edges */
+    .page-shell {
+      padding-left: max(4.5rem, env(safe-area-inset-left));
+      padding-right: max(4.5rem, env(safe-area-inset-right));
+    }
+  }
+
+  /* Centered readable column that widens on large screens */
+  .page-content {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 64rem;
+  }
+  @media (min-width: 1600px) { .page-content { max-width: 84rem; } }
+  @media (min-width: 1920px) { .page-content { max-width: 96rem; } }
+
+  .page-content-narrow {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 42rem;
+  }
+  @media (min-width: 1600px) { .page-content-narrow { max-width: 56rem; } }
+
+  /* Wide media shells (Movies, IPTV, players) */
+  .wide-shell {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 1200px;
+  }
+  @media (min-width: 1600px) { .wide-shell { max-width: 1480px; } }
+  @media (min-width: 1920px) { .wide-shell { max-width: 1720px; } }
+
+  /* Horizontal safe-area padding only (for sticky headers / bottom bars) */
+  .safe-x {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+}
