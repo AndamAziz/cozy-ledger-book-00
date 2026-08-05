@@ -153,7 +153,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             </button>
 
             {/* Main launcher grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-4 gap-2.5 sm:gap-3 lg:gap-4">
               {/* TV */}
               <div className="rounded-2xl bg-gradient-to-br from-info to-primary p-[1px] shadow-lg transition-all duration-200 ease-out hover:shadow-xl hover:shadow-info/20 active:scale-95 active:brightness-95">
                 <a
