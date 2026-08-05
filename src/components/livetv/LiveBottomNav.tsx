@@ -11,7 +11,7 @@ const TABS: { key: LiveTab; label: string; icon: typeof Tv }[] = [
 
 export function LiveBottomNav({ active, onChange }: { active: LiveTab; onChange: (t: LiveTab) => void }) {
   return (
-    <nav className="sticky bottom-0 z-40 flex items-stretch border-t border-white/10 bg-[#0a0a0f]/95 safe-x pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-white/10 bg-[#0a0a0f]/95 safe-x pb-[env(safe-area-inset-bottom)] backdrop-blur-xl shadow-[0_-8px_24px_rgba(0,0,0,0.6)]">
       {TABS.map(({ key, label, icon: Icon }) => {
         const isActive = active === key;
         return (
