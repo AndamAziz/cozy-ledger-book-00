@@ -249,7 +249,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
         </div>
       </header>
 
-      <main className="wide-shell flex-1 safe-x pb-6 pt-4">
+      <main className="wide-shell flex-1 safe-x pt-4 pb-[calc(76px+env(safe-area-inset-bottom))] 2xl:pb-[calc(92px+env(safe-area-inset-bottom))]">
 
 
 
