@@ -3033,17 +3033,11 @@ function MovieModal({
         )}
 
         {/* Tabs */}
-        <div
-          style={{
-            display: "flex",
-            gap: 4,
-            padding: "14px 16px 0",
-            borderBottom: `1px solid ${C.border}`,
-          }}
-        >
+        <div className="mv-tabs">
           {tabs.map((tb) => (
             <button
               key={tb.key}
+              className="mv-tab-btn"
               onClick={() =>
                 tb.key === "ai"
                   ? loadAiInfo()
@@ -3056,8 +3050,6 @@ function MovieModal({
                 border: "none",
                 color: tab === tb.key ? C.gold : C.muted,
                 fontWeight: 800,
-                fontSize: 14,
-                padding: "8px 12px",
                 cursor: "pointer",
                 borderBottom: `2px solid ${tab === tb.key ? C.gold : "transparent"}`,
                 marginBottom: -1,
