@@ -1,10 +1,20 @@
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, Lock, Server, ShieldCheck, Timer, ArrowLeft } from 'lucide-react';
 import { StripeEmbeddedCheckout } from '@/components/StripeEmbeddedCheckout';
 import { useLiveTvAccess, formatCountdown } from '@/hooks/useLiveTvAccess';
 import { LiveTvStatusPanel } from '@/components/livetv/LiveTvStatusPanel';
 import { IptvSourceManager } from '@/components/livetv/IptvSourceManager';
+
+export interface LiveTvSourcesContextValue {
+  canManage: boolean;
+  openSourceManager: () => void;
+}
+
+const LiveTvSourcesContext = createContext<LiveTvSourcesContextValue | null>(null);
+
+export const useLiveTvSources = () => useContext(LiveTvSourcesContext);
+
 
 /** One-time £40 Live TV activation price (see payments catalogue). */
 const ACTIVATION_PRICE_ID = 'ctp_livetv_activation_4000gbp';
