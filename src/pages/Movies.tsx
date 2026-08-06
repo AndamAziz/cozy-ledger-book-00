@@ -914,10 +914,9 @@ export default function Movies() {
           background: "rgba(10,10,15,0.9)",
           backdropFilter: "blur(14px)",
           borderBottom: `1px solid ${C.border}`,
-          paddingTop: "calc(12px + env(safe-area-inset-top, 0px))",
           paddingBottom: 12,
         }}
-        className="page-shell"
+        className="page-shell top-bar-safe"
       >
         <div
           className="wide-shell"
