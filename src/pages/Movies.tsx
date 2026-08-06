@@ -2730,10 +2730,10 @@ function MovieModal({
             style={{
               position: "absolute",
               bottom: 10,
-              insetInlineEnd: 14,
-              insetInlineStart: 14,
+              insetInlineEnd: "clamp(10px, 2vw, 16px)",
+              insetInlineStart: "clamp(10px, 2vw, 16px)",
               display: "flex",
-              gap: 12,
+              gap: "clamp(8px, 2vw, 14px)",
               alignItems: "flex-end",
             }}
           >
@@ -2741,24 +2741,25 @@ function MovieModal({
               src={movie.poster_url}
               alt={movie.title}
               style={{
-                width: 90,
+                width: "clamp(58px, 16vw, 100px)",
                 borderRadius: 10,
                 border: `2px solid ${C.border}`,
                 flexShrink: 0,
                 boxShadow: "0 8px 20px rgba(0,0,0,.5)",
               }}
             />
-            <div style={{ paddingBottom: 2, minWidth: 0 }}>
+            <div style={{ paddingBottom: 2, minWidth: 0, flex: 1 }}>
               <h2
                 style={{
                   margin: 0,
-                  fontSize: 17,
+                  fontSize: "clamp(14px, 3.4vw, 22px)",
                   fontWeight: 800,
-                  lineHeight: 1.35,
+                  lineHeight: 1.3,
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: "vertical",
                   overflow: "hidden",
+                  overflowWrap: "anywhere",
                 }}
               >
                 {movie.title}
@@ -2769,7 +2770,7 @@ function MovieModal({
                   gap: 8,
                   flexWrap: "wrap",
                   marginTop: 4,
-                  fontSize: 12,
+                  fontSize: "clamp(11px, 2.4vw, 13px)",
                   color: C.muted,
                   alignItems: "center",
                 }}
