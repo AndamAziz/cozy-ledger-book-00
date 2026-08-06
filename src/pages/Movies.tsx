@@ -914,7 +914,8 @@ export default function Movies() {
           background: "rgba(10,10,15,0.9)",
           backdropFilter: "blur(14px)",
           borderBottom: `1px solid ${C.border}`,
-          padding: "12px 0",
+          paddingTop: "calc(12px + env(safe-area-inset-top, 0px))",
+          paddingBottom: 12,
         }}
         className="page-shell"
       >
@@ -923,7 +924,8 @@ export default function Movies() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
+            gap: 8,
+            minWidth: 0,
           }}
         >
           <button
@@ -933,15 +935,28 @@ export default function Movies() {
               color: C.text,
               border: `1px solid ${C.border}`,
               borderRadius: 12,
-              padding: "8px 14px",
+              padding: "8px 12px",
               cursor: "pointer",
               fontSize: 14,
               fontWeight: 600,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
             }}
           >
             {t.back}
           </button>
-          <h1 style={{ fontSize: 23, fontWeight: 800, margin: 0, letterSpacing: ".5px" }}>
+          <h1
+            className="mv-head-title"
+            style={{
+              fontWeight: 800,
+              margin: 0,
+              letterSpacing: ".5px",
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             <span style={{ color: C.gold }}>{t.title}</span>
             {t.titleSuffix} 🎬
           </h1>
@@ -953,10 +968,12 @@ export default function Movies() {
               color: C.gold,
               border: `1px solid ${C.gold}`,
               borderRadius: 999,
-              padding: "7px 16px",
+              padding: "7px 14px",
               cursor: "pointer",
-              fontSize: 13.5,
+              fontSize: 13,
               fontWeight: 800,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
             }}
           >
             {lang === "ku" ? "English" : "کوردی"}
@@ -965,7 +982,14 @@ export default function Movies() {
       </header>
 
       {/* Content */}
-      <main className="wide-shell page-shell" style={{ paddingTop: 18, paddingBottom: 120 }}>
+      <main
+        className="wide-shell page-shell"
+        style={{
+          paddingTop: 18,
+          paddingBottom: "calc(104px + env(safe-area-inset-bottom, 0px))",
+        }}
+      >
+
         {/* ===== SEARCH VIEW ===== */}
         {view === "search" && (
           <>
