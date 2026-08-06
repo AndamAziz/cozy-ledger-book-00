@@ -163,6 +163,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
   const [seriesItem, setSeriesItem] = useState<IptvChannel | null>(null);
   const [fullCategory, setFullCategory] = useState<IptvCategory | null>(null);
   const { data: health } = useProviderHealth();
+  const sources = useLiveTvSources();
   const healthTone =
     health?.status === 'online' || health?.status === 'slot_limit'
       ? { bg: '#28d17c26', fg: '#28d17c', label: 'Online' }
