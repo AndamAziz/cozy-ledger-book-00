@@ -2834,15 +2834,11 @@ function MovieModal({
         </div>
 
         {/* Action buttons */}
-        <div style={{ display: "flex", gap: 8, padding: "14px 16px 0" }}>
-          <ActionBtn primary label={t.watch} ariaLabel="watch-now-player" onClick={() => setWatch(true)} />
-          <ActionBtn
-            label={trailerLoading ? "..." : t.trailer}
-            onClick={loadTrailer}
-            disabled={trailerLoading || trailer === "none"}
-          />
-          <ActionBtn label={t.aiInfo} onClick={loadAiInfo} />
-          <ActionBtn label={t.subs} onClick={loadSubs} />
+        <div className="mv-actions">
+          <ActionBtn primary className="mv-action-btn" label={t.watch} ariaLabel="watch-now-player" onClick={() => setWatch(true)} />
+          <ActionBtn className="mv-action-btn" label={trailerLoading ? "..." : t.trailer} onClick={loadTrailer} disabled={trailerLoading || trailer === "none"} />
+          <ActionBtn className="mv-action-btn" label={t.aiInfo} onClick={loadAiInfo} />
+          <ActionBtn className="mv-action-btn" label={t.subs} onClick={loadSubs} />
         </div>
 
         {/* TV: season & episode picker */}
