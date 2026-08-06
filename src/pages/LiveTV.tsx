@@ -207,11 +207,11 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
       </Helmet>
 
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07070b]/90 safe-x top-bar-safe pb-3 backdrop-blur-xl">
-        <div className="mb-3 flex items-center gap-3">
+        <div className="mb-3 flex items-center gap-2 sm:gap-3">
           <Link
             to="/"
             aria-label="Back home"
-            className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
+            className="shrink-0 rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
@@ -226,17 +226,27 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
             onClick={doRefresh}
             disabled={refreshing}
             aria-label="Reload channel list"
-            className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90 disabled:opacity-50"
+            className="shrink-0 rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90 disabled:opacity-50"
           >
             <RotateCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
           <span
             title={health?.message ?? 'Checking provider…'}
-            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+            className="flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
             style={{ background: healthTone.bg, color: healthTone.fg }}
           >
             <SignalHigh className="h-3 w-3" /> {healthTone.label}
           </span>
+          {sources && (
+            <button
+              type="button"
+              onClick={sources.openSourceManager}
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-2 text-[10px] font-bold leading-none text-white/70 transition hover:border-white/25 hover:text-white active:scale-95 sm:px-3 sm:text-[11px]"
+            >
+              <Server className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">My sources</span>
+            </button>
+          )}
         </div>
 
         <div className="relative">
