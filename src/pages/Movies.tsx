@@ -3061,7 +3061,7 @@ function MovieModal({
         </div>
 
         {/* Tab content */}
-        <div style={{ padding: 16, minHeight: 160 }}>
+        <div style={{ padding: "clamp(12px, 2.5vw, 16px)", minHeight: 160 }}>
           {tab === "info" && (
             <div
               style={{
