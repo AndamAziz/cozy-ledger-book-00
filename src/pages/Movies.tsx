@@ -2685,7 +2685,7 @@ function MovieModal({
       }}
     >
       <div
-        className="mv-fade mv-scroll"
+        className="mv-fade mv-scroll mv-modal-shell"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
