@@ -480,15 +480,22 @@ function mapTmdbResult(r: TmdbSearchResult): Movie {
 
 // ====== Global CSS (animations / scrollbar / skeleton) ======
 const GLOBAL_CSS = `
-.mv-scroll::-webkit-scrollbar { height: 6px; width: 8px; }
-.mv-scroll::-webkit-scrollbar-track { background: transparent; }
-.mv-scroll::-webkit-scrollbar-thumb { background: ${C.gold}; border-radius: 8px; opacity:.6; }
-.mv-page { scrollbar-color: ${C.gold} transparent; scrollbar-width: thin; }
+.mv-page { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; }
+.mv-scroll { scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; }
+.mv-scroll::-webkit-scrollbar { height: 0; width: 0; display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .mv-scroll { scrollbar-width: thin; scrollbar-color: ${C.gold} transparent; }
+  .mv-scroll::-webkit-scrollbar { height: 6px; width: 6px; display: block; }
+  .mv-scroll::-webkit-scrollbar-track { background: transparent; }
+  .mv-scroll::-webkit-scrollbar-thumb { background: ${C.gold}; border-radius: 8px; opacity:.6; }
+}
 .mv-card { transition: transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s; }
-.mv-card:hover { transform: translateY(-8px) scale(1.035); box-shadow: 0 18px 40px rgba(0,0,0,.6); z-index:2; }
-.mv-card:hover .mv-play { opacity:1; transform: scale(1); }
-.mv-card:hover .mv-poster-img { transform: scale(1.08); filter: brightness(.55); }
-.mv-srv-card:hover { transform: translateY(-5px); box-shadow: 0 14px 30px rgba(0,0,0,.5); }
+@media (hover: hover) and (pointer: fine) {
+  .mv-card:hover { transform: translateY(-8px) scale(1.035); box-shadow: 0 18px 40px rgba(0,0,0,.6); z-index:2; }
+  .mv-card:hover .mv-play { opacity:1; transform: scale(1); }
+  .mv-card:hover .mv-poster-img { transform: scale(1.08); filter: brightness(.55); }
+  .mv-srv-card:hover { transform: translateY(-5px); box-shadow: 0 14px 30px rgba(0,0,0,.5); }
+}
 .mv-srv-card:active { transform: translateY(-1px) scale(.98); }
 .mv-play { opacity:0; transform: scale(.6); transition: all .28s; }
 .mv-poster-img { transition: transform .5s, filter .35s; }
@@ -498,8 +505,14 @@ const GLOBAL_CSS = `
 .mv-fade { animation: mvFade .35s ease both; }
 @keyframes mvSpin { to { transform: rotate(360deg) } }
 .mv-spin { animation: mvSpin .8s linear infinite; }
-.mv-genre::-webkit-scrollbar { height:0; }
+.mv-genre { scrollbar-width: none; }
+.mv-genre::-webkit-scrollbar { height:0; display: none; }
+.mv-head-title { font-size: 23px; }
+@media (max-width: 420px) {
+  .mv-head-title { font-size: 17px; }
+}
 `;
+
 
 export default function Movies() {
   const navigate = useNavigate();
@@ -901,7 +914,8 @@ export default function Movies() {
           background: "rgba(10,10,15,0.9)",
           backdropFilter: "blur(14px)",
           borderBottom: `1px solid ${C.border}`,
-          padding: "12px 0",
+          paddingTop: "calc(12px + env(safe-area-inset-top, 0px))",
+          paddingBottom: 12,
         }}
         className="page-shell"
       >
@@ -910,7 +924,8 @@ export default function Movies() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
+            gap: 8,
+            minWidth: 0,
           }}
         >
           <button
@@ -920,15 +935,28 @@ export default function Movies() {
               color: C.text,
               border: `1px solid ${C.border}`,
               borderRadius: 12,
-              padding: "8px 14px",
+              padding: "8px 12px",
               cursor: "pointer",
               fontSize: 14,
               fontWeight: 600,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
             }}
           >
             {t.back}
           </button>
-          <h1 style={{ fontSize: 23, fontWeight: 800, margin: 0, letterSpacing: ".5px" }}>
+          <h1
+            className="mv-head-title"
+            style={{
+              fontWeight: 800,
+              margin: 0,
+              letterSpacing: ".5px",
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             <span style={{ color: C.gold }}>{t.title}</span>
             {t.titleSuffix} 🎬
           </h1>
@@ -940,10 +968,12 @@ export default function Movies() {
               color: C.gold,
               border: `1px solid ${C.gold}`,
               borderRadius: 999,
-              padding: "7px 16px",
+              padding: "7px 14px",
               cursor: "pointer",
-              fontSize: 13.5,
+              fontSize: 13,
               fontWeight: 800,
+              flexShrink: 0,
+              whiteSpace: "nowrap",
             }}
           >
             {lang === "ku" ? "English" : "کوردی"}
@@ -952,7 +982,14 @@ export default function Movies() {
       </header>
 
       {/* Content */}
-      <main className="wide-shell page-shell" style={{ paddingTop: 18, paddingBottom: 120 }}>
+      <main
+        className="wide-shell page-shell"
+        style={{
+          paddingTop: 18,
+          paddingBottom: "calc(104px + env(safe-area-inset-bottom, 0px))",
+        }}
+      >
+
         {/* ===== SEARCH VIEW ===== */}
         {view === "search" && (
           <>
