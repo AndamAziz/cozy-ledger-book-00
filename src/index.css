@@ -575,4 +575,14 @@ svg {
       padding-top: max(env(safe-area-inset-top, 0px), 1.75rem);
     }
   }
+
+  /* Compact variant: sits closer under the status bar (secondary action bars). */
+  .top-bar-safe-tight {
+    padding-top: max(env(safe-area-inset-top, 0px), 0.375rem);
+  }
+  @media (max-width: 768px) {
+    .top-bar-safe-tight {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 0.375rem);
+    }
+  }
 }

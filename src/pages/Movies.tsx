@@ -2639,7 +2639,8 @@ function MovieModal({
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
         height: "100dvh",
-        padding: "20px 12px",
+        padding:
+          "calc(env(safe-area-inset-top, 0px) + clamp(8px, 2vw, 20px)) clamp(8px, 2vw, 20px) calc(env(safe-area-inset-bottom, 0px) + clamp(16px, 3vw, 28px))",
       }}
     >
       <div
@@ -2647,9 +2648,9 @@ function MovieModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
-          maxWidth: 760,
+          maxWidth: "min(100%, 900px)",
           background: C.panel,
-          borderRadius: 20,
+          borderRadius: "clamp(14px, 2vw, 20px)",
           overflow: "hidden",
           border: `1px solid ${C.border}`,
           boxShadow: "0 30px 80px rgba(0,0,0,.7)",
@@ -2729,10 +2730,10 @@ function MovieModal({
             style={{
               position: "absolute",
               bottom: 10,
-              insetInlineEnd: 14,
-              insetInlineStart: 14,
+              insetInlineEnd: "clamp(10px, 2vw, 16px)",
+              insetInlineStart: "clamp(10px, 2vw, 16px)",
               display: "flex",
-              gap: 12,
+              gap: "clamp(8px, 2vw, 14px)",
               alignItems: "flex-end",
             }}
           >
@@ -2740,24 +2741,25 @@ function MovieModal({
               src={movie.poster_url}
               alt={movie.title}
               style={{
-                width: 90,
+                width: "clamp(58px, 16vw, 100px)",
                 borderRadius: 10,
                 border: `2px solid ${C.border}`,
                 flexShrink: 0,
                 boxShadow: "0 8px 20px rgba(0,0,0,.5)",
               }}
             />
-            <div style={{ paddingBottom: 2, minWidth: 0 }}>
+            <div style={{ paddingBottom: 2, minWidth: 0, flex: 1 }}>
               <h2
                 style={{
                   margin: 0,
-                  fontSize: 17,
+                  fontSize: "clamp(14px, 3.4vw, 22px)",
                   fontWeight: 800,
-                  lineHeight: 1.35,
+                  lineHeight: 1.3,
                   display: "-webkit-box",
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: "vertical",
                   overflow: "hidden",
+                  overflowWrap: "anywhere",
                 }}
               >
                 {movie.title}
@@ -2768,7 +2770,7 @@ function MovieModal({
                   gap: 8,
                   flexWrap: "wrap",
                   marginTop: 4,
-                  fontSize: 12,
+                  fontSize: "clamp(11px, 2.4vw, 13px)",
                   color: C.muted,
                   alignItems: "center",
                 }}

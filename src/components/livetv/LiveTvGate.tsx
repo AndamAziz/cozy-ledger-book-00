@@ -172,13 +172,13 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
           Free trial ends in {formatCountdown(access.msLeft)} · £40 unlocks it permanently
         </div>
       )}
-      <div className="flex justify-end bg-[#07070b] px-4 pb-1 top-bar-safe">
+      <div className="top-bar-safe-tight flex justify-end bg-[#07070b] px-3 pb-1 sm:px-4">
         <button
           type="button"
           onClick={() => setEditServer(true)}
-          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-bold text-white/60 transition hover:border-white/25 hover:text-white"
+          className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 text-[11px] font-bold leading-none text-white/70 transition hover:border-white/25 hover:text-white active:scale-95"
         >
-          <Server className="h-3 w-3" /> My sources
+          <Server className="h-3.5 w-3.5" /> My sources
         </button>
       </div>
       {children}
