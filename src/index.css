@@ -564,4 +564,15 @@ svg {
   }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
   .safe-top { padding-top: env(safe-area-inset-top); }
+
+  /* Sticky top bars: clear the status bar / notch in APK & mobile browsers,
+     stay compact on desktop. */
+  .top-bar-safe {
+    padding-top: max(env(safe-area-inset-top, 0px), 0.75rem);
+  }
+  @media (max-width: 768px) {
+    .top-bar-safe {
+      padding-top: max(env(safe-area-inset-top, 0px), 1.75rem);
+    }
+  }
 }
