@@ -4587,6 +4587,7 @@ function ActionBtn({
   cyan,
   disabled,
   ariaLabel,
+  className,
 }: {
   label: string;
   onClick: () => void;
@@ -4594,6 +4595,7 @@ function ActionBtn({
   cyan?: boolean;
   disabled?: boolean;
   ariaLabel?: string;
+  className?: string;
 }) {
   let bg: string, color: string, border: string;
   if (cyan) {
@@ -4614,8 +4616,8 @@ function ActionBtn({
       onClick={onClick}
       aria-label={ariaLabel || label}
       disabled={disabled}
+      className={className}
       style={{
-        flex: 1,
         background: bg,
         color: color,
         border: `1px solid ${border}`,
@@ -4623,7 +4625,6 @@ function ActionBtn({
         padding: "11px 8px",
         cursor: disabled ? "not-allowed" : "pointer",
         fontWeight: 800,
-        fontSize: 13.5,
         opacity: disabled ? 0.5 : 1,
         transition: "transform .15s",
       }}
