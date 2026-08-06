@@ -175,23 +175,16 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
 
 
   return (
-    <>
+    <LiveTvSourcesContext.Provider
+      value={{ canManage: isCeo, openSourceManager: () => setEditServer(true) }}
+    >
       {access && !access.isActivated && (
         <div className="flex flex-wrap items-center justify-center gap-2 bg-gradient-to-r from-[#ff2d6f]/20 to-[#b026ff]/20 px-4 py-2 text-center text-[11px] font-bold text-white">
           <Timer className="h-3.5 w-3.5 text-[#ff2d6f]" />
           Free trial ends in {formatCountdown(access.msLeft)} · £40 unlocks it permanently
         </div>
       )}
-      <div className="top-bar-safe-tight flex justify-end bg-[#07070b] px-3 pb-1 sm:px-4">
-        <button
-          type="button"
-          onClick={() => setEditServer(true)}
-          className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 text-[11px] font-bold leading-none text-white/70 transition hover:border-white/25 hover:text-white active:scale-95"
-        >
-          <Server className="h-3.5 w-3.5" /> My sources
-        </button>
-      </div>
       {children}
-    </>
+    </LiveTvSourcesContext.Provider>
   );
 }
