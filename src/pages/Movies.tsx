@@ -2639,7 +2639,8 @@ function MovieModal({
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
         height: "100dvh",
-        padding: "20px 12px",
+        padding:
+          "calc(env(safe-area-inset-top, 0px) + clamp(8px, 2vw, 20px)) clamp(8px, 2vw, 20px) calc(env(safe-area-inset-bottom, 0px) + clamp(16px, 3vw, 28px))",
       }}
     >
       <div
@@ -2647,9 +2648,9 @@ function MovieModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
-          maxWidth: 760,
+          maxWidth: "min(100%, 900px)",
           background: C.panel,
-          borderRadius: 20,
+          borderRadius: "clamp(14px, 2vw, 20px)",
           overflow: "hidden",
           border: `1px solid ${C.border}`,
           boxShadow: "0 30px 80px rgba(0,0,0,.7)",
