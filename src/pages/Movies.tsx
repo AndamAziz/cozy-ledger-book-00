@@ -511,6 +511,47 @@ const GLOBAL_CSS = `
 @media (max-width: 420px) {
   .mv-head-title { font-size: 17px; }
 }
+
+/* ---- Responsive movie detail modal ---- */
+.mv-modal-shell {
+  width: 100%;
+  max-width: min(100%, 900px);
+  margin: 0 auto;
+}
+.mv-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 14px 16px 0;
+}
+.mv-action-btn {
+  flex: 1 1 110px;
+  min-width: 0;
+  font-size: clamp(11px, 2.5vw, 13.5px);
+}
+.mv-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 14px 16px 0;
+  border-bottom: 1px solid ${C.border};
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.mv-tabs::-webkit-scrollbar { display: none; }
+.mv-tab-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: clamp(12px, 2.5vw, 14px);
+  padding: clamp(6px, 2vw, 8px) clamp(8px, 2.5vw, 12px);
+}
+@media (min-width: 1280px) {
+  .mv-modal-shell { max-width: 960px; }
+}
+@media (max-width: 360px) {
+  .mv-action-btn { flex: 1 1 45%; }
+  .mv-tab-btn { font-size: 11px; padding: 6px 8px; }
+}
 `;
 
 
