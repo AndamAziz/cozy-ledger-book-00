@@ -231,6 +231,13 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
               <span className="hidden sm:inline">My sources</span>
             </button>
           )}
+          <span
+            title={health?.message ?? 'Checking provider…'}
+            className="flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+            style={{ background: healthTone.bg, color: healthTone.fg }}
+          >
+            <SignalHigh className="h-3 w-3" /> {healthTone.label}
+          </span>
           <button
             type="button"
             onClick={doRefresh}
@@ -240,13 +247,6 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
           >
             <RotateCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
-          <span
-            title={health?.message ?? 'Checking provider…'}
-            className="flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
-            style={{ background: healthTone.bg, color: healthTone.fg }}
-          >
-            <SignalHigh className="h-3 w-3" /> {healthTone.label}
-          </span>
         </div>
 
         <div className="relative">
