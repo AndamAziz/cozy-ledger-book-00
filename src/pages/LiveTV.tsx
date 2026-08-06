@@ -221,6 +221,16 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
               {index ? `${categories.length.toLocaleString()} categories` : 'Streaming'}
             </p>
           </div>
+          {sources && (
+            <button
+              type="button"
+              onClick={sources.openSourceManager}
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-2 text-[10px] font-bold leading-none text-white/70 transition hover:border-white/25 hover:text-white active:scale-95 sm:px-3 sm:text-[11px]"
+            >
+              <Server className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">My sources</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={doRefresh}
@@ -237,16 +247,6 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
           >
             <SignalHigh className="h-3 w-3" /> {healthTone.label}
           </span>
-          {sources && (
-            <button
-              type="button"
-              onClick={sources.openSourceManager}
-              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-2 text-[10px] font-bold leading-none text-white/70 transition hover:border-white/25 hover:text-white active:scale-95 sm:px-3 sm:text-[11px]"
-            >
-              <Server className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">My sources</span>
-            </button>
-          )}
         </div>
 
         <div className="relative">
