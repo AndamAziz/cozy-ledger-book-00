@@ -480,15 +480,22 @@ function mapTmdbResult(r: TmdbSearchResult): Movie {
 
 // ====== Global CSS (animations / scrollbar / skeleton) ======
 const GLOBAL_CSS = `
-.mv-scroll::-webkit-scrollbar { height: 6px; width: 8px; }
-.mv-scroll::-webkit-scrollbar-track { background: transparent; }
-.mv-scroll::-webkit-scrollbar-thumb { background: ${C.gold}; border-radius: 8px; opacity:.6; }
-.mv-page { scrollbar-color: ${C.gold} transparent; scrollbar-width: thin; }
+.mv-page { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; }
+.mv-scroll { scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; }
+.mv-scroll::-webkit-scrollbar { height: 0; width: 0; display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .mv-scroll { scrollbar-width: thin; scrollbar-color: ${C.gold} transparent; }
+  .mv-scroll::-webkit-scrollbar { height: 6px; width: 6px; display: block; }
+  .mv-scroll::-webkit-scrollbar-track { background: transparent; }
+  .mv-scroll::-webkit-scrollbar-thumb { background: ${C.gold}; border-radius: 8px; opacity:.6; }
+}
 .mv-card { transition: transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s; }
-.mv-card:hover { transform: translateY(-8px) scale(1.035); box-shadow: 0 18px 40px rgba(0,0,0,.6); z-index:2; }
-.mv-card:hover .mv-play { opacity:1; transform: scale(1); }
-.mv-card:hover .mv-poster-img { transform: scale(1.08); filter: brightness(.55); }
-.mv-srv-card:hover { transform: translateY(-5px); box-shadow: 0 14px 30px rgba(0,0,0,.5); }
+@media (hover: hover) and (pointer: fine) {
+  .mv-card:hover { transform: translateY(-8px) scale(1.035); box-shadow: 0 18px 40px rgba(0,0,0,.6); z-index:2; }
+  .mv-card:hover .mv-play { opacity:1; transform: scale(1); }
+  .mv-card:hover .mv-poster-img { transform: scale(1.08); filter: brightness(.55); }
+  .mv-srv-card:hover { transform: translateY(-5px); box-shadow: 0 14px 30px rgba(0,0,0,.5); }
+}
 .mv-srv-card:active { transform: translateY(-1px) scale(.98); }
 .mv-play { opacity:0; transform: scale(.6); transition: all .28s; }
 .mv-poster-img { transition: transform .5s, filter .35s; }
@@ -498,8 +505,14 @@ const GLOBAL_CSS = `
 .mv-fade { animation: mvFade .35s ease both; }
 @keyframes mvSpin { to { transform: rotate(360deg) } }
 .mv-spin { animation: mvSpin .8s linear infinite; }
-.mv-genre::-webkit-scrollbar { height:0; }
+.mv-genre { scrollbar-width: none; }
+.mv-genre::-webkit-scrollbar { height:0; display: none; }
+.mv-head-title { font-size: 23px; }
+@media (max-width: 420px) {
+  .mv-head-title { font-size: 17px; }
+}
 `;
+
 
 export default function Movies() {
   const navigate = useNavigate();
