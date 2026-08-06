@@ -511,6 +511,47 @@ const GLOBAL_CSS = `
 @media (max-width: 420px) {
   .mv-head-title { font-size: 17px; }
 }
+
+/* ---- Responsive movie detail modal ---- */
+.mv-modal-shell {
+  width: 100%;
+  max-width: min(100%, 900px);
+  margin: 0 auto;
+}
+.mv-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 14px 16px 0;
+}
+.mv-action-btn {
+  flex: 1 1 110px;
+  min-width: 0;
+  font-size: clamp(11px, 2.5vw, 13.5px);
+}
+.mv-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 14px 16px 0;
+  border-bottom: 1px solid ${C.border};
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.mv-tabs::-webkit-scrollbar { display: none; }
+.mv-tab-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: clamp(12px, 2.5vw, 14px);
+  padding: clamp(6px, 2vw, 8px) clamp(8px, 2.5vw, 12px);
+}
+@media (min-width: 1280px) {
+  .mv-modal-shell { max-width: 960px; }
+}
+@media (max-width: 360px) {
+  .mv-action-btn { flex: 1 1 45%; }
+  .mv-tab-btn { font-size: 11px; padding: 6px 8px; }
+}
 `;
 
 
@@ -2644,7 +2685,7 @@ function MovieModal({
       }}
     >
       <div
-        className="mv-fade mv-scroll"
+        className="mv-fade mv-scroll mv-modal-shell"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
@@ -2793,15 +2834,11 @@ function MovieModal({
         </div>
 
         {/* Action buttons */}
-        <div style={{ display: "flex", gap: 8, padding: "14px 16px 0" }}>
-          <ActionBtn primary label={t.watch} ariaLabel="watch-now-player" onClick={() => setWatch(true)} />
-          <ActionBtn
-            label={trailerLoading ? "..." : t.trailer}
-            onClick={loadTrailer}
-            disabled={trailerLoading || trailer === "none"}
-          />
-          <ActionBtn label={t.aiInfo} onClick={loadAiInfo} />
-          <ActionBtn label={t.subs} onClick={loadSubs} />
+        <div className="mv-actions">
+          <ActionBtn primary className="mv-action-btn" label={t.watch} ariaLabel="watch-now-player" onClick={() => setWatch(true)} />
+          <ActionBtn className="mv-action-btn" label={trailerLoading ? "..." : t.trailer} onClick={loadTrailer} disabled={trailerLoading || trailer === "none"} />
+          <ActionBtn className="mv-action-btn" label={t.aiInfo} onClick={loadAiInfo} />
+          <ActionBtn className="mv-action-btn" label={t.subs} onClick={loadSubs} />
         </div>
 
         {/* TV: season & episode picker */}
@@ -2996,17 +3033,11 @@ function MovieModal({
         )}
 
         {/* Tabs */}
-        <div
-          style={{
-            display: "flex",
-            gap: 4,
-            padding: "14px 16px 0",
-            borderBottom: `1px solid ${C.border}`,
-          }}
-        >
+        <div className="mv-tabs">
           {tabs.map((tb) => (
             <button
               key={tb.key}
+              className="mv-tab-btn"
               onClick={() =>
                 tb.key === "ai"
                   ? loadAiInfo()
@@ -3019,8 +3050,6 @@ function MovieModal({
                 border: "none",
                 color: tab === tb.key ? C.gold : C.muted,
                 fontWeight: 800,
-                fontSize: 14,
-                padding: "8px 12px",
                 cursor: "pointer",
                 borderBottom: `2px solid ${tab === tb.key ? C.gold : "transparent"}`,
                 marginBottom: -1,
@@ -3032,7 +3061,7 @@ function MovieModal({
         </div>
 
         {/* Tab content */}
-        <div style={{ padding: 16, minHeight: 160 }}>
+        <div style={{ padding: "clamp(12px, 2.5vw, 16px)", minHeight: 160 }}>
           {tab === "info" && (
             <div
               style={{
@@ -4550,6 +4579,7 @@ function ActionBtn({
   cyan,
   disabled,
   ariaLabel,
+  className,
 }: {
   label: string;
   onClick: () => void;
@@ -4557,6 +4587,7 @@ function ActionBtn({
   cyan?: boolean;
   disabled?: boolean;
   ariaLabel?: string;
+  className?: string;
 }) {
   let bg: string, color: string, border: string;
   if (cyan) {
@@ -4577,8 +4608,8 @@ function ActionBtn({
       onClick={onClick}
       aria-label={ariaLabel || label}
       disabled={disabled}
+      className={className}
       style={{
-        flex: 1,
         background: bg,
         color: color,
         border: `1px solid ${border}`,
@@ -4586,7 +4617,6 @@ function ActionBtn({
         padding: "11px 8px",
         cursor: disabled ? "not-allowed" : "pointer",
         fontWeight: 800,
-        fontSize: 13.5,
         opacity: disabled ? 0.5 : 1,
         transition: "transform .15s",
       }}
