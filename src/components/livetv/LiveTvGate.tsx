@@ -172,7 +172,7 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
           Free trial ends in {formatCountdown(access.msLeft)} · £40 unlocks it permanently
         </div>
       )}
-      <div className="flex justify-end bg-[#07070b] px-4 pt-2">
+      <div className="flex justify-end bg-[#07070b] px-4 pb-1 top-bar-safe">
         <button
           type="button"
           onClick={() => setEditServer(true)}
