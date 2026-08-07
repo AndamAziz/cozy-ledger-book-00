@@ -229,10 +229,26 @@ export function LiveTVPlayer({
 
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      // Arrow-key scrubbing for desktop and Smart TV remotes (VOD only).
+      const v = videoRef.current;
+      if (!v || isLive || !Number.isFinite(v.duration) || v.duration <= 0) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const delta = e.key === 'ArrowRight' ? 30 : -10;
+        v.currentTime = Math.min(Math.max(v.currentTime + delta, 0), v.duration);
+        setCurrentTime(v.currentTime);
+        setBarOpen(true);
+      }
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, isLive]);
+
 
   const pickLevel = (index: number) => {
     setSelectedLevel(index);
