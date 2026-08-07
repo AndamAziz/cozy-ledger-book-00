@@ -577,7 +577,9 @@ export function LiveTVPlayer({
             >
               {isFull ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
             </button>
+            </div>
           </div>
+
         )}
 
         {loading && !error && (
