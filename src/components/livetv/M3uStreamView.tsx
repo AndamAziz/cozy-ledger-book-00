@@ -320,9 +320,10 @@ export default function M3uStreamView({
 
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-bold">{c.name}</span>
-                  <span className="block truncate text-[10px] text-muted-foreground">{c.group}</span>
                 </span>
-                {c.url === channel.url && <Play className="h-3.5 w-3.5 shrink-0 text-primary" />}
+                <span className="flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md bg-muted px-1 text-[10px] font-bold text-muted-foreground">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
               </button>
             ))}
           </div>
