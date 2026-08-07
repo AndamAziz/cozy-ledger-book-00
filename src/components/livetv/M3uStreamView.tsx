@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
-  X, Play, Loader2, AlertTriangle, SkipBack, SkipForward,
+  X, Loader2, AlertTriangle, SkipBack, SkipForward,
   Maximize2, RefreshCw, Signal, Search, Volume2, VolumeX,
 } from 'lucide-react';
 import { ChannelLogo } from './ChannelLogo';
