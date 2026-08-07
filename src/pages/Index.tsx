@@ -26,7 +26,7 @@ import { REVIEWS_I18N, getReviewLang } from '@/lib/reviews';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { PriceTickerBar } from '@/components/crypto/PriceTickerBar';
-import { Users, Tv, Film, Bitcoin, Moon, BookOpen, Radio, Wallet } from 'lucide-react';
+import { Tv, Film, Bitcoin, Moon, BookOpen, Radio, Wallet } from 'lucide-react';
 import { SportLivePlayer } from '@/components/sport/SportLivePlayer';
 
 
@@ -99,26 +99,6 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           {/* Live price ticker */}
           <PriceTickerBar />
 
-          {/* Admin Button */}
-          {isAdmin && (
-            <div className="mb-2 sm:mb-3 no-print">
-              <Button
-                onClick={onOpenAdmin}
-                className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-2.5 sm:p-3.5 h-auto w-full md:w-auto transition-all duration-200 touch-manipulation"
-              >
-                <div className="flex items-center gap-2.5 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-md shadow-info/30">
-                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-info-foreground" />
-                  </div>
-                  <div className="text-start">
-                    <p className="font-bold text-foreground text-xs sm:text-sm">{t('adminPanel')}</p>
-                    <p className="text-[9px] sm:text-xs text-muted-foreground">{t('users')}</p>
-                  </div>
-                </div>
-              </Button>
-            </div>
-          )}
-
           {/* Expiry Warning Banner */}
           {daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry <= 10 && userEmail && (
             <ExpiryWarningBanner daysUntilExpiry={daysUntilExpiry} email={userEmail} />
@@ -129,6 +109,8 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
             currentMonthLabel={financeData.getCurrentMonthLabel()}
             onMonthChange={financeData.changeMonth}
             onLogout={logout}
+            onOpenAdmin={onOpenAdmin}
+            isAdmin={isAdmin}
             companyName={companyName}
           />
 

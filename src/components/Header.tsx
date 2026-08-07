@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, Building2, Calendar, Crown } from 'lucide-react';
+import { LogOut, Building2, Calendar, Crown, Users } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,10 +11,14 @@ interface HeaderProps {
   currentMonthLabel: string;
   onMonthChange: (month: string) => void;
   onLogout: () => void;
+  onOpenAdmin?: () => void;
+  isAdmin?: boolean;
   companyName?: string | null;
 }
 
-export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout, companyName }: HeaderProps) {
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout, onOpenAdmin, isAdmin, companyName }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -27,9 +31,10 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
   }, []);
 
   const formatDate = (date: Date) => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = MONTH_ABBR[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   return (
@@ -50,9 +55,26 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
         <div className="p-2.5 sm:p-3.5 md:p-5 flex flex-col gap-2 sm:gap-3">
           {/* Title + Logout row */}
           <div className="flex items-center justify-between">
-            <h1 className="text-sm sm:text-base md:text-lg font-bold text-foreground truncate">
-              {t('financialManagement')}
-            </h1>
+            {isAdmin && onOpenAdmin ? (
+              <Button
+                onClick={onOpenAdmin}
+                className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-1.5 sm:p-2 h-auto transition-all duration-200 touch-manipulation"
+              >
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-sm shadow-info/30">
+                    <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info-foreground" />
+                  </div>
+                  <div className="text-start">
+                    <p className="font-bold text-foreground text-[10px] sm:text-xs">{t('adminPanel')}</p>
+                    <p className="text-[8px] sm:text-[9px] text-muted-foreground">{t('users')}</p>
+                  </div>
+                </div>
+              </Button>
+            ) : (
+              <h1 className="text-sm sm:text-base md:text-lg font-bold text-foreground truncate">
+                {t('financialManagement')}
+              </h1>
+            )}
             <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
