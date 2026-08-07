@@ -275,16 +275,12 @@ export function LiveTVPlayer({
     setBarOpen(true);
   };
 
-  const toggleFullscreen = () => {
-    const el = shellRef.current;
-    const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => undefined);
-      return;
-    }
-    if (el?.requestFullscreen) el.requestFullscreen().catch(() => undefined);
-    else video?.webkitEnterFullscreen?.();
+  const handleFullscreen = () => {
+    // Handles iPhone (video-only fullscreen) plus prefixed WebKit/Edge APIs
+    // used by Smart TV browsers.
+    toggleFullscreen(shellRef.current, videoRef.current);
   };
+
 
   // Auto-hide the controls layer after a few seconds on every device.
   useEffect(() => {
