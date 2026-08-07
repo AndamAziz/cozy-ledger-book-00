@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
-import { X, Loader2, AlertTriangle, Maximize2, Settings2, RefreshCw } from 'lucide-react';
+import {
+  X, Loader2, AlertTriangle, Maximize2, Minimize2, Settings2, RefreshCw,
+  Play, Pause, Volume2, VolumeX,
+} from 'lucide-react';
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 import { useLogoFallback } from '@/lib/logoFallback';
+
 
 
 
@@ -56,6 +60,12 @@ export function LiveTVPlayer({
   const [autoLabel, setAutoLabel] = useState<string | null>(null);
   const [qualityOpen, setQualityOpen] = useState(false);
   const [barOpen, setBarOpen] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [isFull, setIsFull] = useState(false);
+  const isLive = (channel.kind ?? 'live') === 'live';
+
 
   const accent = accentFor(channel.name);
   const headerLogo = useLogoFallback(channel.logo);
@@ -208,22 +218,77 @@ export function LiveTVPlayer({
         : 'Auto'
       : levels.find((l) => l.index === selectedLevel)?.label ?? 'Auto';
 
-  const goFullscreen = () => {
+  // Keep the custom overlay in sync with real playback state.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const sync = () => setPaused(v.paused);
+    const onVol = () => {
+      setMuted(v.muted);
+      setVolume(v.volume);
+    };
+    v.addEventListener('play', sync);
+    v.addEventListener('pause', sync);
+    v.addEventListener('volumechange', onVol);
+    return () => {
+      v.removeEventListener('play', sync);
+      v.removeEventListener('pause', sync);
+      v.removeEventListener('volumechange', onVol);
+    };
+  }, [channel.id]);
+
+  useEffect(() => {
+    const onFs = () => setIsFull(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
+
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    setBarOpen(true);
+    if (v.paused) v.play().catch(() => undefined);
+    else v.pause();
+  };
+
+  const toggleMute = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    if (!v.muted && v.volume === 0) v.volume = 0.6;
+    setBarOpen(true);
+  };
+
+  const changeVolume = (val: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.volume = val;
+    v.muted = val === 0;
+    setBarOpen(true);
+  };
+
+  const toggleFullscreen = () => {
     const el = shellRef.current;
     const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => undefined);
+      return;
+    }
     if (el?.requestFullscreen) el.requestFullscreen().catch(() => undefined);
     else video?.webkitEnterFullscreen?.();
   };
 
-  // Auto-hide the top banner after a few seconds on every device (mobile + desktop).
+  // Auto-hide the controls layer after a few seconds on every device.
   useEffect(() => {
     if (!barOpen) return;
-    const t = setTimeout(() => setBarOpen(false), 4000);
+    if (paused) return;
+    const t = setTimeout(() => setBarOpen(false), 3000);
     return () => clearTimeout(t);
-  }, [barOpen]);
+  }, [barOpen, paused]);
 
 
   const revealBar = () => setBarOpen(true);
+
 
   return (
     <div className="fixed inset-0 z-[90] flex flex-col bg-black/95 backdrop-blur-xl md:bg-[#07070b]/97 lg:flex-row lg:items-stretch">
@@ -290,7 +355,7 @@ export function LiveTVPlayer({
             </div>
           )}
           <button
-            onClick={goFullscreen}
+            onClick={toggleFullscreen}
             aria-label="Fullscreen"
             className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
           >
@@ -309,33 +374,86 @@ export function LiveTVPlayer({
       <div
         onPointerDown={revealBar}
         onMouseMove={revealBar}
-        className="flex min-h-0 flex-1 items-center justify-center bg-black md:bg-transparent md:p-5 lg:p-7"
+        className="flex min-h-0 flex-1 items-stretch justify-center bg-black md:items-center md:bg-transparent md:p-5 lg:p-7"
       >
         <div
           ref={shellRef}
-          className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black md:h-auto md:max-h-full md:aspect-video md:max-w-[1400px] md:rounded-2xl md:border md:border-white/10 md:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
+          className="relative flex h-full w-full flex-1 items-center justify-center overflow-hidden bg-black md:h-auto md:max-h-full md:flex-none md:aspect-video md:max-w-[1400px] md:rounded-2xl md:border md:border-white/10 md:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
         >
         <video
           ref={videoRef}
-          className="h-full max-h-full w-full object-contain"
+          className="absolute inset-0 h-full w-full bg-black object-contain"
           playsInline
           autoPlay
-          controls
         />
 
+        {/* Center play / pause — small circular control, fades with the bar */}
+        {!loading && !error && (
+          <button
+            type="button"
+            onClick={togglePlay}
+            aria-label={paused ? 'Play' : 'Pause'}
+            className={`absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/70 active:scale-90 sm:h-16 sm:w-16 ${
+              barOpen || paused ? 'scale-100 opacity-100' : 'pointer-events-none scale-90 opacity-0'
+            }`}
+          >
+            {paused ? (
+              <Play className="h-6 w-6 translate-x-[1px] sm:h-7 sm:w-7" fill="currentColor" />
+            ) : (
+              <Pause className="h-6 w-6 sm:h-7 sm:w-7" fill="currentColor" />
+            )}
+          </button>
+        )}
 
-        {loading && !error && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45 backdrop-blur-[2px]">
-            <span className="relative flex h-14 w-14 items-center justify-center">
-              <span
-                className="absolute inset-0 animate-ping rounded-full opacity-25"
-                style={{ background: accent }}
-              />
-              <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
-            </span>
-            <p className="text-xs font-semibold text-white/70">Connecting to stream…</p>
+        {/* Bottom control bar */}
+        {!error && (
+          <div
+            className={`absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-3 pb-[calc(env(safe-area-inset-bottom)*0.5+0.6rem)] pt-8 transition-all duration-300 sm:px-5 ${
+              barOpen || paused ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={toggleMute}
+              aria-label={muted || volume === 0 ? 'Unmute' : 'Mute'}
+              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90"
+            >
+              {muted || volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={muted ? 0 : volume}
+              onChange={(e) => changeVolume(Number(e.target.value))}
+              aria-label="Volume"
+              className="h-1 w-16 cursor-pointer appearance-none rounded-full bg-white/25 accent-white sm:w-24"
+            />
+            {isLive && (
+              <span className="ml-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.07] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/85 backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: '#ff2d6f' }} />
+                Live
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              aria-label={isFull ? 'Exit fullscreen' : 'Fullscreen'}
+              className={`rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90 ${isLive ? '' : 'ml-auto'}`}
+            >
+              {isFull ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            </button>
           </div>
         )}
+
+        {loading && !error && (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/55">
+            <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
+            <p className="text-[11px] font-semibold tracking-wide text-white/55">Connecting to stream…</p>
+          </div>
+        )}
+
 
         {error && (
           <div className="absolute inset-0 flex items-center justify-center px-6">
