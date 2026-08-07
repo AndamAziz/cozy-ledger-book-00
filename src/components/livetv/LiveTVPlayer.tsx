@@ -147,7 +147,7 @@ export function LiveTVPlayer({
         setLevels(
           (data.levels ?? []).map((l, i) => ({ index: i, label: labelForLevel(l.height, l.bitrate) })),
         );
-        video.play().catch(() => undefined);
+        playWithAutoplayFallback(video, () => setMuted(true)).catch(() => undefined);
       });
       hls.on(Hls.Events.LEVEL_SWITCHED, (_e, data) => {
         const lvl = hls.levels?.[data.level];
@@ -183,7 +183,7 @@ export function LiveTVPlayer({
     } else {
       video.src = src;
       video.addEventListener('error', onMediaError);
-      video.play().catch(() => {
+      playWithAutoplayFallback(video, () => setMuted(true)).catch(() => {
         // Autoplay rejection is not a stream failure — the user can hit play.
         setLoading(false);
       });
@@ -246,9 +246,8 @@ export function LiveTVPlayer({
   }, [channel.id]);
 
   useEffect(() => {
-    const onFs = () => setIsFull(Boolean(document.fullscreenElement));
-    document.addEventListener('fullscreenchange', onFs);
-    return () => document.removeEventListener('fullscreenchange', onFs);
+    const onFs = () => setIsFull(Boolean(fullscreenElement()));
+    return onFullscreenChange(onFs);
   }, []);
 
   const togglePlay = () => {
@@ -359,7 +358,7 @@ export function LiveTVPlayer({
             </div>
           )}
           <button
-            onClick={toggleFullscreen}
+            onClick={handleFullscreen}
             aria-label="Fullscreen"
             className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
           >
@@ -442,7 +441,7 @@ export function LiveTVPlayer({
             )}
             <button
               type="button"
-              onClick={toggleFullscreen}
+              onClick={handleFullscreen}
               aria-label={isFull ? 'Exit fullscreen' : 'Fullscreen'}
               className={`rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90 ${isLive ? '' : 'ml-auto'}`}
             >
