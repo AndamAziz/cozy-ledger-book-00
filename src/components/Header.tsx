@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, Building2, Calendar, Crown } from 'lucide-react';
+import { LogOut, Building2, Calendar, Crown, Users } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,10 +11,14 @@ interface HeaderProps {
   currentMonthLabel: string;
   onMonthChange: (month: string) => void;
   onLogout: () => void;
+  onOpenAdmin?: () => void;
+  isAdmin?: boolean;
   companyName?: string | null;
 }
 
-export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout, companyName }: HeaderProps) {
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLogout, onOpenAdmin, isAdmin, companyName }: HeaderProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -27,9 +31,10 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
   }, []);
 
   const formatDate = (date: Date) => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = MONTH_ABBR[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   return (
