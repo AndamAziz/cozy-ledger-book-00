@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut, Building2, Calendar, Crown, Users } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { HeaderAction, HEADER_ACTION_CLASSES, HEADER_ACTION_ICON_CLASSES } from '@/components/HeaderAction';
+import { HeaderAction, HEADER_ACTION_CLASSES, HEADER_ACTION_ICON_CLASSES, HEADER_ACTION_LABEL_CLASSES } from '@/components/HeaderAction';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface HeaderProps {
@@ -60,7 +60,7 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
             {isAdmin && onOpenAdmin ? (
               <HeaderAction onClick={onOpenAdmin}>
                 <Users className={HEADER_ACTION_ICON_CLASSES} />
-                <span className="text-xs sm:text-sm font-medium">{t('adminPanel')}</span>
+                <span className={HEADER_ACTION_LABEL_CLASSES}>{t('adminPanel')}</span>
               </HeaderAction>
             ) : (
               <h1 className="text-sm sm:text-base md:text-lg font-bold text-foreground truncate">
@@ -98,7 +98,7 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
             <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
               <div className={cn(HEADER_ACTION_CLASSES, 'select-none cursor-default hover:scale-100 active:scale-100')}>
                 <Calendar className={HEADER_ACTION_ICON_CLASSES} />
-                <span className="text-xs sm:text-sm font-medium">{formatDate(currentTime)}</span>
+                <span className={HEADER_ACTION_LABEL_CLASSES}>{formatDate(currentTime)}</span>
               </div>
               <LanguageSwitcher />
             </div>
