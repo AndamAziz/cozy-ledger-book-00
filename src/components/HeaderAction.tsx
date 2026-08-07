@@ -8,7 +8,7 @@ export const HEADER_ACTION_ICON_CLASSES = 'h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink
 
 /** Shared label typography so every header pill reads the same. */
 export const HEADER_ACTION_LABEL_CLASSES =
-  'text-xs sm:text-sm font-medium tracking-tight tabular-nums whitespace-nowrap';
+  'text-[13px] sm:text-[13px] font-medium leading-[1.2] tracking-tight tabular-nums whitespace-nowrap';
 
 export const HeaderAction = ({
   children,

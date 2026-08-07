@@ -1,6 +1,6 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Language } from '@/lib/translations';
-import { HeaderAction, HEADER_ACTION_ICON_CLASSES } from '@/components/HeaderAction';
+import { HeaderAction, HEADER_ACTION_ICON_CLASSES, HEADER_ACTION_LABEL_CLASSES } from '@/components/HeaderAction';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +35,7 @@ export function LanguageSwitcher() {
           aria-label={`Select language (current: ${currentLang.label})`}
         >
           <Globe className={HEADER_ACTION_ICON_CLASSES} />
-          <span className="text-base sm:text-lg leading-none">{currentLang.flag}</span>
+          <span className={HEADER_ACTION_LABEL_CLASSES}>{currentLang.flag}</span>
         </HeaderAction>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[160px] bg-background border border-border z-50 shadow-lg">
