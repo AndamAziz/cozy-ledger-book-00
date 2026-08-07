@@ -65,12 +65,23 @@ supabase.auth.onAuthStateChange((_event, session) => {
   accessToken = session?.access_token ?? null;
 });
 
-/** CORS-safe, browser-playable stream URL (provider credentials stay server-side). */
-export function toPlayableUrl(channelId: string, kind: IptvKind = 'live', ext?: string): string {
+/**
+ * CORS-safe, browser-playable stream URL (provider credentials stay server-side).
+ * `raw` asks the proxy for the transport-stream variant first — used by the
+ * mpegts.js engine, which needs a TS feed rather than an HLS manifest.
+ */
+export function toPlayableUrl(
+  channelId: string,
+  kind: IptvKind = 'live',
+  ext?: string,
+  opts?: { raw?: boolean },
+): string {
   const extPart = ext ? `&ext=${encodeURIComponent(ext)}` : '';
   const tokenPart = accessToken ? `&token=${encodeURIComponent(accessToken)}` : '';
-  return `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}&apikey=${ANON}${tokenPart}`;
+  const rawPart = opts?.raw ? '&raw=1' : '';
+  return `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}${rawPart}&apikey=${ANON}${tokenPart}`;
 }
+
 
 
 async function get<T>(path: string): Promise<T> {

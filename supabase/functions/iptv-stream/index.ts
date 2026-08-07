@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
   const kindParam = reqUrl.searchParams.get('kind')
   const kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
   const extHint = (reqUrl.searchParams.get('ext') ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase()
+  const rawFirst = reqUrl.searchParams.get('raw') === '1'
 
   // Every stream is served from the caller's OWN provider account.
   const resolved = await resolveViewer(req)
@@ -96,10 +97,11 @@ Deno.serve(async (req) => {
     const { host, protocol, username, password } = parseXtream(source)
     const cred = `${protocol}//${host}`
     if (kind === 'live') {
-      candidates = [
-        `${cred}/live/${username}/${password}/${streamId}.m3u8`,
-        `${cred}/live/${username}/${password}/${streamId}.ts`,
-      ]
+      const hls = `${cred}/live/${username}/${password}/${streamId}.m3u8`
+      const ts = `${cred}/live/${username}/${password}/${streamId}.ts`
+      // `raw=1` (mpegts.js engine) wants the transport stream first; the default
+      // order prefers the HLS manifest, which survives slow links better.
+      candidates = rawFirst ? [ts, hls] : [hls, ts]
     } else {
       const exts = [...new Set([extHint, 'mp4', 'mkv', 'avi'].filter(Boolean))]
       const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
@@ -125,6 +127,25 @@ Deno.serve(async (req) => {
             ? await fetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(20_000) })
             : await egressFetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(25_000) })
         if (res.ok || res.status === 206) {
+          // Some providers answer 200 with an HTML/text error page for dead
+          // channels. Verify manifests really are manifests before committing,
+          // otherwise fall through to the next candidate (raw TS).
+          const ctype = res.headers.get('content-type') || ''
+          const looksManifest =
+            ctype.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(new URL(res.url).pathname)
+          if (looksManifest) {
+            const text = await res.text()
+            if (!text.trimStart().startsWith('#EXTM3U')) {
+              lastError = 'invalid manifest'
+              continue
+            }
+            upstream = new Response(text, {
+              status: 200,
+              headers: { 'Content-Type': 'application/vnd.apple.mpegurl' },
+            })
+            Object.defineProperty(upstream, 'url', { value: res.url })
+            break
+          }
           upstream = res
           break
         }

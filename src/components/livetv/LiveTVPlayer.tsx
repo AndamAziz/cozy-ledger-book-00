@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import {
   X, Loader2, AlertTriangle, Maximize2, Minimize2, Settings2, RefreshCw,
@@ -15,6 +15,7 @@ import {
 import {
   resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
 } from '@/lib/resumePlayback';
+import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
 
 
 
@@ -72,11 +73,15 @@ export function LiveTVPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  /** mpegts.js player instance (raw MPEG-TS live feeds). */
+  const tsRef = useRef<{ destroy: () => void } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [nativeMode, setNativeMode] = useState(false);
+  /** Index into the engine chain: each failure advances to the next engine. */
+  const [stage, setStage] = useState(0);
   const [attempt, setAttempt] = useState(0);
+
   const [levels, setLevels] = useState<QualityLevel[]>([]);
   const [selectedLevel, setSelectedLevel] = useState(-1);
   const [autoLabel, setAutoLabel] = useState<string | null>(null);
@@ -103,7 +108,7 @@ export function LiveTVPlayer({
 
   // New channel / episode → back to the preferred engine and show the top bar.
   useEffect(() => {
-    setNativeMode(false);
+    setStage(0);
     setAttempt(0);
     setLevels([]);
     setSelectedLevel(-1);
@@ -112,20 +117,51 @@ export function LiveTVPlayer({
     setQualityOpen(false);
   }, [channel.id]);
 
+  /**
+   * Engine ladder for this channel — identical in spirit to the IPTV M3U module
+   * that plays flawlessly: HLS manifests go to hls.js (or native HLS on
+   * Safari/iOS/Smart TVs), raw MPEG-TS live feeds go to mpegts.js (Chrome,
+   * Edge, Firefox and Android WebView cannot play .ts natively), and
+   * progressive movie files go straight to the media element.
+   */
+  const engines = useMemo<Engine[]>(() => {
+    const kind = channel.kind ?? 'live';
+    const nativeHls = nativeHlsSupported();
+    if (kind !== 'live') {
+      const container = containerFromExt(channel.ext);
+      const chain = engineChain(container, { nativeHls });
+      return chain.length ? chain : ['native'];
+    }
+    // Live: the stream proxy serves an HLS manifest when the provider has one
+    // and falls back to a raw transport stream, so both must be covered.
+    const chain: Engine[] = nativeHls ? ['native', 'hls', 'mpegts'] : ['hls', 'mpegts', 'native'];
+    return chain.filter((e) => (e === 'hls' ? Hls.isSupported() : true));
+  }, [channel.kind, channel.ext]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    // Destroying hls.js is guarded: a throw here used to bubble up, hit the
+    // Destroying an engine is guarded: a throw here used to bubble up, hit the
     // error boundary and tear the whole player down mid-playback.
     const safeDestroy = () => {
       const inst = hlsRef.current;
       hlsRef.current = null;
-      if (!inst) return;
-      try {
-        inst.destroy();
-      } catch (err) {
-        console.warn('hls destroy failed', err);
+      if (inst) {
+        try {
+          inst.destroy();
+        } catch (err) {
+          console.warn('hls destroy failed', err);
+        }
+      }
+      const ts = tsRef.current;
+      tsRef.current = null;
+      if (ts) {
+        try {
+          ts.destroy();
+        } catch (err) {
+          console.warn('mpegts destroy failed', err);
+        }
       }
     };
 
@@ -134,27 +170,31 @@ export function LiveTVPlayer({
     setLoading(true);
     setError(false);
 
-    const src = toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext);
+    const engine = engines[Math.min(stage, engines.length - 1)] ?? 'native';
+    // mpegts.js needs the transport-stream variant, not an HLS manifest.
+    const src = toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext, {
+      raw: engine === 'mpegts',
+    });
     const done = () => setLoading(false);
-    const onMediaError = () => {
+    let disposed = false;
+
+    /** Move to the next engine, or surface the error once the ladder is spent. */
+    const nextEngine = () => {
+      if (disposed) return;
+      if (stage + 1 < engines.length) {
+        setStage((s) => s + 1);
+        return;
+      }
       setLoading(false);
       setError(true);
     };
+    const onMediaError = () => nextEngine();
 
     video.addEventListener('playing', done);
     video.addEventListener('canplay', done);
     video.addEventListener('loadeddata', done);
 
-    // Movies / episodes are progressive containers (mp4, mkv…): hls.js cannot
-    // parse them, so they play natively — exactly like the IPTV M3U module,
-    // which only engages hls.js for HLS manifests. Safari/iOS and Smart TV
-    // browsers also decode HLS natively (hardware HEVC/AC-3), so hls.js is only
-    // used where native HLS is missing (Chrome, Edge, Firefox, Android WebView).
-    const isHls = (channel.kind ?? 'live') === 'live';
-    let disposed = false;
-
-    if (!nativeMode && isHls && !nativeHlsSupported() && Hls.isSupported()) {
-
+    if (engine === 'hls') {
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
       hlsRef.current = hls;
       let recovered = 0;
@@ -164,7 +204,7 @@ export function LiveTVPlayer({
       } catch (err) {
         console.warn('hls init failed', err);
         safeDestroy();
-        setNativeMode(true);
+        nextEngine();
         return;
       }
       hls.on(Hls.Events.MANIFEST_PARSED, (_e, data) => {
@@ -202,9 +242,41 @@ export function LiveTVPlayer({
         setTimeout(() => {
           if (disposed) return;
           safeDestroy();
-          setNativeMode(true);
+          nextEngine();
         }, 0);
       });
+    } else if (engine === 'mpegts') {
+      // mpegts.js is loaded on demand so it never weighs on the initial bundle.
+      import('mpegts.js')
+        .then(({ default: mpegts }) => {
+          if (disposed) return;
+          if (!mpegts.isSupported() || !mpegts.getFeatureList().mseLivePlayback) {
+            nextEngine();
+            return;
+          }
+          const player = mpegts.createPlayer(
+            { type: 'mpegts', isLive: (channel.kind ?? 'live') === 'live', url: src },
+            { enableWorker: true, liveBufferLatencyChasing: true, lazyLoad: false },
+          );
+          tsRef.current = player;
+          player.on(mpegts.Events.ERROR, () => {
+            setTimeout(() => {
+              if (disposed) return;
+              safeDestroy();
+              nextEngine();
+            }, 0);
+          });
+          try {
+            player.attachMediaElement(video);
+            player.load();
+            playWithAutoplayFallback(video, () => setMuted(true)).catch(() => undefined);
+          } catch (err) {
+            console.warn('mpegts init failed', err);
+            safeDestroy();
+            nextEngine();
+          }
+        })
+        .catch(() => nextEngine());
     } else {
       video.src = src;
       video.addEventListener('error', onMediaError);
@@ -229,7 +301,8 @@ export function LiveTVPlayer({
         console.warn('video teardown failed', err);
       }
     };
-  }, [channel.id, channel.kind, channel.ext, nativeMode, attempt]);
+  }, [channel.id, channel.kind, channel.ext, engines, stage, attempt]);
+
 
 
   useEffect(() => {
@@ -678,7 +751,7 @@ export function LiveTVPlayer({
               <div className="mt-4 flex justify-center gap-2">
                 <button
                   onClick={() => {
-                    setNativeMode(false);
+                    setStage(0);
                     setAttempt((a) => a + 1);
                   }}
                   className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
