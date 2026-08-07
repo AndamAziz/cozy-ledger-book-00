@@ -266,6 +266,24 @@ export function LiveTVPlayer({
     };
   }, [channel.id]);
 
+  // Track position / length for movies and episodes so they can be scrubbed.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    setCurrentTime(0);
+    setDuration(0);
+    const onTime = () => setCurrentTime(v.currentTime);
+    const onMeta = () => setDuration(Number.isFinite(v.duration) ? v.duration : 0);
+    v.addEventListener('timeupdate', onTime);
+    v.addEventListener('loadedmetadata', onMeta);
+    v.addEventListener('durationchange', onMeta);
+    return () => {
+      v.removeEventListener('timeupdate', onTime);
+      v.removeEventListener('loadedmetadata', onMeta);
+      v.removeEventListener('durationchange', onMeta);
+    };
+  }, [channel.id]);
+
   useEffect(() => {
     const onFs = () => setIsFull(Boolean(fullscreenElement()));
     return onFullscreenChange(onFs);
@@ -278,6 +296,30 @@ export function LiveTVPlayer({
     if (v.paused) v.play().catch(() => undefined);
     else v.pause();
   };
+
+  /** Absolute seek, clamped to the media length. */
+  const seekTo = (sec: number) => {
+    const v = videoRef.current;
+    if (!v || !seekable) return;
+    const next = Math.min(Math.max(sec, 0), duration);
+    try {
+      v.currentTime = next;
+    } catch {
+      /* seek before metadata — ignored */
+    }
+    setCurrentTime(next);
+    setBarOpen(true);
+  };
+
+  /** Relative skip: negative rewinds, positive fast-forwards. */
+  const skip = (delta: number) => seekTo((videoRef.current?.currentTime ?? 0) + delta);
+
+  /** Back to the very beginning of the movie / episode. */
+  const restart = () => {
+    seekTo(0);
+    videoRef.current?.play().catch(() => undefined);
+  };
+
 
   const toggleMute = () => {
     const v = videoRef.current;
