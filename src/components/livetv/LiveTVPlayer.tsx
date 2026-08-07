@@ -12,6 +12,10 @@ import {
   nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen,
   onFullscreenChange, fullscreenElement,
 } from '@/lib/playback';
+import {
+  resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
+} from '@/lib/resumePlayback';
+
 
 
 
