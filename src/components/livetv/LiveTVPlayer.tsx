@@ -82,7 +82,15 @@ export function LiveTVPlayer({
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
   const [isFull, setIsFull] = useState(false);
+  // VOD (movies / episodes) playback position — drives the seek bar.
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [scrubbing, setScrubbing] = useState(false);
+  const [scrubValue, setScrubValue] = useState(0);
   const isLive = (channel.kind ?? 'live') === 'live';
+  /** Seek controls only make sense once the container reports a real length. */
+  const seekable = !isLive && duration > 0;
+
 
 
   const accent = accentFor(channel.name);
