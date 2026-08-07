@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import {
   X, Loader2, AlertTriangle, Maximize2, Minimize2, Settings2, RefreshCw,
@@ -15,6 +15,7 @@ import {
 import {
   resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
 } from '@/lib/resumePlayback';
+import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
 
 
 
@@ -72,6 +73,8 @@ export function LiveTVPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  /** mpegts.js player instance (raw MPEG-TS live feeds). */
+  const tsRef = useRef<{ destroy: () => void } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -746,7 +749,7 @@ export function LiveTVPlayer({
               <div className="mt-4 flex justify-center gap-2">
                 <button
                   onClick={() => {
-                    setNativeMode(false);
+                    setStage(0);
                     setAttempt((a) => a + 1);
                   }}
                   className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
