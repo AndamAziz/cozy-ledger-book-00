@@ -1,13 +1,13 @@
-import { Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Language } from '@/lib/translations';
+import { HeaderAction, HEADER_ACTION_ICON_CLASSES } from '@/components/HeaderAction';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+import { Globe } from 'lucide-react';
 
 interface LanguageOption {
   code: Language;
@@ -31,15 +31,12 @@ export function LanguageSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
+        <HeaderAction
           aria-label={`Select language (current: ${currentLang.label})`}
-          className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-lg bg-info/15 hover:bg-info/25 border border-info/30 transition-all duration-200 hover:scale-105 active:scale-95"
         >
-          <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info" />
-          <span className="text-base sm:text-lg">{currentLang.flag}</span>
-        </Button>
+          <Globe className={HEADER_ACTION_ICON_CLASSES} />
+          <span className="text-base sm:text-lg leading-none">{currentLang.flag}</span>
+        </HeaderAction>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[160px] bg-background border border-border z-50 shadow-lg">
         {languages.map((lang) => (
@@ -58,3 +55,4 @@ export function LanguageSwitcher() {
     </DropdownMenu>
   );
 }
+
