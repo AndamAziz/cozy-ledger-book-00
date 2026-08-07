@@ -157,7 +157,7 @@ export function useBotNotifications() {
         },
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { disarm(); supabase.removeChannel(ch); };
   }, [load, requestDailySummary]);
 
   const unread = items.filter((i) => !i.read).length;
