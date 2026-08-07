@@ -100,12 +100,14 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
 
           {/* Date + Controls row */}
           <div className="flex items-center justify-between gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-xl bg-secondary/40 border border-border/20">
-            <div className="flex items-center gap-1 min-w-0">
-              <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-              <span className="text-[9px] sm:text-[11px] text-muted-foreground truncate">{formatDate(currentTime)}</span>
-            </div>
             <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
               <MonthPicker value={currentMonthKey} onChange={onMonthChange} />
+            </div>
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+              <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-lg bg-info/15 border border-info/30 transition-colors hover:bg-info/25">
+                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info flex-shrink-0" />
+                <span className="text-[10px] sm:text-xs text-info font-medium truncate">{formatDate(currentTime)}</span>
+              </div>
               <LanguageSwitcher />
             </div>
           </div>
