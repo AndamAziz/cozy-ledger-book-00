@@ -9,6 +9,8 @@ import {
   Maximize2, RefreshCw, Signal, Search, Volume2, VolumeX,
 } from 'lucide-react';
 import { ChannelLogo } from './ChannelLogo';
+import { nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen } from '@/lib/playback';
+
 
 
 const PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/iptv-m3u-proxy?url=`;
