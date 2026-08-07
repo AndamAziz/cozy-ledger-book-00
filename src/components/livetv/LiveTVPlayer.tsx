@@ -355,7 +355,7 @@ export function LiveTVPlayer({
             </div>
           )}
           <button
-            onClick={goFullscreen}
+            onClick={toggleFullscreen}
             aria-label="Fullscreen"
             className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
           >
@@ -374,33 +374,86 @@ export function LiveTVPlayer({
       <div
         onPointerDown={revealBar}
         onMouseMove={revealBar}
-        className="flex min-h-0 flex-1 items-center justify-center bg-black md:bg-transparent md:p-5 lg:p-7"
+        className="flex min-h-0 flex-1 items-stretch justify-center bg-black md:items-center md:bg-transparent md:p-5 lg:p-7"
       >
         <div
           ref={shellRef}
-          className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black md:h-auto md:max-h-full md:aspect-video md:max-w-[1400px] md:rounded-2xl md:border md:border-white/10 md:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
+          className="relative flex h-full w-full flex-1 items-center justify-center overflow-hidden bg-black md:h-auto md:max-h-full md:flex-none md:aspect-video md:max-w-[1400px] md:rounded-2xl md:border md:border-white/10 md:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
         >
         <video
           ref={videoRef}
-          className="h-full max-h-full w-full object-contain"
+          className="absolute inset-0 h-full w-full bg-black object-contain"
           playsInline
           autoPlay
-          controls
         />
 
+        {/* Center play / pause — small circular control, fades with the bar */}
+        {!loading && !error && (
+          <button
+            type="button"
+            onClick={togglePlay}
+            aria-label={paused ? 'Play' : 'Pause'}
+            className={`absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/70 active:scale-90 sm:h-16 sm:w-16 ${
+              barOpen || paused ? 'scale-100 opacity-100' : 'pointer-events-none scale-90 opacity-0'
+            }`}
+          >
+            {paused ? (
+              <Play className="h-6 w-6 translate-x-[1px] sm:h-7 sm:w-7" fill="currentColor" />
+            ) : (
+              <Pause className="h-6 w-6 sm:h-7 sm:w-7" fill="currentColor" />
+            )}
+          </button>
+        )}
 
-        {loading && !error && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45 backdrop-blur-[2px]">
-            <span className="relative flex h-14 w-14 items-center justify-center">
-              <span
-                className="absolute inset-0 animate-ping rounded-full opacity-25"
-                style={{ background: accent }}
-              />
-              <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
-            </span>
-            <p className="text-xs font-semibold text-white/70">Connecting to stream…</p>
+        {/* Bottom control bar */}
+        {!error && (
+          <div
+            className={`absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-3 pb-[calc(env(safe-area-inset-bottom)*0.5+0.6rem)] pt-8 transition-all duration-300 sm:px-5 ${
+              barOpen || paused ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={toggleMute}
+              aria-label={muted || volume === 0 ? 'Unmute' : 'Mute'}
+              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90"
+            >
+              {muted || volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={muted ? 0 : volume}
+              onChange={(e) => changeVolume(Number(e.target.value))}
+              aria-label="Volume"
+              className="h-1 w-16 cursor-pointer appearance-none rounded-full bg-white/25 accent-white sm:w-24"
+            />
+            {isLive && (
+              <span className="ml-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.07] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/85 backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: '#ff2d6f' }} />
+                Live
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              aria-label={isFull ? 'Exit fullscreen' : 'Fullscreen'}
+              className={`rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90 ${isLive ? '' : 'ml-auto'}`}
+            >
+              {isFull ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            </button>
           </div>
         )}
+
+        {loading && !error && (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/55">
+            <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
+            <p className="text-[11px] font-semibold tracking-wide text-white/55">Connecting to stream…</p>
+          </div>
+        )}
+
 
         {error && (
           <div className="absolute inset-0 flex items-center justify-center px-6">
