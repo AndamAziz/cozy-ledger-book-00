@@ -96,9 +96,9 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
               <MonthPicker value={currentMonthKey} onChange={onMonthChange} />
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-              <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-lg bg-info/15 border border-info/30 transition-colors hover:bg-info/25">
-                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info flex-shrink-0" />
-                <span className="text-[10px] sm:text-xs text-info font-medium truncate">{formatDate(currentTime)}</span>
+              <div className={cn(HEADER_ACTION_CLASSES, 'select-none cursor-default hover:scale-100 active:scale-100')}>
+                <Calendar className={HEADER_ACTION_ICON_CLASSES} />
+                <span className="text-xs sm:text-sm font-medium">{formatDate(currentTime)}</span>
               </div>
               <LanguageSwitcher />
             </div>
