@@ -56,4 +56,5 @@ export const StarRating = forwardRef<HTMLDivElement, StarRatingProps>(function S
       })}
     </div>
   );
-};
+});
+
