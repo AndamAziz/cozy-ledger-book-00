@@ -7,6 +7,11 @@ import {
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 import { useLogoFallback } from '@/lib/logoFallback';
+import {
+  nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen,
+  onFullscreenChange, fullscreenElement,
+} from '@/lib/playback';
+
 
 
 
@@ -117,11 +122,14 @@ export function LiveTVPlayer({
 
     // Movies / episodes are progressive containers (mp4, mkv…): hls.js cannot
     // parse them, so they play natively — exactly like the IPTV M3U module,
-    // which only engages hls.js for HLS manifests.
+    // which only engages hls.js for HLS manifests. Safari/iOS and Smart TV
+    // browsers also decode HLS natively (hardware HEVC/AC-3), so hls.js is only
+    // used where native HLS is missing (Chrome, Edge, Firefox, Android WebView).
     const isHls = (channel.kind ?? 'live') === 'live';
     let disposed = false;
 
-    if (!nativeMode && isHls && Hls.isSupported()) {
+    if (!nativeMode && isHls && !nativeHlsSupported() && Hls.isSupported()) {
+
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
       hlsRef.current = hls;
       let recovered = 0;
@@ -139,7 +147,7 @@ export function LiveTVPlayer({
         setLevels(
           (data.levels ?? []).map((l, i) => ({ index: i, label: labelForLevel(l.height, l.bitrate) })),
         );
-        video.play().catch(() => undefined);
+        playWithAutoplayFallback(video, () => setMuted(true)).catch(() => undefined);
       });
       hls.on(Hls.Events.LEVEL_SWITCHED, (_e, data) => {
         const lvl = hls.levels?.[data.level];
@@ -175,7 +183,7 @@ export function LiveTVPlayer({
     } else {
       video.src = src;
       video.addEventListener('error', onMediaError);
-      video.play().catch(() => {
+      playWithAutoplayFallback(video, () => setMuted(true)).catch(() => {
         // Autoplay rejection is not a stream failure — the user can hit play.
         setLoading(false);
       });
@@ -238,9 +246,8 @@ export function LiveTVPlayer({
   }, [channel.id]);
 
   useEffect(() => {
-    const onFs = () => setIsFull(Boolean(document.fullscreenElement));
-    document.addEventListener('fullscreenchange', onFs);
-    return () => document.removeEventListener('fullscreenchange', onFs);
+    const onFs = () => setIsFull(Boolean(fullscreenElement()));
+    return onFullscreenChange(onFs);
   }, []);
 
   const togglePlay = () => {
@@ -267,16 +274,12 @@ export function LiveTVPlayer({
     setBarOpen(true);
   };
 
-  const toggleFullscreen = () => {
-    const el = shellRef.current;
-    const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => undefined);
-      return;
-    }
-    if (el?.requestFullscreen) el.requestFullscreen().catch(() => undefined);
-    else video?.webkitEnterFullscreen?.();
+  const handleFullscreen = () => {
+    // Handles iPhone (video-only fullscreen) plus prefixed WebKit/Edge APIs
+    // used by Smart TV browsers.
+    toggleFullscreen(shellRef.current, videoRef.current);
   };
+
 
   // Auto-hide the controls layer after a few seconds on every device.
   useEffect(() => {
@@ -355,7 +358,7 @@ export function LiveTVPlayer({
             </div>
           )}
           <button
-            onClick={toggleFullscreen}
+            onClick={handleFullscreen}
             aria-label="Fullscreen"
             className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
           >
@@ -438,7 +441,7 @@ export function LiveTVPlayer({
             )}
             <button
               type="button"
-              onClick={toggleFullscreen}
+              onClick={handleFullscreen}
               aria-label={isFull ? 'Exit fullscreen' : 'Fullscreen'}
               className={`rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90 ${isLive ? '' : 'ml-auto'}`}
             >

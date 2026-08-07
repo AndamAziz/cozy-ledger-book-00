@@ -16,6 +16,8 @@ import {
   fetchMacro,
   fetchEvents,
 } from '@/lib/signalData';
+import { requestNotificationPermissionOnGesture } from '@/lib/notificationPermission';
+
 
 const REFRESH_MS = 60 * 1000; // 60s — keep the signal aligned with the live market
 /** If the last successful refresh is older than this, the data is considered stale. */
@@ -98,12 +100,9 @@ export function useSignalEngine(assetKey: AssetKey, tf: SignalTF, opts?: { enabl
     };
   }, [loadAll, enabled]);
 
-  // Ask for notification permission once.
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
-    }
-  }, []);
+  // Ask for notification permission on the first user gesture (Firefox/Safari
+  // reject load-time requests).
+  useEffect(() => requestNotificationPermissionOnGesture(), []);
 
   const signal: AssetSignal | null = useMemo(() => {
     const candles = candlesByTF[tf];

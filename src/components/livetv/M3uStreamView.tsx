@@ -9,6 +9,8 @@ import {
   Maximize2, RefreshCw, Signal, Search, Volume2, VolumeX,
 } from 'lucide-react';
 import { ChannelLogo } from './ChannelLogo';
+import { nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen } from '@/lib/playback';
+
 
 
 const PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/iptv-m3u-proxy?url=`;
@@ -100,7 +102,14 @@ export default function M3uStreamView({
       }
     };
 
-    if (Hls.isSupported() && src.includes('.m3u8')) {
+    // Safari / iOS / Smart TVs play HLS natively (hardware decode, HEVC, AC-3);
+    // everywhere else hls.js is required — including for extensionless IPTV
+    // manifest URLs, which Chrome/Firefox cannot play on their own.
+    const native = nativeHlsSupported();
+    const looksProgressive = /\.(mp4|mkv|webm|mov|m4v)(\?|$)/i.test(channel.url);
+    const useHlsJs = !native && !looksProgressive && Hls.isSupported();
+
+    if (useHlsJs) {
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
       hlsRef.current = hls;
       hls.loadSource(src);
@@ -109,7 +118,7 @@ export default function M3uStreamView({
         if (cancelled) return;
         setLoadingStream(false);
         setError(false);
-        video.play().catch(() => {});
+        playWithAutoplayFallback(video, () => setMuted(true)).catch(() => {});
       });
       hls.on(Hls.Events.ERROR, (_e, data) => {
         if (data.fatal) {
@@ -119,8 +128,7 @@ export default function M3uStreamView({
       });
     } else {
       video.src = src;
-      video
-        .play()
+      playWithAutoplayFallback(video, () => setMuted(true))
         .then(() => {
           if (cancelled) return;
           setLoadingStream(false);
@@ -135,6 +143,7 @@ export default function M3uStreamView({
       hlsRef.current = null;
     };
   }, [channel.url, useProxy, attempt]);
+
 
   /* reset the proxy fallback whenever the user switches channel */
   useEffect(() => {
@@ -158,11 +167,11 @@ export default function M3uStreamView({
   }, [index, channels]);
 
   const goFullscreen = () => {
-    const el = shellRef.current;
-    if (!el) return;
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else el.requestFullscreen?.().catch(() => {});
+    // iPhone can only fullscreen the video element itself; legacy WebKit and
+    // Smart TV browsers need the prefixed APIs.
+    toggleFullscreen(shellRef.current, videoRef.current);
   };
+
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
