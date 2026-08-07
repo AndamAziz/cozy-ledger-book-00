@@ -119,27 +119,32 @@ function DirectStreamVideo({
     };
 
     if (mode === 'hls') {
-      import('hls.js')
-        .then(({ default: Hls }) => {
-          if (cancelled) return;
-          if (Hls.isSupported()) {
-            const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
-            hlsInstance = hls;
-            hls.loadSource(server.url);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, playQuietly);
-            hls.on(Hls.Events.ERROR, (_event, data) => {
-              if (data?.fatal) onError();
-            });
-          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = server.url;
-            playQuietly();
-          } else {
-            onError();
-          }
-        })
-        .catch(onError);
+      // Safari/iOS and Smart TV browsers decode HLS natively (hardware HEVC /
+      // AC-3), so they take priority over hls.js there.
+      if (nativeHlsSupported()) {
+        video.src = server.url;
+        playQuietly();
+      } else {
+        import('hls.js')
+          .then(({ default: Hls }) => {
+            if (cancelled) return;
+            if (Hls.isSupported()) {
+              const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+              hlsInstance = hls;
+              hls.loadSource(server.url);
+              hls.attachMedia(video);
+              hls.on(Hls.Events.MANIFEST_PARSED, playQuietly);
+              hls.on(Hls.Events.ERROR, (_event, data) => {
+                if (data?.fatal) onError();
+              });
+            } else {
+              onError();
+            }
+          })
+          .catch(onError);
+      }
     } else {
+
       video.src = server.url;
       playQuietly();
     }
