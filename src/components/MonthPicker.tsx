@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { HEADER_ACTION_CLASSES, HEADER_ACTION_ICON_CLASSES, HEADER_ACTION_LABEL_CLASSES } from '@/components/HeaderAction';
 
 interface MonthPickerProps {
   value: string; // Format: 'YYYY-MM'
@@ -48,12 +49,13 @@ export function MonthPicker({ value, onChange, className }: MonthPickerProps) {
         <Button
           variant="outline"
           className={cn(
-            "w-[110px] sm:w-[150px] md:w-[180px] bg-secondary/50 border-border/50 rounded-lg sm:rounded-xl hover:bg-secondary/80 transition-colors justify-start text-right font-normal h-8 sm:h-9 px-2 sm:px-3 touch-manipulation",
+            HEADER_ACTION_CLASSES,
+            "w-[110px] sm:w-[150px] md:w-[180px] justify-start text-right touch-manipulation",
             className
           )}
         >
-          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-1.5 sm:ml-2 text-primary flex-shrink-0" />
-          <span className="text-xs sm:text-sm truncate">{displayLabel}</span>
+          <Calendar className={HEADER_ACTION_ICON_CLASSES} />
+          <span className={HEADER_ACTION_LABEL_CLASSES}>{displayLabel}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent 
