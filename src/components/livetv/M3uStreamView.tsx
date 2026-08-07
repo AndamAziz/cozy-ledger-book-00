@@ -167,11 +167,11 @@ export default function M3uStreamView({
   }, [index, channels]);
 
   const goFullscreen = () => {
-    const el = shellRef.current;
-    if (!el) return;
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else el.requestFullscreen?.().catch(() => {});
+    // iPhone can only fullscreen the video element itself; legacy WebKit and
+    // Smart TV browsers need the prefixed APIs.
+    toggleFullscreen(shellRef.current, videoRef.current);
   };
+
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
