@@ -117,11 +117,14 @@ export function LiveTVPlayer({
 
     // Movies / episodes are progressive containers (mp4, mkv…): hls.js cannot
     // parse them, so they play natively — exactly like the IPTV M3U module,
-    // which only engages hls.js for HLS manifests.
+    // which only engages hls.js for HLS manifests. Safari/iOS and Smart TV
+    // browsers also decode HLS natively (hardware HEVC/AC-3), so hls.js is only
+    // used where native HLS is missing (Chrome, Edge, Firefox, Android WebView).
     const isHls = (channel.kind ?? 'live') === 'live';
     let disposed = false;
 
-    if (!nativeMode && isHls && Hls.isSupported()) {
+    if (!nativeMode && isHls && !nativeHlsSupported() && Hls.isSupported()) {
+
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
       hlsRef.current = hls;
       let recovered = 0;
