@@ -170,7 +170,11 @@ export function LiveTVPlayer({
     setLoading(true);
     setError(false);
 
-    const src = toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext);
+    const engine = engines[Math.min(stage, engines.length - 1)] ?? 'native';
+    // mpegts.js needs the transport-stream variant, not an HLS manifest.
+    const src = toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext, {
+      raw: engine === 'mpegts',
+    });
     const done = () => setLoading(false);
     let disposed = false;
 
@@ -189,8 +193,6 @@ export function LiveTVPlayer({
     video.addEventListener('playing', done);
     video.addEventListener('canplay', done);
     video.addEventListener('loadeddata', done);
-
-    const engine = engines[Math.min(stage, engines.length - 1)] ?? 'native';
 
     if (engine === 'hls') {
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
