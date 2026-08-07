@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -10,12 +11,12 @@ export const HEADER_ACTION_ICON_CLASSES = 'h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink
 export const HEADER_ACTION_LABEL_CLASSES =
   'text-[13px] sm:text-[13px] font-medium leading-[1.2] tracking-tight tabular-nums whitespace-nowrap';
 
-export const HeaderAction = ({
-  children,
-  className,
-  ...props
-}: React.ComponentProps<typeof Button>) => (
+export const HeaderAction = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<typeof Button>
+>(({ children, className, ...props }, ref) => (
   <Button
+    ref={ref}
     variant="outline"
     size="sm"
     className={cn(HEADER_ACTION_CLASSES, className)}
@@ -23,4 +24,6 @@ export const HeaderAction = ({
   >
     {children}
   </Button>
-);
+));
+
+HeaderAction.displayName = 'HeaderAction';
