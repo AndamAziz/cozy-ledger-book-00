@@ -31,13 +31,11 @@ for (const { name, viewport } of viewports) {
       const pageErrors: string[] = [];
       page.on("pageerror", (err) => pageErrors.push(err.message));
 
+      // Skip the first-visit onboarding overlay so the header/login chrome renders.
+      await page.addInitScript(() => {
+        localStorage.setItem("central-tech-platform-onboarding-seen", "true");
+      });
       await page.goto("/", { waitUntil: "domcontentloaded" });
-
-      // Dismiss the first-visit onboarding overlay when it is shown.
-      const skip = page.getByRole("button", { name: /^Skip$/ });
-      if (await skip.isVisible().catch(() => false)) {
-        await skip.click();
-      }
 
       const trigger = page.locator('button[aria-label^="Select language"]');
       await expect(trigger).toBeVisible();
