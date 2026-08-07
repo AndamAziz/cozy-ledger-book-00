@@ -10,13 +10,14 @@ import {
   SignalAction,
 } from '@/lib/signalEngine';
 import {
-import { requestNotificationPermissionOnGesture } from '@/lib/notificationPermission';
   AssetMeta,
   getAssetMeta,
   fetchAssetAllTF,
   fetchMacro,
   fetchEvents,
 } from '@/lib/signalData';
+import { requestNotificationPermissionOnGesture } from '@/lib/notificationPermission';
+
 
 const REFRESH_MS = 60 * 1000; // 60s — keep the signal aligned with the live market
 /** If the last successful refresh is older than this, the data is considered stale. */
