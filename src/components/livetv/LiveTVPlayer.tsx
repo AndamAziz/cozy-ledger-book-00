@@ -60,6 +60,12 @@ export function LiveTVPlayer({
   const [autoLabel, setAutoLabel] = useState<string | null>(null);
   const [qualityOpen, setQualityOpen] = useState(false);
   const [barOpen, setBarOpen] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [isFull, setIsFull] = useState(false);
+  const isLive = (channel.kind ?? 'live') === 'live';
+
 
   const accent = accentFor(channel.name);
   const headerLogo = useLogoFallback(channel.logo);
