@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { playWinSound, playLoseSound, playDing } from "./useTradeSounds";
+import { requestNotificationPermissionOnGesture } from '@/lib/notificationPermission';
 
 export interface BotNotification {
   id: string;
@@ -134,12 +135,9 @@ export function useBotNotifications() {
   }, []);
 
   useEffect(() => {
-    // Ask for browser notification permission once.
-    try {
-      if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission().catch(() => {});
-      }
-    } catch { /* ignore */ }
+    // Ask for browser notification permission on the first user gesture —
+    // Firefox rejects load-time requests outright.
+    const disarm = requestNotificationPermissionOnGesture();
 
     load().then(() => requestDailySummary());
 

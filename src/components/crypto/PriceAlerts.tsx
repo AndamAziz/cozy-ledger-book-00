@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, Plus, Trash2, ArrowUp, ArrowDown, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { requestNotificationPermissionOnGesture } from '@/lib/notificationPermission';
 
 interface PriceAlert {
   id: string;
@@ -55,15 +56,8 @@ export function PriceAlerts({ storeKey, label, price, decimals }: Props) {
     setAlerts(loadAlerts(key));
   }, [key]);
 
-  useEffect(() => {
-    try {
-      if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission().catch(() => {});
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  // Deferred to the first user gesture — required by Firefox and Safari.
+  useEffect(() => requestNotificationPermissionOnGesture(), []);
 
   const persist = useCallback((next: PriceAlert[]) => {
     setAlerts(next);
