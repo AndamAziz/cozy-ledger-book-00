@@ -7,6 +7,11 @@ import {
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 import { useLogoFallback } from '@/lib/logoFallback';
+import {
+  nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen,
+  onFullscreenChange, fullscreenElement,
+} from '@/lib/playback';
+
 
 
 
