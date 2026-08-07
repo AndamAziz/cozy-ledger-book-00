@@ -58,20 +58,10 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
           {/* Title + Logout row */}
           <div className="flex items-center justify-between">
             {isAdmin && onOpenAdmin ? (
-              <Button
-                onClick={onOpenAdmin}
-                className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-info/20 via-info/10 to-transparent border border-info/30 hover:border-info/50 p-1.5 sm:p-2 h-auto transition-all duration-200 touch-manipulation"
-              >
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-info to-info/80 flex items-center justify-center shadow-sm shadow-info/30">
-                    <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info-foreground" />
-                  </div>
-                  <div className="text-start">
-                    <p className="font-bold text-foreground text-[10px] sm:text-xs">{t('adminPanel')}</p>
-                    <p className="text-[8px] sm:text-[9px] text-muted-foreground">{t('users')}</p>
-                  </div>
-                </div>
-              </Button>
+              <HeaderAction onClick={onOpenAdmin}>
+                <Users className={HEADER_ACTION_ICON_CLASSES} />
+                <span className="text-xs sm:text-sm font-medium">{t('adminPanel')}</span>
+              </HeaderAction>
             ) : (
               <h1 className="text-sm sm:text-base md:text-lg font-bold text-foreground truncate">
                 {t('financialManagement')}
