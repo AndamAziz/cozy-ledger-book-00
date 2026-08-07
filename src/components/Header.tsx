@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { LogOut, Building2, Calendar, Crown, Users } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { HeaderAction, HEADER_ACTION_CLASSES, HEADER_ACTION_ICON_CLASSES } from '@/components/HeaderAction';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface HeaderProps {
