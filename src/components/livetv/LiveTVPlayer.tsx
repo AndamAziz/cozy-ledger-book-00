@@ -75,8 +75,10 @@ export function LiveTVPlayer({
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [nativeMode, setNativeMode] = useState(false);
+  /** Index into the engine chain: each failure advances to the next engine. */
+  const [stage, setStage] = useState(0);
   const [attempt, setAttempt] = useState(0);
+
   const [levels, setLevels] = useState<QualityLevel[]>([]);
   const [selectedLevel, setSelectedLevel] = useState(-1);
   const [autoLabel, setAutoLabel] = useState<string | null>(null);
