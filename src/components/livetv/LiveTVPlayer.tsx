@@ -12,6 +12,10 @@ import {
   nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen,
   onFullscreenChange, fullscreenElement,
 } from '@/lib/playback';
+import {
+  resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
+} from '@/lib/resumePlayback';
+
 
 
 
@@ -282,23 +286,73 @@ export function LiveTVPlayer({
     };
   }, [channel.id]);
 
-  // Track position / length for movies and episodes so they can be scrubbed.
+  // Track position / length for movies and episodes so they can be scrubbed,
+  // and remember where the user stopped so playback resumes next time.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     setCurrentTime(0);
     setDuration(0);
-    const onTime = () => setCurrentTime(v.currentTime);
-    const onMeta = () => setDuration(Number.isFinite(v.duration) ? v.duration : 0);
+    if (isLive) return;
+
+    const key = resumeKey(channel.id, currentEpisodeId);
+    let restored = false;
+    let lastSaved = 0;
+
+    const restore = () => {
+      if (restored) return;
+      const saved = getResume(key);
+      if (!saved) {
+        restored = true;
+        return;
+      }
+      const len = Number.isFinite(v.duration) ? v.duration : 0;
+      if (len > 0 && saved.time >= len - RESUME_END_MARGIN) {
+        restored = true;
+        return;
+      }
+      try {
+        v.currentTime = saved.time;
+        restored = true;
+        setCurrentTime(saved.time);
+      } catch {
+        /* metadata not ready yet — retry on the next event */
+      }
+    };
+
+    const onTime = () => {
+      setCurrentTime(v.currentTime);
+      const now = Date.now();
+      if (now - lastSaved < 5000) return;
+      lastSaved = now;
+      saveResume(key, v.currentTime, Number.isFinite(v.duration) ? v.duration : 0);
+    };
+    const onMeta = () => {
+      setDuration(Number.isFinite(v.duration) ? v.duration : 0);
+      restore();
+    };
+    const flush = () => saveResume(key, v.currentTime, Number.isFinite(v.duration) ? v.duration : 0);
+    const onEnded = () => clearResume(key);
+
     v.addEventListener('timeupdate', onTime);
     v.addEventListener('loadedmetadata', onMeta);
     v.addEventListener('durationchange', onMeta);
+    v.addEventListener('loadeddata', restore);
+    v.addEventListener('pause', flush);
+    v.addEventListener('ended', onEnded);
+    window.addEventListener('pagehide', flush);
     return () => {
+      flush();
       v.removeEventListener('timeupdate', onTime);
       v.removeEventListener('loadedmetadata', onMeta);
       v.removeEventListener('durationchange', onMeta);
+      v.removeEventListener('loadeddata', restore);
+      v.removeEventListener('pause', flush);
+      v.removeEventListener('ended', onEnded);
+      window.removeEventListener('pagehide', flush);
     };
-  }, [channel.id]);
+  }, [channel.id, currentEpisodeId, isLive]);
+
 
   useEffect(() => {
     const onFs = () => setIsFull(Boolean(fullscreenElement()));
