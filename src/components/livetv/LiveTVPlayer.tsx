@@ -218,22 +218,77 @@ export function LiveTVPlayer({
         : 'Auto'
       : levels.find((l) => l.index === selectedLevel)?.label ?? 'Auto';
 
-  const goFullscreen = () => {
+  // Keep the custom overlay in sync with real playback state.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const sync = () => setPaused(v.paused);
+    const onVol = () => {
+      setMuted(v.muted);
+      setVolume(v.volume);
+    };
+    v.addEventListener('play', sync);
+    v.addEventListener('pause', sync);
+    v.addEventListener('volumechange', onVol);
+    return () => {
+      v.removeEventListener('play', sync);
+      v.removeEventListener('pause', sync);
+      v.removeEventListener('volumechange', onVol);
+    };
+  }, [channel.id]);
+
+  useEffect(() => {
+    const onFs = () => setIsFull(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
+
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    setBarOpen(true);
+    if (v.paused) v.play().catch(() => undefined);
+    else v.pause();
+  };
+
+  const toggleMute = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    if (!v.muted && v.volume === 0) v.volume = 0.6;
+    setBarOpen(true);
+  };
+
+  const changeVolume = (val: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.volume = val;
+    v.muted = val === 0;
+    setBarOpen(true);
+  };
+
+  const toggleFullscreen = () => {
     const el = shellRef.current;
     const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => undefined);
+      return;
+    }
     if (el?.requestFullscreen) el.requestFullscreen().catch(() => undefined);
     else video?.webkitEnterFullscreen?.();
   };
 
-  // Auto-hide the top banner after a few seconds on every device (mobile + desktop).
+  // Auto-hide the controls layer after a few seconds on every device.
   useEffect(() => {
     if (!barOpen) return;
-    const t = setTimeout(() => setBarOpen(false), 4000);
+    if (paused) return;
+    const t = setTimeout(() => setBarOpen(false), 3000);
     return () => clearTimeout(t);
-  }, [barOpen]);
+  }, [barOpen, paused]);
 
 
   const revealBar = () => setBarOpen(true);
+
 
   return (
     <div className="fixed inset-0 z-[90] flex flex-col bg-black/95 backdrop-blur-xl md:bg-[#07070b]/97 lg:flex-row lg:items-stretch">
