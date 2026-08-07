@@ -41,8 +41,10 @@ for (const { name, viewport } of viewports) {
       await expect(trigger).toBeVisible();
 
       for (const lang of LANGUAGES) {
+        // Wait for any previous menu to fully close before reopening.
+        await expect(page.getByRole("menuitem").first()).toBeHidden();
         await trigger.click();
-        const item = page.getByRole("menuitem", { name: new RegExp(lang.label) });
+        const item = page.getByRole("menuitem", { name: new RegExp(lang.label) }).first();
         await expect(item).toBeVisible();
         await item.click();
 
