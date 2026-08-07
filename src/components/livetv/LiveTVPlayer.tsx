@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import {
   X, Loader2, AlertTriangle, Maximize2, Minimize2, Settings2, RefreshCw,
-  Play, Pause, Volume2, VolumeX,
+  Play, Pause, Volume2, VolumeX, RotateCcw, Rewind, FastForward,
 } from 'lucide-react';
+
 import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 import { useLogoFallback } from '@/lib/logoFallback';
