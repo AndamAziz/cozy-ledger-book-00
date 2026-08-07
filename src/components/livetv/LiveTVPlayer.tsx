@@ -474,11 +474,78 @@ export function LiveTVPlayer({
         {/* Bottom control bar */}
         {!error && (
           <div
-            className={`absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-3 pb-[calc(env(safe-area-inset-bottom)*0.5+0.6rem)] pt-8 transition-all duration-300 sm:px-5 ${
+            className={`absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-3 pb-[calc(env(safe-area-inset-bottom)*0.5+0.6rem)] pt-8 transition-all duration-300 sm:px-5 ${
               barOpen || paused ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
             }`}
           >
+            {/* Seek bar — movies and episodes only (live streams have no length) */}
+            {seekable && (
+              <div className="flex items-center gap-2.5">
+                <span className="w-10 shrink-0 text-right text-[10px] font-bold tabular-nums text-white/70 sm:text-[11px]">
+                  {formatTime(scrubbing ? scrubValue : currentTime)}
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={duration}
+                  step={1}
+                  value={scrubbing ? scrubValue : Math.min(currentTime, duration)}
+                  onChange={(e) => {
+                    setScrubbing(true);
+                    setScrubValue(Number(e.target.value));
+                    setBarOpen(true);
+                  }}
+                  onPointerUp={() => {
+                    setScrubbing(false);
+                    seekTo(scrubValue);
+                  }}
+                  onKeyUp={() => {
+                    setScrubbing(false);
+                    seekTo(scrubValue);
+                  }}
+                  aria-label="Seek"
+                  className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-white/25 accent-white"
+                />
+                <span className="w-10 shrink-0 text-[10px] font-bold tabular-nums text-white/50 sm:text-[11px]">
+                  {formatTime(duration)}
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 sm:gap-3">
+            {seekable && (
+              <>
+                <button
+                  type="button"
+                  onClick={restart}
+                  aria-label="Restart from beginning"
+                  title="Restart"
+                  className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90"
+                >
+                  <RotateCcw className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => skip(-10)}
+                  aria-label="Rewind 10 seconds"
+                  title="-10s"
+                  className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90"
+                >
+                  <Rewind className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => skip(30)}
+                  aria-label="Forward 30 seconds"
+                  title="+30s"
+                  className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90"
+                >
+                  <FastForward className="h-5 w-5" />
+                </button>
+              </>
+            )}
             <button
+
               type="button"
               onClick={toggleMute}
               aria-label={muted || volume === 0 ? 'Unmute' : 'Mute'}
