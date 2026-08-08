@@ -65,6 +65,14 @@ const HLS_STREAM_RE = /#EXT-X-(TARGETDURATION|MEDIA-SEQUENCE|STREAM-INF|ENDLIST|
 
 export type M3uKind = 'live' | 'vod' | 'series'
 
+/** Per-channel HTTP headers a playlist may declare (Referer-protected feeds). */
+export interface M3uStreamHeaders {
+  referer?: string
+  userAgent?: string
+  origin?: string
+  cookie?: string
+}
+
 export interface M3uEntry {
   id: string
   name: string
@@ -72,12 +80,50 @@ export interface M3uEntry {
   group: string
   kind: M3uKind
   url: string
+  /** Present only when the playlist declared custom headers for this channel. */
+  headers?: M3uStreamHeaders
   /** Season / episode parsed out of the title when it looks like a series. */
   season: number | null
   episode: number | null
   /** Series grouping key (title without the SxxExx suffix). */
   seriesKey: string | null
 }
+
+const HEADER_KEYS: Record<string, keyof M3uStreamHeaders> = {
+  referer: 'referer',
+  referrer: 'referer',
+  'http-referer': 'referer',
+  'http-referrer': 'referer',
+  'user-agent': 'userAgent',
+  'http-user-agent': 'userAgent',
+  origin: 'origin',
+  'http-origin': 'origin',
+  cookie: 'cookie',
+  'http-cookie': 'cookie',
+}
+
+function setHeader(bag: M3uStreamHeaders, rawKey: string, rawValue: string) {
+  const key = HEADER_KEYS[rawKey.trim().toLowerCase()]
+  const value = rawValue.trim().replace(/^["']|["']$/g, '')
+  if (key && value) bag[key] = value
+}
+
+/** `key=value&key2=value2` header strings used by Kodi/inputstream props. */
+function parseHeaderString(bag: M3uStreamHeaders, raw: string) {
+  for (const pair of raw.split(/[&|]/)) {
+    const eq = pair.indexOf('=')
+    if (eq > 0) setHeader(bag, pair.slice(0, eq), decodeURIComponent(pair.slice(eq + 1)))
+  }
+}
+
+/** Folds a `|Referer=...&User-Agent=...` URL suffix into the header bag. */
+function splitUrlHeaders(line: string, bag: M3uStreamHeaders): string {
+  const pipe = line.indexOf('|')
+  if (pipe < 0) return line
+  parseHeaderString(bag, line.slice(pipe + 1))
+  return line.slice(0, pipe)
+}
+
 
 const UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const M3U_TTL = 30 * 60 * 1000
