@@ -283,7 +283,13 @@ function snapshot(
       // ignore malformed rows
     }
   }
-  const version = hashId(`${entries.length}|${etag ?? ''}|${entries[0]?.id ?? ''}|${entries[entries.length - 1]?.id ?? ''}`)
+  // PARSER_VERSION is part of the hash so a parser upgrade (e.g. per-channel
+  // header extraction) invalidates previously cached parses instead of reusing
+  // entries that lack the new fields.
+  const version = hashId(
+    `${PARSER_VERSION}|${entries.length}|${etag ?? ''}|${entries[0]?.id ?? ''}|${entries[entries.length - 1]?.id ?? ''}`,
+  )
+
   return { url, at: Date.now(), entries, byId, hosts, version, etag, lastModified }
 }
 
