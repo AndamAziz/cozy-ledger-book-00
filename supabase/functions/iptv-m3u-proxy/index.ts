@@ -62,7 +62,8 @@ function rewritePlaylist(body: string, base: string, self: string, hParam: strin
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const target = new URL(req.url).searchParams.get("url") || "";
+  const params = new URL(req.url).searchParams;
+  const target = params.get("url") || "";
   if (!isHttp(target) || target.length > 2048) {
     return new Response(JSON.stringify({ error: "Invalid url" }), {
       status: 400,
@@ -70,12 +71,18 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Custom headers declared by the playlist (Referer / User-Agent / Origin / Cookie).
+  const hRaw = params.get("h");
+  const custom = decodeHeaderBag(hRaw);
+  const hParam = hRaw ? `&h=${encodeURIComponent(hRaw)}` : "";
+
   const range = req.headers.get("range");
   let upstream: Response;
   try {
     upstream = await fetch(target, {
       headers: {
         "User-Agent": "VLC/3.0.20 LibVLC/3.0.20",
+        ...custom,
         ...(range ? { Range: range } : {}),
       },
       redirect: "follow",
@@ -94,7 +101,8 @@ Deno.serve(async (req) => {
 
   if (isPlaylist) {
     const text = await upstream.text();
-    const rewritten = rewritePlaylist(text, upstream.url, SELF());
+    const rewritten = rewritePlaylist(text, upstream.url, SELF(), hParam);
+
     return new Response(rewritten, {
       status: upstream.status,
       headers: {
