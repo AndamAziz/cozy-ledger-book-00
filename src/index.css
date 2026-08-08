@@ -311,17 +311,36 @@ html[lang='ckb'] textarea {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+  scrollbar-color: transparent transparent;
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+  width: 0;
+  height: 0;
 }
 
 /* Custom Scrollbar — slim, subtle, non-obtrusive */
-* {
+
+/* Firefox / standards-based (also Safari 18.2+, Chrome 121+) */
+html {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
 }
+*,
+*::before,
+*::after {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
+}
+/* Firefox has no :hover pseudo for scrollbars, so nudge the thumb on
+   container hover for a comparable feel to WebKit browsers. */
+@supports (scrollbar-color: auto) {
+  *:hover {
+    scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+  }
+}
 
+/* WebKit / Blink (Chrome, Edge, Safari) */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -343,6 +362,7 @@ html[lang='ckb'] textarea {
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+
 
 
 /* Print styles */
