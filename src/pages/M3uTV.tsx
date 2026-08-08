@@ -109,7 +109,6 @@ export default function M3uTV() {
 
   // Top banner is a permanent slim bar — it never auto-hides so the active
   // server + channel count stay visible while browsing or watching.
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [groupPickerOpen, setGroupPickerOpen] = useState(false);
 
 
