@@ -384,6 +384,27 @@ html {
   background: transparent;
 }
 
+/* iOS Safari / touch devices: keep the native overlay indicator.
+   Resetting -webkit-appearance there can hide the scroll indicator
+   entirely, and overlay bars take no layout space anyway. */
+@media (hover: none) and (pointer: coarse) {
+  ::-webkit-scrollbar {
+    -webkit-appearance: auto;
+    appearance: auto;
+    width: auto;
+    height: auto;
+  }
+  ::-webkit-scrollbar-thumb {
+    -webkit-appearance: auto;
+    appearance: auto;
+    background-color: hsl(var(--muted-foreground) / 0.35);
+    min-height: 0;
+    min-width: 0;
+  }
+}
+
+
+
 
 
 
