@@ -34,6 +34,43 @@ function isHttp(u: string) {
     return false
   }
 }
+/**
+ * Per-channel headers (Referer/User-Agent/Origin/Cookie) travel with segment
+ * URLs as a url-safe base64 `h=` param, exactly like the IPTV M3U proxy — a
+ * <video>/hls.js request cannot set them itself.
+ */
+function encodeHeaderBag(bag: Record<string, string | undefined>): string {
+  const clean: Record<string, string> = {}
+  for (const [k, v] of Object.entries(bag)) if (typeof v === 'string' && v.trim()) clean[k] = v.trim()
+  if (!Object.keys(clean).length) return ''
+  const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(clean))))
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function decodeHeaderBag(raw: string | null): Record<string, string> {
+  if (!raw || raw.length > 2048) return {}
+  try {
+    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/')
+    const obj = JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)))
+    const map: Record<string, string> = {
+      referer: 'Referer',
+      origin: 'Origin',
+      userAgent: 'User-Agent',
+      cookie: 'Cookie',
+    }
+    const out: Record<string, string> = {}
+    if (obj && typeof obj === 'object') {
+      for (const [k, v] of Object.entries(obj)) {
+        const name = map[k]
+        if (name && typeof v === 'string' && v.trim() && v.length < 512) out[name] = v.trim()
+      }
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
 
 function rewritePlaylist(body: string, base: string, self: string, suffix: string) {
   const abs = (raw: string) => {
