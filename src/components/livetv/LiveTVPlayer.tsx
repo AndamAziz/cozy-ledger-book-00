@@ -489,6 +489,59 @@ export function LiveTVPlayer({
     toggleFullscreen(shellRef.current, videoRef.current);
   };
 
+  /* Smart TV remote: transport keys, channel/episode zapping and Back. */
+  useEffect(() => {
+    const stepEpisode = (delta: number) => {
+      if (!episodes?.length || !onSelectEpisode) return false;
+      const i = episodes.findIndex((ep) => ep.id === currentEpisodeId);
+      const next = episodes[(Math.max(i, 0) + delta + episodes.length) % episodes.length];
+      if (next) onSelectEpisode(next);
+      return true;
+    };
+
+    const handlers: Record<string, (e: Event) => void> = {
+      [TV_EVENT.playPause]: (e) => {
+        e.preventDefault();
+        togglePlay();
+      },
+      [TV_EVENT.mute]: (e) => {
+        e.preventDefault();
+        toggleMute();
+      },
+      [TV_EVENT.rewind]: (e) => {
+        e.preventDefault();
+        skip(-10);
+      },
+      [TV_EVENT.forward]: (e) => {
+        e.preventDefault();
+        skip(30);
+      },
+      [TV_EVENT.stop]: (e) => {
+        e.preventDefault();
+        onClose();
+      },
+      [TV_EVENT.back]: (e) => {
+        e.preventDefault();
+        onClose();
+      },
+      [TV_EVENT.channelUp]: (e) => {
+        if (stepEpisode(1)) e.preventDefault();
+      },
+      [TV_EVENT.channelDown]: (e) => {
+        if (stepEpisode(-1)) e.preventDefault();
+      },
+    };
+
+    for (const [name, fn] of Object.entries(handlers)) window.addEventListener(name, fn);
+    return () => {
+      for (const [name, fn] of Object.entries(handlers)) window.removeEventListener(name, fn);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episodes, currentEpisodeId, onSelectEpisode, onClose, seekable, duration]);
+
+
+
+
 
   // Auto-hide the controls layer after a few seconds on every device.
   useEffect(() => {
