@@ -65,6 +65,14 @@ const HLS_STREAM_RE = /#EXT-X-(TARGETDURATION|MEDIA-SEQUENCE|STREAM-INF|ENDLIST|
 
 export type M3uKind = 'live' | 'vod' | 'series'
 
+/** Per-channel HTTP headers a playlist may declare (Referer-protected feeds). */
+export interface M3uStreamHeaders {
+  referer?: string
+  userAgent?: string
+  origin?: string
+  cookie?: string
+}
+
 export interface M3uEntry {
   id: string
   name: string
@@ -72,6 +80,8 @@ export interface M3uEntry {
   group: string
   kind: M3uKind
   url: string
+  /** Present only when the playlist declared custom headers for this channel. */
+  headers?: M3uStreamHeaders
   /** Season / episode parsed out of the title when it looks like a series. */
   season: number | null
   episode: number | null
@@ -79,7 +89,47 @@ export interface M3uEntry {
   seriesKey: string | null
 }
 
+const HEADER_KEYS: Record<string, keyof M3uStreamHeaders> = {
+  referer: 'referer',
+  referrer: 'referer',
+  'http-referer': 'referer',
+  'http-referrer': 'referer',
+  'user-agent': 'userAgent',
+  'http-user-agent': 'userAgent',
+  origin: 'origin',
+  'http-origin': 'origin',
+  cookie: 'cookie',
+  'http-cookie': 'cookie',
+}
+
+function setHeader(bag: M3uStreamHeaders, rawKey: string, rawValue: string) {
+  const key = HEADER_KEYS[rawKey.trim().toLowerCase()]
+  const value = rawValue.trim().replace(/^["']|["']$/g, '')
+  if (key && value) bag[key] = value
+}
+
+/** `key=value&key2=value2` header strings used by Kodi/inputstream props. */
+function parseHeaderString(bag: M3uStreamHeaders, raw: string) {
+  for (const pair of raw.split(/[&|]/)) {
+    const eq = pair.indexOf('=')
+    if (eq > 0) setHeader(bag, pair.slice(0, eq), decodeURIComponent(pair.slice(eq + 1)))
+  }
+}
+
+/** Folds a `|Referer=...&User-Agent=...` URL suffix into the header bag. */
+function splitUrlHeaders(line: string, bag: M3uStreamHeaders): string {
+  const pipe = line.indexOf('|')
+  if (pipe < 0) return line
+  parseHeaderString(bag, line.slice(pipe + 1))
+  return line.slice(0, pipe)
+}
+
+
+/** Bump whenever parseM3U starts producing new/changed entry fields. */
+const PARSER_VERSION = 'p2-headers'
+
 const UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
+
 const M3U_TTL = 30 * 60 * 1000
 /** Beyond the TTL the cached parse is still served while it revalidates. */
 const M3U_STALE_MAX = 6 * 60 * 60 * 1000
@@ -112,6 +162,9 @@ export function parseM3U(text: string): M3uEntry[] {
   const seen = new Set<string>()
   const lines = text.split(/\r?\n/)
   let pending: { name: string; logo: string; group: string } | null = null
+  // Header hints may appear before OR after #EXTINF, so the bag is only reset
+  // once the channel's URL line has been consumed.
+  let bag: M3uStreamHeaders = {}
 
   for (const raw of lines) {
     const line = raw.trim()
@@ -125,6 +178,8 @@ export function parseM3U(text: string): M3uEntry[] {
       const rawName = comma >= 0 ? tail.slice(comma + 1) : lastQuote >= 0 ? '' : tail.split(',').slice(1).join(',')
       const name = (rawName || attr(line, 'tvg-name')).trim() || 'Untitled'
 
+      // Some playlists put the header right on the EXTINF attribute list.
+      for (const m of line.matchAll(/([a-zA-Z-]+)="([^"]*)"/g)) setHeader(bag, m[1], m[2])
       pending = {
         name,
         logo: attr(line, 'tvg-logo') || attr(line, 'logo'),
@@ -132,16 +187,52 @@ export function parseM3U(text: string): M3uEntry[] {
       }
       continue
     }
+    if (/^#EXTVLCOPT/i.test(line)) {
+      // #EXTVLCOPT:http-referrer=https://site/
+      const body = line.replace(/^#EXTVLCOPT:?/i, '')
+      const eq = body.indexOf('=')
+      if (eq > 0) setHeader(bag, body.slice(0, eq), body.slice(eq + 1))
+      continue
+    }
+    if (/^#EXTHTTP/i.test(line)) {
+      // #EXTHTTP:{"User-Agent":"...","Referer":"..."}
+      try {
+        const obj = JSON.parse(line.replace(/^#EXTHTTP:?/i, '').trim())
+        if (obj && typeof obj === 'object') {
+          for (const [k, v] of Object.entries(obj)) if (typeof v === 'string') setHeader(bag, k, v)
+        }
+      } catch { /* malformed metadata is ignored, never fatal */ }
+      continue
+    }
+    if (/^#KODIPROP/i.test(line)) {
+      // #KODIPROP:inputstream.adaptive.stream_headers=User-Agent=...&Referer=...
+      const body = line.replace(/^#KODIPROP:?/i, '')
+      const eq = body.indexOf('=')
+      if (eq > 0) {
+        const prop = body.slice(0, eq).toLowerCase()
+        const value = body.slice(eq + 1)
+        if (prop.includes('headers')) parseHeaderString(bag, value)
+        else setHeader(bag, prop.split('.').pop() ?? '', value)
+      }
+      continue
+    }
     if (line.startsWith('#')) continue
     if (!/^https?:\/\//i.test(line)) {
       pending = null
+      bag = {}
       continue
     }
 
     const meta = pending ?? { name: 'Untitled', logo: '', group: 'Other' }
     pending = null
-    const kind = classify(meta.name, line)
+    const headers: M3uStreamHeaders = { ...bag }
+    bag = {}
+    // The `|Referer=...` suffix is folded into the headers, never played as URL.
+    const url = splitUrlHeaders(line, headers)
+    const hasHeaders = Object.values(headers).some((v) => v && v.trim())
+    const kind = classify(meta.name, url)
     const m = meta.name.match(SERIES_RE)
+    // Hash the RAW line so ids stay stable across this parser change.
     let id = hashId(line)
     while (seen.has(id)) id += 'x'
     seen.add(id)
@@ -151,13 +242,15 @@ export function parseM3U(text: string): M3uEntry[] {
       logo: /^https?:\/\//i.test(meta.logo) ? meta.logo : null,
       group: meta.group || 'Other',
       kind,
-      url: line,
+      url,
+      ...(hasHeaders ? { headers } : {}),
       season: m ? Number(m[1]) : null,
       episode: m ? Number(m[2]) : null,
       seriesKey: kind === 'series' ? meta.name.replace(SERIES_RE, '').replace(/[\s._-]+$/, '').trim() || meta.name : null,
     })
   }
   return out
+
 }
 
 export interface M3uSnapshot {
@@ -194,7 +287,13 @@ function snapshot(
       // ignore malformed rows
     }
   }
-  const version = hashId(`${entries.length}|${etag ?? ''}|${entries[0]?.id ?? ''}|${entries[entries.length - 1]?.id ?? ''}`)
+  // PARSER_VERSION is part of the hash so a parser upgrade (e.g. per-channel
+  // header extraction) invalidates previously cached parses instead of reusing
+  // entries that lack the new fields.
+  const version = hashId(
+    `${PARSER_VERSION}|${entries.length}|${etag ?? ''}|${entries[0]?.id ?? ''}|${entries[entries.length - 1]?.id ?? ''}`,
+  )
+
   return { url, at: Date.now(), entries, byId, hosts, version, etag, lastModified }
 }
 
@@ -275,7 +374,7 @@ async function loadShared(url: string, maxAge = SHARED_TTL): Promise<M3uSnapshot
   if (!rest) return null
   try {
     const res = await fetch(
-      `${rest.base}/rest/v1/iptv_playlist_cache?url_hash=eq.${hashId(url)}&select=entries_gz,etag,last_modified,updated_at`,
+      `${rest.base}/rest/v1/iptv_playlist_cache?url_hash=eq.${hashId(url)}&select=entries_gz,etag,last_modified,updated_at,version`,
       { headers: { apikey: rest.key, Authorization: `Bearer ${rest.key}` } },
     )
     if (!res.ok) return null
@@ -284,6 +383,7 @@ async function loadShared(url: string, maxAge = SHARED_TTL): Promise<M3uSnapshot
       etag: string | null
       last_modified: string | null
       updated_at: string
+      version: string | null
     }[]
     const row = rows?.[0]
     if (!row) return null
@@ -292,11 +392,15 @@ async function loadShared(url: string, maxAge = SHARED_TTL): Promise<M3uSnapshot
     const entries = JSON.parse(await gunzip(row.entries_gz)) as M3uEntry[]
     if (!entries.length) return null
     const snap = snapshot(url, entries, row.etag, row.last_modified)
+    // A row written by an older parser is dropped, so upgrades (per-channel
+    // headers, new fields) take effect instead of being masked by the cache.
+    if (row.version && row.version !== snap.version) return null
     return { ...snap, at }
   } catch {
     return null
   }
 }
+
 
 async function saveShared(snap: M3uSnapshot): Promise<void> {
   const rest = REST()

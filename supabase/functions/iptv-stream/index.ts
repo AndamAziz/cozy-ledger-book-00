@@ -34,6 +34,43 @@ function isHttp(u: string) {
     return false
   }
 }
+/**
+ * Per-channel headers (Referer/User-Agent/Origin/Cookie) travel with segment
+ * URLs as a url-safe base64 `h=` param, exactly like the IPTV M3U proxy — a
+ * <video>/hls.js request cannot set them itself.
+ */
+function encodeHeaderBag(bag: Record<string, string | undefined>): string {
+  const clean: Record<string, string> = {}
+  for (const [k, v] of Object.entries(bag)) if (typeof v === 'string' && v.trim()) clean[k] = v.trim()
+  if (!Object.keys(clean).length) return ''
+  const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(clean))))
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function decodeHeaderBag(raw: string | null): Record<string, string> {
+  if (!raw || raw.length > 2048) return {}
+  try {
+    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/')
+    const obj = JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)))
+    const map: Record<string, string> = {
+      referer: 'Referer',
+      origin: 'Origin',
+      userAgent: 'User-Agent',
+      cookie: 'Cookie',
+    }
+    const out: Record<string, string> = {}
+    if (obj && typeof obj === 'object') {
+      for (const [k, v] of Object.entries(obj)) {
+        const name = map[k]
+        if (name && typeof v === 'string' && v.trim() && v.length < 512) out[name] = v.trim()
+      }
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
 
 function rewritePlaylist(body: string, base: string, self: string, suffix: string) {
   const abs = (raw: string) => {
@@ -80,6 +117,9 @@ Deno.serve(async (req) => {
   // Candidate upstreams, in the order the M3U module proves reliable:
   // HLS manifest first (segment-based, survives slow links), raw TS as backup.
   let candidates: string[] = []
+  // Custom per-channel headers: forwarded from the playlist entry on the first
+  // hop, then carried on segment URLs via `h=`.
+  let hRaw = reqUrl.searchParams.get('h')
   if (passthrough) {
     if (!isHttp(passthrough)) return json({ error: 'Invalid url' }, 400)
     candidates = [passthrough]
@@ -92,6 +132,7 @@ Deno.serve(async (req) => {
     }
     if (!entry) return json({ error: `Unknown stream id: ${streamId}` }, 404)
     candidates = [entry.url]
+    if (entry.headers) hRaw = encodeHeaderBag(entry.headers) || hRaw
   } else if (streamId) {
     if (!/^\d+$/.test(streamId)) return json({ error: 'Invalid id' }, 400)
     const { host, protocol, username, password } = parseXtream(source)
@@ -112,7 +153,14 @@ Deno.serve(async (req) => {
   }
 
   const range = req.headers.get('range')
-  const headers: Record<string, string> = { 'User-Agent': UA, Accept: '*/*', ...(range ? { Range: range } : {}) }
+  const custom = decodeHeaderBag(hRaw)
+  const headers: Record<string, string> = {
+    'User-Agent': UA,
+    Accept: '*/*',
+    ...custom,
+    ...(range ? { Range: range } : {}),
+  }
+
 
   let upstream: Response | null = null
   let lastError = 'fetch failed'
@@ -176,7 +224,9 @@ Deno.serve(async (req) => {
     const token = tokenFromRequest(req)
     const suffix =
       `${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}` +
-      `${token ? `&token=${encodeURIComponent(token)}` : ''}`
+      `${token ? `&token=${encodeURIComponent(token)}` : ''}` +
+      `${hRaw ? `&h=${encodeURIComponent(hRaw)}` : ''}`
+
     const text = await upstream.text()
     return new Response(rewritePlaylist(text, upstream.url, SELF(req), suffix), {
       status: upstream.status,
