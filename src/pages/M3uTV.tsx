@@ -36,9 +36,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Tv, Trash2, Search, Loader2, Play, ArrowLeft,
+  Trash2, Search, Loader2, Play, ArrowLeft,
   ListVideo, CheckCircle2, AlertTriangle, Save, Gauge,
-  ChevronDown, Clapperboard, Settings2,
+  ChevronDown, Settings2,
 } from 'lucide-react';
 
 
@@ -745,27 +745,6 @@ export default function M3uTV() {
           <div className="space-y-8">
             {sections.map((section) => (
               <section key={section.name} className="space-y-3">
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-                      section.movie
-                        ? 'bg-gradient-to-br from-primary to-accent'
-                        : 'bg-gradient-to-br from-destructive to-pink-500'
-                    }`}
-                  >
-                    {section.movie ? (
-                      <Clapperboard className="h-4 w-4 text-primary-foreground" />
-                    ) : (
-                      <Tv className="h-4 w-4 text-destructive-foreground" />
-                    )}
-                  </span>
-                  <h3 className="truncate text-sm font-extrabold">{section.name}</h3>
-                  <Badge variant="secondary" className="text-[10px]">
-                    {section.items.length} {section.movie ? T.movies : T.channels}
-                  </Badge>
-                  <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-                </div>
-
                 {section.movie ? (
                   <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9">
                     {section.items.map((ch, i) => (
