@@ -561,10 +561,10 @@ export function LiveTVPlayer({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
 
       {/* Slim permanent header — never auto-hides */}
-        <header className="flex shrink-0 items-center gap-2 px-3 py-1.5 md:border-b md:border-white/10 md:bg-white/[0.03] md:px-5 md:py-2">
+        <header className="flex shrink-0 items-center gap-2.5 px-3 py-2 md:border-b md:border-white/10 md:bg-white/[0.03] md:px-5 md:py-2.5">
 
           <span
-            className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md text-[10px] font-extrabold text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md text-[10px] font-extrabold text-white"
             style={{ background: `linear-gradient(140deg, ${accent}, ${accent}55)` }}
           >
             {headerLogo.src ? (
@@ -581,9 +581,8 @@ export function LiveTVPlayer({
 
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-bold leading-none text-white">
+            <p className="truncate text-sm font-bold leading-none text-white">
               {channel.name}
-              <span className="ms-2 text-[10px] font-medium uppercase tracking-wider text-white/40">{channel.group}</span>
             </p>
           </div>
           {levels.length > 0 && (
