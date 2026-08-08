@@ -634,7 +634,6 @@ export default function M3uTV() {
             ku={ku}
             onSelect={(ch) => setCurrent(ch)}
             onClose={() => setCurrent(null)}
-            onVideoTap={() => setBannerOpen(true)}
           />
         )}
 
