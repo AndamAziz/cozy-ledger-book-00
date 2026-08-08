@@ -468,29 +468,29 @@ export default function M3uTV() {
       </Helmet>
 
       <div className="wide-shell page-shell space-y-4 py-4 sm:space-y-5 sm:py-5">
-        {/* Slim persistent header — always visible, never auto-hides */}
-        <div className="sticky top-0 z-30 -mx-1 flex items-center gap-1.5 rounded-full border border-destructive/25 bg-card/70 px-2.5 py-1.5 shadow-sm backdrop-blur-xl">
+        {/* Slim persistent header — fixed pixel sizing so it stays identical across all screens */}
+        <div className="sticky top-0 z-30 -mx-1 flex h-[42px] items-center gap-[6px] rounded-full border border-destructive/25 bg-card/70 px-[10px] py-0 shadow-sm backdrop-blur-xl">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/')}
             aria-label={T.back}
-            className="h-7 w-7 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+            className="h-[28px] w-[28px] min-h-[28px] shrink-0 rounded-full p-0 text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeft className="h-[14px] w-[14px]" />
           </Button>
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
-            <Tv className="h-3.5 w-3.5" />
+          <span className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
+            <Tv className="h-[14px] w-[14px]" />
           </span>
-          <h1 className="shrink-0 text-xs font-bold leading-none">{T.title}</h1>
-          <Badge variant="destructive" className="h-4 shrink-0 px-1.5 text-[10px] leading-none">
+          <h1 className="shrink-0 text-[11px] font-bold leading-none">{T.title}</h1>
+          <Badge variant="destructive" className="h-[16px] shrink-0 px-[6px] py-0 text-[10px] leading-none">
             {T.live}
           </Badge>
           <p className="min-w-0 flex-1 truncate text-[11px] leading-none text-muted-foreground">
             {playlists.find((p) => p.id === activeId)?.name ?? T.subtitle}
             {Object.keys(groupCounts).length > 0 && ` · ${Object.keys(groupCounts).length} ${T.categories}`}
           </p>
-          <span className="shrink-0 rounded-full bg-secondary/60 px-2 py-0.5 text-[10px] font-semibold leading-none">
+          <span className="shrink-0 rounded-full bg-secondary/60 px-[8px] py-[2px] text-[10px] font-semibold leading-none">
             {channels.length.toLocaleString()} <span className="font-medium text-muted-foreground">{T.channels}</span>
           </span>
         </div>
