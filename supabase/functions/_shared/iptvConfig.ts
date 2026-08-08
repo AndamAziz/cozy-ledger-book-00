@@ -125,7 +125,11 @@ function splitUrlHeaders(line: string, bag: M3uStreamHeaders): string {
 }
 
 
+/** Bump whenever parseM3U starts producing new/changed entry fields. */
+const PARSER_VERSION = 'p2-headers'
+
 const UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
+
 const M3U_TTL = 30 * 60 * 1000
 /** Beyond the TTL the cached parse is still served while it revalidates. */
 const M3U_STALE_MAX = 6 * 60 * 60 * 1000
