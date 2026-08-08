@@ -158,6 +158,9 @@ export function parseM3U(text: string): M3uEntry[] {
   const seen = new Set<string>()
   const lines = text.split(/\r?\n/)
   let pending: { name: string; logo: string; group: string } | null = null
+  // Header hints may appear before OR after #EXTINF, so the bag is only reset
+  // once the channel's URL line has been consumed.
+  let bag: M3uStreamHeaders = {}
 
   for (const raw of lines) {
     const line = raw.trim()
@@ -171,6 +174,8 @@ export function parseM3U(text: string): M3uEntry[] {
       const rawName = comma >= 0 ? tail.slice(comma + 1) : lastQuote >= 0 ? '' : tail.split(',').slice(1).join(',')
       const name = (rawName || attr(line, 'tvg-name')).trim() || 'Untitled'
 
+      // Some playlists put the header right on the EXTINF attribute list.
+      for (const m of line.matchAll(/([a-zA-Z-]+)="([^"]*)"/g)) setHeader(bag, m[1], m[2])
       pending = {
         name,
         logo: attr(line, 'tvg-logo') || attr(line, 'logo'),
@@ -178,16 +183,52 @@ export function parseM3U(text: string): M3uEntry[] {
       }
       continue
     }
+    if (/^#EXTVLCOPT/i.test(line)) {
+      // #EXTVLCOPT:http-referrer=https://site/
+      const body = line.replace(/^#EXTVLCOPT:?/i, '')
+      const eq = body.indexOf('=')
+      if (eq > 0) setHeader(bag, body.slice(0, eq), body.slice(eq + 1))
+      continue
+    }
+    if (/^#EXTHTTP/i.test(line)) {
+      // #EXTHTTP:{"User-Agent":"...","Referer":"..."}
+      try {
+        const obj = JSON.parse(line.replace(/^#EXTHTTP:?/i, '').trim())
+        if (obj && typeof obj === 'object') {
+          for (const [k, v] of Object.entries(obj)) if (typeof v === 'string') setHeader(bag, k, v)
+        }
+      } catch { /* malformed metadata is ignored, never fatal */ }
+      continue
+    }
+    if (/^#KODIPROP/i.test(line)) {
+      // #KODIPROP:inputstream.adaptive.stream_headers=User-Agent=...&Referer=...
+      const body = line.replace(/^#KODIPROP:?/i, '')
+      const eq = body.indexOf('=')
+      if (eq > 0) {
+        const prop = body.slice(0, eq).toLowerCase()
+        const value = body.slice(eq + 1)
+        if (prop.includes('headers')) parseHeaderString(bag, value)
+        else setHeader(bag, prop.split('.').pop() ?? '', value)
+      }
+      continue
+    }
     if (line.startsWith('#')) continue
     if (!/^https?:\/\//i.test(line)) {
       pending = null
+      bag = {}
       continue
     }
 
     const meta = pending ?? { name: 'Untitled', logo: '', group: 'Other' }
     pending = null
-    const kind = classify(meta.name, line)
+    const headers: M3uStreamHeaders = { ...bag }
+    bag = {}
+    // The `|Referer=...` suffix is folded into the headers, never played as URL.
+    const url = splitUrlHeaders(line, headers)
+    const hasHeaders = Object.values(headers).some((v) => v && v.trim())
+    const kind = classify(meta.name, url)
     const m = meta.name.match(SERIES_RE)
+    // Hash the RAW line so ids stay stable across this parser change.
     let id = hashId(line)
     while (seen.has(id)) id += 'x'
     seen.add(id)
@@ -197,13 +238,15 @@ export function parseM3U(text: string): M3uEntry[] {
       logo: /^https?:\/\//i.test(meta.logo) ? meta.logo : null,
       group: meta.group || 'Other',
       kind,
-      url: line,
+      url,
+      ...(hasHeaders ? { headers } : {}),
       season: m ? Number(m[1]) : null,
       episode: m ? Number(m[2]) : null,
       seriesKey: kind === 'series' ? meta.name.replace(SERIES_RE, '').replace(/[\s._-]+$/, '').trim() || meta.name : null,
     })
   }
   return out
+
 }
 
 export interface M3uSnapshot {
