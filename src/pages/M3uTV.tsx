@@ -431,10 +431,6 @@ export default function M3uTV() {
     );
   }, [channels, activeGroup, query]);
 
-  const groupChannels = useMemo(
-    () => (activeGroup === 'all' ? channels : channels.filter((c) => c.group === activeGroup)),
-    [channels, activeGroup],
-  );
 
   const groupCounts = useMemo(() => {
     const map: Record<string, number> = {};
