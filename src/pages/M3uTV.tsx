@@ -107,19 +107,11 @@ export default function M3uTV() {
     });
   }, []);
 
-  // Top banner only auto-hides while a channel is actually playing; while browsing
-  // it stays visible so the channel count of the active server is always shown.
-  const [bannerOpen, setBannerOpen] = useState(true);
+  // Top banner is a permanent slim bar — it never auto-hides so the active
+  // server + channel count stay visible while browsing or watching.
   const [pickerOpen, setPickerOpen] = useState(false);
   const [groupPickerOpen, setGroupPickerOpen] = useState(false);
-  useEffect(() => {
-    if (!bannerOpen || !current) return;
-    const t = setTimeout(() => setBannerOpen(false), 4000);
-    return () => clearTimeout(t);
-  }, [bannerOpen, current]);
-  useEffect(() => {
-    if (!current) setBannerOpen(true);
-  }, [current]);
+
 
 
 
