@@ -224,7 +224,9 @@ Deno.serve(async (req) => {
     const token = tokenFromRequest(req)
     const suffix =
       `${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}` +
-      `${token ? `&token=${encodeURIComponent(token)}` : ''}`
+      `${token ? `&token=${encodeURIComponent(token)}` : ''}` +
+      `${hRaw ? `&h=${encodeURIComponent(hRaw)}` : ''}`
+
     const text = await upstream.text()
     return new Response(rewritePlaylist(text, upstream.url, SELF(req), suffix), {
       status: upstream.status,
