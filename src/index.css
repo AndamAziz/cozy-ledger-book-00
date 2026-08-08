@@ -342,26 +342,48 @@ html {
 
 /* WebKit / Blink (Chrome, Edge, Safari) */
 ::-webkit-scrollbar {
+  /* Safari keeps its native overlay bar unless appearance is reset */
+  -webkit-appearance: none;
+  appearance: none;
   width: 4px;
   height: 4px;
-}
-
-::-webkit-scrollbar-track {
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.25);
-  border-radius: 9999px;
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-track-piece {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.45);
+::-webkit-scrollbar-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 9999px;
+  /* Safari needs an explicit min so the thumb never collapses */
+  min-height: 32px;
+  min-width: 32px;
+}
+
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background-color: hsl(var(--muted-foreground) / 0.45);
+}
+
+/* Remove Safari's stepper arrows / resizer chrome */
+::-webkit-scrollbar-button,
+::-webkit-resizer {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+
 
 
 
