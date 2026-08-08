@@ -20,7 +20,7 @@ function visible(el: Element): boolean {
 /** Prefer candidates inside the topmost overlay (portal/modal) when one is open. */
 function scopeRoot(): ParentNode {
   const overlays = Array.from(
-    document.querySelectorAll<HTMLElement>('[role="dialog"], [data-tv-scope], .fixed.inset-0'),
+    document.querySelectorAll<HTMLElement>('[role="dialog"][data-state="open"], [data-tv-scope]'),
   ).filter(visible);
   return overlays.length ? overlays[overlays.length - 1] : document;
 }
