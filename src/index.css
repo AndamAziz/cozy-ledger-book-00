@@ -486,6 +486,21 @@ svg {
   html { font-size: 19px; }
 }
 
+/* D-pad focus ring — visible from across the room on Smart TVs.
+   Only active once a remote/D-pad is detected (body[data-tv]). */
+body[data-tv] :focus-visible,
+body[data-tv] a:focus,
+body[data-tv] button:focus,
+body[data-tv] [role="button"]:focus,
+body[data-tv] [tabindex]:focus {
+  outline: 3px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 0 6px hsl(var(--primary) / 0.25);
+  transform: scale(1.02);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
 /* Remote/touch friendly hit areas on very large screens */
 @media (min-width: 1600px) {
   button,
