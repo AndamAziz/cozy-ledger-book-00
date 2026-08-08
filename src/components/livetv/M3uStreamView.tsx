@@ -232,31 +232,32 @@ export default function M3uStreamView({
       >
         {/* Player */}
         <div className="flex min-w-0 flex-col lg:flex-1">
+          {/* Slim permanent top bar — above the video, never over it */}
+          <div className="mb-2 flex items-center gap-2 rounded-lg border border-border/50 bg-secondary/40 px-1.5 py-1 backdrop-blur md:px-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label={T.close}
+              className="h-7 w-7 shrink-0 rounded-full hover:bg-foreground/10"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <p className="min-w-0 flex-1 truncate text-[12px] font-bold leading-none text-foreground md:text-sm">
+              {channel.name}
+              <span className="ms-2 font-medium text-muted-foreground">{playlistName} · {channel.group}</span>
+            </p>
+            <Badge variant="destructive" className="h-4 shrink-0 px-1.5 text-[9px] leading-none">
+              <Signal className="me-1 h-2.5 w-2.5" /> {T.live}
+            </Badge>
+          </div>
           <div
             ref={shellRef}
             onPointerDown={revealBar}
             onMouseMove={revealBar}
             className="relative aspect-video w-full overflow-hidden rounded-xl border border-border/50 bg-black shadow-2xl md:rounded-2xl"
           >
-            {/* Slim permanent top bar — always visible over the video */}
-            <div className="absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-gradient-to-b from-black/80 via-black/40 to-transparent px-1.5 py-1 md:px-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                aria-label={T.close}
-                className="h-7 w-7 shrink-0 rounded-full text-white hover:bg-white/15"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-              <p className="min-w-0 flex-1 truncate text-[12px] font-bold leading-none text-white md:text-sm">
-                {channel.name}
-                <span className="ms-2 font-medium text-white/55">{playlistName} · {channel.group}</span>
-              </p>
-              <Badge variant="destructive" className="h-4 shrink-0 px-1.5 text-[9px] leading-none">
-                <Signal className="me-1 h-2.5 w-2.5" /> {T.live}
-              </Badge>
-            </div>
+
 
 
 
