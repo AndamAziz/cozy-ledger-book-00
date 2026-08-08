@@ -36,9 +36,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Tv, Trash2, Search, Loader2, Play, Signal, ArrowLeft,
+  Tv, Trash2, Search, Loader2, Play, ArrowLeft,
   ListVideo, CheckCircle2, AlertTriangle, Save, Gauge,
-  ChevronDown, Clapperboard, ShieldCheck, Settings2,
+  ChevronDown, Clapperboard, Settings2,
 } from 'lucide-react';
 
 
@@ -109,7 +109,6 @@ export default function M3uTV() {
 
   // Top banner is a permanent slim bar — it never auto-hides so the active
   // server + channel count stay visible while browsing or watching.
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [groupPickerOpen, setGroupPickerOpen] = useState(false);
 
 
@@ -432,10 +431,6 @@ export default function M3uTV() {
     );
   }, [channels, activeGroup, query]);
 
-  const groupChannels = useMemo(
-    () => (activeGroup === 'all' ? channels : channels.filter((c) => c.group === activeGroup)),
-    [channels, activeGroup],
-  );
 
   const groupCounts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -474,26 +469,26 @@ export default function M3uTV() {
 
       <div className="wide-shell page-shell space-y-4 py-4 sm:space-y-5 sm:py-5">
         {/* Slim persistent header — always visible, never auto-hides */}
-        <div className="sticky top-0 z-30 -mx-1 flex items-center gap-2 rounded-full border border-destructive/25 bg-card/70 px-2 py-1.5 shadow-sm backdrop-blur-xl">
+        <div className="sticky top-0 z-30 -mx-1 flex items-center gap-2 rounded-full border border-destructive/25 bg-card/70 px-3 py-2 shadow-sm backdrop-blur-xl">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/')}
             aria-label={T.back}
-            className="h-7 w-7 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-destructive to-pink-500">
-            <Tv className="h-3.5 w-3.5 text-destructive-foreground" />
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-destructive to-pink-500">
+            <Tv className="h-4 w-4 text-destructive-foreground" />
           </span>
-          <h1 className="shrink-0 text-[13px] font-extrabold leading-none">{T.title}</h1>
-          <Badge variant="destructive" className="h-4 shrink-0 px-1.5 text-[9px] leading-none">{T.live}</Badge>
-          <p className="min-w-0 flex-1 truncate text-[11px] leading-none text-muted-foreground">
+          <h1 className="shrink-0 text-sm font-extrabold leading-none">{T.title}</h1>
+          <Badge variant="destructive" className="h-5 shrink-0 px-2 text-[10px] leading-none">{T.live}</Badge>
+          <p className="min-w-0 flex-1 truncate text-xs leading-none text-muted-foreground">
             {playlists.find((p) => p.id === activeId)?.name ?? T.subtitle}
             {Object.keys(groupCounts).length > 0 && ` · ${Object.keys(groupCounts).length} ${T.categories}`}
           </p>
-          <span className="shrink-0 rounded-full bg-secondary/60 px-2 py-0.5 text-[10px] font-bold leading-none">
+          <span className="shrink-0 rounded-full bg-secondary/60 px-2.5 py-1 text-[11px] font-bold leading-none">
             {channels.length.toLocaleString()} <span className="font-medium text-muted-foreground">{T.channels}</span>
           </span>
         </div>
@@ -564,63 +559,6 @@ export default function M3uTV() {
             </PopoverContent>
           </Popover>
 
-          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={pickerOpen}
-                className="h-11 w-full justify-between gap-2 rounded-xl bg-card/60 backdrop-blur"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate text-xs font-semibold">
-                    {current ? current.name : T.search}
-                  </span>
-                </span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="start"
-              className="w-[min(92vw,32rem)] p-0"
-              dir={ku ? 'rtl' : 'ltr'}
-            >
-              <Command>
-                <CommandInput placeholder={T.search} />
-                <CommandList className="max-h-72">
-                  <CommandEmpty>{T.noChannels}</CommandEmpty>
-                  <CommandGroup
-                    heading={`${groupChannels.length.toLocaleString()} ${T.channels}${
-                      activeGroup === 'all' ? '' : ` · ${activeGroup}`
-                    }`}
-                  >
-                    {groupChannels.slice(0, 800).map((ch, i) => (
-                      <CommandItem
-                        key={`${ch.url}-${i}`}
-                        value={`${ch.name} ${ch.group}`}
-                        onSelect={() => {
-                          setCurrent(ch);
-                          setPickerOpen(false);
-                        }}
-                        className="gap-2"
-                      >
-                        <ChannelLogo
-                          logo={ch.logo}
-                          name={ch.name}
-                          className="h-6 w-6 shrink-0"
-                        />
-                        <span className="truncate text-xs font-semibold">{ch.name}</span>
-                        <span className="ms-auto truncate text-[10px] text-muted-foreground">
-                          {ch.group}
-                        </span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
         </div>
         )}
 
