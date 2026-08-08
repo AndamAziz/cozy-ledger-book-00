@@ -206,17 +206,11 @@ export default function M3uStreamView({
     return channels.filter((c) => !q || c.name.toLowerCase().includes(q)).slice(0, 200);
   }, [channels, query]);
 
-  /* top bar auto-hide */
-  const [barOpen, setBarOpen] = useState(true);
-  useEffect(() => {
-    if (!barOpen) return;
-    const t = setTimeout(() => setBarOpen(false), 4000);
-    return () => clearTimeout(t);
-  }, [barOpen]);
+  /* top bar stays permanently visible — slim enough to never cover the picture */
   const revealBar = () => {
-    setBarOpen(true);
     onVideoTap?.();
   };
+
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   /** pick a channel from the list and bring the player back into view */
