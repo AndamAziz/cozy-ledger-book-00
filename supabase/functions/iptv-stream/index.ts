@@ -117,6 +117,9 @@ Deno.serve(async (req) => {
   // Candidate upstreams, in the order the M3U module proves reliable:
   // HLS manifest first (segment-based, survives slow links), raw TS as backup.
   let candidates: string[] = []
+  // Custom per-channel headers: forwarded from the playlist entry on the first
+  // hop, then carried on segment URLs via `h=`.
+  let hRaw = reqUrl.searchParams.get('h')
   if (passthrough) {
     if (!isHttp(passthrough)) return json({ error: 'Invalid url' }, 400)
     candidates = [passthrough]
@@ -129,6 +132,7 @@ Deno.serve(async (req) => {
     }
     if (!entry) return json({ error: `Unknown stream id: ${streamId}` }, 404)
     candidates = [entry.url]
+    if (entry.headers) hRaw = encodeHeaderBag(entry.headers) || hRaw
   } else if (streamId) {
     if (!/^\d+$/.test(streamId)) return json({ error: 'Invalid id' }, 400)
     const { host, protocol, username, password } = parseXtream(source)
@@ -149,7 +153,14 @@ Deno.serve(async (req) => {
   }
 
   const range = req.headers.get('range')
-  const headers: Record<string, string> = { 'User-Agent': UA, Accept: '*/*', ...(range ? { Range: range } : {}) }
+  const custom = decodeHeaderBag(hRaw)
+  const headers: Record<string, string> = {
+    'User-Agent': UA,
+    Accept: '*/*',
+    ...custom,
+    ...(range ? { Range: range } : {}),
+  }
+
 
   let upstream: Response | null = null
   let lastError = 'fetch failed'
