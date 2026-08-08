@@ -316,24 +316,34 @@ html[lang='ckb'] textarea {
   display: none;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar — slim, subtle, non-obtrusive */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(var(--muted));
-  border-radius: 3px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--primary));
-  border-radius: 3px;
+  background: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary) / 0.8);
+  background: hsl(var(--muted-foreground) / 0.45);
 }
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 
 /* Print styles */
 @media print {
