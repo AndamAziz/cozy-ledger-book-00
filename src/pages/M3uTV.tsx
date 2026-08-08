@@ -3,6 +3,8 @@ import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import M3uStreamView from '@/components/livetv/M3uStreamView';
 import { ChannelLogo } from '@/components/livetv/ChannelLogo';
+import type { StreamHeaders } from '@/lib/streamHeaders';
+
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
