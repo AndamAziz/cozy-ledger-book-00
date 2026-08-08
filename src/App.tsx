@@ -8,6 +8,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { BotNotificationsProvider } from "@/contexts/BotNotificationsContext";
 import InstallPrompt from "@/components/InstallPrompt";
+import { TvRemoteProvider } from "@/hooks/useTvRemote";
 import Index from "./pages/Index";
 import CryptoTracker from "./pages/CryptoTracker";
 import Movies from "./pages/Movies";
@@ -40,6 +41,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <InstallPrompt />
+          <TvRemoteProvider />
           <BrowserRouter>
             <BotNotificationsProvider>
               <Routes>

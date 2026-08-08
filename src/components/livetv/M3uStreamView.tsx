@@ -11,6 +11,7 @@ import {
 import { ChannelLogo } from './ChannelLogo';
 import { nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen } from '@/lib/playback';
 import { needsProxy, resolveStreamSource, type StreamHeaders } from '@/lib/streamHeaders';
+import { TV_EVENT } from '@/lib/tvRemote';
 
 
 
@@ -194,6 +195,44 @@ export default function M3uStreamView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, channels]);
 
+  /* Smart TV remote: CH+/CH- zapping, play/pause, mute and Back. */
+  useEffect(() => {
+    const video = () => videoRef.current;
+    const handlers: Record<string, (e: Event) => void> = {
+      [TV_EVENT.channelUp]: (e) => {
+        e.preventDefault();
+        step(1);
+      },
+      [TV_EVENT.channelDown]: (e) => {
+        e.preventDefault();
+        step(-1);
+      },
+      [TV_EVENT.playPause]: (e) => {
+        e.preventDefault();
+        const v = video();
+        if (!v) return;
+        v.paused ? v.play().catch(() => undefined) : v.pause();
+      },
+      [TV_EVENT.mute]: (e) => {
+        e.preventDefault();
+        setMuted((m) => !m);
+      },
+      [TV_EVENT.stop]: (e) => {
+        e.preventDefault();
+        onClose();
+      },
+      [TV_EVENT.back]: (e) => {
+        e.preventDefault();
+        onClose();
+      },
+    };
+    for (const [name, fn] of Object.entries(handlers)) window.addEventListener(name, fn);
+    return () => {
+      for (const [name, fn] of Object.entries(handlers)) window.removeEventListener(name, fn);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, channels, onClose]);
+
   const goFullscreen = () => {
     // iPhone can only fullscreen the video element itself; legacy WebKit and
     // Smart TV browsers need the prefixed APIs.
@@ -225,7 +264,7 @@ export default function M3uStreamView({
 
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex flex-col overscroll-contain bg-background">
+    <div data-tv-scope className="fixed inset-0 z-[100] flex flex-col overscroll-contain bg-background">
       <div
         ref={scrollRef}
         className="relative mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 overflow-y-auto p-3 md:p-6 lg:flex-row lg:gap-6 lg:overflow-hidden"
