@@ -745,33 +745,66 @@ export default function M3uTV() {
           <div className="space-y-8">
             {sections.map((section) => (
               <section key={section.name} className="space-y-3">
-                {section.items.map((ch, i) => (
-                  <button
-                    key={`${ch.url}-${i}`}
-                    type="button"
-                    onClick={() => playChannel(ch)}
-                    className={`group relative overflow-hidden rounded-xl border text-start shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg ${
-                      current?.url === ch.url ? 'border-primary ring-2 ring-primary/40' : 'border-border/60'
-                    }`}
-                  >
-                    <div className="relative w-full overflow-hidden bg-muted" style={{ aspectRatio: '2 / 3' }}>
-                      <ChannelLogo
-                        name={ch.name}
-                        logo={ch.logo}
-                        className="flex h-full w-full items-center justify-center overflow-hidden"
-                        imageClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        placeholderClassName="h-7 w-7 text-muted-foreground"
-                      />
-                      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-background/95 to-transparent" />
-                      <span className="absolute inset-0 flex items-center justify-center bg-background/40 opacity-0 backdrop-blur-[1px] transition-opacity group-hover:opacity-100">
-                        <Play className="h-7 w-7 text-primary" />
-                      </span>
-                    </div>
-                    <p className="line-clamp-2 min-h-[2.1rem] px-2 py-1.5 text-[11px] font-semibold leading-tight">
-                      {ch.name}
-                    </p>
-                  </button>
-                ))}
+                {section.movie ? (
+                  <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9">
+                    {section.items.map((ch, i) => (
+                      <button
+                        key={`${ch.url}-${i}`}
+                        type="button"
+                        onClick={() => playChannel(ch)}
+                        className={`group relative overflow-hidden rounded-xl border text-start shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+                          current?.url === ch.url ? 'border-primary ring-2 ring-primary/40' : 'border-border/60'
+                        }`}
+                      >
+                        <div className="relative w-full overflow-hidden bg-muted" style={{ aspectRatio: '2 / 3' }}>
+                          <ChannelLogo
+                            name={ch.name}
+                            logo={ch.logo}
+                            className="flex h-full w-full items-center justify-center overflow-hidden"
+                            imageClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            placeholderClassName="h-7 w-7 text-muted-foreground"
+                          />
+                          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-background/95 to-transparent" />
+                          <span className="absolute inset-0 flex items-center justify-center bg-background/40 opacity-0 backdrop-blur-[1px] transition-opacity group-hover:opacity-100">
+                            <Play className="h-7 w-7 text-primary" />
+                          </span>
+                        </div>
+                        <p className="line-clamp-2 min-h-[2.1rem] px-2 py-1.5 text-[11px] font-semibold leading-tight">
+                          {ch.name}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9">
+                    {section.items.map((ch, i) => (
+                      <button
+                        key={`${ch.url}-${i}`}
+                        type="button"
+                        onClick={() => playChannel(ch)}
+                        className={`group relative overflow-hidden rounded-xl border p-2 text-center transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                          current?.url === ch.url
+                            ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
+                            : 'border-border/60 bg-card hover:border-primary/50'
+                        }`}
+                      >
+                        <div className="mx-auto mb-1.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg bg-muted/40">
+                          <ChannelLogo
+                            name={ch.name}
+                            logo={ch.logo}
+                            className="flex h-full w-full items-center justify-center overflow-hidden"
+                            imageClassName="h-full w-full object-contain p-1.5"
+                            placeholderClassName="h-5 w-5 text-muted-foreground"
+                          />
+                        </div>
+                        <p className="line-clamp-2 min-h-[2rem] text-[11px] font-bold leading-tight">{ch.name}</p>
+                        <span className="absolute end-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
+                          <Play className="h-4 w-4 text-primary" />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </section>
             ))}
           </div>
