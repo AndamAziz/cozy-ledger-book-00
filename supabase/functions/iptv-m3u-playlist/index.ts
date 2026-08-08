@@ -70,7 +70,9 @@ function parseM3U(text: string): Channel[] {
       // The display name is everything after the LAST comma that follows the attributes.
       const comma = line.indexOf(",", line.lastIndexOf('"') + 1);
       const name = (comma >= 0 ? line.slice(comma + 1).trim() : "") || attrs["tvg-name"] || "Unknown";
-      headers = {};
+      // Header hints may appear before OR after #EXTINF, so the bag is only
+      // reset once the channel's URL line has been consumed.
+
       // Some playlists put the header right on the EXTINF attribute list.
       for (const [k, v] of Object.entries(attrs)) setHeader(headers, k, v);
       pending = {
