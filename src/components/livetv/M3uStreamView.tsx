@@ -245,8 +245,8 @@ export default function M3uStreamView({
             </Button>
             <p className="min-w-0 flex-1 truncate text-[12px] font-bold leading-none text-foreground md:text-sm">
               {channel.name}
-              <span className="ms-2 font-medium text-muted-foreground">{playlistName} · {channel.group}</span>
             </p>
+
             <Badge variant="destructive" className="h-4 shrink-0 px-1.5 text-[9px] leading-none">
               <Signal className="me-1 h-2.5 w-2.5" /> {T.live}
             </Badge>

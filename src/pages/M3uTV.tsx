@@ -486,10 +486,8 @@ export default function M3uTV() {
           <Badge variant="destructive" className="h-[16px] shrink-0 px-[6px] py-0 text-[10px] leading-none">
             {T.live}
           </Badge>
-          <p className="min-w-0 flex-1 truncate text-[11px] leading-none text-muted-foreground">
-            {playlists.find((p) => p.id === activeId)?.name ?? T.subtitle}
-            {Object.keys(groupCounts).length > 0 && ` · ${Object.keys(groupCounts).length} ${T.categories}`}
-          </p>
+          <div className="min-w-0 flex-1" />
+
           <span className="shrink-0 rounded-full bg-secondary/60 px-[8px] py-[2px] text-[10px] font-semibold leading-none">
             {channels.length.toLocaleString()} <span className="font-medium text-muted-foreground">{T.channels}</span>
           </span>
