@@ -1,17 +1,65 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
+interface StreamHeaders {
+  referer?: string;
+  userAgent?: string;
+  origin?: string;
+  cookie?: string;
+}
+
 interface Channel {
   name: string;
   logo: string | null;
   group: string;
   url: string;
   country: string | null;
+  /** Present only when the playlist declared custom headers for this channel. */
+  headers?: StreamHeaders;
+}
+
+const HEADER_KEYS: Record<string, keyof StreamHeaders> = {
+  "referer": "referer",
+  "referrer": "referer",
+  "http-referer": "referer",
+  "http-referrer": "referer",
+  "user-agent": "userAgent",
+  "http-user-agent": "userAgent",
+  "origin": "origin",
+  "http-origin": "origin",
+  "cookie": "cookie",
+  "http-cookie": "cookie",
+};
+
+function setHeader(bag: StreamHeaders, rawKey: string, rawValue: string) {
+  const key = HEADER_KEYS[rawKey.trim().toLowerCase()];
+  const value = rawValue.trim().replace(/^["']|["']$/g, "");
+  if (key && value) bag[key] = value;
+}
+
+/** `key=value&key2=value2` header strings used by Kodi/inputstream props. */
+function parseHeaderString(bag: StreamHeaders, raw: string) {
+  for (const pair of raw.split(/[&|]/)) {
+    const eq = pair.indexOf("=");
+    if (eq > 0) setHeader(bag, pair.slice(0, eq), decodeURIComponent(pair.slice(eq + 1)));
+  }
+}
+
+/**
+ * Strips the `|Referer=...&User-Agent=...` suffix some playlists append to the
+ * stream URL and folds it into the header bag.
+ */
+function splitUrlHeaders(line: string, bag: StreamHeaders): string {
+  const pipe = line.indexOf("|");
+  if (pipe < 0) return line;
+  parseHeaderString(bag, line.slice(pipe + 1));
+  return line.slice(0, pipe);
 }
 
 function parseM3U(text: string): Channel[] {
   const lines = text.split(/\r?\n/);
   const channels: Channel[] = [];
   let pending: Omit<Channel, "url"> | null = null;
+  let headers: StreamHeaders = {};
 
   for (const raw of lines) {
     const line = raw.trim();
@@ -22,19 +70,54 @@ function parseM3U(text: string): Channel[] {
       // The display name is everything after the LAST comma that follows the attributes.
       const comma = line.indexOf(",", line.lastIndexOf('"') + 1);
       const name = (comma >= 0 ? line.slice(comma + 1).trim() : "") || attrs["tvg-name"] || "Unknown";
+      // Header hints may appear before OR after #EXTINF, so the bag is only
+      // reset once the channel's URL line has been consumed.
+
+      // Some playlists put the header right on the EXTINF attribute list.
+      for (const [k, v] of Object.entries(attrs)) setHeader(headers, k, v);
       pending = {
         name,
         logo: attrs["tvg-logo"] || null,
         group: attrs["group-title"] || "General",
         country: attrs["tvg-country"] || null,
       };
+    } else if (/^#EXTVLCOPT/i.test(line)) {
+      // #EXTVLCOPT:http-referrer=https://site/
+      const body = line.replace(/^#EXTVLCOPT:?/i, "");
+      const eq = body.indexOf("=");
+      if (eq > 0) setHeader(headers, body.slice(0, eq), body.slice(eq + 1));
+    } else if (/^#EXTHTTP/i.test(line)) {
+      // #EXTHTTP:{"User-Agent":"...","Referer":"..."}
+      try {
+        const obj = JSON.parse(line.replace(/^#EXTHTTP:?/i, "").trim());
+        if (obj && typeof obj === "object") {
+          for (const [k, v] of Object.entries(obj)) {
+            if (typeof v === "string") setHeader(headers, k, v);
+          }
+        }
+      } catch { /* malformed metadata is ignored, never fatal */ }
+    } else if (/^#KODIPROP/i.test(line)) {
+      // #KODIPROP:inputstream.adaptive.stream_headers=User-Agent=...&Referer=...
+      const body = line.replace(/^#KODIPROP:?/i, "");
+      const eq = body.indexOf("=");
+      if (eq > 0) {
+        const prop = body.slice(0, eq).toLowerCase();
+        const value = body.slice(eq + 1);
+        if (prop.includes("headers")) parseHeaderString(headers, value);
+        else setHeader(headers, prop.split(".").pop() ?? "", value);
+      }
     } else if (!line.startsWith("#") && pending) {
-      channels.push({ ...pending, url: line });
+      const bag: StreamHeaders = { ...headers };
+      const url = splitUrlHeaders(line, bag);
+      const hasHeaders = Object.values(bag).some((v) => v && v.trim());
+      channels.push({ ...pending, url, ...(hasHeaders ? { headers: bag } : {}) });
       pending = null;
+      headers = {};
     }
   }
   return channels;
 }
+
 
 function isValidUrl(u: unknown): u is string {
   if (typeof u !== "string" || u.length > 2048) return false;

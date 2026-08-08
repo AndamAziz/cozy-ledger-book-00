@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { ChannelLogo } from './ChannelLogo';
 import { nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen } from '@/lib/playback';
+import { needsProxy, resolveStreamSource, type StreamHeaders } from '@/lib/streamHeaders';
 
 
 
@@ -20,7 +21,10 @@ export interface StreamChannel {
   logo: string | null;
   group: string;
   url: string;
+  /** Custom headers detected in the playlist; when present the stream is proxied. */
+  headers?: StreamHeaders | null;
 }
+
 
 interface Props {
   channel: StreamChannel;
@@ -78,6 +82,14 @@ export default function M3uStreamView({
     setAttempt((a) => a + 1);
   }, []);
 
+  /**
+   * Channels that declare custom headers in the playlist must go through the
+   * proxy from the very first attempt (a browser cannot send Referer/UA).
+   * Everything else plays direct, with the proxy only as a fallback.
+   */
+  const requiresProxy = needsProxy(channel.headers);
+  const headerKey = requiresProxy ? JSON.stringify(channel.headers) : '';
+
   /* playback engine — direct source first, proxy as automatic fallback */
   useEffect(() => {
     const video = videoRef.current;
@@ -92,15 +104,17 @@ export default function M3uStreamView({
     setError(false);
     setLoadingStream(true);
 
-    const src = useProxy ? `${PROXY_BASE}${encodeURIComponent(channel.url)}` : channel.url;
+    const src = resolveStreamSource(channel.url, channel.headers, PROXY_BASE, useProxy);
+    const exhausted = useProxy || requiresProxy;
     const fail = () => {
       if (cancelled) return;
-      if (!useProxy) setUseProxy(true);
+      if (!exhausted) setUseProxy(true);
       else {
         setLoadingStream(false);
         setError(true);
       }
     };
+
 
     // Safari / iOS / Smart TVs play HLS natively (hardware decode, HEVC, AC-3);
     // everywhere else hls.js is required — including for extensionless IPTV
@@ -142,7 +156,7 @@ export default function M3uStreamView({
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
-  }, [channel.url, useProxy, attempt]);
+  }, [channel.url, headerKey, useProxy, attempt]);
 
 
   /* reset the proxy fallback whenever the user switches channel */
