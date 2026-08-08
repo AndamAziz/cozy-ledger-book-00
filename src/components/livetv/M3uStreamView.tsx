@@ -216,7 +216,7 @@ export default function M3uStreamView({
   /** pick a channel from the list and bring the player back into view */
   const handleSelect = (c: StreamChannel) => {
     onSelect(c);
-    setBarOpen(true);
+    
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       shellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
