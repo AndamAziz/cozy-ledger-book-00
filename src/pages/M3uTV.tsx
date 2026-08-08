@@ -36,9 +36,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Tv, Trash2, Search, Loader2, Play, Signal, ArrowLeft,
+  Tv, Trash2, Loader2, Play, ArrowLeft,
   ListVideo, CheckCircle2, AlertTriangle, Save, Gauge,
-  ChevronDown, Clapperboard, ShieldCheck, Settings2,
+  ChevronDown, Clapperboard, Settings2,
 } from 'lucide-react';
 
 
