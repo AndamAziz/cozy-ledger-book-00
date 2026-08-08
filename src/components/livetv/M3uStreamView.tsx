@@ -134,11 +134,25 @@ export default function M3uStreamView({
         setError(false);
         playWithAutoplayFallback(video, () => setMuted(true)).catch(() => {});
       });
+      // Proxied live feeds (Referer-protected channels, rolling segment windows)
+      // occasionally hit a transient network/media fault. Recovering in place is
+      // far more reliable than tearing the engine down on the first hiccup.
+      let recoveries = 0;
       hls.on(Hls.Events.ERROR, (_e, data) => {
-        if (data.fatal) {
-          hls.destroy();
-          fail();
+        if (!data.fatal || cancelled) return;
+        if (recoveries < 3) {
+          recoveries += 1;
+          if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            recoveries <= 2 ? hls.recoverMediaError() : hls.swapAudioCodec();
+          } else {
+            hls.stopLoad();
+            hls.loadSource(src);
+            hls.startLoad();
+          }
+          return;
         }
+        hls.destroy();
+        fail();
       });
     } else {
       video.src = src;
