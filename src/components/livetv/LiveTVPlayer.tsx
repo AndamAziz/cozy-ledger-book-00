@@ -510,7 +510,7 @@ export function LiveTVPlayer({
         <header className="flex shrink-0 items-center gap-2 px-3 py-1.5 md:border-b md:border-white/10 md:bg-white/[0.03] md:px-5 md:py-2">
 
           <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-[11px] font-extrabold text-white"
+            className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md text-[10px] font-extrabold text-white"
             style={{ background: `linear-gradient(140deg, ${accent}, ${accent}55)` }}
           >
             {headerLogo.src ? (
@@ -527,8 +527,10 @@ export function LiveTVPlayer({
 
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-white">{channel.name}</p>
-            <p className="truncate text-[10px] uppercase tracking-wider text-white/40">{channel.group}</p>
+            <p className="truncate text-[13px] font-bold leading-none text-white">
+              {channel.name}
+              <span className="ms-2 text-[10px] font-medium uppercase tracking-wider text-white/40">{channel.group}</span>
+            </p>
           </div>
           {levels.length > 0 && (
             <div className="relative">
@@ -570,19 +572,18 @@ export function LiveTVPlayer({
           <button
             onClick={handleFullscreen}
             aria-label="Fullscreen"
-            className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
+            className="rounded-lg p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
           >
-            <Maximize2 className="h-5 w-5" />
+            <Maximize2 className="h-4 w-4" />
           </button>
           <button
             onClick={onClose}
             aria-label="Close player"
-            className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
+            className="rounded-lg p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </header>
-      )}
 
       <div
         onPointerDown={revealBar}
@@ -722,7 +723,7 @@ export function LiveTVPlayer({
               aria-label={isFull ? 'Exit fullscreen' : 'Fullscreen'}
               className={`rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white active:scale-90 ${isLive ? '' : 'ml-auto'}`}
             >
-              {isFull ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+              {isFull ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-4 w-4" />}
             </button>
             </div>
           </div>
