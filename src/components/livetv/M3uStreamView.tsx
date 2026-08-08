@@ -156,7 +156,7 @@ export default function M3uStreamView({
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
-  }, [channel.url, useProxy, attempt]);
+  }, [channel.url, headerKey, useProxy, attempt]);
 
 
   /* reset the proxy fallback whenever the user switches channel */
