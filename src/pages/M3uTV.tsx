@@ -107,19 +107,11 @@ export default function M3uTV() {
     });
   }, []);
 
-  // Top banner only auto-hides while a channel is actually playing; while browsing
-  // it stays visible so the channel count of the active server is always shown.
-  const [bannerOpen, setBannerOpen] = useState(true);
+  // Top banner is a permanent slim bar — it never auto-hides so the active
+  // server + channel count stay visible while browsing or watching.
   const [pickerOpen, setPickerOpen] = useState(false);
   const [groupPickerOpen, setGroupPickerOpen] = useState(false);
-  useEffect(() => {
-    if (!bannerOpen || !current) return;
-    const t = setTimeout(() => setBannerOpen(false), 4000);
-    return () => clearTimeout(t);
-  }, [bannerOpen, current]);
-  useEffect(() => {
-    if (!current) setBannerOpen(true);
-  }, [current]);
+
 
 
 
@@ -481,42 +473,31 @@ export default function M3uTV() {
       </Helmet>
 
       <div className="wide-shell page-shell space-y-4 py-4 sm:space-y-5 sm:py-5">
-        {/* Hero — auto-hides after a few idle seconds, returns on video tap */}
-        {bannerOpen ? (
-          <Card className="flex animate-fade-in items-center gap-4 border-destructive/30 bg-gradient-to-br from-destructive/15 via-primary/10 to-transparent p-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')} aria-label={T.back}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-destructive to-pink-500 shadow-md">
-              <Tv className="h-6 w-6 text-destructive-foreground" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h1 className="truncate text-base font-extrabold">{T.title}</h1>
-                <Badge variant="destructive" className="text-[10px]">{T.live}</Badge>
-              </div>
-              <p className="truncate text-xs text-muted-foreground">
-                {playlists.find((p) => p.id === activeId)?.name ?? T.subtitle}
-                {Object.keys(groupCounts).length > 0 && ` · ${Object.keys(groupCounts).length} ${T.categories}`}
-              </p>
-            </div>
-            <div className="text-end">
-              <p className="text-lg font-extrabold">{channels.length.toLocaleString()}</p>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{T.channels}</p>
-            </div>
-
-          </Card>
-        ) : (
+        {/* Slim persistent header — always visible, never auto-hides */}
+        <div className="sticky top-0 z-30 -mx-1 flex items-center gap-2 rounded-full border border-destructive/25 bg-card/70 px-2 py-1.5 shadow-sm backdrop-blur-xl">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/')}
             aria-label={T.back}
-            className="text-muted-foreground"
+            className="h-7 w-7 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-        )}
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-destructive to-pink-500">
+            <Tv className="h-3.5 w-3.5 text-destructive-foreground" />
+          </span>
+          <h1 className="shrink-0 text-[13px] font-extrabold leading-none">{T.title}</h1>
+          <Badge variant="destructive" className="h-4 shrink-0 px-1.5 text-[9px] leading-none">{T.live}</Badge>
+          <p className="min-w-0 flex-1 truncate text-[11px] leading-none text-muted-foreground">
+            {playlists.find((p) => p.id === activeId)?.name ?? T.subtitle}
+            {Object.keys(groupCounts).length > 0 && ` · ${Object.keys(groupCounts).length} ${T.categories}`}
+          </p>
+          <span className="shrink-0 rounded-full bg-secondary/60 px-2 py-0.5 text-[10px] font-bold leading-none">
+            {channels.length.toLocaleString()} <span className="font-medium text-muted-foreground">{T.channels}</span>
+          </span>
+        </div>
+
 
         {/* Searchable group + channel pickers */}
         {channels.length > 0 && (
@@ -653,7 +634,6 @@ export default function M3uTV() {
             ku={ku}
             onSelect={(ch) => setCurrent(ch)}
             onClose={() => setCurrent(null)}
-            onVideoTap={() => setBannerOpen(true)}
           />
         )}
 

@@ -206,23 +206,17 @@ export default function M3uStreamView({
     return channels.filter((c) => !q || c.name.toLowerCase().includes(q)).slice(0, 200);
   }, [channels, query]);
 
-  /* top bar auto-hide */
-  const [barOpen, setBarOpen] = useState(true);
-  useEffect(() => {
-    if (!barOpen) return;
-    const t = setTimeout(() => setBarOpen(false), 4000);
-    return () => clearTimeout(t);
-  }, [barOpen]);
+  /* top bar stays permanently visible — slim enough to never cover the picture */
   const revealBar = () => {
-    setBarOpen(true);
     onVideoTap?.();
   };
+
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   /** pick a channel from the list and bring the player back into view */
   const handleSelect = (c: StreamChannel) => {
     onSelect(c);
-    setBarOpen(true);
+    
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       shellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -244,23 +238,26 @@ export default function M3uStreamView({
             onMouseMove={revealBar}
             className="relative aspect-video w-full overflow-hidden rounded-xl border border-border/50 bg-black shadow-2xl md:rounded-2xl"
           >
-            {/* Top bar — overlays the video, auto-hides, returns on tap / mouse move */}
-            {barOpen && (
-              <div className="absolute inset-x-0 top-0 z-20 flex animate-fade-in items-center gap-3 bg-gradient-to-b from-black/85 to-transparent px-2 py-2 md:px-4">
-                <Button variant="ghost" size="icon" onClick={onClose} aria-label={T.close} className="text-white hover:bg-white/10">
-                  <X className="h-5 w-5" />
-                </Button>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-extrabold text-white md:text-base">{channel.name}</p>
-                  <p className="truncate text-[11px] text-white/70">
-                    {playlistName} · {channel.group}
-                  </p>
-                </div>
-                <Badge variant="destructive" className="text-[10px]">
-                  <Signal className="me-1 h-3 w-3" /> {T.live}
-                </Badge>
-              </div>
-            )}
+            {/* Slim permanent top bar — always visible over the video */}
+            <div className="absolute inset-x-0 top-0 z-20 flex items-center gap-2 bg-gradient-to-b from-black/80 via-black/40 to-transparent px-1.5 py-1 md:px-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                aria-label={T.close}
+                className="h-7 w-7 shrink-0 rounded-full text-white hover:bg-white/15"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <p className="min-w-0 flex-1 truncate text-[12px] font-bold leading-none text-white md:text-sm">
+                {channel.name}
+                <span className="ms-2 font-medium text-white/55">{playlistName} · {channel.group}</span>
+              </p>
+              <Badge variant="destructive" className="h-4 shrink-0 px-1.5 text-[9px] leading-none">
+                <Signal className="me-1 h-2.5 w-2.5" /> {T.live}
+              </Badge>
+            </div>
+
 
 
             <video
