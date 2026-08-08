@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { ChannelLogo } from './ChannelLogo';
 import { nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen } from '@/lib/playback';
+import { needsProxy, resolveStreamSource, type StreamHeaders } from '@/lib/streamHeaders';
 
 
 
@@ -20,7 +21,10 @@ export interface StreamChannel {
   logo: string | null;
   group: string;
   url: string;
+  /** Custom headers detected in the playlist; when present the stream is proxied. */
+  headers?: StreamHeaders | null;
 }
+
 
 interface Props {
   channel: StreamChannel;
