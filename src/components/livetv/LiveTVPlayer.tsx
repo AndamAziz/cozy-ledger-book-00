@@ -220,23 +220,26 @@ export function LiveTVPlayer({
       });
       hls.on(Hls.Events.ERROR, (_e, data) => {
         if (!data.fatal || disposed) return;
-        // Try in-place recovery first (network hiccup / decoder glitch) so a
-        // brief drop no longer kills the session.
-        if (recovered < 2) {
+        // Same 3-stage in-place recovery ladder the IPTV M3U engine uses:
+        // decoder glitches are recovered (then audio codec swapped), network
+        // faults reload the manifest — only then do we fall to the next engine.
+        if (recovered < 3) {
           recovered += 1;
           try {
             if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-              hls.recoverMediaError();
+              if (recovered <= 2) hls.recoverMediaError();
+              else hls.swapAudioCodec();
               return;
             }
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-              hls.startLoad();
-              return;
-            }
+            hls.stopLoad();
+            hls.loadSource(src);
+            hls.startLoad();
+            return;
           } catch (err) {
             console.warn('hls recovery failed', err);
           }
         }
+
         // Never destroy synchronously inside the handler — hls.js is still on
         // the stack and throwing there crashed the player.
         setTimeout(() => {
