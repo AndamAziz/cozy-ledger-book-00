@@ -370,7 +370,7 @@ async function loadShared(url: string, maxAge = SHARED_TTL): Promise<M3uSnapshot
   if (!rest) return null
   try {
     const res = await fetch(
-      `${rest.base}/rest/v1/iptv_playlist_cache?url_hash=eq.${hashId(url)}&select=entries_gz,etag,last_modified,updated_at`,
+      `${rest.base}/rest/v1/iptv_playlist_cache?url_hash=eq.${hashId(url)}&select=entries_gz,etag,last_modified,updated_at,version`,
       { headers: { apikey: rest.key, Authorization: `Bearer ${rest.key}` } },
     )
     if (!res.ok) return null
@@ -379,6 +379,7 @@ async function loadShared(url: string, maxAge = SHARED_TTL): Promise<M3uSnapshot
       etag: string | null
       last_modified: string | null
       updated_at: string
+      version: string | null
     }[]
     const row = rows?.[0]
     if (!row) return null
@@ -387,11 +388,15 @@ async function loadShared(url: string, maxAge = SHARED_TTL): Promise<M3uSnapshot
     const entries = JSON.parse(await gunzip(row.entries_gz)) as M3uEntry[]
     if (!entries.length) return null
     const snap = snapshot(url, entries, row.etag, row.last_modified)
+    // A row written by an older parser is dropped, so upgrades (per-channel
+    // headers, new fields) take effect instead of being masked by the cache.
+    if (row.version && row.version !== snap.version) return null
     return { ...snap, at }
   } catch {
     return null
   }
 }
+
 
 async function saveShared(snap: M3uSnapshot): Promise<void> {
   const rest = REST()
