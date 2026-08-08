@@ -479,9 +479,6 @@ export default function M3uTV() {
           >
             <ArrowLeft className="h-[14px] w-[14px]" />
           </Button>
-          <span className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full bg-destructive text-destructive-foreground">
-            <Tv className="h-[14px] w-[14px]" />
-          </span>
           <h1 className="shrink-0 text-[11px] font-bold leading-none">{T.title}</h1>
           <Badge variant="destructive" className="h-[16px] shrink-0 px-[6px] py-0 text-[10px] leading-none">
             {T.live}
