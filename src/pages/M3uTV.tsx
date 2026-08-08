@@ -48,7 +48,10 @@ interface Channel {
   logo: string | null;
   group: string;
   url: string;
+  /** Optional custom HTTP headers detected in the playlist (needs proxying). */
+  headers?: StreamHeaders | null;
 }
+
 
 interface Playlist {
   id: string;
