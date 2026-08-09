@@ -136,8 +136,8 @@ Deno.serve(async (req) => {
   }
 
   // --- Xtream: resolve a live stream id, then probe the stream URL ----------
-  const { host, protocol, username, password } = parseXtream(playlist)
-  const api = `${protocol}//${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+  const { host, protocol, basePath, username, password } = parseXtream(playlist)
+  const api = `${protocol}//${host}${basePath}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
   const requestedCategory = typeof body.categoryId === 'string' && body.categoryId ? body.categoryId : ''
 
   /** First stream_id in a category, or '' when the category is genuinely empty. */
