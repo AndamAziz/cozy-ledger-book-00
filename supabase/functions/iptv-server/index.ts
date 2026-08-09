@@ -148,6 +148,110 @@ Deno.serve(async (req) => {
     return true
   }
 
+  // ---------------------------------------------------------------------------
+  // Multi-source grants (`user_source_access`): an account may be allowed to
+  // browse several providers and switch between them; exactly one grant is the
+  // selected ("default") one, and it is mirrored into the single-server vault
+  // row so every playback function keeps working unchanged.
+  // ---------------------------------------------------------------------------
+
+  /** Mirrors one specific source row into the single-server vault row. */
+  const syncSelected = async (userId: string, sourceId: string) => {
+    const { data } = await db
+      .from('iptv_sources')
+      .select('name, playlist_enc, playlist_masked')
+      .eq('id', sourceId)
+      .maybeSingle()
+    if (!data?.playlist_enc) return false
+    await db.from('user_iptv_servers').upsert(
+      {
+        user_id: userId,
+        playlist_url: '',
+        playlist_enc: data.playlist_enc as string,
+        playlist_masked: String(data.playlist_masked ?? ''),
+        provider_name: (data.name as string | null) ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' },
+    )
+    return true
+  }
+
+  /** Grants a source to a user, optionally making it their selected source. */
+  const grantSource = async (userId: string, sourceId: string, makeDefault: boolean) => {
+    if (makeDefault) {
+      await db
+        .from('user_source_access')
+        .update({ is_default: false })
+        .eq('user_id', userId)
+        .eq('is_default', true)
+    }
+    await db.from('user_source_access').upsert(
+      {
+        user_id: userId,
+        source_id: sourceId,
+        is_default: makeDefault,
+        granted_by: user.id,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,source_id' },
+    )
+    if (makeDefault) await syncSelected(userId, sourceId)
+  }
+
+  /** All sources one account may browse (grants, plus own rows for the CEO). */
+  const listGranted = async (userId: string) => {
+    const { data: grants } = await db
+      .from('user_source_access')
+      .select('source_id, is_default, iptv_sources(id, name, kind, playlist_masked, health_status, health_message)')
+      .eq('user_id', userId)
+      .order('created_at')
+
+    type Row = {
+      source_id: string
+      is_default: boolean
+      iptv_sources: {
+        id: string
+        name: string
+        kind: string
+        playlist_masked: string
+        health_status: string | null
+        health_message: string | null
+      } | null
+    }
+    const rows = ((grants ?? []) as unknown as Row[]).filter((r) => !!r.iptv_sources)
+    const out = rows.map((r) => ({
+      id: r.iptv_sources!.id,
+      name: r.iptv_sources!.name,
+      kind: r.iptv_sources!.kind,
+      masked: r.iptv_sources!.playlist_masked ?? '',
+      isDefault: !!r.is_default,
+      health: r.iptv_sources!.health_status ?? null,
+      healthMessage: r.iptv_sources!.health_message ?? null,
+    }))
+
+    // Sources the account owns directly (CEO pool) are always browsable.
+    const { data: owned } = await db
+      .from('iptv_sources')
+      .select('id, name, kind, playlist_masked, is_active, health_status, health_message')
+      .eq('user_id', userId)
+      .order('created_at')
+    for (const o of owned ?? []) {
+      if (out.some((s) => s.id === o.id)) continue
+      out.push({
+        id: o.id as string,
+        name: o.name as string,
+        kind: o.kind as string,
+        masked: String(o.playlist_masked ?? ''),
+        isDefault: !out.some((s) => s.isDefault) && !!o.is_active,
+        health: (o.health_status as string | null) ?? null,
+        healthMessage: (o.health_message as string | null) ?? null,
+      })
+    }
+    return out
+  }
+
+
   /**
    * The CEO account keeps the two reference sources ready to test/switch:
    * a public iptv-org M3U and the Xtream provider account.
