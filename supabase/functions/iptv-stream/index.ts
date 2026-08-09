@@ -175,6 +175,7 @@ Deno.serve(async (req) => {
   let upstreamBase = candidates[0] ?? ''
   let lastError = 'fetch failed'
   let deadlineHit = false
+  const trace: string[] = []
 
   const OVERALL_DEADLINE_MS = 12_000
   const startedAt = Date.now()
@@ -259,9 +260,11 @@ Deno.serve(async (req) => {
         break
       }
       lastError = `HTTP ${res.status}`
+      trace.push(`${via}:${res.status}`)
       await res.body?.cancel().catch(() => undefined)
     } catch (e) {
       lastError = describeFetchError(e)
+      trace.push(`${via}:err:${lastError.slice(0, 60)}`)
       // Refused / DNS failure will not improve with another UA or transport.
       if (via === 'direct' && isDeadHost(lastError)) deadHosts.add(hostKey)
     }
@@ -272,7 +275,7 @@ Deno.serve(async (req) => {
       ? `Stream did not start within ${OVERALL_DEADLINE_MS / 1000}s (last error: ${lastError})`
       : lastError
     console.error(
-      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, lastError })}`,
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, lastError, trace })}`,
     )
     return json({ error: reason, deadline: deadlineHit, candidates: candidates.length }, 502)
   }
