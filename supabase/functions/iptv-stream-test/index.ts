@@ -14,8 +14,6 @@ import { diagFetchRaw, redactUrl, type UpstreamDiag } from '../_shared/iptvDiag.
 
 const UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const TIMEOUT_MS = 15_000
-/** Default probe category: Kurdish live (live:20). */
-const DEFAULT_CATEGORY = '20'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
