@@ -14,6 +14,7 @@ import {
   IptvRequestError,
 } from '@/hooks/useIptvPlaylist';
 import { IptvDiagnosticPanel } from '@/components/livetv/IptvDiagnosticPanel';
+import { ProviderHealthPanel } from '@/components/livetv/ProviderHealthPanel';
 import { SourcePicker } from '@/components/livetv/SourcePicker';
 
 
@@ -293,6 +294,8 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
       </header>
 
       <main className="wide-shell flex-1 safe-x pt-4 pb-[calc(76px+env(safe-area-inset-bottom))] 2xl:pb-[calc(92px+env(safe-area-inset-bottom))]">
+        <ProviderHealthPanel className="mb-4" />
+
 
 
 

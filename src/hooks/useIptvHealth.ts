@@ -22,6 +22,9 @@ export interface ProviderHealth {
   maxConnections: number | null;
   expiresAt: string | null;
   checkedAt: string;
+  /** Round-trip time of the provider probe, in milliseconds. */
+  latencyMs?: number;
+  cached?: boolean;
 }
 
 /** Periodic provider health check (auth, reachability, slot usage). */

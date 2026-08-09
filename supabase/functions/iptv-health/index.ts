@@ -18,6 +18,8 @@ interface Health {
   maxConnections: number | null
   expiresAt: string | null
   checkedAt: string
+  /** Probe round-trip time in ms (filled in by the handler). */
+  latencyMs?: number
 }
 
 // Health is per provider account, so it is cached per user.
@@ -185,11 +187,14 @@ Deno.serve(async (req) => {
   }
 
   let health: Health
+  const startedAt = Date.now()
   try {
     health = isXtreamUrl(source) ? await checkXtream(source) : await checkPlainM3U(source)
   } catch (e) {
     health = base('offline', e instanceof Error && e.name === 'AbortError' ? 'Provider timed out' : 'Provider unreachable')
   }
+  // Round-trip time of the probe itself — surfaced in the UI as provider latency.
+  health.latencyMs = Date.now() - startedAt
 
   cache.set(resolved.viewer.userId, { at: Date.now(), health })
   if (cache.size > 500) cache.delete(cache.keys().next().value as string)
