@@ -929,7 +929,8 @@ Deno.serve(async (req) => {
 
 
   const reqId = crypto.randomUUID().slice(0, 8)
-  diagBySource[sk] = null
+  /** Source key for this request; only known after the viewer is resolved. */
+  let sk = ''
   const reqUrl = new URL(req.url)
   console.log(
     `[iptv-playlist] ${JSON.stringify({
@@ -946,6 +947,9 @@ Deno.serve(async (req) => {
     const resolved = await resolveViewer(req)
     if (!resolved.ok) return json({ error: resolved.message, code: resolved.error }, resolved.status)
     const source = resolved.viewer.playlistUrl
+    sk = source
+    diagBySource[sk] = null
+    pruneDiags(sk)
 
     const url = new URL(req.url)
 
