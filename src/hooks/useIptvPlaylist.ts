@@ -206,10 +206,18 @@ async function get<T>(path: string, opts: { cache?: boolean; background?: boolea
       }
       if (useCache && json) writeCatalogCache(cacheKey, json);
       failMemo.delete(cacheKey);
+      outage.delete(sourceKey);
       return json as T;
     } catch (err) {
       const e = err instanceof Error ? err : new Error('Failed to load playlist');
-      if (e.message !== 'cancelled') failMemo.set(cacheKey, { at: Date.now(), err: e });
+      if (e.message !== 'cancelled') {
+        failMemo.set(cacheKey, { at: Date.now(), err: e });
+        if (isOutageError(e)) {
+          // Panel is down: stop every other pending/queued catalogue request.
+          outage.set(sourceKey, { at: Date.now(), err: e });
+          cancelBackgroundQueue();
+        }
+      }
       throw e;
     }
   }, { background: opts.background });
