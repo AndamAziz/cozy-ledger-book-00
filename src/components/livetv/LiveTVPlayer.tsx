@@ -117,6 +117,8 @@ export function LiveTVPlayer({
   useEffect(() => {
     setStage(0);
     setAttempt(0);
+    setRetrying(false);
+
     setLevels([]);
     setSelectedLevel(-1);
     setAutoLabel(null);
