@@ -936,7 +936,7 @@ export function LiveTVPlayer({
                 <AlertTriangle className="h-6 w-6" style={{ color: '#ffb020' }} />
               </span>
               <p className="text-sm font-extrabold tracking-tight text-white">
-                Unsupported codec ({codecIssue})
+                Unsupported codec
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
                 This channel is broadcast in {codecIssue}, which this browser cannot decode.
