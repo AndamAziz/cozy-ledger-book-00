@@ -47,8 +47,8 @@ export function CategoryStatusBadge({
       role="status"
       aria-label={`${health.online} of ${health.total} sampled streams online, ${
         stale ? 'stale' : 'updated'
-      } ${relativeTime(health.checkedAt)}`}
-      title={`Sampled ${health.total} channels · ${stale ? 'stale' : 'updated'} ${relativeTime(health.checkedAt)}`}
+      } ${relativeTime(health.checkedAt ?? undefined)}`}
+      title={`Sampled ${health.total} channels · ${stale ? 'stale' : 'updated'} ${relativeTime(health.checkedAt ?? undefined)}`}
       className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${className}`}
       style={{ background: bg, color: fg }}
     >
@@ -58,7 +58,7 @@ export function CategoryStatusBadge({
       />
       {health.online}/{health.total}
       <span className="font-semibold normal-case tracking-normal opacity-70">
-        {stale ? 'stale' : relativeTime(health.checkedAt)}
+        {stale ? 'stale' : relativeTime(health.checkedAt ?? undefined)}
       </span>
       {stale && (
         <button

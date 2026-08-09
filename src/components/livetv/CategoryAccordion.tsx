@@ -3,6 +3,8 @@ import { ChevronRight, Loader2 } from 'lucide-react';
 import { useIptvChannels, type IptvCategory, type IptvChannel } from '@/hooks/useIptvPlaylist';
 import { ChannelCard } from './ChannelCard';
 import { PosterCard } from './PosterCard';
+import { CategoryStatusBadge } from './CategoryStatusBadge';
+import { useCategoryHealth } from '@/hooks/useCategoryHealth';
 
 interface Props {
   category: IptvCategory;
@@ -18,6 +20,8 @@ const PREVIEW_LIMIT = 12;
 export function CategoryAccordion({ category, kind, poster, onPlay, onSeeAll }: Props) {
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useIptvChannels(category.id, open, PREVIEW_LIMIT);
+  // Live categories get a periodically re-probed health verdict (sampled channels).
+  const health = useCategoryHealth(category.id, data?.channels, kind, kind === 'live');
 
   return (
     <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl">
@@ -33,6 +37,9 @@ export function CategoryAccordion({ category, kind, poster, onPlay, onSeeAll }: 
           <span className="shrink-0 rounded-full bg-white/[0.07] px-2 py-0.5 text-[10px] font-bold text-white/50">
             {data?.total ?? category.count}
           </span>
+        )}
+        {kind === 'live' && (
+          <CategoryStatusBadge categoryId={category.id} health={health} stale={health.stale} />
         )}
         <ChevronRight
           className={`h-4 w-4 shrink-0 text-white/45 transition-transform duration-300 ${open ? 'rotate-90' : ''}`}
