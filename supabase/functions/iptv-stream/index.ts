@@ -144,10 +144,17 @@ Deno.serve(async (req) => {
       // order prefers the HLS manifest, which survives slow links better.
       candidates = rawFirst ? [ts, hls] : [hls, ts]
     } else {
-      const exts = [...new Set([extHint, 'mp4', 'mkv', 'avi'].filter(Boolean))]
+      // Provider's real container_extension (sent by the client as `ext`) is
+      // tried FIRST and alone; the broad matrix is only a fallback when that
+      // specific hint fails, so a correct hint commits on attempt #1.
       const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
-      candidates = exts.flatMap((ext) => dirs.map((d) => `${cred}/${d}/${username}/${password}/${streamId}.${ext}`))
+      const url = (d: string, ext: string) => `${cred}/${d}/${username}/${password}/${streamId}.${ext}`
+      const primary = extHint ? [url(dirs[0], extHint), url(dirs[1], extHint)] : []
+      const fallbackExts = ['mp4', 'mkv', 'avi'].filter((e) => e !== extHint)
+      const fallback = fallbackExts.flatMap((ext) => dirs.map((d) => url(d, ext)))
+      candidates = [...new Set([...primary, ...fallback])]
     }
+
   } else {
     return json({ error: 'Missing id or u parameter' }, 400)
   }
