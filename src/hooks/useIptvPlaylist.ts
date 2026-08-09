@@ -331,7 +331,7 @@ export function useIptvRefresh() {
   return async () => {
     clearCatalogCache();
     try {
-      await get<IptvIndex>('iptv-playlist?refresh=1');
+      await get<IptvIndex>('iptv-playlist?refresh=1').catch(() => undefined);
     } finally {
       clearCatalogCache();
       qc.removeQueries({ queryKey: ['iptv-index'] });
