@@ -244,13 +244,6 @@ Deno.serve(async (req) => {
       if (res.ok || res.status === 206) {
         const ctype = res.headers.get('content-type') || ''
         const resolvedUrl = finalUrlOf(res, target)
-        // A WAF / panel block page arrives as HTML, sometimes with HTTP 200:
-        // never hand that to the player — retry with the next UA.
-        if (isHtmlBlock(ctype)) {
-          await res.body?.cancel().catch(() => undefined)
-          lastError = 'provider returned a block page (HTML)'
-          continue
-        }
         // Some providers answer 200 with a text error page for dead channels.
         // Verify manifests really are manifests before committing.
         let manifestPath = ''
@@ -274,6 +267,16 @@ Deno.serve(async (req) => {
           })
           upstreamBase = resolvedUrl
           break
+        }
+        // Some Xtream panels incorrectly label valid MP4/MKV/episode byte
+        // streams as text/html. Header-only HTML detection therefore breaks all
+        // VOD while manifests still work. Only reject an HTML content type here
+        // when the request is not a ranged/progressive media response; genuine
+        // block pages on manifests are body-checked above.
+        if (isHtmlBlock(ctype) && !range && kind === 'live') {
+          await res.body?.cancel().catch(() => undefined)
+          lastError = 'provider returned a block page (HTML)'
+          continue
         }
         upstream = res
         upstreamBase = resolvedUrl
@@ -367,6 +370,7 @@ Deno.serve(async (req) => {
     const suffix =
       `${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}` +
       `${token ? `&token=${encodeURIComponent(token)}` : ''}` +
+      `${resolved.viewer.sourceId ? `&source=${encodeURIComponent(resolved.viewer.sourceId)}` : ''}` +
       `${hRaw ? `&h=${encodeURIComponent(hRaw)}` : ''}`
 
     const text = await upstream.text()
