@@ -11,14 +11,14 @@ import { isHtmlBlock, uaFor, IPTV_USER_AGENTS } from '../_shared/iptvFetch.ts'
  * One isolate serves many users/providers concurrently: a single global would
  * let provider A's 403 be reported as provider B's failure.
  */
-const diagBySource = new Map<string, UpstreamDiag | null>()
+const diagBySource: Record<string, UpstreamDiag | null> = {}
 const DIAG_MAX = 50
-function setDiag(sk: string, diag: UpstreamDiag | null) {
-  diagBySource.delete(sk)
-  diagBySource.set(sk, diag)
-  while (diagBySource.size > DIAG_MAX) diagBySource.delete(diagBySource.keys().next().value as string)
+/** Keeps the per-source diagnostic map bounded. */
+function pruneDiags(keep: string) {
+  const keys = Object.keys(diagBySource)
+  if (keys.length <= DIAG_MAX) return
+  for (const k of keys.slice(0, keys.length - DIAG_MAX)) if (k !== keep) delete diagBySource[k]
 }
-const getDiag = (sk: string): UpstreamDiag | null => diagBySource.get(sk) ?? null
 
 type Kind = 'live' | 'vod' | 'series'
 
@@ -252,7 +252,7 @@ async function fetchJson<T>(
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
-      setDiag(sk, diag
+      diagBySource[sk] = diag
       continue
     }
     let text = ''
@@ -260,42 +260,42 @@ async function fetchJson<T>(
       text = await res.text()
     } catch (e) {
       const { kind, message } = classifyError(e)
-      setDiag(sk, { ...diag, ok: false, kind, message }
-      logDiag(`${tag}:read`, lastUpstreamDiag)
+      diagBySource[sk] = { ...diag, ok: false, kind, message }
+      logDiag(`${tag}:read`, diagBySource[sk])
       continue
     }
     if (isHtmlBlock(res.headers.get('content-type'), text)) {
-      setDiag(sk, {
+      diagBySource[sk] = {
         ...diag,
         ok: false,
         kind: 'http_error',
         bodySnippet: text.slice(0, 500),
         message: 'Provider answered a block page (HTML) instead of data',
       }
-      logDiag(`${tag}:blocked`, lastUpstreamDiag)
+      logDiag(`${tag}:blocked`, diagBySource[sk])
       continue
     }
 
     try {
       const json = JSON.parse(text)
       if (Array.isArray(json)) return json as T
-      setDiag(sk, {
+      diagBySource[sk] = {
         ...diag,
         ok: false,
         kind: 'parse_error',
         bodySnippet: text.slice(0, 500),
         message: 'Upstream returned JSON that is not an array',
       }
-      logDiag(`${tag}:shape`, lastUpstreamDiag)
+      logDiag(`${tag}:shape`, diagBySource[sk])
     } catch (e) {
-      setDiag(sk, {
+      diagBySource[sk] = {
         ...diag,
         ok: false,
         kind: 'parse_error',
         bodySnippet: text.slice(0, 500),
         message: classifyError(e).message,
       }
-      logDiag(`${tag}:parse`, lastUpstreamDiag)
+      logDiag(`${tag}:parse`, diagBySource[sk])
     }
   }
   return null
@@ -336,13 +336,13 @@ async function scanArray(url: string, onRow: (row: Record<string, unknown>) => b
     res = attempt.res
   }
   if (!res) {
-    setDiag(sk, diag
+    diagBySource[sk] = diag
     return
   }
 
   if (!res.body) {
-    setDiag(sk, { ...diag, ok: false, kind: 'parse_error', message: 'Upstream returned an empty body' }
-    logDiag('scanArray:empty', lastUpstreamDiag)
+    diagBySource[sk] = { ...diag, ok: false, kind: 'parse_error', message: 'Upstream returned an empty body' }
+    logDiag('scanArray:empty', diagBySource[sk])
     return
   }
 
@@ -382,8 +382,8 @@ async function scanArray(url: string, onRow: (row: Record<string, unknown>) => b
     }
   } catch (e) {
     const { kind, message } = classifyError(e)
-    setDiag(sk, { ...diag, ok: false, kind, message: `Stream aborted while reading: ${message}` }
-    logDiag('scanArray:stream', lastUpstreamDiag)
+    diagBySource[sk] = { ...diag, ok: false, kind, message: `Stream aborted while reading: ${message}` }
+    logDiag('scanArray:stream', diagBySource[sk])
   }
 
   try {
@@ -415,19 +415,19 @@ async function xtreamLogin(api: string): Promise<void> {
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
-      setDiag(sk, diag
+      diagBySource[sk] = diag
       continue
     }
     const text = await res.text().catch(() => '')
     if (isHtmlBlock(res.headers.get('content-type'), text)) {
-      setDiag(sk, {
+      diagBySource[sk] = {
         ...diag,
         ok: false,
         kind: 'http_error',
         bodySnippet: text.slice(0, 500),
         message: 'Provider answered a block page (HTML) instead of data',
       }
-      logDiag('login:blocked', lastUpstreamDiag)
+      logDiag('login:blocked', diagBySource[sk])
       continue
     }
     try {
@@ -501,7 +501,7 @@ async function buildIndex(source: string) {
     } catch (error) {
       console.warn(`[iptv-playlist] M3U fallback failed: ${error instanceof Error ? error.message : String(error)}`)
     }
-    const upstream = lastUpstreamDiag
+    const upstream = diagBySource[sk]
     if (upstream?.status === 401 || upstream?.status === 403) {
       return {
         at: Date.now(),
@@ -601,7 +601,7 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
       categoryCache.set(key, { at: Date.now(), items: scanned })
       return scanned
     }
-    const d = lastUpstreamDiag
+    const d = diagBySource[sk]
     throw new Error(
       d
         ? `Your IPTV provider did not respond (${d.kind}${d.status ? ` ${d.status}` : ''}${d.message ? `: ${d.message}` : ''}).`
@@ -659,35 +659,35 @@ async function getSeriesInfo(api: string, seriesId: string) {
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
-      setDiag(sk, diag
+      diagBySource[sk] = diag
       continue
     }
     let text = ''
     try {
       text = await res.text()
       if (isHtmlBlock(res.headers.get('content-type'), text)) {
-        setDiag(sk, {
+        diagBySource[sk] = {
           ...diag,
           ok: false,
           kind: 'http_error',
           bodySnippet: text.slice(0, 500),
           message: 'Provider answered a block page (HTML) instead of data',
         }
-        logDiag('getSeriesInfo:blocked', lastUpstreamDiag)
+        logDiag('getSeriesInfo:blocked', diagBySource[sk])
         continue
       }
       const json = JSON.parse(text)
       if (json && typeof json === 'object') data = json as Record<string, unknown>
     } catch (e) {
 
-      setDiag(sk, {
+      diagBySource[sk] = {
         ...diag,
         ok: false,
         kind: 'parse_error',
         bodySnippet: text.slice(0, 500),
         message: classifyError(e).message,
       }
-      logDiag('getSeriesInfo:parse', lastUpstreamDiag)
+      logDiag('getSeriesInfo:parse', diagBySource[sk])
     }
   }
   if (!data) throw new Error('Your IPTV provider did not respond. Please try again.')
@@ -926,7 +926,7 @@ Deno.serve(async (req) => {
 
 
   const reqId = crypto.randomUUID().slice(0, 8)
-  lastUpstreamDiag = null
+  diagBySource[sk] = null
   const reqUrl = new URL(req.url)
   console.log(
     `[iptv-playlist] ${JSON.stringify({
@@ -991,7 +991,7 @@ Deno.serve(async (req) => {
           total: index.total,
           categories: index.categories,
           updatedAt: new Date(index.at).toISOString(),
-          ...(index.warning ? { warning: index.warning, reqId, diagnostic: index.diag ?? publicDiag(lastUpstreamDiag) } : {}),
+          ...(index.warning ? { warning: index.warning, reqId, diagnostic: index.diag ?? publicDiag(diagBySource[sk]) } : {}),
         },
         200,
         300,
@@ -1036,7 +1036,7 @@ Deno.serve(async (req) => {
 
   } catch (e) {
     const { kind, message } = classifyError(e)
-    const upstream = lastUpstreamDiag
+    const upstream = diagBySource[sk]
     console.error(
       `[iptv-playlist] ${JSON.stringify({
         reqId,
