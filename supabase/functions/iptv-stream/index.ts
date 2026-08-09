@@ -21,7 +21,7 @@ const cors: Record<string, string> = {
   'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
 }
 
-const UA = 'VLC/3.0.20 LibVLC/3.0.20'
+import { IPTV_USER_AGENTS, isHtmlBlock } from '../_shared/iptvFetch.ts'
 
 const SELF = (req: Request) =>
   `${(Deno.env.get('SUPABASE_URL') || new URL(req.url).origin).replace(/\/$/, '')}/functions/v1/iptv-stream`
