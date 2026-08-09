@@ -560,6 +560,83 @@ async function buildIndex(source: string) {
     }
   }
 
+  // Many panels advertise the FULL provider category tree while the subscription
+  // only carries a subset: those extra categories answer `category_id=…` with an
+  // empty array, which surfaced as dozens of "No items in this category" rows.
+  // The live catalogue is small enough to fetch once, so real counts are derived
+  // from it and categories the line cannot actually access are dropped.
+  if (categories.some((c) => c.kind === 'live')) {
+    const rows = await fetchJson<Record<string, unknown>[]>(
+      sk,
+      `${api}&action=${ACTIONS.live[1]}`,
+      20000,
+      2,
+      'live:catalogue',
+    )
+    if (rows?.length) {
+      const items = rows.map((r) => toItem(r, 'live')).filter((i): i is Item => !!i)
+      const counts = new Map<string, number>()
+      for (const i of items) counts.set(i.categoryId, (counts.get(i.categoryId) ?? 0) + 1)
+
+      const known = new Set(categories.filter((c) => c.kind === 'live').map((c) => c.id))
+      // Channels can also sit in a category the list endpoint never returned; those
+      // have no upstream name, so it is derived from the shared channel-name prefix
+      // ("KURD ▎SURYOYO SAT" → "KURD") exactly like native players display it.
+      for (const [id, count] of counts) {
+        if (known.has(id)) continue
+        const tally = new Map<string, number>()
+        for (const i of items) {
+          if (i.categoryId !== id) continue
+          const prefix = i.name.split(/[▎|]/)[0].trim()
+          if (prefix && prefix.length <= 24) tally.set(prefix, (tally.get(prefix) ?? 0) + 1)
+        }
+        const best = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]
+        let name = best && best[1] > 1 ? best[0] : 'Live'
+        // Providers often split one prefix over several groups (BEIN ×5); add the
+        // most common word after the separator so the tabs stay distinguishable.
+        if (categories.some((c) => c.kind === 'live' && c.name === name)) {
+          const words = new Map<string, number>()
+          for (const i of items) {
+            if (i.categoryId !== id) continue
+            const rest = i.name
+              .split(/[▎|]/)
+              .slice(1)
+              .join(' ')
+              .trim()
+              .split(/\s+/)
+              .filter((w) => w.toUpperCase() !== name.toUpperCase())
+              .slice(0, 2)
+              .join(' ')
+            if (rest) words.set(rest, (words.get(rest) ?? 0) + 1)
+          }
+          const w = [...words.entries()].sort((a, b) => b[1] - a[1])[0]
+          if (w) name = `${name} ▎${w[0]}`
+        }
+        categories.push({ id, name, count, kind: 'live' })
+      }
+      for (const c of categories) {
+        if (c.kind === 'live') c.count = counts.get(c.id) ?? 0
+      }
+      const trimmed = categories.filter((c) => c.kind !== 'live' || c.count > 0)
+      categories.length = 0
+      categories.push(...trimmed)
+
+      // Reuse the payload we already paid for: opening a live category is instant
+      // and costs the provider (single-slot lines!) nothing extra.
+      for (const [id, count] of counts) {
+        if (!count) continue
+        categoryCache.set(`${digest(source)}|${id}`, {
+          at: Date.now(),
+          items: items.filter((i) => i.categoryId === id),
+        })
+      }
+      while (categoryCache.size > CATEGORY_MAX) {
+        categoryCache.delete(categoryCache.keys().next().value as string)
+      }
+    }
+  }
+
+
   if (!categories.length) {
     // Xtream sources ALWAYS live on player_api.php: many panels (Proxyshield &
     // co) answer `get.php?type=m3u` with HTTP 200 and an EMPTY body, so falling
@@ -654,7 +731,7 @@ const CATEGORY_TTL = 10 * 60 * 1000
 // Genuinely empty answers are re-checked quickly — some providers only populate
 // a movie/series category through the full catalogue listing.
 const EMPTY_TTL = 60 * 1000
-const CATEGORY_MAX = 12
+const CATEGORY_MAX = 96
 const categoryCache = new Map<string, { at: number; items: Item[] }>()
 
 /** Fallback for providers that ignore `category_id` on get_vod_streams/get_series. */
