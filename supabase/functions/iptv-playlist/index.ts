@@ -1,7 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U, xtreamApiBase, type M3uEntry } from '../_shared/iptvConfig.ts'
 import { resolveViewer } from '../_shared/iptvViewer.ts'
-import { classifyError, diagFetch, logDiag, type UpstreamDiag } from '../_shared/iptvDiag.ts'
+import { classifyError, diagFetch, logDiag, redactUrl, verdictOf, type UpstreamDiag } from '../_shared/iptvDiag.ts'
 import { isHtmlBlock, uaFor, IPTV_USER_AGENTS } from '../_shared/iptvFetch.ts'
 
 
@@ -34,6 +34,43 @@ const TTL = 30 * 60 * 1000
 
 // The VOD/series catalogues are ~70MB each, so nothing global is kept in memory:
 // the index caches category lists only and item lists are fetched per category.
+type PublicDiag = {
+  verdict: string
+  reason: string
+  status: number
+  statusText?: string
+  url: string
+  action?: string
+  attempt?: number
+  durationMs?: number
+  headers?: Record<string, string>
+  bodySnippet?: string
+  message?: string
+}
+
+/** UI-safe view of an upstream failure (URL redacted, body snippet trimmed). */
+function publicDiag(diag: UpstreamDiag | null | undefined): PublicDiag | null {
+  if (!diag) return null
+  const { verdict, reason } = verdictOf(diag)
+  let action: string | undefined
+  try {
+    action = new URL(diag.url).searchParams.get('action') ?? undefined
+  } catch { /* ignore */ }
+  return {
+    verdict,
+    reason,
+    status: diag.status,
+    statusText: diag.statusText,
+    url: redactUrl(diag.url),
+    action,
+    attempt: diag.attempt,
+    durationMs: diag.durationMs,
+    headers: diag.headers,
+    bodySnippet: diag.bodySnippet ? diag.bodySnippet.slice(0, 300) : undefined,
+    message: diag.message,
+  }
+}
+
 type IndexSnapshot = {
   at: number
   source: string
@@ -42,7 +79,9 @@ type IndexSnapshot = {
   partial?: boolean
   mode?: 'xtream' | 'plain'
   warning?: string
+  diag?: PublicDiag | null
 }
+
 // Keyed by playlist URL: each user browses their own provider catalogue.
 const indexCache = new Map<string, IndexSnapshot>()
 const indexLoading = new Map<string, Promise<IndexSnapshot>>()
@@ -460,6 +499,8 @@ async function buildIndex(source: string) {
         partial: true,
         mode: 'xtream' as const,
         warning: `The IPTV provider temporarily refused the catalogue request (${upstream.status} ${upstream.statusText ?? 'Forbidden'}).`,
+        diag: publicDiag(upstream),
+
       }
     }
     throw new Error('Upstream returned no channels')
@@ -938,11 +979,12 @@ Deno.serve(async (req) => {
           total: index.total,
           categories: index.categories,
           updatedAt: new Date(index.at).toISOString(),
-          ...(index.warning ? { warning: index.warning } : {}),
+          ...(index.warning ? { warning: index.warning, reqId, diagnostic: index.diag ?? publicDiag(lastUpstreamDiag) } : {}),
         },
         200,
         300,
       )
+
 
     }
 
@@ -1008,9 +1050,10 @@ Deno.serve(async (req) => {
         error: e instanceof Error ? e.message : String(e),
         reqId,
         errorKind: upstream?.kind ?? kind,
+        diagnostic: publicDiag(upstream),
         upstream: upstream
           ? {
-              url: upstream.url,
+              url: redactUrl(upstream.url),
               status: upstream.status,
               statusText: upstream.statusText,
               durationMs: upstream.durationMs,
@@ -1020,6 +1063,7 @@ Deno.serve(async (req) => {
       },
       upstream?.kind === 'timeout' ? 504 : 502,
     )
+
   }
 })
 
