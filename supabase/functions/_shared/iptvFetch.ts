@@ -100,15 +100,25 @@ export async function relayFetch(
 
       const raw = await res.text()
       const body = raw.length > maxBytes ? raw.slice(0, maxBytes) : raw
+      const contentType = res.headers.get('content-type')
+      // A WAF block page can arrive with HTTP 200 and an HTML body: treat it as
+      // a failure so the next User-Agent is tried.
+      const blocked = isHtmlBlock(contentType, body)
       const result: RelayResult = {
-        ok: res.ok,
+        ok: res.ok && !blocked,
         status: res.status,
         body,
-        contentType: res.headers.get('content-type'),
+        contentType,
         userAgent: ua,
       }
-      if (res.ok) return result
-      last = { ...result, error: `Server responded with ${res.status} ${res.statusText}`.trim() }
+      if (result.ok) return result
+      last = {
+        ...result,
+        error: blocked
+          ? 'Provider answered a block page (HTML) instead of data'
+          : `Server responded with ${res.status} ${res.statusText}`.trim(),
+      }
+
     } catch (e) {
       last = {
         ok: false,
