@@ -331,15 +331,26 @@ export function LiveTVPlayer({
         setLoading(false);
       });
     }
+    };
+
+    // Open the upstream connection only after the previous slot was released.
+    const startTimer = window.setTimeout(() => {
+      if (disposed) return;
+      armWatchdog();
+      attach();
+    }, slotWait);
 
     return () => {
       disposed = true;
       clearWatchdog();
+      clearTimeout(startTimer);
+      if (retryTimer !== undefined) clearTimeout(retryTimer);
       video.removeEventListener('playing', done);
       video.removeEventListener('canplay', done);
       video.removeEventListener('loadeddata', done);
       video.removeEventListener('error', onMediaError);
       safeDestroy();
+      unregisterStream(safeDestroy);
       try {
         video.pause();
         video.removeAttribute('src');
@@ -348,6 +359,7 @@ export function LiveTVPlayer({
         console.warn('video teardown failed', err);
       }
     };
+
   }, [channel.id, channel.kind, channel.ext, engines, stage, attempt]);
 
 
