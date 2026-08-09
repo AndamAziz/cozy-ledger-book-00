@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-tech-platform-v3';
+const CACHE_NAME = 'central-tech-platform-v4';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache immediately on install
@@ -7,10 +7,11 @@ const PRECACHE_ASSETS = [
   '/index.html',
   '/offline.html',
   '/manifest.json',
-  '/app-icon.svg',
+  '/logo.png',
   '/app-icon-192.png',
   '/app-icon-512.png',
   '/favicon.png',
+  '/logo.png',
   '/favicon-32x32.png',
   '/favicon-16x16.png'
 ];

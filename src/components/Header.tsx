@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { LogOut, Building2, Calendar, Crown, Users } from 'lucide-react';
+import { LogOut, Calendar, Crown, Users } from 'lucide-react';
 import { MonthPicker } from '@/components/MonthPicker';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { HeaderAction, HEADER_ACTION_CLASSES, HEADER_ACTION_ICON_CLASSES, HEADER_ACTION_LABEL_CLASSES } from '@/components/HeaderAction';
@@ -48,10 +48,17 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
         {/* Company Name Banner */}
         {companyName && (
           <div className="flex items-center justify-center gap-2 py-2 px-3 bg-gradient-to-r from-primary/15 via-primary/10 to-primary/15 border-b border-primary/15">
-            <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
+            <img
+              src="/logo.png"
+              alt="ANDAM logo"
+              width={32}
+              height={32}
+              className="h-5 w-5 sm:h-6 sm:w-6 rounded-md object-cover flex-shrink-0"
+            />
             <span className="text-xs sm:text-sm md:text-base font-bold text-primary truncate">{companyName}</span>
           </div>
         )}
+
 
         {/* Main header content */}
         <div className="p-2.5 sm:p-3.5 md:p-5 flex flex-col gap-2 sm:gap-3">

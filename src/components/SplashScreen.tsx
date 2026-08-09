@@ -70,8 +70,8 @@ export const SplashScreen = ({ timedOut = false, onRetry }: SplashScreenProps) =
                  style={{ animationDuration: '2s' }} />
             <div className="absolute inset-1 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-success flex items-center justify-center overflow-hidden">
               <img 
-                src="/app-icon.svg" 
-                alt="Central Tech Platform Logo" 
+                src="/logo.png" 
+                alt="ANDAM logo" 
                 className="w-16 h-16 sm:w-24 sm:h-24 object-contain drop-shadow-lg"
               />
             </div>
