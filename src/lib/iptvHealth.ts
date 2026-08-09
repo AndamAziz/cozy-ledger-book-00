@@ -8,6 +8,7 @@
  */
 
 import { isSlotLimitPayload } from './iptvSlotRetry';
+import { onIdle, tabHidden } from './idle';
 
 export type ChannelStatus = 'unknown' | 'checking' | 'online' | 'busy' | 'offline';
 
