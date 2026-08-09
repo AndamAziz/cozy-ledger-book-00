@@ -58,6 +58,12 @@ interface TestResult {
   ok: boolean;
   kind?: string;
   channels?: number;
+  live?: number;
+  vod?: number | null;
+  series?: number | null;
+  online?: number;
+  sample_tested?: number;
+  sample_online?: number;
   latency_ms?: number;
   host?: string;
   compatible?: boolean;
@@ -65,6 +71,7 @@ interface TestResult {
   error?: string;
   at?: string;
 }
+
 
 interface DirectoryUser {
   userId: string;
@@ -92,13 +99,22 @@ const call = async (body: Record<string, unknown>) => {
 };
 
 function Diagnostics({ result }: { result: TestResult }) {
-  const rows = [
+  const rows: [string, string][] = [
     ['Connection', result.ok ? 'Online' : 'Failed'],
     ['Type', (result.kind ?? '—').toUpperCase()],
-    ['Channels', result.channels != null ? String(result.channels) : '—'],
+    ['Live channels', (result.live ?? result.channels) != null ? String(result.live ?? result.channels) : '—'],
+  ];
+  if (result.vod != null) rows.push(['Movies (VOD)', String(result.vod)]);
+  if (result.series != null) rows.push(['Series', String(result.series)]);
+  if (result.online != null) rows.push(['Online channels', String(result.online)]);
+  if (result.sample_tested) {
+    rows.push(['Playback sample', `${result.sample_online ?? 0}/${result.sample_tested} playing`]);
+  }
+  rows.push(
     ['Response time', result.latency_ms != null ? `${result.latency_ms} ms` : '—'],
     ['Stream compatibility', result.ok ? (result.compatible ? 'Playable' : 'Unknown') : '—'],
-  ];
+  );
+
   return (
     <div
       className={`space-y-1 rounded-xl border p-3 text-[11px] ${
@@ -855,6 +871,33 @@ export function IptvSourceManager({
             {editingId ? 'Save changes' : 'Add source'}
           </button>
         </div>
+        <div className="space-y-1 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[10px] leading-relaxed opacity-70">
+          <p className="font-extrabold opacity-100">Supported link types for testing</p>
+          <p>
+            <span className="font-bold">Xtream API</span> — player_api.php / get.php with
+            username &amp; password (live + movies + series counts)
+          </p>
+          <p>
+            <span className="font-bold">M3U / M3U_PLUS</span> — .m3u playlist files (channel list)
+          </p>
+          <p>
+            <span className="font-bold">HLS</span> — .m3u8 manifest (single stream)
+          </p>
+          <p>
+            <span className="font-bold">MPEG-TS</span> — .ts live feed (single stream)
+          </p>
+          <p>
+            <span className="font-bold">Progressive files</span> — .mp4, .mkv, .m4v, .mov, .avi,
+            .webm, .flv (single stream)
+          </p>
+          <p>
+            <span className="font-bold">MPEG-DASH</span> — .mpd manifest (single stream)
+          </p>
+          <p className="opacity-60">
+            Xtream direct paths like /live/user/pass/123 are detected as one stream too.
+          </p>
+        </div>
+
         {editingId && (
           <button
             type="button"
