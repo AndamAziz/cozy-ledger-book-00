@@ -578,12 +578,13 @@ export function IptvSourceManager({
                               placeholder="Server name"
                               className="h-8 w-full rounded-lg border border-white/10 bg-white/[0.05] px-2 text-[11px] outline-none focus:border-emerald-400/60"
                             />
-                            <input
+                            <textarea
                               value={dirUrl}
                               onChange={(e) => setDirUrl(e.target.value)}
                               dir="ltr"
+                              rows={3}
                               placeholder="New link (leave empty to keep current)"
-                              className="h-8 w-full rounded-lg border border-white/10 bg-white/[0.05] px-2 text-[11px] outline-none focus:border-emerald-400/60"
+                              className="min-h-[72px] w-full resize-none rounded-lg border border-white/10 bg-white/[0.05] px-2 py-2 text-[11px] outline-none focus:border-emerald-400/60"
                             />
                             <button
                               type="button"
@@ -914,19 +915,20 @@ export function IptvSourceManager({
           placeholder="Source name (e.g. Source A — Iraq)"
           className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 text-xs outline-none focus:border-[#ff2d6f]/60"
         />
-        <input
+        <textarea
           value={url}
           onChange={(e) => {
             setUrl(e.target.value);
             setTest(null);
           }}
           dir="ltr"
+          rows={3}
           placeholder={
             editingId
               ? 'Paste a new link to replace (leave empty to keep the current one)'
               : 'http://provider.tv/player_api.php?username=…&password=… or .m3u'
           }
-          className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.05] px-3 text-xs outline-none focus:border-[#ff2d6f]/60"
+          className="min-h-[80px] w-full resize-none rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-xs outline-none focus:border-[#ff2d6f]/60"
         />
         <div className="flex gap-2">
           <button
