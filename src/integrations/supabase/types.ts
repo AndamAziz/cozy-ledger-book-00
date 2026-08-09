@@ -1710,7 +1710,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "owner"
       bot_status: "idle" | "running" | "stopped"
       bot_strategy: "conservative" | "balanced" | "aggressive"
       currency_code: "GBP" | "IQD" | "EUR" | "USD"
@@ -1845,7 +1845,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "owner"],
       bot_status: ["idle", "running", "stopped"],
       bot_strategy: ["conservative", "balanced", "aggressive"],
       currency_code: ["GBP", "IQD", "EUR", "USD"],
