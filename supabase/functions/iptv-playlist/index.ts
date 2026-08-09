@@ -574,6 +574,7 @@ async function buildIndex(source: string) {
   // empty array, which surfaced as dozens of "No items in this category" rows.
   // The live catalogue is small enough to fetch once, so real counts are derived
   // from it and categories the line cannot actually access are dropped.
+  let liveCatalogueOk = false
   if (categories.some((c) => c.kind === 'live')) {
     const rows = await fetchJson<Record<string, unknown>[]>(
       sk,
@@ -631,6 +632,7 @@ async function buildIndex(source: string) {
           .slice(0, PREVIEW_SIZE)
           .map((i) => shape(i, c.name))
       }
+      liveCatalogueOk = true
       const trimmed = categories.filter((c) => c.kind !== 'live' || c.count > 0)
       categories.length = 0
       categories.push(...trimmed)
@@ -650,6 +652,29 @@ async function buildIndex(source: string) {
     }
   }
 
+
+  // The full live catalogue is what produces per-category counts AND the embedded
+  // first page. The provider only allows one connection at a time, so that call
+  // sometimes loses the race — reuse the last known-good snapshot instead of
+  // publishing an index with zero counts and no previews.
+  if (!liveCatalogueOk && categories.some((c) => c.kind === 'live')) {
+    const stale = await loadSharedIndex(source)
+    if (stale) {
+      const byId = new Map(stale.categories.map((c) => [c.id, c]))
+      for (const c of categories) {
+        const prev = c.kind === 'live' ? byId.get(c.id) : undefined
+        if (!prev) continue
+        c.count = prev.count
+        c.preview = prev.preview
+      }
+      for (const prev of stale.categories) {
+        if (prev.kind === 'live' && !categories.some((c) => c.id === prev.id)) categories.push(prev)
+      }
+      const kept = categories.filter((c) => c.kind !== 'live' || c.count > 0)
+      categories.length = 0
+      categories.push(...kept)
+    }
+  }
 
   if (!categories.length) {
     // Xtream sources ALWAYS live on player_api.php: many panels (Proxyshield &
@@ -693,7 +718,15 @@ async function buildIndex(source: string) {
     }
     throw new Error('Upstream returned no channels')
   }
-  return { at: Date.now(), source, categories, total: 0, partial, mode: 'xtream' as const }
+  return {
+    at: Date.now(),
+    source,
+    categories,
+    total: 0,
+    // A missing live catalogue means counts/previews are borrowed: retry soon.
+    partial: partial || !liveCatalogueOk,
+    mode: 'xtream' as const,
+  }
 }
 
 
