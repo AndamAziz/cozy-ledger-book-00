@@ -54,6 +54,7 @@ export function classifyStatus(status: number, body?: string): StreamError {
   if (status === 402) return streamError('ACCOUNT_EXPIRED')
   if (status === 403) return streamError('WAF_BLOCK', 'HTTP 403')
   if (status === 404 || status === 410) return streamError('CHANNEL_OFFLINE', `HTTP ${status}`)
+  if (status === 458 || status === 407) return streamError('MAX_CONNECTIONS', `HTTP ${status}`)
   if (status === 429 || status === 509) return streamError('RATE_LIMITED', `HTTP ${status}`)
   if (status === 451 || status === 456 || status === 459) return streamError('GEO_BLOCKED', `HTTP ${status}`)
   if (status === 408 || status === 504) return streamError('TIMEOUT', `HTTP ${status}`)

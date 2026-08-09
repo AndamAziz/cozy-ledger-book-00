@@ -205,6 +205,9 @@ Deno.serve(async (req) => {
   /** Best classified reason so far — shown to the user if nothing plays. */
   let classified: StreamError | null = null
   let rateLimited = false
+  /** Provider answered 458/407 — the account's viewing slots are all in use. */
+  let slotLimited = false
+
   /** `host|via` pairs the provider geo-blocks — no UA rotation can fix those. */
   const blockedRoutes = new Set<string>()
   let geoBlocked = false
@@ -277,6 +280,19 @@ Deno.serve(async (req) => {
         clearCooldown(target)
         break
       }
+      // 458/407: the Xtream panel refuses because every viewing slot on the
+      // account is in use. Retrying (or rotating UA/transport) only holds MORE
+      // slots open, which is what kept live TV permanently broken. Drain the
+      // body to release the socket and stop the plan for this host at once.
+      if (res.status === 458 || res.status === 407) {
+        slotLimited = true
+        classified = streamError('MAX_CONNECTIONS', `HTTP ${res.status}`)
+        blockedRoutes.add(`${hostKey}|direct`)
+        blockedRoutes.add(`${hostKey}|relay`)
+        lastError = `HTTP ${res.status}`
+        await res.body?.cancel().catch(() => undefined)
+        continue
+      }
       // 429/509: throttled. Stop the whole plan for this host — a different UA
       // or transport only deepens the throttle.
       if (isRateLimited(res.status) && res.status !== 503) {
@@ -289,6 +305,7 @@ Deno.serve(async (req) => {
         await res.body?.cancel().catch(() => undefined)
         continue
       }
+
       if (!classified || classified.code === 'UNKNOWN') classified = classifyStatus(res.status)
       // 456/459/451: the panel refuses this egress IP (geo / stream block).
       // Another User-Agent will never change that — stop hammering this route.
@@ -310,15 +327,17 @@ Deno.serve(async (req) => {
 
   if (!upstream) {
     // One actionable sentence, the way IPTV Smarters / VLC report failures.
-    const error: StreamError = rateLimited
-      ? streamError('RATE_LIMITED')
-      : geoBlocked
-        ? { code: 'GEO_BLOCKED', message: GEO_BLOCK_MESSAGE, retryable: true }
-        : deadlineHit
-          ? streamError('TIMEOUT', `${OVERALL_DEADLINE_MS / 1000}s`)
-          : (classified ?? classifyTransport(lastError))
+    const error: StreamError = slotLimited
+      ? streamError('MAX_CONNECTIONS')
+      : rateLimited
+        ? streamError('RATE_LIMITED')
+        : geoBlocked
+          ? { code: 'GEO_BLOCKED', message: GEO_BLOCK_MESSAGE, retryable: true }
+          : deadlineHit
+            ? streamError('TIMEOUT', `${OVERALL_DEADLINE_MS / 1000}s`)
+            : (classified ?? classifyTransport(lastError))
     console.error(
-      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, code: error.code, lastError, trace })}`,
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, slotLimited, code: error.code, lastError, trace })}`,
     )
     return json(
       {
@@ -328,11 +347,13 @@ Deno.serve(async (req) => {
         deadline: deadlineHit,
         geoBlocked,
         rateLimited,
+        slotLimited,
         detail: lastError,
         candidates: candidates.length,
       },
-      rateLimited ? 429 : 502,
+      rateLimited || slotLimited ? 429 : 502,
     )
+
   }
 
   const finalUrl = new URL(upstreamBase)
