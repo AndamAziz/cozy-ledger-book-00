@@ -34,7 +34,27 @@ export function learnScheme(host: string, protocol: string, ok = true) {
   else if (learnedScheme.get(host) === proto) learnedScheme.delete(host)
 }
 
+/** Panel endpoints that mark the end of a (possibly prefixed) panel base. */
+const PANEL_ENDPOINT_RE = /^(player_api|panel_api|get|xmltv|enigma2|portal)\.php$/i
+
+/**
+ * The custom intermediate path a reverse-proxied panel is served under, or ''.
+ *
+ * Strictly conditional: it returns a prefix ONLY when the URL's last segment is
+ * a known panel endpoint AND there is at least one segment in front of it.
+ * Every standard provider URL (`/player_api.php`, `/get.php`), every plain M3U
+ * or direct-stream link, and every non-panel path returns '' — their parsing is
+ * completely unchanged.
+ */
+function customPanelBasePath(u: URL): string {
+  const segments = u.pathname.split('/').filter(Boolean)
+  if (segments.length < 2) return ''
+  if (!PANEL_ENDPOINT_RE.test(segments[segments.length - 1])) return ''
+  return '/' + segments.slice(0, -1).join('/')
+}
+
 /** Parse Xtream credentials out of an M3U playlist URL. */
+
 export function parseXtream(raw: string) {
   const u = new URL(raw)
   const learned = learnedScheme.get(u.host)
