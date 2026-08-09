@@ -51,10 +51,12 @@ export function LiveTvUsersAdmin() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [users, access, servers] = await Promise.all([
+    const [users, access, servers, assigned] = await Promise.all([
       supabase.from('user_approvals').select('user_id, email').order('email'),
       supabase.from('livetv_access').select('user_id, trial_ends_at, is_activated'),
       supabase.functions.invoke('iptv-server', { body: { action: 'admin_list' } }),
+      // Read-only: names/types of the sources each account holds. No URLs.
+      supabase.functions.invoke('iptv-server', { body: { action: 'admin_assigned_sources' } }),
     ]);
     const accessMap = new Map((access.data ?? []).map((a) => [a.user_id, a]));
     // Credentials are encrypted at rest; the vault function returns masked previews only.
@@ -64,6 +66,7 @@ export function LiveTvUsersAdmin() {
       masked: string;
     }[];
     const serverMap = new Map(serverRows.map((s) => [s.userId, s]));
+    const byUser = (assigned.data?.byUser ?? {}) as Record<string, AssignedSource[]>;
     setRows(
       (users.data ?? []).map((u) => ({
         userId: u.user_id,
@@ -72,8 +75,10 @@ export function LiveTvUsersAdmin() {
         masked: serverMap.get(u.user_id)?.masked ?? '',
         trialEndsAt: accessMap.get(u.user_id)?.trial_ends_at ?? null,
         isActivated: !!accessMap.get(u.user_id)?.is_activated,
+        sources: byUser[u.user_id] ?? [],
       })),
     );
+
     setLoading(false);
   }, []);
 
