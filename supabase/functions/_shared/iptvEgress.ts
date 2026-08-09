@@ -17,17 +17,25 @@
 let cachedTemplate: string | null | undefined
 let cachedToken: string | null | undefined
 
+/** Default relay endpoint — the confirmed working contract is `/proxy?url=…`. */
+const DEFAULT_RELAY = 'https://relay.andam.uk:8443/proxy'
+
 function template(): string | null {
   if (cachedTemplate === undefined) {
     const raw = (Deno.env.get('IPTV_EGRESS_PROXY_URL') ?? '').trim()
-    cachedTemplate = raw || null
+    cachedTemplate = raw || DEFAULT_RELAY
   }
   return cachedTemplate ?? null
 }
 
 function token(): string | null {
   if (cachedToken === undefined) {
-    const raw = (Deno.env.get('IPTV_EGRESS_PROXY_TOKEN') ?? '').trim()
+    const raw = (Deno.env.get('RELAY_TOKEN') ?? Deno.env.get('IPTV_EGRESS_PROXY_TOKEN') ?? '').trim()
+    if (!raw) {
+      console.error(
+        '[iptvEgress] MISSING RELAY_TOKEN — relay requests will be rejected (HTTP 403). Set the RELAY_TOKEN secret.',
+      )
+    }
     cachedToken = raw || null
   }
   return cachedToken ?? null
@@ -38,13 +46,19 @@ export function hasEgressProxy(): boolean {
   return template() !== null
 }
 
-/** Wrap an upstream URL so the request leaves through the configured relay. */
+/**
+ * Wrap an upstream URL so the request leaves through the relay.
+ * Contract: `<relay-origin>/proxy?url=<encoded target>` + `X-Relay-Token`.
+ */
 export function egressUrl(target: string): string {
   const t = template()
   if (!t) return target
   const encoded = encodeURIComponent(target)
   if (t.includes('{url}')) return t.replace('{url}', encoded)
-  return `${t}${t.includes('?') ? '&' : '?'}url=${encoded}`
+  let base = t.replace(/\/+$/, '')
+  // Accept a bare origin in config and normalise it onto the /proxy path.
+  if (!/\/proxy(\?|$)/i.test(base) && !base.includes('?')) base = `${base}/proxy`
+  return `${base}${base.includes('?') ? '&' : '?'}url=${encoded}`
 }
 
 /** Headers the relay itself needs (auth token). */
