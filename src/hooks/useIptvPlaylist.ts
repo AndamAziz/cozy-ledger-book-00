@@ -191,7 +191,9 @@ export function useIptvChannels(categoryId: string | null, enabled: boolean, lim
         `iptv-playlist?category=${encodeURIComponent(categoryId ?? '')}&limit=${limit}`,
       ),
     enabled: enabled && !!categoryId,
-    staleTime: 15 * 60 * 1000,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
+    retry: 0,
     // Paging keeps the already-rendered grid on screen instead of flashing skeletons.
     placeholderData: keepPreviousData,
   });
@@ -207,7 +209,8 @@ export function useIptvSearch(query: string, section: 'live' | 'vod' | 'series' 
         `iptv-playlist?q=${encodeURIComponent(q)}&kind=${section}&limit=90`,
       ),
     enabled: q.length >= 2,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    retry: 0,
   });
 }
 
@@ -217,10 +220,12 @@ export function useIptvSeriesInfo(seriesId: string | null) {
     queryKey: ['iptv-series', activeSourceId, seriesId],
     queryFn: () => get<IptvSeriesInfo>(`iptv-playlist?series=${encodeURIComponent(seriesId ?? '')}`),
     enabled: !!seriesId,
-    staleTime: 30 * 60 * 1000,
-    retry: 1,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
+    retry: 0,
   });
 }
+
 
 
 
