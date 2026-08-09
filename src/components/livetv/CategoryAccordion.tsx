@@ -19,7 +19,7 @@ const PREVIEW_LIMIT = 12;
 /** Collapsible category row with a horizontal preview strip and a "See All" action. */
 export function CategoryAccordion({ category, kind, poster, onPlay, onSeeAll }: Props) {
   const [open, setOpen] = useState(false);
-  const { data, isLoading } = useIptvChannels(category.id, open, PREVIEW_LIMIT);
+  const { data, isLoading, isError, error, refetch } = useIptvChannels(category.id, open, PREVIEW_LIMIT);
   // Live categories get a periodically re-probed health verdict (sampled channels).
   const health = useCategoryHealth(category.id, data?.channels, kind, kind === 'live');
 
@@ -51,10 +51,24 @@ export function CategoryAccordion({ category, kind, poster, onPlay, onSeeAll }: 
       >
         <div className="overflow-hidden">
           <div className="border-t border-white/10 px-3 py-3">
-            {isLoading || !data ? (
+            {isError ? (
+              <div className="flex items-center justify-between gap-3 py-5">
+                <p className="min-w-0 flex-1 truncate text-xs font-semibold text-white/45">
+                  {(error as Error)?.message ?? 'Could not load this category.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  className="shrink-0 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[11px] font-bold text-white/80"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : isLoading || !data ? (
               <div className="flex items-center gap-2 py-6 text-xs font-semibold text-white/45">
                 <Loader2 className="h-4 w-4 animate-spin text-[#ff2d6f]" /> Loading…
               </div>
+
             ) : data.channels.length === 0 ? (
               <p className="py-6 text-center text-xs font-semibold text-white/40">No items in this category.</p>
             ) : (

@@ -1,7 +1,9 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
+  cancelBackgroundQueue,
   clearCatalogCache,
+
   fetchWithBackoff,
   queued,
   readCatalogCache,
@@ -139,6 +141,10 @@ export function toPlayableUrl(
 
 
 
+/** A path that just failed is not retried for this long (fail fast, no 20s stall). */
+const FAIL_MEMO_MS = 45_000;
+const failMemo = new Map<string, { at: number; err: Error }>();
+
 async function get<T>(path: string, opts: { cache?: boolean; background?: boolean } = {}): Promise<T> {
   const useCache = opts.cache !== false && !path.includes('refresh=1');
   const cacheKey = `${activeSourceId ?? 'default'}|${path}`;
@@ -150,9 +156,13 @@ async function get<T>(path: string, opts: { cache?: boolean; background?: boolea
       if (!hit.fresh && !opts.background) void get<T>(path, { background: true }).catch(() => undefined);
       return hit.value;
     }
+    const failed = failMemo.get(cacheKey);
+    if (failed && Date.now() - failed.at < FAIL_MEMO_MS) throw failed.err;
   }
 
-  // One provider request at a time, max 3 attempts with a real backoff.
+  // Foreground requests jump ahead of prefetch work and never sit behind it.
+  if (!opts.background) cancelBackgroundQueue();
+
   return await queued(async () => {
     if (useCache) {
       // A queued duplicate may have been filled while waiting.
@@ -163,20 +173,30 @@ async function get<T>(path: string, opts: { cache?: boolean; background?: boolea
     const token = data.session?.access_token ?? null;
     accessToken = token;
     const url = `${FN_BASE}/${path}${activeSourceId ? `${path.includes('?') ? '&' : '?'}source=${encodeURIComponent(activeSourceId)}` : ''}`;
-    const res = await fetchWithBackoff(url, {
-      headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` },
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok) {
-      throw new IptvRequestError(json?.error ?? `Failed to load playlist (HTTP ${res.status})`, {
-        reqId: json?.reqId,
-        errorKind: json?.errorKind,
-        diagnostic: json?.diagnostic ?? null,
-      });
+    try {
+      const res = await fetchWithBackoff(
+        url,
+        { headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` } },
+        // Prefetch never burns retries; a foreground miss gets two quick tries.
+        opts.background ? { retries: 1 } : { retries: 2, delayMs: 1200 },
+      );
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new IptvRequestError(json?.error ?? `Failed to load playlist (HTTP ${res.status})`, {
+          reqId: json?.reqId,
+          errorKind: json?.errorKind,
+          diagnostic: json?.diagnostic ?? null,
+        });
+      }
+      if (useCache && json) writeCatalogCache(cacheKey, json);
+      failMemo.delete(cacheKey);
+      return json as T;
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error('Failed to load playlist');
+      if (e.message !== 'cancelled') failMemo.set(cacheKey, { at: Date.now(), err: e });
+      throw e;
     }
-    if (useCache && json) writeCatalogCache(cacheKey, json);
-    return json as T;
-  });
+  }, { background: opts.background });
 }
 
 /**
@@ -191,6 +211,7 @@ export function prefetchIptvCategories(categoryIds: string[], limit = 12) {
     ).catch(() => undefined);
   });
 }
+
 
 
 export function useIptvIndex() {

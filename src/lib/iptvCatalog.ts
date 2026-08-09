@@ -65,14 +65,47 @@ export function clearCatalogCache(): void {
  * Sequential request queue: only one catalogue request is in flight at a time,
  * so a screen that mounts several category sections can never open several
  * provider connections at once.
+ *
+ * Background (prefetch) work runs in a separate lane that yields to anything the
+ * user is actually waiting for: a tap must never queue behind 8 warm-up calls.
  */
-let tail: Promise<unknown> = Promise.resolve();
-export function queued<T>(task: () => Promise<T>): Promise<T> {
-  const run = tail.then(task, task);
-  // Keep the chain alive even when a task rejects.
-  tail = run.catch(() => undefined);
-  return run;
+type Job = { run: () => void; cancel: () => void };
+const waiting: { fg: Job[]; bg: Job[] } = { fg: [], bg: [] };
+let busy = false;
+
+function pump() {
+  if (busy) return;
+  const job = waiting.fg.shift() ?? waiting.bg.shift();
+  if (!job) return;
+  busy = true;
+  job.run();
 }
+
+export function queued<T>(task: () => Promise<T>, opts: { background?: boolean } = {}): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const job: Job = {
+      cancel: () => reject(new Error('cancelled')),
+      run: () => {
+        Promise.resolve()
+          .then(task)
+          .then(resolve, reject)
+          .finally(() => {
+            busy = false;
+            pump();
+          });
+      },
+    };
+    (opts.background ? waiting.bg : waiting.fg).push(job);
+    pump();
+  });
+}
+
+/** Drop queued prefetch work (called when the user asks for something now). */
+export function cancelBackgroundQueue() {
+  const dropped = waiting.bg.splice(0, waiting.bg.length);
+  dropped.forEach((j) => j.cancel());
+}
+
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
