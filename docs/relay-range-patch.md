@@ -19,7 +19,9 @@ app.all('/proxy', async (req, res) => {
   const upstreamHeaders = {
     'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
     'Accept': req.headers['accept'] || '*/*',
-    'Accept-Encoding': req.headers['accept-encoding'] || 'identity',
+    // MUST be 'identity': node fetch() transparently decompresses, so passing
+    // the client's gzip/br through makes the forwarded content-encoding lie.
+    'Accept-Encoding': 'identity',
   };
   if (req.headers['range']) upstreamHeaders['Range'] = req.headers['range'];
   if (req.headers['if-range']) upstreamHeaders['If-Range'] = req.headers['if-range'];
