@@ -579,9 +579,19 @@ async function buildIndex(source: string) {
       for (const i of items) counts.set(i.categoryId, (counts.get(i.categoryId) ?? 0) + 1)
 
       const known = new Set(categories.filter((c) => c.kind === 'live').map((c) => c.id))
-      // Channels can also sit in a category the list endpoint never returned.
+      // Channels can also sit in a category the list endpoint never returned; those
+      // have no upstream name, so it is derived from the shared channel-name prefix
+      // ("KURD ▎SURYOYO SAT" → "KURD") exactly like native players display it.
       for (const [id, count] of counts) {
-        if (!known.has(id)) categories.push({ id, name: 'Live', count, kind: 'live' })
+        if (known.has(id)) continue
+        const tally = new Map<string, number>()
+        for (const i of items) {
+          if (i.categoryId !== id) continue
+          const prefix = i.name.split(/[▎|]/)[0].trim()
+          if (prefix && prefix.length <= 24) tally.set(prefix, (tally.get(prefix) ?? 0) + 1)
+        }
+        const best = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]
+        categories.push({ id, name: best && best[1] > 1 ? best[0] : 'Live', count, kind: 'live' })
       }
       for (const c of categories) {
         if (c.kind === 'live') c.count = counts.get(c.id) ?? 0
