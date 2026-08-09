@@ -148,6 +148,8 @@ export function LiveTVPlayer({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    let retryTimer: number | undefined;
+
 
     // Destroying an engine is guarded: a throw here used to bubble up, hit the
     // error boundary and tear the whole player down mid-playback.
