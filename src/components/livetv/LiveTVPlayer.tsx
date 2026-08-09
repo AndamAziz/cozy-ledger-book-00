@@ -293,13 +293,10 @@ export function LiveTVPlayer({
           .map((l) => l.videoCodec || (l as { codecSet?: string }).codecSet || '')
           .filter(Boolean);
         if (codecs.length && codecs.every((c) => isUnsupportedHevc(c))) {
-          setLoading(false);
-          setCodecIssue('HEVC / H.265');
-          setTimeout(() => {
-            if (!disposed) safeDestroy();
-          }, 0);
+          flagCodec('HEVC / H.265');
           return;
         }
+
         setLoading(false);
         setLevels(
           (data.levels ?? []).map((l, i) => ({ index: i, label: labelForLevel(l.height, l.bitrate) })),
