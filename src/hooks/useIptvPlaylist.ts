@@ -158,6 +158,19 @@ function isOutageError(e: unknown): boolean {
   return err?.diagnostic?.verdict === 'server_down' || err?.errorKind === 'connection';
 }
 
+/**
+ * Fire-and-forget background refresh. Never rejects — a provider outage during a
+ * silent revalidation must not surface as an unhandled promise rejection.
+ */
+function revalidate<T>(path: string): void {
+  try {
+    void get<T>(path, { background: true }).catch(() => undefined);
+  } catch {
+    // ignore
+  }
+}
+
+
 async function get<T>(path: string, opts: { cache?: boolean; background?: boolean } = {}): Promise<T> {
   const useCache = opts.cache !== false && !path.includes('refresh=1');
   const cacheKey = `${activeSourceId ?? 'default'}|${path}`;
