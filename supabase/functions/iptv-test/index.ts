@@ -161,8 +161,12 @@ Deno.serve(async (req) => {
   const authProblem = xtreamAuthError(auth.body)
   if (authProblem) return json({ ok: false, error: authProblem })
 
-  // 2. Channel list.
-  const list = await relayFetch(`${api}&action=get_live_streams`, { timeoutMs: TIMEOUT_MS })
+  // 2. Channel list — several MB on large panels, so it gets the long deadline
+  //    and a generous byte budget (a truncated body would fail JSON.parse).
+  const list = await relayFetch(`${api}&action=get_live_streams`, {
+    timeoutMs: CATALOGUE_TIMEOUT_MS,
+    maxBytes: 60_000_000,
+  })
   if (!list.ok) return json({ ok: false, error: list.error ?? 'Could not reach the server', status: list.status })
 
   let parsed: unknown
@@ -177,7 +181,10 @@ Deno.serve(async (req) => {
 
   // 3. Catalogue sizes (sequential — the provider allows one connection).
   const countOf = async (action: string) => {
-    const r = await relayFetch(`${api}&action=${action}`, { timeoutMs: TIMEOUT_MS })
+    const r = await relayFetch(`${api}&action=${action}`, {
+      timeoutMs: CATALOGUE_TIMEOUT_MS,
+      maxBytes: 60_000_000,
+    })
     if (!r.ok) return null
     try {
       const arr = JSON.parse(r.body)
@@ -186,6 +193,7 @@ Deno.serve(async (req) => {
       return null
     }
   }
+
   const vodCount = await countOf('get_vod_streams')
   const seriesCount = await countOf('get_series')
 
