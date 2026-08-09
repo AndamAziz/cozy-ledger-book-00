@@ -454,11 +454,11 @@ interface EpisodeOut {
 async function getSeriesInfo(api: string, seriesId: string) {
   const url = `${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
   let data: Record<string, unknown> | null = null
-  for (let i = 0; i < 2 && !data; i++) {
+  for (let i = 0; i < IPTV_USER_AGENTS.length && !data; i++) {
     const { res, diag } = await diagFetch('getSeriesInfo', url, {
       timeoutMs: 15000 * (i + 1),
       attempt: i + 1,
-      headers: { 'User-Agent': UA },
+      headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
       lastUpstreamDiag = diag
@@ -467,9 +467,21 @@ async function getSeriesInfo(api: string, seriesId: string) {
     let text = ''
     try {
       text = await res.text()
+      if (isHtmlBlock(res.headers.get('content-type'), text)) {
+        lastUpstreamDiag = {
+          ...diag,
+          ok: false,
+          kind: 'http_error',
+          bodySnippet: text.slice(0, 500),
+          message: 'Provider answered a block page (HTML) instead of data',
+        }
+        logDiag('getSeriesInfo:blocked', lastUpstreamDiag)
+        continue
+      }
       const json = JSON.parse(text)
       if (json && typeof json === 'object') data = json as Record<string, unknown>
     } catch (e) {
+
       lastUpstreamDiag = {
         ...diag,
         ok: false,
