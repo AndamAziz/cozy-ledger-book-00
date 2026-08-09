@@ -14,6 +14,7 @@ import {
   IptvRequestError,
 } from '@/hooks/useIptvPlaylist';
 import { IptvDiagnosticPanel } from '@/components/livetv/IptvDiagnosticPanel';
+import { ProviderHealthPanel } from '@/components/livetv/ProviderHealthPanel';
 import { SourcePicker } from '@/components/livetv/SourcePicker';
 
 
