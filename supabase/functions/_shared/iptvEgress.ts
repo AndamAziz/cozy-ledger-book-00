@@ -88,7 +88,26 @@ export async function egressFetch(
         return res
       }
     }
+    // The relay itself rejected US (bad/missing X-Relay-Token). Its own 401/403
+    // must never be reported as a provider refusal: it advertises the relay
+    // token header in CORS and never proxies upstream headers on that path.
+    if (res.status === 401 || res.status === 403) {
+      const acah = (res.headers.get('access-control-allow-headers') ?? '').toLowerCase()
+      const selfRejected = acah.includes('x-relay-token') || !!res.headers.get('x-powered-by')
+      if (selfRejected) {
+        console.error(
+          `[iptvEgress] relay rejected our token (HTTP ${res.status}) — check IPTV_EGRESS_PROXY_TOKEN; falling back to direct`,
+        )
+        await res.body?.cancel().catch(() => {})
+        try {
+          return await fetch(target, { ...init, redirect: 'follow' })
+        } catch {
+          return res
+        }
+      }
+    }
     return res
+
   } catch (e) {
     console.warn(`[iptvEgress] relay unreachable (${e instanceof Error ? e.message : 'error'}) — falling back to direct`)
     return await fetch(target, { ...init, redirect: 'follow' })
