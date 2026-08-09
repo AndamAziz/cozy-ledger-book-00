@@ -790,6 +790,8 @@ export default function M3uTV() {
                 )}
               </section>
             ))}
+            {/* Reveals the next batch of categories as the user scrolls. */}
+            {sectionWindow.hasMore && <div ref={sectionWindow.sentinelRef} className="h-10" />}
           </div>
         )}
 
