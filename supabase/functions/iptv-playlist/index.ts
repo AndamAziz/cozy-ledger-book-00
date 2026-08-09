@@ -598,7 +598,15 @@ async function buildIndex(source: string) {
           const words = new Map<string, number>()
           for (const i of items) {
             if (i.categoryId !== id) continue
-            const rest = i.name.split(/[▎|]/).slice(1).join(' ').trim().split(/\s+/)[0]
+            const rest = i.name
+              .split(/[▎|]/)
+              .slice(1)
+              .join(' ')
+              .trim()
+              .split(/\s+/)
+              .filter((w) => w.toUpperCase() !== name.toUpperCase())
+              .slice(0, 2)
+              .join(' ')
             if (rest) words.set(rest, (words.get(rest) ?? 0) + 1)
           }
           const w = [...words.entries()].sort((a, b) => b[1] - a[1])[0]
