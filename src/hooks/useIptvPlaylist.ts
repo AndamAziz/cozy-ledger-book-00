@@ -5,8 +5,10 @@ import {
   fetchWithBackoff,
   queued,
   readCatalogCache,
+  readCatalogEntry,
   writeCatalogCache,
 } from '@/lib/iptvCatalog';
+
 
 
 export type IptvKind = 'live' | 'vod' | 'series';
@@ -137,12 +139,17 @@ export function toPlayableUrl(
 
 
 
-async function get<T>(path: string, opts: { cache?: boolean } = {}): Promise<T> {
+async function get<T>(path: string, opts: { cache?: boolean; background?: boolean } = {}): Promise<T> {
   const useCache = opts.cache !== false && !path.includes('refresh=1');
   const cacheKey = `${activeSourceId ?? 'default'}|${path}`;
   if (useCache) {
-    const hit = readCatalogCache<T>(cacheKey);
-    if (hit) return hit;
+    // Stale entries are served instantly and refreshed in the background: the
+    // provider allows one connection at a time, so waiting is what felt slow.
+    const hit = readCatalogEntry<T>(cacheKey);
+    if (hit) {
+      if (!hit.fresh && !opts.background) void get<T>(path, { background: true }).catch(() => undefined);
+      return hit.value;
+    }
   }
 
   // One provider request at a time, max 3 attempts with a real backoff.
@@ -171,6 +178,20 @@ async function get<T>(path: string, opts: { cache?: boolean } = {}): Promise<T> 
     return json as T;
   });
 }
+
+/**
+ * Warm the localStorage cache for the categories the user is about to open, one
+ * at a time in the background, so expanding a row paints instantly.
+ */
+export function prefetchIptvCategories(categoryIds: string[], limit = 12) {
+  categoryIds.forEach((id) => {
+    void get<{ total: number; channels: IptvChannel[] }>(
+      `iptv-playlist?category=${encodeURIComponent(id)}&limit=${limit}`,
+      { background: true },
+    ).catch(() => undefined);
+  });
+}
+
 
 export function useIptvIndex() {
   return useQuery({

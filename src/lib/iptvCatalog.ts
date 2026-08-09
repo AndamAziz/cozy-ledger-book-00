@@ -7,25 +7,34 @@
  */
 
 const TTL_MS = 60 * 60 * 1000; // 1 hour — categories/playlists barely change
+/** Beyond the TTL an entry is still served instantly, then refreshed in the background. */
+const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 const PREFIX = 'iptv:cat:';
 
 type Entry<T> = { t: number; v: T };
 
-/** Cached catalogue payload, or null when missing/expired/corrupt. */
-export function readCatalogCache<T>(key: string): T | null {
+/** Raw cache entry with a freshness flag (stale entries are still usable). */
+export function readCatalogEntry<T>(key: string): { value: T; fresh: boolean } | null {
   try {
     const raw = localStorage.getItem(PREFIX + key);
     if (!raw) return null;
     const entry = JSON.parse(raw) as Entry<T>;
     if (!entry || typeof entry.t !== 'number') return null;
-    if (Date.now() - entry.t > TTL_MS) {
+    const age = Date.now() - entry.t;
+    if (age > STALE_MS) {
       localStorage.removeItem(PREFIX + key);
       return null;
     }
-    return entry.v;
+    return { value: entry.v, fresh: age <= TTL_MS };
   } catch {
     return null;
   }
+}
+
+/** Cached catalogue payload, or null when missing/expired/corrupt. */
+export function readCatalogCache<T>(key: string): T | null {
+  const hit = readCatalogEntry<T>(key);
+  return hit?.fresh ? hit.value : null;
 }
 
 export function writeCatalogCache<T>(key: string, value: T): void {
@@ -36,6 +45,7 @@ export function writeCatalogCache<T>(key: string, value: T): void {
     clearCatalogCache();
   }
 }
+
 
 /** Wipe every cached catalogue entry (used by the hard refresh button). */
 export function clearCatalogCache(): void {

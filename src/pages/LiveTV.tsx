@@ -6,6 +6,8 @@ import {
   useIptvIndex,
   useIptvRefresh,
   useIptvChannels,
+  prefetchIptvCategories,
+
   useIptvSearch,
   type IptvCategory,
   type IptvChannel,
@@ -209,10 +211,18 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
     [index, tab],
   );
 
+  // Warm the local cache for the first rows so expanding one paints instantly.
+  useEffect(() => {
+    if (!categories.length) return;
+    const t = setTimeout(() => prefetchIptvCategories(categories.slice(0, 8).map((c) => c.id)), 300);
+    return () => clearTimeout(t);
+  }, [categories]);
+
   // Switching tabs returns to the category list.
   useEffect(() => {
     setFullCategory(null);
   }, [tab]);
+
 
 
 
