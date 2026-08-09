@@ -87,6 +87,9 @@ export function LiveTVPlayer({
   const [attempt, setAttempt] = useState(0);
   /** True while waiting out the backoff between whole-ladder retries. */
   const [retrying, setRetrying] = useState(false);
+  /** Bumped by the manual Retry button to force a fresh ladder run. */
+  const [reload, setReload] = useState(0);
+
 
 
   const [levels, setLevels] = useState<QualityLevel[]>([]);
