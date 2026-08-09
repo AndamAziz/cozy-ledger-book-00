@@ -1,9 +1,13 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { isDirectStreamUrl, isXtreamUrl, parseXtream } from '../_shared/iptvConfig.ts'
+import { isDirectStreamUrl, isM3uPlaylistUrl, isXtreamUrl, parseXtream } from '../_shared/iptvConfig.ts'
 import { relayFetch, xtreamAuthError } from '../_shared/iptvFetch.ts'
 
-const TIMEOUT_MS = 10_000
+// M3U files (especially GitHub-hosted playlists with thousands of lines) need
+// time to download — a short deadline reported a false "Connection timed out".
+const TIMEOUT_MS = 30_000
+/** Short deadline for the tiny sample playback probes. */
+const PROBE_TIMEOUT_MS = 8_000
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -72,8 +76,12 @@ Deno.serve(async (req) => {
   }
 
   // --- Plain M3U / M3U8 playlist (no Xtream credentials) -------------------
-  if (!isXtreamUrl(raw)) {
-    const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS })
+  // A playlist pattern (get.php?type=m3u, /playlist, *.m3u, GitHub raw file) is
+  // always read as text — never probed as an Xtream API endpoint.
+  if (isM3uPlaylistUrl(raw) || !isXtreamUrl(raw)) {
+    // Big playlists (tens of thousands of channels) must be read whole so the
+    // channel count is accurate.
+    const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS, maxBytes: 60_000_000 })
     if (!res.ok) return json({ ok: false, error: res.error ?? 'Could not reach the server', status: res.status })
     if (!/#EXTM3U|#EXTINF/i.test(res.body)) {
       return json({
@@ -105,7 +113,7 @@ Deno.serve(async (req) => {
       .slice(0, 3)
     let onlineSample = 0
     for (const u of urls) {
-      const probe = await relayFetch(u, { timeoutMs: TIMEOUT_MS, maxBytes: 2048 })
+      const probe = await relayFetch(u, { timeoutMs: PROBE_TIMEOUT_MS, maxBytes: 2048 })
       if (probe.ok || probe.status === 206) onlineSample += 1
     }
     const ratio = urls.length ? onlineSample / urls.length : 1
@@ -177,7 +185,7 @@ Deno.serve(async (req) => {
     const target = `${creds.protocol}//${creds.host}/live/${encodeURIComponent(creds.username)}/${encodeURIComponent(
       creds.password,
     )}/${id}.ts`
-    const probe = await relayFetch(target, { timeoutMs: TIMEOUT_MS, maxBytes: 2048 })
+    const probe = await relayFetch(target, { timeoutMs: PROBE_TIMEOUT_MS, maxBytes: 2048 })
     if (probe.ok || probe.status === 206) onlineSample += 1
   }
 

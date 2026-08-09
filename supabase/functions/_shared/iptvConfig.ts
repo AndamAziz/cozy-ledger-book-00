@@ -706,3 +706,23 @@ export async function getM3U(url: string, force = false): Promise<M3uSnapshot> {
   return pending
 }
 
+
+/**
+ * True when a link must be read as a plain-text M3U playlist rather than probed
+ * as an Xtream API endpoint. Covers `get.php?...&type=m3u|m3u_plus`, generic
+ * `/playlist`, `/list` endpoints and any `.m3u`/`.m3u8` file (GitHub raw links
+ * included) — even when the URL also carries username/password parameters.
+ */
+export function isM3uPlaylistUrl(raw: string): boolean {
+  let u: URL
+  try {
+    u = new URL(raw)
+  } catch {
+    return false
+  }
+  const type = (u.searchParams.get('type') ?? '').toLowerCase()
+  if (/^m3u(_plus)?$/.test(type)) return true
+  if (/\/(get\.php|playlist\.php|playlist|list)(\/|$)/i.test(u.pathname)) return true
+  if (/\.m3u8?(\?|#|$)/i.test(u.pathname)) return true
+  return false
+}
