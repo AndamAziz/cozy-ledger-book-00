@@ -177,6 +177,39 @@ export function LiveTvUsersAdmin() {
                   <span className="text-sm font-semibold">{row.email}</span>
                   <span className={`text-xs font-bold ${label.tone}`}>{label.text}</span>
                 </div>
+
+                {/* Read-only source visibility (all admins). Assignment stays owner-only. */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {row.sources.length === 0 ? (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-dashed px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                      <ListTree className="h-3 w-3" /> No source assigned
+                    </span>
+                  ) : (
+                    row.sources.map((s) => (
+                      <span
+                        key={s.id}
+                        title={s.isActive ? 'Active source' : 'Assigned but inactive'}
+                        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${
+                          s.isActive
+                            ? 'border-primary/40 bg-primary/10 text-primary'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            s.isActive ? 'bg-emerald-500' : 'bg-muted-foreground/50'
+                          }`}
+                        />
+                        {s.name}
+                        <span className="rounded bg-muted px-1 text-[10px] uppercase">
+                          {s.kind === 'xtream' ? 'XT' : 'M3U'}
+                        </span>
+                        {s.isSelected && <span className="text-[10px] opacity-70">selected</span>}
+                      </span>
+                    ))
+                  )}
+                </div>
+
                 {isOwner && <div className="flex flex-wrap gap-2">
                   <Input
                     dir="ltr"
