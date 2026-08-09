@@ -1,5 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { parseXtream, isXtreamUrl, getM3U, xtreamApiBase, type M3uEntry } from '../_shared/iptvConfig.ts'
+import { parseXtream, isXtreamUrl, getM3U, xtreamApiBase, isM3uPlaylistUrl, type M3uEntry } from '../_shared/iptvConfig.ts'
 import { resolveViewer } from '../_shared/iptvViewer.ts'
 import { classifyError, diagFetch, logDiag, redactUrl, verdictOf, type UpstreamDiag } from '../_shared/iptvDiag.ts'
 import { isHtmlBlock, uaFor, IPTV_USER_AGENTS } from '../_shared/iptvFetch.ts'
@@ -561,26 +561,31 @@ async function buildIndex(source: string) {
   }
 
   if (!categories.length) {
-    // Some panels temporarily forbid player_api.php while their get.php M3U
-    // export remains available. Reuse its shared last-known-good snapshot so a
-    // provider-side 403 does not blank Live TV, Movies and Series together.
-    try {
-      const snap = await getM3U(source)
-      const fallback = derive(snap.version, snap.entries)
-      if (fallback.categories.length) {
-        console.warn('[iptv-playlist] player_api unavailable; using M3U catalogue fallback')
-        return {
-          at: snap.at,
-          source,
-          categories: fallback.categories,
-          total: fallback.browsable.length,
-          partial: false,
-          mode: 'plain' as const,
+    // Xtream sources ALWAYS live on player_api.php: many panels (Proxyshield &
+    // co) answer `get.php?type=m3u` with HTTP 200 and an EMPTY body, so falling
+    // back to the M3U export there only replaces a real error with a silently
+    // empty catalogue. Only genuine playlist links get the M3U fallback.
+    const m3uFallbackAllowed = isM3uPlaylistUrl(source) || !isXtreamUrl(source)
+    if (m3uFallbackAllowed) {
+      try {
+        const snap = await getM3U(source)
+        const fallback = derive(snap.version, snap.entries)
+        if (fallback.categories.length) {
+          console.warn('[iptv-playlist] player_api unavailable; using M3U catalogue fallback')
+          return {
+            at: snap.at,
+            source,
+            categories: fallback.categories,
+            total: fallback.browsable.length,
+            partial: false,
+            mode: 'plain' as const,
+          }
         }
+      } catch (error) {
+        console.warn(`[iptv-playlist] M3U fallback failed: ${error instanceof Error ? error.message : String(error)}`)
       }
-    } catch (error) {
-      console.warn(`[iptv-playlist] M3U fallback failed: ${error instanceof Error ? error.message : String(error)}`)
     }
+
     const upstream = diagBySource[sk]
     if (upstream?.status === 401 || upstream?.status === 403) {
       return {

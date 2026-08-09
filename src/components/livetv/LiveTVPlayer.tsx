@@ -16,6 +16,8 @@ import {
   resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
 } from '@/lib/resumePlayback';
 import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
+import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
+
 import { claimStreamSlot, unregisterStream } from '@/lib/streamSlot';
 import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
 
@@ -82,8 +84,15 @@ export function LiveTVPlayer({
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  /**
+   * Codec this browser cannot decode (HEVC/H.265 video, E-AC-3 style audio):
+   * an honest message beats cycling engines and reporting "not responding".
+   */
+  const [codecIssue, setCodecIssue] = useState<string | null>(null);
+
   /** Index into the engine chain: each failure advances to the next engine. */
   const [stage, setStage] = useState(0);
+
   const [attempt, setAttempt] = useState(0);
   /** True while waiting out the backoff between whole-ladder retries. */
   const [retrying, setRetrying] = useState(false);
@@ -121,6 +130,8 @@ export function LiveTVPlayer({
     setStage(0);
     setAttempt(0);
     setRetrying(false);
+    setCodecIssue(null);
+
 
     setLevels([]);
     setSelectedLevel(-1);
@@ -193,6 +204,17 @@ export function LiveTVPlayer({
       raw: engine === 'mpegts',
     });
     let disposed = false;
+    /** Stop everything and tell the viewer the codec — not the feed — is the problem. */
+    const flagCodec = (label: string) => {
+      if (disposed) return;
+      setLoading(false);
+      setCodecIssue(label);
+      clearWatchdog();
+      setTimeout(() => {
+        if (!disposed) safeDestroy();
+      }, 0);
+    };
+
     /**
      * Load watchdog: if no frame arrives within 15s the stream is treated as a
      * failure so "Connecting to stream…" can never spin forever, even if the
@@ -264,21 +286,50 @@ export function LiveTVPlayer({
         return;
       }
       hls.on(Hls.Events.MANIFEST_PARSED, (_e, data) => {
+        // Codec-risk gate: an HEVC/H.265 feed (common on Kurdish channels such
+        // as NRT FHD / Suroyo) cannot be decoded by Chrome/Edge/Firefox at all,
+        // so every engine would fail identically. Say so instead.
+        const codecs = (data.levels ?? [])
+          .map((l) => l.videoCodec || (l as { codecSet?: string }).codecSet || '')
+          .filter(Boolean);
+        if (codecs.length && codecs.every((c) => isUnsupportedHevc(c))) {
+          flagCodec('HEVC / H.265');
+          return;
+        }
+
         setLoading(false);
         setLevels(
           (data.levels ?? []).map((l, i) => ({ index: i, label: labelForLevel(l.height, l.bitrate) })),
         );
         playWithAutoplayFallback(video, () => setMuted(true)).catch(() => undefined);
       });
+
       hls.on(Hls.Events.LEVEL_SWITCHED, (_e, data) => {
         const lvl = hls.levels?.[data.level];
         if (lvl) setAutoLabel(labelForLevel(lvl.height, lvl.bitrate));
       });
+      // Media playlists carry no CODECS attribute, so the real codec only shows
+      // up once a fragment is parsed / a source buffer is created.
+      hls.on(Hls.Events.BUFFER_CODECS, (_e, data) => {
+        const codec = (data as { video?: { codec?: string } })?.video?.codec ?? '';
+        if (!isUnsupportedHevc(codec)) return;
+        flagCodec('HEVC / H.265');
+      });
       hls.on(Hls.Events.ERROR, (_e, data) => {
         if (!data.fatal || disposed) return;
+        // A codec the browser refuses (HEVC video, E-AC-3 audio) fails the same
+        // way on every engine — flag it instead of cycling and blaming the feed.
+        const d = data as unknown as { details?: string; mimeType?: string; reason?: string; error?: { message?: string } };
+        const hint = [d.mimeType, d.reason, d.error?.message].filter(Boolean).join(' ');
+        if (/CodecError|IncompatibleCodecs/i.test(String(d.details ?? ''))) {
+          flagCodec(isHevcCodec(hint) ? 'HEVC / H.265' : 'an unsupported video/audio codec');
+          return;
+        }
+
         // Same 3-stage in-place recovery ladder the IPTV M3U engine uses:
         // decoder glitches are recovered (then audio codec swapped), network
         // faults reload the manifest — only then do we fall to the next engine.
+
         if (recovered < 3) {
           recovered += 1;
           try {
@@ -318,7 +369,19 @@ export function LiveTVPlayer({
             { enableWorker: true, liveBufferLatencyChasing: true, lazyLoad: false },
           );
           tsRef.current = player;
+          let codecBlocked = false;
+          // Raw MPEG-TS carrying HEVC video: report the codec, don't retry.
+          player.on(mpegts.Events.MEDIA_INFO, (info: { videoCodec?: string; mimeType?: string }) => {
+            const codec = info?.videoCodec || info?.mimeType || '';
+            if (!isUnsupportedHevc(codec)) return;
+            codecBlocked = true;
+            flagCodec(isHevcCodec(codec) ? 'HEVC / H.265' : codec);
+          });
+
           player.on(mpegts.Events.ERROR, () => {
+            if (codecBlocked) return;
+
+
             setTimeout(() => {
               if (disposed) return;
               safeDestroy();
@@ -851,7 +914,7 @@ export function LiveTVPlayer({
 
         )}
 
-        {loading && !error && (
+        {loading && !error && !codecIssue && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/55">
             <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
             <p className="text-[11px] font-semibold tracking-wide text-white/55">
@@ -863,8 +926,37 @@ export function LiveTVPlayer({
           </div>
         )}
 
+        {codecIssue && (
+          <div className="absolute inset-0 flex items-center justify-center px-6">
+            <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.06] px-6 py-7 text-center shadow-2xl backdrop-blur-2xl">
+              <span
+                className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
+                style={{ background: 'rgba(255,176,32,0.16)' }}
+              >
+                <AlertTriangle className="h-6 w-6" style={{ color: '#ffb020' }} />
+              </span>
+              <p className="text-sm font-extrabold tracking-tight text-white">
+                Unsupported codec
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-white/50">
+                This channel is broadcast in {codecIssue}, which this browser cannot decode.
+                It plays on Safari, iPhone/iPad, Apple TV and most Smart TVs — or pick the
+                SD/H.264 version of the same channel.
+              </p>
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={onClose}
+                  className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 transition hover:border-white/40 hover:text-white active:scale-95"
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {error && (
+        {error && !codecIssue && (
+
           <div className="absolute inset-0 flex items-center justify-center px-6">
             <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.06] px-6 py-7 text-center shadow-2xl backdrop-blur-2xl">
               <span
