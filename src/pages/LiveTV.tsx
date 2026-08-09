@@ -401,7 +401,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {categories.map((category) => (
+            {categories.slice(0, catWindow.limit).map((category) => (
               <CategoryAccordion
                 key={category.id}
                 category={category}
@@ -411,6 +411,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
                 onSeeAll={setFullCategory}
               />
             ))}
+            {catWindow.hasMore && <div ref={catWindow.sentinelRef} style={{ height: 24 }} />}
 
             {!isLoading && !error && categories.length === 0 && (
               <p className="py-24 text-center text-xs font-semibold text-white/40">No channels in this section.</p>
