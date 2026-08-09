@@ -871,6 +871,33 @@ export function IptvSourceManager({
             {editingId ? 'Save changes' : 'Add source'}
           </button>
         </div>
+        <div className="space-y-1 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-[10px] leading-relaxed opacity-70">
+          <p className="font-extrabold opacity-100">Supported link types for testing</p>
+          <p>
+            <span className="font-bold">Xtream API</span> — player_api.php / get.php with
+            username &amp; password (live + movies + series counts)
+          </p>
+          <p>
+            <span className="font-bold">M3U / M3U_PLUS</span> — .m3u playlist files (channel list)
+          </p>
+          <p>
+            <span className="font-bold">HLS</span> — .m3u8 manifest (single stream)
+          </p>
+          <p>
+            <span className="font-bold">MPEG-TS</span> — .ts live feed (single stream)
+          </p>
+          <p>
+            <span className="font-bold">Progressive files</span> — .mp4, .mkv, .m4v, .mov, .avi,
+            .webm, .flv (single stream)
+          </p>
+          <p>
+            <span className="font-bold">MPEG-DASH</span> — .mpd manifest (single stream)
+          </p>
+          <p className="opacity-60">
+            Xtream direct paths like /live/user/pass/123 are detected as one stream too.
+          </p>
+        </div>
+
         {editingId && (
           <button
             type="button"
