@@ -170,11 +170,14 @@ async function get<T>(path: string, opts: { cache?: boolean; background?: boolea
       if (!hit.fresh && !opts.background) void get<T>(path, { background: true }).catch(() => undefined);
       return hit.value;
     }
-    const down = outage.get(sourceKey);
-    if (down && Date.now() - down.at < OUTAGE_MS) throw down.err;
     const failed = failMemo.get(cacheKey);
     if (failed && Date.now() - failed.at < FAIL_MEMO_MS) throw failed.err;
   }
+
+  // Panel-level outage applies to every request (even refresh=1), otherwise a
+  // dead provider produces one 502 per category.
+  const downNow = outage.get(sourceKey);
+  if (downNow && Date.now() - downNow.at < OUTAGE_MS) throw downNow.err;
 
   // Foreground requests jump ahead of prefetch work and never sit behind it.
   if (!opts.background) cancelBackgroundQueue();
@@ -185,6 +188,9 @@ async function get<T>(path: string, opts: { cache?: boolean; background?: boolea
       const hit = readCatalogCache<T>(cacheKey);
       if (hit) return hit;
     }
+    // The breaker may have tripped while this request waited in the queue.
+    const down = outage.get(sourceKey);
+    if (down && Date.now() - down.at < OUTAGE_MS) throw down.err;
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token ?? null;
     accessToken = token;
