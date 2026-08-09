@@ -109,3 +109,27 @@ curl -I -r 0-1023 "https://relay.andam.uk:8443/proxy?url=https%3A%2F%2Fexample.c
 ```
 
 You should see `HTTP/2 206` and a `content-range:` header.
+
+## Hotfix (2026-08-09): gzip regression
+
+The deployed relay currently returns `content-encoding: gzip` on an **already
+decompressed** body, because `fetch()` in Node transparently gunzips. Any client
+that trusts the header (our Deno edge functions do) fails with:
+
+```
+TypeError: Invalid gzip header
+```
+
+That is why Live / Movies / Series category listings return 502 right now.
+
+Two one-line changes fix it (both already applied in the handler above):
+
+1. Always send `'Accept-Encoding': 'identity'` upstream — never the client value.
+2. Remove `'content-encoding'` from the forwarded header list.
+
+Verify after restart — the header must be **absent**:
+
+```bash
+curl -sI -H "Accept-Encoding: gzip" -H "X-Relay-Token: $RELAY_TOKEN" \
+  "https://relay.andam.uk:8443/proxy?url=https%3A%2F%2Fapi.github.com%2Fmeta" | grep -i content-encoding
+```
