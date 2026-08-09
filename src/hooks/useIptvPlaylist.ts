@@ -237,13 +237,17 @@ export function useIptvSeriesInfo(seriesId: string | null) {
 export function useIptvRefresh() {
   const qc = useQueryClient();
   return async () => {
+    clearCatalogCache();
     try {
       await get<IptvIndex>('iptv-playlist?refresh=1');
     } finally {
+      clearCatalogCache();
       qc.removeQueries({ queryKey: ['iptv-index'] });
       qc.removeQueries({ queryKey: ['iptv-channels'] });
       qc.removeQueries({ queryKey: ['iptv-search'] });
+      qc.removeQueries({ queryKey: ['iptv-series'] });
       await qc.refetchQueries({ queryKey: ['iptv-index'] });
     }
+
   };
 }
