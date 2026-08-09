@@ -41,6 +41,7 @@ type IndexSnapshot = {
   total: number
   partial?: boolean
   mode?: 'xtream' | 'plain'
+  warning?: string
 }
 // Keyed by playlist URL: each user browses their own provider catalogue.
 const indexCache = new Map<string, IndexSnapshot>()
@@ -448,6 +449,18 @@ async function buildIndex(source: string) {
       }
     } catch (error) {
       console.warn(`[iptv-playlist] M3U fallback failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    const upstream = lastUpstreamDiag
+    if (upstream?.status === 401 || upstream?.status === 403) {
+      return {
+        at: Date.now(),
+        source,
+        categories: [],
+        total: 0,
+        partial: true,
+        mode: 'xtream' as const,
+        warning: `The IPTV provider temporarily refused the catalogue request (${upstream.status} ${upstream.statusText ?? 'Forbidden'}).`,
+      }
     }
     throw new Error('Upstream returned no channels')
   }
@@ -925,6 +938,7 @@ Deno.serve(async (req) => {
           total: index.total,
           categories: index.categories,
           updatedAt: new Date(index.at).toISOString(),
+          ...(index.warning ? { warning: index.warning } : {}),
         },
         200,
         300,

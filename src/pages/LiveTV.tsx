@@ -280,6 +280,25 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
           </div>
         )}
 
+        {!error && index?.warning && (
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-4 text-white/70">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#ff2d6f]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white">Provider catalogue unavailable</p>
+              <p className="mt-1 text-xs leading-relaxed text-white/50">{index.warning}</p>
+            </div>
+            <button
+              type="button"
+              onClick={doRefresh}
+              disabled={refreshing}
+              className="shrink-0 rounded-lg border border-white/10 p-2 text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+              aria-label="Retry playlist"
+            >
+              <RotateCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        )}
+
         {searching ? (
           <section>
             <div className="mb-3 flex items-center gap-3">
