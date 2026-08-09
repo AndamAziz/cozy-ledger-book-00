@@ -238,7 +238,9 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
               {index ? `${categories.length.toLocaleString()} categories` : 'Streaming'}
             </p>
           </div>
+          <SourcePicker />
           {sources && (
+
             <button
               type="button"
               onClick={sources.openSourceManager}
