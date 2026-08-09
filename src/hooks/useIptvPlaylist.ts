@@ -43,12 +43,44 @@ export interface IptvCategory {
 }
 
 
+/** UI-facing explanation of why the provider refused a catalogue request. */
+export interface IptvDiagnostic {
+  verdict: 'waf_block' | 'credentials' | 'rate_limited' | 'geo_block' | 'unknown' | string;
+  reason: string;
+  status: number;
+  statusText?: string;
+  url: string;
+  action?: string;
+  attempt?: number;
+  durationMs?: number;
+  headers?: Record<string, string>;
+  bodySnippet?: string;
+  message?: string;
+}
+
 export interface IptvIndex {
   total: number;
   categories: IptvCategory[];
   updatedAt: string;
   warning?: string;
+  reqId?: string;
+  diagnostic?: IptvDiagnostic | null;
 }
+
+/** Error carrying the upstream diagnostic returned by the edge function. */
+export class IptvRequestError extends Error {
+  reqId?: string;
+  errorKind?: string;
+  diagnostic?: IptvDiagnostic | null;
+  constructor(message: string, meta: { reqId?: string; errorKind?: string; diagnostic?: IptvDiagnostic | null }) {
+    super(message);
+    this.name = 'IptvRequestError';
+    this.reqId = meta.reqId;
+    this.errorKind = meta.errorKind;
+    this.diagnostic = meta.diagnostic ?? null;
+  }
+}
+
 
 const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
