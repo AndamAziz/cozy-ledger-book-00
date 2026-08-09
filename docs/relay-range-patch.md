@@ -37,7 +37,9 @@ app.all('/proxy', async (req, res) => {
     });
 
     res.status(upstream.status);
-    const forward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'content-encoding', 'etag', 'last-modified', 'cache-control'];
+    // NOTE: 'content-encoding' is deliberately NOT forwarded — fetch() already
+    // decompressed the body, so forwarding it corrupts the response.
+    const forward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified', 'cache-control'];
     for (const h of forward) {
       const v = upstream.headers.get(h);
       if (v) res.setHeader(h, v);
