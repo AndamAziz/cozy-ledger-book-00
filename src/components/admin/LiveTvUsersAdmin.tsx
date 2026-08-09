@@ -6,6 +6,14 @@ import { useToast } from '@/hooks/use-toast';
 import { ListTree, Loader2, Radio, Save, Search, Timer, Unlock, Lock } from 'lucide-react';
 import { IptvSourceManager } from '@/components/livetv/IptvSourceManager';
 
+interface AssignedSource {
+  id: string;
+  name: string;
+  kind: string;
+  isActive: boolean;
+  isSelected: boolean;
+}
+
 interface Row {
   userId: string;
   email: string;
@@ -13,7 +21,9 @@ interface Row {
   masked: string;
   trialEndsAt: string | null;
   isActivated: boolean;
+  sources: AssignedSource[];
 }
+
 
 function trialLabel(row: Row): { text: string; tone: string } {
   if (row.isActivated) return { text: 'Activated (paid)', tone: 'text-emerald-500' };
