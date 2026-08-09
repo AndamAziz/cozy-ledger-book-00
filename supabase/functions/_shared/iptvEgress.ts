@@ -130,7 +130,17 @@ function serialise<T>(task: () => Promise<T>): Promise<T> {
 export async function egressFetch(
   target: string,
   init: RequestInit = {},
-  opts: { direct?: boolean } = {},
+  opts: { direct?: boolean; stream?: boolean } = {},
+): Promise<Response> {
+  // Catalogue/metadata hops are queued so the provider never sees a burst.
+  if (!opts.stream) return await serialise(() => egressHop(target, init, opts))
+  return await egressHop(target, init, opts)
+}
+
+async function egressHop(
+  target: string,
+  init: RequestInit,
+  opts: { direct?: boolean; stream?: boolean },
 ): Promise<Response> {
   if (opts.direct || !hasEgressProxy()) return await direct(target, init)
   if (Date.now() < relayDownUntil) return await direct(target, init)

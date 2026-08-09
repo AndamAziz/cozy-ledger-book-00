@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
       const res =
         via === 'direct'
           ? await fetch(target, { headers, redirect: 'follow', signal })
-          : await egressFetch(target, { headers, redirect: 'follow', signal })
+          : await egressFetch(target, { headers, redirect: 'follow', signal }, { stream: true })
       if (res.ok || res.status === 206) {
         const ctype = res.headers.get('content-type') || ''
         const resolvedUrl = finalUrlOf(res, target)
