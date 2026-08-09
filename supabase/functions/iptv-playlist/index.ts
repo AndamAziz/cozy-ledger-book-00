@@ -3,6 +3,13 @@ import { parseXtream, isXtreamUrl, getM3U, xtreamApiBase, type M3uEntry } from '
 import { resolveViewer } from '../_shared/iptvViewer.ts'
 import { classifyError, diagFetch, logDiag, redactUrl, verdictOf, type UpstreamDiag } from '../_shared/iptvDiag.ts'
 import { isHtmlBlock, uaFor, IPTV_USER_AGENTS } from '../_shared/iptvFetch.ts'
+import { backoffMs, clearCooldown, cooldownLeft, isRateLimited, markRateLimited, sleep } from '../_shared/iptvCooldown.ts'
+
+/**
+ * Hard wall-clock budget for ANY catalogue call. Without it, three escalating
+ * 15s attempts could keep a user waiting 90s before the first error.
+ */
+const CATALOGUE_BUDGET_MS = 15_000
 
 
 /**
@@ -244,18 +251,41 @@ async function fetchJson<T>(
   attempts = IPTV_USER_AGENTS.length,
   tag = 'fetchJson',
 ): Promise<T | null> {
+  const deadline = Date.now() + CATALOGUE_BUDGET_MS
+  // A provider that just rate-limited us is left alone until its window ends.
+  const parked = cooldownLeft(url)
+  if (parked) {
+    diagBySource[sk] = {
+      ok: false,
+      kind: 'http_error',
+      url,
+      status: 429,
+      statusText: 'Too Many Requests',
+      message: `Provider is rate limiting; retrying in ${Math.ceil(parked / 1000)}s`,
+    } as UpstreamDiag
+    return null
+  }
   for (let i = 0; i < attempts; i++) {
+    const left = deadline - Date.now()
+    if (left < 1_000) break
     // Each attempt uses a different player User-Agent: panels behind a WAF
     // reject some clients outright (403 or an HTML block page).
     const { res, diag } = await diagFetch(tag, url, {
-      timeoutMs: timeoutMs * (i + 1),
+      timeoutMs: Math.min(timeoutMs * (i + 1), left),
       attempt: i + 1,
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
       diagBySource[sk] = diag
+      // 429 is not a client problem: park the host instead of rotating UAs.
+      if (isRateLimited(diag.status)) {
+        markRateLimited(url, diag.rawHeaders ?? null)
+        break
+      }
+      if (i + 1 < attempts) await sleep(Math.min(backoffMs(i), Math.max(0, deadline - Date.now())))
       continue
     }
+    clearCooldown(url)
     let text = ''
     try {
       text = await res.text()
@@ -655,14 +685,21 @@ interface EpisodeOut {
 async function getSeriesInfo(sk: string, api: string, seriesId: string) {
   const url = `${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
   let data: Record<string, unknown> | null = null
+  const deadline = Date.now() + CATALOGUE_BUDGET_MS
   for (let i = 0; i < IPTV_USER_AGENTS.length && !data; i++) {
+    const left = deadline - Date.now()
+    if (left < 1_000) break
     const { res, diag } = await diagFetch('getSeriesInfo', url, {
-      timeoutMs: 15000 * (i + 1),
+      timeoutMs: Math.min(15000 * (i + 1), left),
       attempt: i + 1,
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
       diagBySource[sk] = diag
+      if (isRateLimited(diag.status)) {
+        markRateLimited(url, diag.rawHeaders ?? null)
+        break
+      }
       continue
     }
     let text = ''
