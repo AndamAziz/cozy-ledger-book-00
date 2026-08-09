@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  Activity,
   CheckCircle2,
   ChevronDown,
   Loader2,
@@ -172,6 +173,11 @@ export function IptvSourceManager({
   // Per-row stream-resolver probe (does not block the row UI).
   const [rowTesting, setRowTesting] = useState<string | null>(null);
   const [rowTest, setRowTest] = useState<Record<string, RowTestResult>>({});
+  // Per-row provider health probe (moved here from the Live TV page).
+  const [healthBusy, setHealthBusy] = useState<string | null>(null);
+  const [rowHealth, setRowHealth] = useState<
+    Record<string, { status?: string; message?: string; latencyMs?: number; activeConnections?: number; maxConnections?: number }>
+  >({});
   // CEO: assign one of my sources to another account.
   const [assignFor, setAssignFor] = useState<string | null>(null);
   const [assignQuery, setAssignQuery] = useState('');
@@ -271,6 +277,36 @@ export function IptvSourceManager({
       }));
     } finally {
       setRowTesting(null);
+    }
+  };
+
+  /** Live provider up/down + latency check for the currently active source. */
+  const checkHealth = async (s: IptvSource) => {
+    setHealthBusy(s.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('iptv-health?fresh=1', { method: 'GET' });
+      if (error) throw error;
+      const h = data as { status?: string; message?: string; latencyMs?: number; activeConnections?: number; maxConnections?: number };
+      setRowHealth((prev) => ({ ...prev, [s.id]: h }));
+      setSources((prev) =>
+        prev.map((x) =>
+          x.id === s.id
+            ? {
+                ...x,
+                health_status: (h.status as IptvSource['health_status']) ?? x.health_status,
+                health_message: h.message ?? x.health_message,
+                health_checked_at: new Date().toISOString(),
+              }
+            : x,
+        ),
+      );
+    } catch (e) {
+      setRowHealth((prev) => ({
+        ...prev,
+        [s.id]: { status: 'offline', message: e instanceof Error ? e.message : 'Health check failed' },
+      }));
+    } finally {
+      setHealthBusy(null);
     }
   };
 
@@ -647,6 +683,29 @@ export function IptvSourceManager({
                         }${rowTest[s.id].message ? ` — ${rowTest[s.id].message}` : ''}`}
                 </p>
               )}
+              {rowHealth[s.id] && (
+                <p
+                  dir="ltr"
+                  className={`text-[10px] font-bold ${
+                    rowHealth[s.id].status === 'online'
+                      ? 'text-emerald-400'
+                      : rowHealth[s.id].status === 'slot_limit'
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
+                  }`}
+                >
+                  {rowHealth[s.id].status === 'online'
+                    ? 'Up'
+                    : rowHealth[s.id].status === 'slot_limit'
+                      ? 'Busy'
+                      : 'Down'}
+                  {rowHealth[s.id].latencyMs != null ? ` · ${rowHealth[s.id].latencyMs} ms` : ''}
+                  {rowHealth[s.id].maxConnections
+                    ? ` · ${rowHealth[s.id].activeConnections ?? '?'}/${rowHealth[s.id].maxConnections} slots`
+                    : ''}
+                  {rowHealth[s.id].message ? ` — ${rowHealth[s.id].message}` : ''}
+                </p>
+              )}
 
               <div className="flex flex-wrap gap-1.5 pt-1">
                 <button
@@ -662,6 +721,21 @@ export function IptvSourceManager({
                   )}
                   Test
                 </button>
+                {s.is_active && (
+                  <button
+                    type="button"
+                    onClick={() => void checkHealth(s)}
+                    disabled={healthBusy === s.id}
+                    className="flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-[10px] font-bold opacity-80 transition hover:border-sky-400/50 hover:opacity-100 disabled:opacity-40"
+                  >
+                    {healthBusy === s.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Activity className="h-3 w-3" />
+                    )}
+                    Health
+                  </button>
+                )}
                 {!s.is_active && (
                   <button
                     type="button"
