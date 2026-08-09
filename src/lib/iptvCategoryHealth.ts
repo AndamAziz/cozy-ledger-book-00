@@ -11,6 +11,7 @@
  */
 
 import { isSlotLimitPayload } from './iptvSlotRetry';
+import { idle, onIdle, tabHidden } from './idle';
 
 /** A verdict older than this is shown as "stale" and re-probed. */
 export const CATEGORY_TTL_MS = 5 * 60 * 1000;
