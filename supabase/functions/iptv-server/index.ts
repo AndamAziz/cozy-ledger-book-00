@@ -434,7 +434,10 @@ Deno.serve(async (req) => {
       await seedCeoDefaults(targetId)
       const { data } = await db
         .from('iptv_sources')
-        .select('id, name, kind, playlist_masked, is_active, last_test, updated_at')
+        .select(
+          'id, name, kind, playlist_masked, is_active, last_test, health_status, health_message, health_checked_at, updated_at',
+        )
+
         .eq('user_id', targetId)
         .order('created_at')
       return json({ sources: data ?? [] })
