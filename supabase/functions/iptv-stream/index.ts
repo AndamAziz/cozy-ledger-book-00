@@ -22,8 +22,6 @@ const cors: Record<string, string> = {
 }
 
 import { IPTV_USER_AGENTS, isHtmlBlock, describeFetchError } from '../_shared/iptvFetch.ts'
-import { clearCooldown, cooldownLeft, isRateLimited, markRateLimited } from '../_shared/iptvCooldown.ts'
-import { classifyStatus, classifyTransport, streamError, type StreamError } from '../_shared/iptvErrors.ts'
 
 const SELF = (req: Request) =>
   `${(Deno.env.get('SUPABASE_URL') || new URL(req.url).origin).replace(/\/$/, '')}/functions/v1/iptv-stream`
@@ -202,12 +200,6 @@ Deno.serve(async (req) => {
   }
 
   const deadHosts = new Set<string>()
-  /** Best classified reason so far — shown to the user if nothing plays. */
-  let classified: StreamError | null = null
-  let rateLimited = false
-  /** Provider answered 458/407 — the account's viewing slots are all in use. */
-  let slotLimited = false
-
   /** `host|via` pairs the provider geo-blocks — no UA rotation can fix those. */
   const blockedRoutes = new Set<string>()
   let geoBlocked = false
@@ -223,14 +215,6 @@ Deno.serve(async (req) => {
     } catch { /* keep raw */ }
     if (deadHosts.has(hostKey)) continue
     if (blockedRoutes.has(`${hostKey}|${via}`)) continue
-    // Never hammer a panel that just rate-limited us: that is how an egress IP
-    // earns a ban. Park it and report a retryable error instead.
-    if (cooldownLeft(target)) {
-      rateLimited = true
-      classified = streamError('RATE_LIMITED')
-      lastError = 'provider is rate limiting this connection'
-      continue
-    }
 
     const headers = { ...baseHeaders, 'User-Agent': ua }
     // A FRESH signal per attempt — a signal that already fired would abort the
@@ -244,6 +228,13 @@ Deno.serve(async (req) => {
       if (res.ok || res.status === 206) {
         const ctype = res.headers.get('content-type') || ''
         const resolvedUrl = finalUrlOf(res, target)
+        // A WAF / panel block page arrives as HTML, sometimes with HTTP 200:
+        // never hand that to the player — retry with the next UA.
+        if (isHtmlBlock(ctype)) {
+          await res.body?.cancel().catch(() => undefined)
+          lastError = 'provider returned a block page (HTML)'
+          continue
+        }
         // Some providers answer 200 with a text error page for dead channels.
         // Verify manifests really are manifests before committing.
         let manifestPath = ''
@@ -268,48 +259,10 @@ Deno.serve(async (req) => {
           upstreamBase = resolvedUrl
           break
         }
-        // Some Xtream panels incorrectly label valid MP4/MKV/episode byte
-        // streams as text/html. Header-only HTML detection therefore breaks all
-        // VOD while manifests still work. Only reject an HTML content type here
-        // when the request is not a ranged/progressive media response; genuine
-        // block pages on manifests are body-checked above.
-        if (isHtmlBlock(ctype) && !range && kind === 'live') {
-          await res.body?.cancel().catch(() => undefined)
-          lastError = 'provider returned a block page (HTML)'
-          continue
-        }
         upstream = res
         upstreamBase = resolvedUrl
-        clearCooldown(target)
         break
       }
-      // 458/407: the Xtream panel refuses because every viewing slot on the
-      // account is in use. Retrying (or rotating UA/transport) only holds MORE
-      // slots open, which is what kept live TV permanently broken. Drain the
-      // body to release the socket and stop the plan for this host at once.
-      if (res.status === 458 || res.status === 407) {
-        slotLimited = true
-        classified = streamError('MAX_CONNECTIONS', `HTTP ${res.status}`)
-        blockedRoutes.add(`${hostKey}|direct`)
-        blockedRoutes.add(`${hostKey}|relay`)
-        lastError = `HTTP ${res.status}`
-        await res.body?.cancel().catch(() => undefined)
-        continue
-      }
-      // 429/509: throttled. Stop the whole plan for this host — a different UA
-      // or transport only deepens the throttle.
-      if (isRateLimited(res.status) && res.status !== 503) {
-        markRateLimited(target, res.headers)
-        rateLimited = true
-        classified = streamError('RATE_LIMITED', `HTTP ${res.status}`)
-        blockedRoutes.add(`${hostKey}|direct`)
-        blockedRoutes.add(`${hostKey}|relay`)
-        lastError = `HTTP ${res.status}`
-        await res.body?.cancel().catch(() => undefined)
-        continue
-      }
-
-      if (!classified || classified.code === 'UNKNOWN') classified = classifyStatus(res.status)
       // 456/459/451: the panel refuses this egress IP (geo / stream block).
       // Another User-Agent will never change that — stop hammering this route.
       if (isGeoBlocked(res.status) || res.status === 456) {
@@ -321,7 +274,6 @@ Deno.serve(async (req) => {
       await res.body?.cancel().catch(() => undefined)
     } catch (e) {
       lastError = describeFetchError(e)
-      if (!classified || classified.code === 'UNKNOWN') classified = classifyTransport(lastError)
       trace.push(`${via}:err:${lastError.slice(0, 60)}`)
       // Refused / DNS failure will not improve with another UA or transport.
       if (via === 'direct' && isDeadHost(lastError)) deadHosts.add(hostKey)
@@ -329,34 +281,18 @@ Deno.serve(async (req) => {
   }
 
   if (!upstream) {
-    // One actionable sentence, the way IPTV Smarters / VLC report failures.
-    const error: StreamError = slotLimited
-      ? streamError('MAX_CONNECTIONS')
-      : rateLimited
-        ? streamError('RATE_LIMITED')
-        : geoBlocked
-          ? { code: 'GEO_BLOCKED', message: GEO_BLOCK_MESSAGE, retryable: true }
-          : deadlineHit
-            ? streamError('TIMEOUT', `${OVERALL_DEADLINE_MS / 1000}s`)
-            : (classified ?? classifyTransport(lastError))
+    const reason = geoBlocked
+      ? GEO_BLOCK_MESSAGE
+      : deadlineHit
+        ? `Stream did not start within ${OVERALL_DEADLINE_MS / 1000}s (last error: ${lastError})`
+        : lastError
     console.error(
-      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, slotLimited, code: error.code, lastError, trace })}`,
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, lastError, trace })}`,
     )
     return json(
-      {
-        error: error.message,
-        code: error.code,
-        retryable: error.retryable,
-        deadline: deadlineHit,
-        geoBlocked,
-        rateLimited,
-        slotLimited,
-        detail: lastError,
-        candidates: candidates.length,
-      },
-      rateLimited || slotLimited ? 429 : 502,
+      { error: reason, deadline: deadlineHit, geoBlocked, detail: lastError, candidates: candidates.length },
+      502,
     )
-
   }
 
   const finalUrl = new URL(upstreamBase)
@@ -370,7 +306,6 @@ Deno.serve(async (req) => {
     const suffix =
       `${apikey ? `&apikey=${encodeURIComponent(apikey)}` : ''}` +
       `${token ? `&token=${encodeURIComponent(token)}` : ''}` +
-      `${resolved.viewer.sourceId ? `&source=${encodeURIComponent(resolved.viewer.sourceId)}` : ''}` +
       `${hRaw ? `&h=${encodeURIComponent(hRaw)}` : ''}`
 
     const text = await upstream.text()
@@ -386,118 +321,10 @@ Deno.serve(async (req) => {
 
   const out = new Headers(cors)
   out.set('Content-Type', ct || 'application/octet-stream')
+  const cr = upstream.headers.get('content-range')
+  if (cr) out.set('Content-Range', cr)
   out.set('Accept-Ranges', 'bytes')
   out.set('Cache-Control', 'no-store')
-  // Media stacks and debug fetches must be able to READ the range headers on a
-  // cross-origin response, otherwise CORS hides them and seeking breaks.
-  out.set('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type')
-  const cr = upstream.headers.get('content-range')
-  const clen = upstream.headers.get('content-length')
-  console.log(
-    `[iptv-stream:media] ${JSON.stringify({ kind, streamId, reqRange: range ?? null, upstreamStatus: upstream.status, ct, contentRange: cr, contentLength: clen })}`,
-  )
 
-
-  // Upstream honoured the Range request: pass 206 + range headers through.
-  //
-  // BUT some Xtream panels answer a SUFFIX range (`bytes=-N`, which is exactly
-  // what a browser sends to read a non-faststart MP4's trailing `moov` atom)
-  // with a MALFORMED header that echoes the request instead of the resolved
-  // window: `Content-Range: bytes -131072/4181661025`. Per RFC 7233 that is
-  // invalid, so Chromium/Safari discard the whole response and the <video>
-  // element reports MEDIA_ERR_SRC_NOT_SUPPORTED with readyState 0 — the movie
-  // never starts. Normalise it from the total size and the body length before
-  // forwarding.
-  if (cr) {
-    let fixed = cr
-    const wellFormed = /^bytes\s+\d+-\d+\/(\d+|\*)$/i.test(cr.trim())
-    if (!wellFormed) {
-      const total = Number(/\/(\d+)\s*$/.exec(cr)?.[1] ?? NaN)
-      const len = Number(clen ?? NaN)
-      if (Number.isFinite(total) && Number.isFinite(len) && len > 0 && len <= total) {
-        // A suffix window always ends at the last byte of the resource.
-        const end = total - 1
-        const start = Math.max(0, total - len)
-        fixed = `bytes ${start}-${end}/${total}`
-      }
-    }
-    if (fixed !== cr) console.log(`[iptv-stream:media] normalised Content-Range "${cr}" -> "${fixed}"`)
-    out.set('Content-Range', fixed)
-    if (clen) out.set('Content-Length', clen)
-    return new Response(upstream.body, { status: upstream.status, headers: out })
-  }
-
-
-  // Upstream (or our relay) ignored Range and answered a full-body 200. A
-  // <video> element needs a 206 with Content-Range to start progressive
-  // playback, so synthesize one: skip `start` bytes and stop after the
-  // requested window instead of streaming the whole file.
-  const parsed = range ? /^bytes=(\d*)-(\d*)$/i.exec(range.trim()) : null
-  // A SUFFIX range (`bytes=-N`, used to read a non-faststart MP4's trailing
-  // `moov` atom) cannot be honoured without a known total size: answering it
-  // with leading bytes would hand the demuxer corrupt data. Be honest instead.
-  const suffixRange = !!parsed && !parsed[1] && !!parsed[2]
-  if (suffixRange && !clen) {
-    await upstream.body?.cancel().catch(() => undefined)
-    out.set('Content-Range', 'bytes */*')
-    return new Response(null, { status: 416, headers: out })
-  }
-  if (parsed && upstream.status === 200 && upstream.body) {
-    const total = clen ? Number(clen) : NaN
-    const start = parsed[1] ? Number(parsed[1]) : suffixRange ? Math.max(0, total - Number(parsed[2])) : 0
-    const endReq = parsed[1] && parsed[2] ? Number(parsed[2]) : suffixRange ? total - 1 : NaN
-
-    // Cap an open-ended range so we never buffer an entire movie in memory.
-    const OPEN_WINDOW = 4 * 1024 * 1024
-    const end = Number.isFinite(endReq)
-      ? endReq
-      : Number.isFinite(total)
-        ? total - 1
-        : start + OPEN_WINDOW - 1
-    if (!Number.isFinite(start) || start < 0 || end < start) {
-      await upstream.body.cancel().catch(() => undefined)
-      return new Response(null, { status: 416, headers: out })
-    }
-    const wanted = end - start + 1
-    const reader = upstream.body.getReader()
-    let skipped = 0
-    let sent = 0
-    const sliced = new ReadableStream<Uint8Array>({
-      async pull(controller) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done || !value) {
-            controller.close()
-            return
-          }
-          let chunk = value
-          if (skipped < start) {
-            const need = start - skipped
-            if (chunk.byteLength <= need) {
-              skipped += chunk.byteLength
-              continue
-            }
-            chunk = chunk.subarray(need)
-            skipped = start
-          }
-          if (sent + chunk.byteLength > wanted) chunk = chunk.subarray(0, wanted - sent)
-          sent += chunk.byteLength
-          controller.enqueue(chunk)
-          if (sent >= wanted) {
-            controller.close()
-            await reader.cancel().catch(() => undefined)
-          }
-          return
-        }
-      },
-      cancel: (reason) => reader.cancel(reason).catch(() => undefined),
-    })
-    out.set('Content-Range', `bytes ${start}-${end}/${Number.isFinite(total) ? total : '*'}`)
-    out.set('Content-Length', String(wanted))
-    return new Response(sliced, { status: 206, headers: out })
-  }
-
-  if (clen) out.set('Content-Length', clen)
   return new Response(upstream.body, { status: upstream.status, headers: out })
 })
-

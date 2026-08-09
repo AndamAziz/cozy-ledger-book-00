@@ -102,17 +102,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
-  const [isCEO, setIsCEO] = useState(false);
+  const CEO_EMAIL = 'andam@outlook.com';
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const isCEO = (currentUserEmail || '').toLowerCase() === CEO_EMAIL;
 
   useEffect(() => {
     fetchUsers();
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      const { data: owner } = await supabase.rpc('has_role', {
-        _user_id: data.user.id,
-        _role: 'owner',
-      });
-      setIsCEO(!!owner);
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserEmail(data.user?.email ?? null);
     });
   }, []);
 
@@ -132,7 +129,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         .from('user_roles')
         .select('user_id, role');
       
-      const adminUserIds = new Set(adminRoles?.filter(r => r.role === 'admin' || r.role === 'owner').map(r => r.user_id) || []);
+      const adminUserIds = new Set(adminRoles?.filter(r => r.role === 'admin').map(r => r.user_id) || []);
       
       // Mark admins but KEEP them in the list so they appear under the Admin filter
       const usersWithAdminStatus = data?.map(u => ({
@@ -696,7 +693,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         </header>
 
         {/* Role context banner */}
-        {isCEO ? (
+        {currentUserEmail && (
+          isCEO ? (
             <div className="mb-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 to-primary/5 p-4 flex items-start gap-3">
               <Crown className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
@@ -709,7 +707,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               <Shield className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground">{t('adminBannerNote')}</p>
             </div>
-          )}
+          )
+        )}
 
         {/* Audit log trigger */}
         <div className="mb-6">

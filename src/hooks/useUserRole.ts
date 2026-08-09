@@ -42,7 +42,7 @@ export function useUserRole(user: User | null) {
           .eq('user_id', user.id)
           .maybeSingle();
 
-        const isUserAdmin = roleData?.role === 'admin' || roleData?.role === 'owner';
+        const isUserAdmin = roleData?.role === 'admin';
         setIsAdmin(isUserAdmin);
 
         // Check approval status

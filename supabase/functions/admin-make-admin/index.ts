@@ -53,16 +53,24 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Only the owner may promote a user to admin.
+    // Only the CEO may promote a user to admin.
     const { data: roleData } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (roleData?.role !== "owner") {
+    if (roleData?.role !== "admin") {
       return new Response(
-        JSON.stringify({ error: "Forbidden: Owner access required" }),
+        JSON.stringify({ error: "Forbidden: Admin access required" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const CEO_EMAIL = "andam@outlook.com";
+    if ((user.email || "").toLowerCase() !== CEO_EMAIL) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Only the CEO can promote users to admin" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

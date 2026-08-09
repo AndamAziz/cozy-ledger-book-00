@@ -94,20 +94,16 @@ export default function M3uTV() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState<Channel | null>(null);
-  // Only the owner role manages playlist links (add / delete).
+  // Only the CEO account manages playlist links (add / delete).
   // Every other signed-in user sees the same shared playlists, read-only.
   const [isCeo, setIsCeo] = useState(false);
   const ceoRef = useRef(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      const { data: owner } = await supabase.rpc('has_role', {
-        _user_id: data.user.id,
-        _role: 'owner',
-      });
-      setIsCeo(!!owner);
-      ceoRef.current = !!owner;
+    supabase.auth.getUser().then(({ data }) => {
+      const ceo = (data.user?.email ?? '').toLowerCase() === 'andam@outlook.com';
+      setIsCeo(ceo);
+      ceoRef.current = ceo;
     });
   }, []);
 
@@ -167,9 +163,7 @@ export default function M3uTV() {
 
   const fetchPlaylists = useCallback(async () => {
     const { data: userRes } = await supabase.auth.getUser();
-    const { data: ceo } = userRes.user
-      ? await supabase.rpc('has_role', { _user_id: userRes.user.id, _role: 'owner' })
-      : { data: false };
+    const ceo = (userRes.user?.email ?? '').toLowerCase() === 'andam@outlook.com';
     ceoRef.current = ceo;
     const { data } = await supabase
       .from('iptv_playlists')
@@ -282,9 +276,7 @@ export default function M3uTV() {
       // Seeding the first shared playlist is a CEO-only write.
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
-      const { data: isCeoUser } = uid
-        ? await supabase.rpc('has_role', { _user_id: uid, _role: 'owner' })
-        : { data: false };
+      const isCeoUser = (userRes.user?.email ?? '').toLowerCase() === 'andam@outlook.com';
       if (uid && isCeoUser) {
         const { data: inserted } = await supabase
           .from('iptv_playlists')

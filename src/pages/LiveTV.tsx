@@ -12,8 +12,6 @@ import {
   IptvRequestError,
 } from '@/hooks/useIptvPlaylist';
 import { IptvDiagnosticPanel } from '@/components/livetv/IptvDiagnosticPanel';
-import { SourcePicker } from '@/components/livetv/SourcePicker';
-
 
 import { recordProviderSuccess, recordProviderFailure } from '@/lib/iptvProviderStatus';
 import { ChannelCard } from '@/components/livetv/ChannelCard';
@@ -240,9 +238,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
               {index ? `${categories.length.toLocaleString()} categories` : 'Streaming'}
             </p>
           </div>
-          <SourcePicker />
           {sources && (
-
             <button
               type="button"
               onClick={sources.openSourceManager}

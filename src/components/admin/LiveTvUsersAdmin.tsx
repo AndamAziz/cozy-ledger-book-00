@@ -6,14 +6,6 @@ import { useToast } from '@/hooks/use-toast';
 import { ListTree, Loader2, Radio, Save, Search, Timer, Unlock, Lock } from 'lucide-react';
 import { IptvSourceManager } from '@/components/livetv/IptvSourceManager';
 
-interface AssignedSource {
-  id: string;
-  name: string;
-  kind: string;
-  isActive: boolean;
-  isSelected: boolean;
-}
-
 interface Row {
   userId: string;
   email: string;
@@ -21,9 +13,7 @@ interface Row {
   masked: string;
   trialEndsAt: string | null;
   isActivated: boolean;
-  sources: AssignedSource[];
 }
-
 
 function trialLabel(row: Row): { text: string; tone: string } {
   if (row.isActivated) return { text: 'Activated (paid)', tone: 'text-emerald-500' };
@@ -47,16 +37,13 @@ export function LiveTvUsersAdmin() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [openSources, setOpenSources] = useState<string | null>(null);
-  const [isOwner, setIsOwner] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [users, access, servers, assigned] = await Promise.all([
+    const [users, access, servers] = await Promise.all([
       supabase.from('user_approvals').select('user_id, email').order('email'),
       supabase.from('livetv_access').select('user_id, trial_ends_at, is_activated'),
       supabase.functions.invoke('iptv-server', { body: { action: 'admin_list' } }),
-      // Read-only: names/types of the sources each account holds. No URLs.
-      supabase.functions.invoke('iptv-server', { body: { action: 'admin_assigned_sources' } }),
     ]);
     const accessMap = new Map((access.data ?? []).map((a) => [a.user_id, a]));
     // Credentials are encrypted at rest; the vault function returns masked previews only.
@@ -66,7 +53,6 @@ export function LiveTvUsersAdmin() {
       masked: string;
     }[];
     const serverMap = new Map(serverRows.map((s) => [s.userId, s]));
-    const byUser = (assigned.data?.byUser ?? {}) as Record<string, AssignedSource[]>;
     setRows(
       (users.data ?? []).map((u) => ({
         userId: u.user_id,
@@ -75,23 +61,13 @@ export function LiveTvUsersAdmin() {
         masked: serverMap.get(u.user_id)?.masked ?? '',
         trialEndsAt: accessMap.get(u.user_id)?.trial_ends_at ?? null,
         isActivated: !!accessMap.get(u.user_id)?.is_activated,
-        sources: byUser[u.user_id] ?? [],
       })),
     );
-
     setLoading(false);
   }, []);
 
   useEffect(() => {
     void load();
-    void supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return;
-      const { data: owner } = await supabase.rpc('has_role', {
-        _user_id: data.user.id,
-        _role: 'owner',
-      });
-      setIsOwner(!!owner);
-    });
   }, [load]);
 
   const filtered = useMemo(() => {
@@ -121,11 +97,17 @@ export function LiveTvUsersAdmin() {
 
   const setActivation = async (row: Row, activated: boolean) => {
     setBusy(row.userId);
-    const { data, error } = await supabase.functions.invoke('iptv-server', {
-      body: { action: 'set_access', userId: row.userId, activated },
-    });
+    const { error } = await supabase.from('livetv_access').upsert(
+      {
+        user_id: row.userId,
+        is_activated: activated,
+        activated_at: activated ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' },
+    );
     setBusy(null);
-    if (error || data?.error) toast({ title: 'Update failed', description: data?.error ?? error?.message, variant: 'destructive' });
+    if (error) toast({ title: 'Update failed', description: error.message, variant: 'destructive' });
     else void load();
   };
 
@@ -177,40 +159,7 @@ export function LiveTvUsersAdmin() {
                   <span className="text-sm font-semibold">{row.email}</span>
                   <span className={`text-xs font-bold ${label.tone}`}>{label.text}</span>
                 </div>
-
-                {/* Read-only source visibility (all admins). Assignment stays owner-only. */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {row.sources.length === 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-md border border-dashed px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                      <ListTree className="h-3 w-3" /> No source assigned
-                    </span>
-                  ) : (
-                    row.sources.map((s) => (
-                      <span
-                        key={s.id}
-                        title={s.isActive ? 'Active source' : 'Assigned but inactive'}
-                        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${
-                          s.isActive
-                            ? 'border-primary/40 bg-primary/10 text-primary'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            s.isActive ? 'bg-emerald-500' : 'bg-muted-foreground/50'
-                          }`}
-                        />
-                        {s.name}
-                        <span className="rounded bg-muted px-1 text-[10px] uppercase">
-                          {s.kind === 'xtream' ? 'XT' : 'M3U'}
-                        </span>
-                        {s.isSelected && <span className="text-[10px] opacity-70">selected</span>}
-                      </span>
-                    ))
-                  )}
-                </div>
-
-                {isOwner && <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Input
                     dir="ltr"
                     value={drafts[row.userId] ?? ''}
@@ -229,8 +178,8 @@ export function LiveTvUsersAdmin() {
                     <ListTree className="mr-1 h-3.5 w-3.5" />
                     {openSources === row.userId ? 'Hide sources' : 'Sources'}
                   </Button>
-                </div>}
-                {isOwner && openSources === row.userId && (
+                </div>
+                {openSources === row.userId && (
                   <div className="rounded-lg border bg-background/40 p-3">
                     <IptvSourceManager userId={row.userId} compact onChanged={() => void load()} />
                   </div>

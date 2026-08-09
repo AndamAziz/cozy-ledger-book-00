@@ -35,14 +35,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Only the owner can remove admins.
-    const { data: isOwner } = await supabase.rpc('has_role', {
-      _user_id: user.id,
-      _role: 'owner',
-    })
-    if (!isOwner) {
+    // Only the CEO/super-admin can remove admins
+    const CEO_EMAIL = 'andam@outlook.com'
+    if ((user.email || '').toLowerCase() !== CEO_EMAIL) {
       return new Response(
-        JSON.stringify({ error: 'Forbidden: Only the owner can remove admins' }),
+        JSON.stringify({ error: 'Forbidden: Only the CEO can remove admins' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

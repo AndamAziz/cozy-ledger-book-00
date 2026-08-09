@@ -41,15 +41,24 @@ Deno.serve(async (req) => {
     const adminUserId = claimsData.claims.sub;
     const adminEmail = claimsData.claims.email as string || '';
 
-    // Only the owner may delete an account.
-    const { data: isOwner } = await supabaseUser.rpc('has_role', {
+    // Check if requesting user is admin
+    const { data: isAdmin } = await supabaseUser.rpc('has_role', {
       _user_id: adminUserId,
-      _role: 'owner'
+      _role: 'admin'
     });
 
-    if (!isOwner) {
+    if (!isAdmin) {
       return new Response(
-        JSON.stringify({ error: 'Owner access required' }),
+        JSON.stringify({ error: 'Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Only the CEO may delete a user account.
+    const CEO_EMAIL = 'andam@outlook.com';
+    if (adminEmail.toLowerCase() !== CEO_EMAIL) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: Only the CEO can delete user accounts' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

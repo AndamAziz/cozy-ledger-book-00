@@ -1613,44 +1613,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_source_access: {
-        Row: {
-          created_at: string
-          granted_by: string | null
-          id: string
-          is_default: boolean
-          source_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          granted_by?: string | null
-          id?: string
-          is_default?: boolean
-          source_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          granted_by?: string | null
-          id?: string
-          is_default?: boolean
-          source_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_source_access_source_id_fkey"
-            columns: ["source_id"]
-            isOneToOne: false
-            referencedRelation: "iptv_sources"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -1710,7 +1672,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user" | "owner"
+      app_role: "admin" | "user"
       bot_status: "idle" | "running" | "stopped"
       bot_strategy: "conservative" | "balanced" | "aggressive"
       currency_code: "GBP" | "IQD" | "EUR" | "USD"
@@ -1845,7 +1807,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user", "owner"],
+      app_role: ["admin", "user"],
       bot_status: ["idle", "running", "stopped"],
       bot_strategy: ["conservative", "balanced", "aggressive"],
       currency_code: ["GBP", "IQD", "EUR", "USD"],

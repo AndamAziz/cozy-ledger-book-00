@@ -10,8 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:iptv": "playwright test --project=iptv-playback"
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@fontsource/amiri": "^5.2.8",

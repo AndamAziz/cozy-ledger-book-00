@@ -91,18 +91,6 @@ const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
  * mirrored `token` query parameter on media URLs.
  */
 let accessToken: string | null = null;
-
-/**
- * Selected IPTV source (`iptv_sources.id`) for accounts that hold several.
- * Threaded onto every catalogue/stream URL so the edge functions resolve the
- * right provider even before the server-side default is updated.
- */
-let activeSourceId: string | null = null;
-export function setActiveSourceId(id: string | null) {
-  activeSourceId = id;
-}
-export const getActiveSourceId = () => activeSourceId;
-const sourceParam = () => (activeSourceId ? `&source=${encodeURIComponent(activeSourceId)}` : '');
 supabase.auth.getSession().then(({ data }) => {
   accessToken = data.session?.access_token ?? null;
 });
@@ -124,7 +112,7 @@ export function toPlayableUrl(
   const extPart = ext ? `&ext=${encodeURIComponent(ext)}` : '';
   const tokenPart = accessToken ? `&token=${encodeURIComponent(accessToken)}` : '';
   const rawPart = opts?.raw ? '&raw=1' : '';
-  return `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}${rawPart}${sourceParam()}&apikey=${ANON}${tokenPart}`;
+  return `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}${rawPart}&apikey=${ANON}${tokenPart}`;
 }
 
 
@@ -133,8 +121,7 @@ async function get<T>(path: string): Promise<T> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token ?? null;
   accessToken = token;
-  const url = `${FN_BASE}/${path}${activeSourceId ? `${path.includes('?') ? '&' : '?'}source=${encodeURIComponent(activeSourceId)}` : ''}`;
-  const res = await fetch(url, {
+  const res = await fetch(`${FN_BASE}/${path}`, {
     headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` },
   });
   const json = await res.json().catch(() => null);
@@ -151,7 +138,7 @@ async function get<T>(path: string): Promise<T> {
 
 export function useIptvIndex() {
   return useQuery({
-    queryKey: ['iptv-index', activeSourceId],
+    queryKey: ['iptv-index'],
     queryFn: () => get<IptvIndex>('iptv-playlist'),
     staleTime: 15 * 60 * 1000,
     retry: 1,
@@ -160,7 +147,7 @@ export function useIptvIndex() {
 
 export function useIptvChannels(categoryId: string | null, enabled: boolean, limit = 24) {
   return useQuery({
-    queryKey: ['iptv-channels', activeSourceId, categoryId, limit],
+    queryKey: ['iptv-channels', categoryId, limit],
     queryFn: () =>
       get<{ total: number; channels: IptvChannel[] }>(
         `iptv-playlist?category=${encodeURIComponent(categoryId ?? '')}&limit=${limit}`,
@@ -176,7 +163,7 @@ export function useIptvChannels(categoryId: string | null, enabled: boolean, lim
 export function useIptvSearch(query: string, section: 'live' | 'vod' | 'series' = 'live') {
   const q = query.trim();
   return useQuery({
-    queryKey: ['iptv-search', activeSourceId, q, section],
+    queryKey: ['iptv-search', q, section],
     queryFn: () =>
       get<{ total: number; channels: IptvChannel[] }>(
         `iptv-playlist?q=${encodeURIComponent(q)}&kind=${section}&limit=90`,
@@ -189,7 +176,7 @@ export function useIptvSearch(query: string, section: 'live' | 'vod' | 'series' 
 /** Season / episode structure for a single series. */
 export function useIptvSeriesInfo(seriesId: string | null) {
   return useQuery({
-    queryKey: ['iptv-series', activeSourceId, seriesId],
+    queryKey: ['iptv-series', seriesId],
     queryFn: () => get<IptvSeriesInfo>(`iptv-playlist?series=${encodeURIComponent(seriesId ?? '')}`),
     enabled: !!seriesId,
     staleTime: 30 * 60 * 1000,
