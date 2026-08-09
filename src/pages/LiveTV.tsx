@@ -6,6 +6,8 @@ import {
   useIptvIndex,
   useIptvRefresh,
   useIptvChannels,
+  prefetchIptvCategories,
+
   useIptvSearch,
   type IptvCategory,
   type IptvChannel,
