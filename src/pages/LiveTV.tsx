@@ -174,6 +174,18 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
           ? { bg: '#ff2d6f26', fg: '#ff2d6f', label: 'Offline' }
           : { bg: '#ffffff14', fg: '#ffffff8c', label: 'Checking' };
 
+  // Persist provider reachability so the status widget survives reloads.
+  useEffect(() => {
+    if (index && !index.warning) recordProviderSuccess(index.total, index.updatedAt);
+    else if (index?.warning) recordProviderFailure(index.diagnostic, index.reqId, index.warning);
+  }, [index]);
+  useEffect(() => {
+    if (!error) return;
+    const e = error as IptvRequestError;
+    recordProviderFailure(e.diagnostic, e.reqId, e.message);
+  }, [error]);
+
+
   // Series open a season/episode detail sheet; everything else plays directly.
   const openItem = (c: IptvChannel) => (c.kind === 'series' ? setSeriesItem(c) : setPlaying(c));
 
