@@ -1,4 +1,4 @@
-import { Check, Loader2, Server } from 'lucide-react';
+import { Check, Layers, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import { useIptvSources } from '@/hooks/useIptvSources';
 function safeName(name: string, kind: string) {
   if (!/^https?:\/\//i.test(name)) return name;
   try {
-    return `${new URL(name).hostname} (${kind === 'xtream' ? 'Xtream' : 'M3U'})`;
+    return new URL(name).hostname;
   } catch {
     return kind === 'xtream' ? 'Xtream server' : 'M3U playlist';
   }
@@ -54,7 +54,7 @@ export function SourcePicker({ className = '' }: { className?: string }) {
           {isSwitching ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Server className="h-4 w-4" />
+            <Layers className="h-4 w-4" />
           )}
         </button>
       </DropdownMenuTrigger>
