@@ -16,7 +16,7 @@ import {
   resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
 } from '@/lib/resumePlayback';
 import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
-import { isUnsupportedHevc } from '@/lib/codecSupport';
+import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
 
 import { claimStreamSlot, unregisterStream } from '@/lib/streamSlot';
 import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
