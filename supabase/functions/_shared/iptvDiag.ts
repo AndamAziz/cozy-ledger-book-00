@@ -126,6 +126,18 @@ export function verdictOf(diag: UpstreamDiag | null | undefined): {
     .toLowerCase()
   const blob = `${body}\n${headers}`
 
+  // Nothing answered at all: the provider host accepted no HTTP response.
+  // Distinguish "server is down / dropping connections" from a real HTTP verdict.
+  if (!diag.status || diag.status === 0) {
+    const m = `${diag.message ?? ''}`.toLowerCase()
+    if (/socket hang up|connection closed|econnreset|connection reset|refused|econnrefused|error sending request|unreachable|timed? ?out/.test(m)) {
+      return {
+        verdict: 'server_down',
+        reason: 'The provider server accepted no connection (it dropped or refused the request). The panel itself is down or your line/IP is cut — nothing on our side can fix it until the provider is back.',
+      }
+    }
+  }
+
   if (diag.status === 429 || /retry-after|too many requests|rate.?limit/.test(blob)) {
     return {
       verdict: 'rate_limited',
