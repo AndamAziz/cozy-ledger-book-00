@@ -1,7 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
-import { egressFetch, finalUrlOf } from '../_shared/iptvEgress.ts'
+import { egressFetch, finalUrlOf, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
 /**
  * Lean Live TV stream proxy — a 1:1 copy of the playback pipeline used by the
@@ -200,6 +200,9 @@ Deno.serve(async (req) => {
   }
 
   const deadHosts = new Set<string>()
+  /** `host|via` pairs the provider geo-blocks — no UA rotation can fix those. */
+  const blockedRoutes = new Set<string>()
+  let geoBlocked = false
 
   for (const { target, via, ua } of plan) {
     if (remaining() <= 500) {
@@ -211,6 +214,7 @@ Deno.serve(async (req) => {
       hostKey = new URL(target).host
     } catch { /* keep raw */ }
     if (deadHosts.has(hostKey)) continue
+    if (blockedRoutes.has(`${hostKey}|${via}`)) continue
 
     const headers = { ...baseHeaders, 'User-Agent': ua }
     // A FRESH signal per attempt — a signal that already fired would abort the
@@ -259,6 +263,12 @@ Deno.serve(async (req) => {
         upstreamBase = resolvedUrl
         break
       }
+      // 456/459/451: the panel refuses this egress IP (geo / stream block).
+      // Another User-Agent will never change that — stop hammering this route.
+      if (isGeoBlocked(res.status) || res.status === 456) {
+        geoBlocked = true
+        blockedRoutes.add(`${hostKey}|${via}`)
+      }
       lastError = `HTTP ${res.status}`
       trace.push(`${via}:${res.status}`)
       await res.body?.cancel().catch(() => undefined)
@@ -271,13 +281,18 @@ Deno.serve(async (req) => {
   }
 
   if (!upstream) {
-    const reason = deadlineHit
-      ? `Stream did not start within ${OVERALL_DEADLINE_MS / 1000}s (last error: ${lastError})`
-      : lastError
+    const reason = geoBlocked
+      ? GEO_BLOCK_MESSAGE
+      : deadlineHit
+        ? `Stream did not start within ${OVERALL_DEADLINE_MS / 1000}s (last error: ${lastError})`
+        : lastError
     console.error(
-      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, lastError, trace })}`,
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, lastError, trace })}`,
     )
-    return json({ error: reason, deadline: deadlineHit, candidates: candidates.length }, 502)
+    return json(
+      { error: reason, deadline: deadlineHit, geoBlocked, detail: lastError, candidates: candidates.length },
+      502,
+    )
   }
 
   const finalUrl = new URL(upstreamBase)
