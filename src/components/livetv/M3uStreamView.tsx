@@ -17,6 +17,10 @@ import { TV_EVENT } from '@/lib/tvRemote';
 
 const PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/iptv-m3u-proxy?url=`;
 
+/** Fixed row metrics keep the virtual list maths exact. */
+const ROW_HEIGHT = 56;
+const ROW_GAP = 6;
+
 export interface StreamChannel {
   name: string;
   logo: string | null;
