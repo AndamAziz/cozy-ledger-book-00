@@ -34,7 +34,14 @@ const TTL = 30 * 60 * 1000
 
 // The VOD/series catalogues are ~70MB each, so nothing global is kept in memory:
 // the index caches category lists only and item lists are fetched per category.
-type IndexSnapshot = { at: number; source: string; categories: CategoryInfo[]; total: number; partial?: boolean }
+type IndexSnapshot = {
+  at: number
+  source: string
+  categories: CategoryInfo[]
+  total: number
+  partial?: boolean
+  mode?: 'xtream' | 'plain'
+}
 // Keyed by playlist URL: each user browses their own provider catalogue.
 const indexCache = new Map<string, IndexSnapshot>()
 const indexLoading = new Map<string, Promise<IndexSnapshot>>()
@@ -121,9 +128,10 @@ async function loadSharedIndex(source: string): Promise<IndexSnapshot | null> {
     const parsed = JSON.parse(await gunzipText(row.entries_gz)) as {
       categories?: CategoryInfo[]
       total?: number
+      mode?: 'xtream' | 'plain'
     }
     if (!Array.isArray(parsed.categories) || !parsed.categories.length) return null
-    return { at, source, categories: parsed.categories, total: Number(parsed.total ?? 0) }
+    return { at, source, categories: parsed.categories, total: Number(parsed.total ?? 0), mode: parsed.mode }
   } catch (error) {
     console.warn(`[iptv-playlist] shared index load failed: ${error instanceof Error ? error.message : String(error)}`)
     return null
@@ -418,8 +426,30 @@ async function buildIndex(source: string) {
     }
   }
 
-  if (!categories.length) throw new Error('Upstream returned no channels')
-  return { at: Date.now(), source, categories, total: 0, partial }
+  if (!categories.length) {
+    // Some panels temporarily forbid player_api.php while their get.php M3U
+    // export remains available. Reuse its shared last-known-good snapshot so a
+    // provider-side 403 does not blank Live TV, Movies and Series together.
+    try {
+      const snap = await getM3U(source)
+      const fallback = derive(snap.version, snap.entries)
+      if (fallback.categories.length) {
+        console.warn('[iptv-playlist] player_api unavailable; using M3U catalogue fallback')
+        return {
+          at: snap.at,
+          source,
+          categories: fallback.categories,
+          total: fallback.browsable.length,
+          partial: false,
+          mode: 'plain' as const,
+        }
+      }
+    } catch (error) {
+      console.warn(`[iptv-playlist] M3U fallback failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    throw new Error('Upstream returned no channels')
+  }
+  return { at: Date.now(), source, categories, total: 0, partial, mode: 'xtream' as const }
 }
 
 
@@ -865,6 +895,10 @@ Deno.serve(async (req) => {
 
     const seriesId = url.searchParams.get('series')
     if (seriesId) {
+      if (seriesId.startsWith('sx')) {
+        const { body } = await handlePlain(source, url)
+        return json(body)
+      }
       if (!/^\d+$/.test(seriesId)) return json({ error: 'Invalid series id' }, 400)
       return json(await getSeriesInfo(apiBase(source), seriesId))
     }
@@ -875,6 +909,12 @@ Deno.serve(async (req) => {
     const offset = Math.max(Number(url.searchParams.get('offset') ?? 0) || 0, 0)
 
     const index = await getIndex(source, url.searchParams.get('refresh') === '1')
+
+    if (index.mode === 'plain' && (category || q)) {
+      const { body, version } = await handlePlain(source, url)
+      const etag = `W/"${version}-${digest(url.search)}"`
+      return json(body, 200, q ? 0 : 120, etag)
+    }
 
 
     if (!category && !q) {
