@@ -657,7 +657,7 @@ async function buildIndex(source: string) {
   // first page. The provider only allows one connection at a time, so that call
   // sometimes loses the race — reuse the last known-good snapshot instead of
   // publishing an index with zero counts and no previews.
-  if (!liveCatalogueOk && categories.some((c) => c.kind === 'live')) {
+  if (!liveCatalogueOk) {
     const stale = await loadSharedIndex(source)
     if (stale) {
       const byId = new Map(stale.categories.map((c) => [c.id, c]))
