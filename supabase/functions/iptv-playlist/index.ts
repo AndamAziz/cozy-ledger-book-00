@@ -159,14 +159,35 @@ async function fetchJson<T>(
 async function scanArray(url: string, onRow: (row: Record<string, unknown>) => boolean) {
   const deadline = Date.now() + 20_000
   // Streaming read: keep the body, so no snippet is consumed on success.
-  const { res, diag } = await diagFetch('scanArray', url, {
-    timeoutMs: 15_000,
-    headers: { 'User-Agent': UA },
-  })
+  // Rotate the player User-Agent until the provider answers with real data
+  // instead of a 403 / HTML block page.
+  let res: Response | null = null
+  let diag: UpstreamDiag | null = null
+  for (let i = 0; i < IPTV_USER_AGENTS.length && !res; i++) {
+    const attempt = await diagFetch('scanArray', url, {
+      timeoutMs: 15_000,
+      attempt: i + 1,
+      headers: { 'User-Agent': uaFor(i) },
+    })
+    diag = attempt.diag
+    if (attempt.res && isHtmlBlock(attempt.res.headers.get('content-type'))) {
+      await attempt.res.body?.cancel().catch(() => {})
+      diag = {
+        ...attempt.diag,
+        ok: false,
+        kind: 'http_error',
+        message: 'Provider answered a block page (HTML) instead of data',
+      }
+      logDiag('scanArray:blocked', diag)
+      continue
+    }
+    res = attempt.res
+  }
   if (!res) {
     lastUpstreamDiag = diag
     return
   }
+
   if (!res.body) {
     lastUpstreamDiag = { ...diag, ok: false, kind: 'parse_error', message: 'Upstream returned an empty body' }
     logDiag('scanArray:empty', lastUpstreamDiag)
