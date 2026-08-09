@@ -579,6 +579,40 @@ Deno.serve(async (req) => {
       return json({ rows })
     }
 
+    /**
+     * Read-only visibility for admins: which source(s) each account holds.
+     * Returns names/types/selection only — never a URL, masked or otherwise —
+     * and mutates nothing. Assignment stays owner-only.
+     */
+    case 'admin_assigned_sources': {
+      if (!isAdmin) return json({ error: 'Forbidden' }, 403)
+      const [{ data: sources }, { data: grants }] = await Promise.all([
+        db.from('iptv_sources').select('id, user_id, name, kind, is_active, updated_at').order('created_at'),
+        db.from('user_source_access').select('user_id, source_id, is_default'),
+      ])
+      const defaults = new Set(
+        (grants ?? []).filter((g) => g.is_default).map((g) => `${g.user_id}:${g.source_id}`),
+      )
+      const byUser: Record<string, unknown[]> = {}
+      for (const r of sources ?? []) {
+        const uid = r.user_id as string
+        ;(byUser[uid] ??= []).push({
+          id: r.id,
+          // Some legacy rows were named after the raw provider URL — mask those
+          // so admins never see credentials through this read-only view.
+          name: /^https?:\/\//i.test(String(r.name ?? ''))
+            ? maskPlaylistUrl(String(r.name))
+            : String(r.name ?? 'Source'),
+          kind: String(r.kind ?? 'm3u'),
+          isActive: !!r.is_active,
+          isSelected: defaults.has(`${uid}:${r.id}`),
+          updatedAt: r.updated_at ?? null,
+        })
+      }
+      return json({ byUser })
+    }
+
+
     // Account activation and source assignment are deliberately separate.
     // Any admin may activate access, but a newly activated account starts with
     // no source, no default grant and no legacy credential mirror.
