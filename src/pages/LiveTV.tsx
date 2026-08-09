@@ -12,6 +12,8 @@ import {
   IptvRequestError,
 } from '@/hooks/useIptvPlaylist';
 import { IptvDiagnosticPanel } from '@/components/livetv/IptvDiagnosticPanel';
+import { IptvProviderStatusWidget } from '@/components/livetv/IptvProviderStatusWidget';
+import { recordProviderSuccess, recordProviderFailure } from '@/lib/iptvProviderStatus';
 import { ChannelCard } from '@/components/livetv/ChannelCard';
 
 import { PosterCard } from '@/components/livetv/PosterCard';
@@ -174,6 +176,18 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
           ? { bg: '#ff2d6f26', fg: '#ff2d6f', label: 'Offline' }
           : { bg: '#ffffff14', fg: '#ffffff8c', label: 'Checking' };
 
+  // Persist provider reachability so the status widget survives reloads.
+  useEffect(() => {
+    if (index && !index.warning) recordProviderSuccess(index.total, index.updatedAt);
+    else if (index?.warning) recordProviderFailure(index.diagnostic, index.reqId, index.warning);
+  }, [index]);
+  useEffect(() => {
+    if (!error) return;
+    const e = error as IptvRequestError;
+    recordProviderFailure(e.diagnostic, e.reqId, e.message);
+  }, [error]);
+
+
   // Series open a season/episode detail sheet; everything else plays directly.
   const openItem = (c: IptvChannel) => (c.kind === 'series' ? setSeriesItem(c) : setPlaying(c));
 
@@ -287,6 +301,8 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
             />
           </div>
         )}
+
+        <IptvProviderStatusWidget className="mb-4" onRetry={doRefresh} refreshing={refreshing} />
 
         {!error && index?.warning && (
           <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.04] p-4 text-white/70">
