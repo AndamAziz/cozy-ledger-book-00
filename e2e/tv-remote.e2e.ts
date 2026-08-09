@@ -92,3 +92,60 @@ test.describe('Smart TV remote', () => {
     expect(new URL(page.url()).pathname).toBe('/');
   });
 });
+
+/**
+ * Per-platform detection matrix in a real browser: each TV UA must set
+ * body[data-tv], move focus with its own D-pad codes, activate with OK and zap
+ * channels with its own CH+/CH- codes.
+ */
+const PLATFORMS = [
+  { name: 'Tizen', ua: TV_UA, dpadDown: 40, ok: 13, chUp: 427, chDown: 428 },
+  {
+    name: 'webOS',
+    ua: 'Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 Chrome/79 Safari/537.36',
+    dpadDown: 40,
+    ok: 13,
+    chUp: 33,
+    chDown: 34,
+  },
+  {
+    name: 'AndroidTV',
+    ua: 'Mozilla/5.0 (Linux; Android 12; AFTB Build/STT) AppleWebKit/537.36 Chrome/120 Safari/537.36 CrKey',
+    dpadDown: 40,
+    ok: 23,
+    chUp: 427,
+    chDown: 428,
+  },
+];
+
+for (const p of PLATFORMS) {
+  test.describe(`${p.name} remote matrix`, () => {
+    test.use({ userAgent: p.ua });
+
+    test(`${p.name}: D-pad, OK and CH+/CH- are detected`, async ({ page }) => {
+      await page.goto('/iptv');
+      await page.waitForTimeout(6000);
+
+      // D-pad: four presses must land on four different focus targets.
+      const seen = new Set<string>();
+      for (let i = 0; i < 4; i += 1) {
+        await pressCode(page, p.dpadDown);
+        seen.add(await focusLabel(page));
+      }
+      expect(await page.evaluate(() => document.body.getAttribute('data-tv'))).toBe('true');
+      expect(seen.size).toBeGreaterThan(2);
+
+      // OK opens the player.
+      await pressCode(page, p.ok);
+      await expect(page.locator('[data-tv-scope] video')).toHaveCount(1);
+      const first = await playerTitle(page);
+      expect(first).toBeTruthy();
+
+      // CH+ then CH- must zap away and back.
+      await pressCode(page, p.chUp);
+      expect(await playerTitle(page)).not.toBe(first);
+      await pressCode(page, p.chDown);
+      expect(await playerTitle(page)).toBe(first);
+    });
+  });
+}
