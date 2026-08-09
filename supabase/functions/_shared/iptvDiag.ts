@@ -102,6 +102,70 @@ export function logDiag(tag: string, diag: UpstreamDiag) {
   else console.error(`[iptv-upstream] ${JSON.stringify(line)}`)
 }
 
+export type UpstreamVerdict = 'waf_block' | 'credentials' | 'rate_limited' | 'geo_block' | 'unknown'
+
+/**
+ * Decide *why* an upstream refused us, so the UI can tell a WAF/bot-filter block
+ * apart from an actually invalid provider account.
+ */
+export function verdictOf(diag: UpstreamDiag | null | undefined): {
+  verdict: UpstreamVerdict
+  reason: string
+} {
+  if (!diag) return { verdict: 'unknown', reason: 'No upstream diagnostic was recorded.' }
+  const body = (diag.bodySnippet ?? '').toLowerCase()
+  const headers = Object.entries(diag.headers ?? {})
+    .map(([k, v]) => `${k}: ${v}`)
+    .join('\n')
+    .toLowerCase()
+  const blob = `${body}\n${headers}`
+
+  if (diag.status === 429 || /retry-after|too many requests|rate.?limit/.test(blob)) {
+    return {
+      verdict: 'rate_limited',
+      reason: 'The provider rate-limited this server (too many catalogue requests in a short window). It usually clears by itself in a few minutes.',
+    }
+  }
+  if (
+    /cloudflare|cf-ray|attention required|ddos|__cf|sucuri|incapsula|mod_security|modsecurity|access denied|bot detection|captcha|just a moment/.test(
+      blob,
+    )
+  ) {
+    return {
+      verdict: 'waf_block',
+      reason: 'A firewall / bot filter in front of the provider blocked the request (not your account). Credentials were never checked by the panel.',
+    }
+  }
+  if (/country|geo|region.?block|not.?allow/.test(blob)) {
+    return {
+      verdict: 'geo_block',
+      reason: 'The provider refused the request based on the server location (geo-block). Route it through the egress relay.',
+    }
+  }
+  if (
+    diag.status === 401 ||
+    /invalid (user|credential|login)|user(name)? or password|auth(entication)? failed|account (expired|banned|disabled)|"auth"\s*:\s*0/.test(
+      blob,
+    )
+  ) {
+    return {
+      verdict: 'credentials',
+      reason: 'The provider panel rejected the account (wrong username/password, expired or banned subscription).',
+    }
+  }
+  if (diag.status === 403 && !body) {
+    return {
+      verdict: 'waf_block',
+      reason: 'The provider returned a bare 403 with no panel error body — typical of an edge/WAF block rather than a credentials failure.',
+    }
+  }
+  return {
+    verdict: 'unknown',
+    reason: `The provider answered ${diag.status} ${diag.statusText ?? ''} without an identifiable reason.`.trim(),
+  }
+}
+
+
 /**
  * Fetch an upstream URL with an explicit timeout wrapper. The try/catch wraps
  * the *fetch itself* (not only parsing), so connection/DNS/timeout failures are
