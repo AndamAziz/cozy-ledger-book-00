@@ -133,8 +133,14 @@ export async function relayFetch(
         userAgent: ua,
         error: describeFetchError(e),
       }
-      // A timeout / refused connection will not improve with another UA.
-      if (last.error?.startsWith('Connection refused') || last.error?.startsWith('Host not found')) break
+      // A timeout / refused connection will not improve with another UA — and
+      // retrying a timeout would multiply the caller's deadline by 3.
+      if (
+        last.error?.startsWith('Connection refused') ||
+        last.error?.startsWith('Host not found') ||
+        last.error?.startsWith('Connection timed out')
+      ) break
+
     }
   }
 
