@@ -920,6 +920,12 @@ export default function Movies() {
       )
     : baseList;
 
+  // Poster grid renders in batches and grows on scroll, so a long infinite-scroll
+  // session never keeps thousands of cards mounted at once.
+  const grid = useIncrementalList(filtered.length, 36, [view, genre, year, minRating, sortKey, searching]);
+
+
+
 
   return (
     <div
