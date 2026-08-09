@@ -240,10 +240,24 @@ export default function M3uStreamView({
   };
 
 
+  // Debounced so typing in a 40k-channel playlist doesn't re-filter per keystroke.
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 180);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  // Full list (no cap) — only the visible rows are rendered, see useVirtualList.
   const list = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return channels.filter((c) => !q || c.name.toLowerCase().includes(q)).slice(0, 200);
-  }, [channels, query]);
+    const q = debouncedQuery.trim().toLowerCase();
+    return q ? channels.filter((c) => c.name.toLowerCase().includes(q)) : channels;
+  }, [channels, debouncedQuery]);
+
+  const rows = useVirtualList(list.length, { rowHeight: ROW_HEIGHT, gap: ROW_GAP });
+  useEffect(() => {
+    rows.scrollToTop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery]);
 
   /* top bar stays permanently visible — slim enough to never cover the picture */
   const revealBar = () => {
