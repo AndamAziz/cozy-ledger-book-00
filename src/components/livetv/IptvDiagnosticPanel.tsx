@@ -7,6 +7,7 @@ const VERDICT_LABEL: Record<string, string> = {
   credentials: 'Credentials / subscription rejected',
   rate_limited: 'Rate limited by provider',
   geo_block: 'Geo-block (server location)',
+  server_down: 'Provider server down / refusing connections',
   unknown: 'Unclassified provider refusal',
 };
 
