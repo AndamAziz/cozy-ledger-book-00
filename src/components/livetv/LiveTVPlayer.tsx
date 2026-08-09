@@ -204,6 +204,17 @@ export function LiveTVPlayer({
       raw: engine === 'mpegts',
     });
     let disposed = false;
+    /** Stop everything and tell the viewer the codec — not the feed — is the problem. */
+    const flagCodec = (label: string) => {
+      if (disposed) return;
+      setLoading(false);
+      setCodecIssue(label);
+      clearWatchdog();
+      setTimeout(() => {
+        if (!disposed) safeDestroy();
+      }, 0);
+    };
+
     /**
      * Load watchdog: if no frame arrives within 15s the stream is treated as a
      * failure so "Connecting to stream…" can never spin forever, even if the
