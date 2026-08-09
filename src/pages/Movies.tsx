@@ -1328,11 +1328,14 @@ export default function Movies() {
               {t.noMovies}
             </div>
           ) : (
-            <Grid>
-              {filtered.map((m, i) => (
-                    <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} t={t} onClick={() => setSelected(m)} />
-              ))}
-            </Grid>
+            <>
+              <Grid>
+                {filtered.slice(0, grid.limit).map((m, i) => (
+                  <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} t={t} onClick={() => setSelected(m)} />
+                ))}
+              </Grid>
+              {grid.hasMore && <div ref={grid.sentinelRef} style={{ height: 24 }} />}
+            </>
           ))}
 
         {/* Infinite scroll sentinel + loader (catalog views only) */}
