@@ -83,15 +83,17 @@ async function checkXtream(source: string): Promise<Health> {
   }
 
   const slotFull = max !== null && max > 0 && active !== null && active >= max
+  const slotMessage =
+    max !== null && max > 0
+      ? active !== null
+        ? slotFull
+          ? `All ${max} viewing slots are in use`
+          : `${active}/${max} viewing slots in use`
+        : `${max} viewing slots · slot status unknown`
+      : 'Provider is reachable'
+
   return {
-    ...base(
-      slotFull ? 'slot_limit' : 'online',
-      slotFull
-        ? `All ${max} viewing slots are in use`
-        : max
-          ? `${active ?? 0}/${max} viewing slots in use`
-          : 'Provider is reachable',
-    ),
+    ...base(slotFull ? 'slot_limit' : 'online', slotMessage),
     activeConnections: active,
     maxConnections: max,
     expiresAt,
