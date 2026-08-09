@@ -109,8 +109,11 @@ export async function egressFetch(
       const acah = (res.headers.get('access-control-allow-headers') ?? '').toLowerCase()
       const selfRejected = acah.includes('x-relay-token') || !!res.headers.get('x-powered-by')
       if (selfRejected) {
+        const tk = token()
+        let ep = 'invalid'
+        try { const u = new URL(egressUrl(target)); ep = `${u.host}${u.pathname}` } catch { /* ignore */ }
         console.error(
-          `[iptvEgress] relay rejected our token (HTTP ${res.status}) — check IPTV_EGRESS_PROXY_TOKEN; falling back to direct`,
+          `[iptvEgress] relay rejected our token (HTTP ${res.status}) endpoint=${ep} tokenLen=${tk?.length ?? 0} src=${Deno.env.get('RELAY_TOKEN') ? 'RELAY_TOKEN' : (Deno.env.get('IPTV_EGRESS_PROXY_TOKEN') ? 'IPTV_EGRESS_PROXY_TOKEN' : 'none')}; falling back to direct`,
         )
         await res.body?.cancel().catch(() => {})
         try {
