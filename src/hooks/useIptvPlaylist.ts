@@ -1,5 +1,13 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  clearCatalogCache,
+  fetchWithBackoff,
+  queued,
+  readCatalogCache,
+  writeCatalogCache,
+} from '@/lib/iptvCatalog';
+
 
 export type IptvKind = 'live' | 'vod' | 'series';
 
