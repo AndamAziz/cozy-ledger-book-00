@@ -42,8 +42,22 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid JSON body' }, 400)
   }
 
-  const raw = typeof body.url === 'string' ? body.url.trim() : ''
-  if (!raw || raw.length > 2048) return json({ error: 'A playlist URL is required' }, 400)
+  const rawInput = typeof body.url === 'string' ? body.url.trim() : ''
+  if (!rawInput || rawInput.length > 2048) return json({ error: 'A playlist URL is required' }, 400)
+
+  // A pasted Xtream URL often already carries `action=get_live_streams`, whose
+  // answer can be several MB — far too heavy for a quick handshake test. Strip
+  // any `action` so the test starts from the tiny account endpoint; the
+  // catalogue is then counted deliberately further down.
+  let raw = rawInput
+  try {
+    const u = new URL(rawInput)
+    if (u.searchParams.has('action') && /player_api\.php$/i.test(u.pathname)) {
+      u.searchParams.delete('action')
+      raw = u.toString()
+    }
+  } catch { /* not a URL — handled below */ }
+
 
   let creds: ReturnType<typeof parseXtream>
   try {
