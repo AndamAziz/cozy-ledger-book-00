@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
   if (isM3uPlaylistUrl(raw) || !isXtreamUrl(raw)) {
     // Big playlists (tens of thousands of channels) must be read whole so the
     // channel count is accurate.
-    const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS, maxBytes: 60_000_000 })
+    const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS, maxBytes: 60_000_000, directFirst: true })
     if (!res.ok) return json({ ok: false, error: res.error ?? 'Could not reach the server', status: res.status })
     if (!/#EXTM3U|#EXTINF/i.test(res.body)) {
       return json({
