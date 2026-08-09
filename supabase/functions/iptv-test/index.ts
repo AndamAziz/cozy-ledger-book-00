@@ -133,14 +133,53 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: 'Connected, but no channels were returned' })
   }
 
+  // 3. Catalogue sizes (sequential — the provider allows one connection).
+  const countOf = async (action: string) => {
+    const r = await relayFetch(`${api}&action=${action}`, { timeoutMs: TIMEOUT_MS })
+    if (!r.ok) return null
+    try {
+      const arr = JSON.parse(r.body)
+      return Array.isArray(arr) ? arr.length : null
+    } catch {
+      return null
+    }
+  }
+  const vodCount = await countOf('get_vod_streams')
+  const seriesCount = await countOf('get_series')
+
+  // 4. Sample playback probe: how many of the first channels really answer.
+  const sample = (parsed as Array<{ stream_id?: unknown }>)
+    .slice(0, 3)
+    .map((c) => String(c?.stream_id ?? ''))
+    .filter(Boolean)
+  let onlineSample = 0
+  for (const id of sample) {
+    const target = `${creds.protocol}//${creds.host}/live/${encodeURIComponent(creds.username)}/${encodeURIComponent(
+      creds.password,
+    )}/${id}.ts`
+    const probe = await relayFetch(target, { timeoutMs: TIMEOUT_MS, maxBytes: 2048 })
+    if (probe.ok || probe.status === 206) onlineSample += 1
+  }
+
+  const liveCount = parsed.length
   return json({
     ok: true,
     kind: 'xtream',
-    channels: parsed.length,
+    channels: liveCount,
+    live: liveCount,
+    vod: vodCount,
+    series: seriesCount,
+    online: onlineSample > 0 ? liveCount : 0,
+    sample_tested: sample.length,
+    sample_online: onlineSample,
     latency_ms: latency(),
     host: creds.host,
     via: list.userAgent,
-    compatible: true,
-    message: `Connected — ${parsed.length} live channels in ${latency()} ms`,
+    compatible: onlineSample > 0,
+    message:
+      onlineSample > 0
+        ? `Connected — ${liveCount} live channels online (${onlineSample}/${sample.length} sampled playing) in ${latency()} ms`
+        : `Connected — ${liveCount} live channels listed, but none of the ${sample.length} sampled channels are playing`,
   })
 })
+
