@@ -172,6 +172,11 @@ export function IptvSourceManager({
   // Per-row stream-resolver probe (does not block the row UI).
   const [rowTesting, setRowTesting] = useState<string | null>(null);
   const [rowTest, setRowTest] = useState<Record<string, RowTestResult>>({});
+  // Per-row provider health probe (moved here from the Live TV page).
+  const [healthBusy, setHealthBusy] = useState<string | null>(null);
+  const [rowHealth, setRowHealth] = useState<
+    Record<string, { status?: string; message?: string; latencyMs?: number; activeConnections?: number; maxConnections?: number }>
+  >({});
   // CEO: assign one of my sources to another account.
   const [assignFor, setAssignFor] = useState<string | null>(null);
   const [assignQuery, setAssignQuery] = useState('');
