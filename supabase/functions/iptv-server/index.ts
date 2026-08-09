@@ -365,7 +365,15 @@ Deno.serve(async (req) => {
 
       const ok = await setActive(targetId, newId!)
       if (!ok) return json({ error: 'Assigned but could not activate it' }, 500)
+      // Grant it in the many-to-many table too: an account can hold several
+      // providers and switch between them from the app.
+      const { count: grantCount } = await db
+        .from('user_source_access')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', targetId)
+      await grantSource(targetId, newId!, !grantCount)
       return json({ ok: true, email: targetEmail, name: payload.name })
+
     }
 
     /** Everyone (except the CEO) currently holding a copy of one of my sources. */
@@ -428,6 +436,13 @@ Deno.serve(async (req) => {
       if (!targetRow) return json({ ok: true, email, alreadyRevoked: true })
 
       await db.from('iptv_sources').delete().eq('id', targetRow.id as string).eq('user_id', targetId)
+      // Revoke the grant for both the user's copy and the CEO pool row (older
+      // backfilled grants point at the pool row).
+      await db
+        .from('user_source_access')
+        .delete()
+        .eq('user_id', targetId)
+        .in('source_id', [targetRow.id as string, id])
 
       if (targetRow.is_active) {
         const { data: next } = await db
@@ -440,8 +455,43 @@ Deno.serve(async (req) => {
         if (next?.id) await setActive(targetId, next.id as string)
         else await store(targetId, '')
       }
+      // Keep a selected source when other grants remain.
+      const remaining = await listGranted(targetId)
+      if (remaining.length && !remaining.some((s) => s.isDefault)) {
+        await grantSource(targetId, remaining[0].id, true)
+      }
       return json({ ok: true, email })
     }
+
+    /** Every source the caller (or an admin's target user) may browse. */
+    case 'my_sources': {
+      const targetId = ownerId()
+      if (!targetId) return json({ error: 'Forbidden' }, 403)
+      return json({ sources: await listGranted(targetId) })
+    }
+
+    /** Switch the selected source (immediately effective for playback). */
+    case 'select_source': {
+      const targetId = ownerId()
+      if (!targetId) return json({ error: 'Forbidden' }, 403)
+      const id = String(body.id ?? '')
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
+      const allowed = await listGranted(targetId)
+      if (!allowed.some((s) => s.id === id)) return json({ error: 'That source is not available to you' }, 403)
+      await grantSource(targetId, id, true)
+      const owns = await db
+        .from('iptv_sources')
+        .select('id')
+        .eq('id', id)
+        .eq('user_id', targetId)
+        .maybeSingle()
+      if (owns.data?.id) await setActive(targetId, id)
+      if (!(await syncSelected(targetId, id))) {
+        return json({ error: 'That source has no stored credentials' }, 409)
+      }
+      return json({ ok: true, id, sources: await listGranted(targetId) })
+    }
+
 
     /**
      * CEO directory: every account (other than the CEO) that currently holds
