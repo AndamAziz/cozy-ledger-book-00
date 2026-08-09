@@ -1,5 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { isXtreamUrl, xtreamApiBase } from '../_shared/iptvConfig.ts'
+import { isXtreamUrl, xtreamApiBases, learnScheme } from '../_shared/iptvConfig.ts'
 import { resolveViewer, serviceClient } from '../_shared/iptvViewer.ts'
 import { maskPlaylistUrl } from '../_shared/iptvCrypto.ts'
 import { egressFetch } from '../_shared/iptvEgress.ts'
