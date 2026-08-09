@@ -58,6 +58,12 @@ interface TestResult {
   ok: boolean;
   kind?: string;
   channels?: number;
+  live?: number;
+  vod?: number | null;
+  series?: number | null;
+  online?: number;
+  sample_tested?: number;
+  sample_online?: number;
   latency_ms?: number;
   host?: string;
   compatible?: boolean;
@@ -65,6 +71,7 @@ interface TestResult {
   error?: string;
   at?: string;
 }
+
 
 interface DirectoryUser {
   userId: string;
