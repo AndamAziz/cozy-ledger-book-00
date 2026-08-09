@@ -279,6 +279,36 @@ export function IptvSourceManager({
     }
   };
 
+  /** Live provider up/down + latency check for the currently active source. */
+  const checkHealth = async (s: IptvSource) => {
+    setHealthBusy(s.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('iptv-health?fresh=1', { method: 'GET' });
+      if (error) throw error;
+      const h = data as { status?: string; message?: string; latencyMs?: number; activeConnections?: number; maxConnections?: number };
+      setRowHealth((prev) => ({ ...prev, [s.id]: h }));
+      setSources((prev) =>
+        prev.map((x) =>
+          x.id === s.id
+            ? {
+                ...x,
+                health_status: (h.status as IptvSource['health_status']) ?? x.health_status,
+                health_message: h.message ?? x.health_message,
+                health_checked_at: new Date().toISOString(),
+              }
+            : x,
+        ),
+      );
+    } catch (e) {
+      setRowHealth((prev) => ({
+        ...prev,
+        [s.id]: { status: 'offline', message: e instanceof Error ? e.message : 'Health check failed' },
+      }));
+    } finally {
+      setHealthBusy(null);
+    }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
