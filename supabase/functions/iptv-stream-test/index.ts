@@ -238,12 +238,14 @@ Deno.serve(async (req) => {
 
 
   const target = `${protocol}//${host}/live/${encodeURIComponent(username)}/${encodeURIComponent(password)}/${streamId}.ts`
-  const { res, diag } = await diagFetchRaw('stream-test:live', target, {
+  // Probe the real playable URL, not the pre-redirect path the provider blocks.
+  const playable = await resolveTokenizedUrl(target, headers)
+  const { res, diag } = await diagFetchRaw('stream-test:live', playable, {
     timeoutMs: TIMEOUT_MS,
     headers,
     onDiag: capture,
   })
-  if (!res || !res.ok) return fail(diag, target)
+  if (!res || !res.ok) return fail(diag, playable)
   // Release the provider slot immediately — single-slot accounts are common.
   await res.body?.cancel().catch(() => undefined)
   return json({
@@ -251,7 +253,9 @@ Deno.serve(async (req) => {
     latency_ms: diag.durationMs,
     status: diag.status,
     streamId,
+    redirected: playable !== target,
     contentType: diag.headers?.['content-type'] ?? null,
-    url: redactUrl(target),
+    url: redactUrl(playable),
+
   })
 })
