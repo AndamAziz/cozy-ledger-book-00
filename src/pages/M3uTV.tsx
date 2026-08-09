@@ -726,7 +726,7 @@ export default function M3uTV() {
           <p className="py-20 text-center text-xs font-semibold text-muted-foreground">{T.noChannels}</p>
         ) : (
           <div className="space-y-8">
-            {sections.map((section) => (
+            {sections.slice(0, sectionWindow.limit).map((section) => (
               <section key={section.name} className="space-y-3">
                 {section.movie ? (
                   <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9">
