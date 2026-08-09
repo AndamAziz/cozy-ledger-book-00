@@ -11,6 +11,24 @@ export const IPTV_USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
 ]
 
+/** UA for attempt N (0-based) — rotates through {@link IPTV_USER_AGENTS}. */
+export function uaFor(attempt: number): string {
+  return IPTV_USER_AGENTS[Math.abs(attempt) % IPTV_USER_AGENTS.length]
+}
+
+/**
+ * True when a response is an HTML page rather than provider data. Cloudflare
+ * ("Attention Required!") and panel error pages answer HTML — sometimes with
+ * HTTP 200 — so the content type (and, when available, the body) must be
+ * checked, not only the status code.
+ */
+export function isHtmlBlock(contentType: string | null | undefined, body?: string): boolean {
+  if ((contentType ?? '').toLowerCase().includes('text/html')) return true
+  const head = (body ?? '').slice(0, 400).trimStart().toLowerCase()
+  return head.startsWith('<!doctype html') || head.startsWith('<html')
+}
+
+
 export interface RelayResult {
   ok: boolean
   status: number
