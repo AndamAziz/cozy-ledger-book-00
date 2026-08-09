@@ -36,8 +36,13 @@ export interface IptvSource {
   playlist_masked: string;
   is_active: boolean;
   last_test: TestResult | null;
+  /** Live verdict written by every automatic provider health check. */
+  health_status?: 'online' | 'slot_limit' | 'offline' | null;
+  health_message?: string | null;
+  health_checked_at?: string | null;
   updated_at: string;
 }
+
 
 interface RowTestResult {
   ok: boolean;
