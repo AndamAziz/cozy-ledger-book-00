@@ -79,7 +79,9 @@ Deno.serve(async (req) => {
   // A playlist pattern (get.php?type=m3u, /playlist, *.m3u, GitHub raw file) is
   // always read as text — never probed as an Xtream API endpoint.
   if (isM3uPlaylistUrl(raw) || !isXtreamUrl(raw)) {
-    const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS })
+    // Big playlists (tens of thousands of channels) must be read whole so the
+    // channel count is accurate.
+    const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS, maxBytes: 60_000_000 })
     if (!res.ok) return json({ ok: false, error: res.error ?? 'Could not reach the server', status: res.status })
     if (!/#EXTM3U|#EXTINF/i.test(res.body)) {
       return json({
