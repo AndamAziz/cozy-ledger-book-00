@@ -241,6 +241,9 @@ async function get<T>(path: string, opts: { cache?: boolean; background?: boolea
           cancelBackgroundQueue();
         }
       }
+      // Prefer showing the last-known-good catalogue over an error screen.
+      const fallback = useCache ? readCatalogEntry<T>(cacheKey) : null;
+      if (fallback) return fallback.value;
       throw e;
     }
   }, { background: opts.background });
