@@ -102,7 +102,13 @@ export function logDiag(tag: string, diag: UpstreamDiag) {
   else console.error(`[iptv-upstream] ${JSON.stringify(line)}`)
 }
 
-export type UpstreamVerdict = 'waf_block' | 'credentials' | 'rate_limited' | 'geo_block' | 'unknown'
+export type UpstreamVerdict =
+  | 'waf_block'
+  | 'credentials'
+  | 'rate_limited'
+  | 'geo_block'
+  | 'server_down'
+  | 'unknown'
 
 /**
  * Decide *why* an upstream refused us, so the UI can tell a WAF/bot-filter block
