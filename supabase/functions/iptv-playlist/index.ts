@@ -34,6 +34,43 @@ const TTL = 30 * 60 * 1000
 
 // The VOD/series catalogues are ~70MB each, so nothing global is kept in memory:
 // the index caches category lists only and item lists are fetched per category.
+type PublicDiag = {
+  verdict: string
+  reason: string
+  status: number
+  statusText?: string
+  url: string
+  action?: string
+  attempt?: number
+  durationMs?: number
+  headers?: Record<string, string>
+  bodySnippet?: string
+  message?: string
+}
+
+/** UI-safe view of an upstream failure (URL redacted, body snippet trimmed). */
+function publicDiag(diag: UpstreamDiag | null | undefined): PublicDiag | null {
+  if (!diag) return null
+  const { verdict, reason } = verdictOf(diag)
+  let action: string | undefined
+  try {
+    action = new URL(diag.url).searchParams.get('action') ?? undefined
+  } catch { /* ignore */ }
+  return {
+    verdict,
+    reason,
+    status: diag.status,
+    statusText: diag.statusText,
+    url: redactUrl(diag.url),
+    action,
+    attempt: diag.attempt,
+    durationMs: diag.durationMs,
+    headers: diag.headers,
+    bodySnippet: diag.bodySnippet ? diag.bodySnippet.slice(0, 300) : undefined,
+    message: diag.message,
+  }
+}
+
 type IndexSnapshot = {
   at: number
   source: string
@@ -42,7 +79,9 @@ type IndexSnapshot = {
   partial?: boolean
   mode?: 'xtream' | 'plain'
   warning?: string
+  diag?: PublicDiag | null
 }
+
 // Keyed by playlist URL: each user browses their own provider catalogue.
 const indexCache = new Map<string, IndexSnapshot>()
 const indexLoading = new Map<string, Promise<IndexSnapshot>>()
