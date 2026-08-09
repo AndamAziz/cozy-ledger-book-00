@@ -171,75 +171,114 @@ Deno.serve(async (req) => {
   const uaList = custom['User-Agent'] ? [custom['User-Agent']] : IPTV_USER_AGENTS
 
   let upstream: Response | null = null
+  /** Provider URL the committed response really came from (relay-aware). */
+  let upstreamBase = candidates[0] ?? ''
   let lastError = 'fetch failed'
+  let deadlineHit = false
+
+  const OVERALL_DEADLINE_MS = 12_000
+  const startedAt = Date.now()
+  const remaining = () => OVERALL_DEADLINE_MS - (Date.now() - startedAt)
+
+  /** Fatal per-host errors: another UA/transport will not help. */
+  const isDeadHost = (msg: string) =>
+    msg.startsWith('Connection refused') || msg.startsWith('Host not found')
+
+  // Attempt plan: every candidate gets a fast direct hop then the geo-relay with
+  // the primary UA. Only if the whole list fails do we rotate UAs — on the first
+  // (most likely) candidate only, instead of cross-producing the full matrix.
+  type Attempt = { target: string; via: 'direct' | 'relay'; ua: string }
+  const plan: Attempt[] = []
   for (const target of candidates) {
-    // Direct hop first (fast, and what the M3U module does); the geo-relay is a
-    // fallback for hosts that block Supabase egress — VOD files are often served
-    // from a different, stricter host than the live edge.
-    for (const via of ['direct', 'relay'] as const) {
-      for (const ua of uaList) {
-        const headers = { ...baseHeaders, 'User-Agent': ua }
-        try {
-          const res =
-            via === 'direct'
-              ? await fetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(20_000) })
-              : await egressFetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(25_000) })
-          if (res.ok || res.status === 206) {
-            const ctype = res.headers.get('content-type') || ''
-            // A WAF / panel block page arrives as HTML, sometimes with HTTP 200:
-            // never hand that to the player — retry with the next UA.
-            if (isHtmlBlock(ctype)) {
-              await res.body?.cancel().catch(() => undefined)
-              lastError = 'provider returned a block page (HTML)'
-              continue
-            }
-            // Some providers answer 200 with a text error page for dead
-            // channels. Verify manifests really are manifests before committing,
-            // otherwise fall through to the next candidate (raw TS).
-            const looksManifest =
-              ctype.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(new URL(res.url).pathname)
-            if (looksManifest) {
-              const text = await res.text()
-              if (isHtmlBlock(null, text)) {
-                lastError = 'provider returned a block page (HTML)'
-                continue
-              }
-              if (!text.trimStart().startsWith('#EXTM3U')) {
-                lastError = 'invalid manifest'
-                continue
-              }
-              upstream = new Response(text, {
-                status: 200,
-                headers: { 'Content-Type': 'application/vnd.apple.mpegurl' },
-              })
-              Object.defineProperty(upstream, 'url', { value: res.url })
-              break
-            }
-            upstream = res
-            break
-          }
-          lastError = `HTTP ${res.status}`
-          await res.body?.cancel().catch(() => undefined)
-        } catch (e) {
-          lastError = e instanceof Error ? e.message : 'fetch failed'
-        }
-      }
-      if (upstream) break
-    }
-    if (upstream) break
+    plan.push({ target, via: 'direct', ua: uaList[0] })
+    plan.push({ target, via: 'relay', ua: uaList[0] })
+  }
+  for (const ua of uaList.slice(1)) {
+    plan.push({ target: candidates[0], via: 'direct', ua })
+    plan.push({ target: candidates[0], via: 'relay', ua })
   }
 
+  const deadHosts = new Set<string>()
+
+  for (const { target, via, ua } of plan) {
+    if (remaining() <= 500) {
+      deadlineHit = true
+      break
+    }
+    let hostKey = target
+    try {
+      hostKey = new URL(target).host
+    } catch { /* keep raw */ }
+    if (deadHosts.has(hostKey)) continue
+
+    const headers = { ...baseHeaders, 'User-Agent': ua }
+    // A FRESH signal per attempt — a signal that already fired would abort the
+    // next request instantly.
+    const signal = AbortSignal.timeout(Math.max(1_500, Math.min(8_000, remaining() - 300)))
+    try {
+      const res =
+        via === 'direct'
+          ? await fetch(target, { headers, redirect: 'follow', signal })
+          : await egressFetch(target, { headers, redirect: 'follow', signal })
+      if (res.ok || res.status === 206) {
+        const ctype = res.headers.get('content-type') || ''
+        const resolvedUrl = finalUrlOf(res, target)
+        // A WAF / panel block page arrives as HTML, sometimes with HTTP 200:
+        // never hand that to the player — retry with the next UA.
+        if (isHtmlBlock(ctype)) {
+          await res.body?.cancel().catch(() => undefined)
+          lastError = 'provider returned a block page (HTML)'
+          continue
+        }
+        // Some providers answer 200 with a text error page for dead channels.
+        // Verify manifests really are manifests before committing.
+        let manifestPath = ''
+        try {
+          manifestPath = new URL(resolvedUrl).pathname
+        } catch { /* ignore */ }
+        const looksManifest = ctype.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(manifestPath)
+        if (looksManifest) {
+          const text = await res.text()
+          if (isHtmlBlock(null, text)) {
+            lastError = 'provider returned a block page (HTML)'
+            continue
+          }
+          if (!text.trimStart().startsWith('#EXTM3U')) {
+            lastError = 'invalid manifest'
+            continue
+          }
+          upstream = new Response(text, {
+            status: 200,
+            headers: { 'Content-Type': 'application/vnd.apple.mpegurl' },
+          })
+          upstreamBase = resolvedUrl
+          break
+        }
+        upstream = res
+        upstreamBase = resolvedUrl
+        break
+      }
+      lastError = `HTTP ${res.status}`
+      await res.body?.cancel().catch(() => undefined)
+    } catch (e) {
+      lastError = describeFetchError(e)
+      // Refused / DNS failure will not improve with another UA or transport.
+      if (via === 'direct' && isDeadHost(lastError)) deadHosts.add(hostKey)
+    }
+  }
 
   if (!upstream) {
+    const reason = deadlineHit
+      ? `Stream did not start within ${OVERALL_DEADLINE_MS / 1000}s (last error: ${lastError})`
+      : lastError
     console.error(
-      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, lastError })}`,
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, lastError })}`,
     )
+    return json({ error: reason, deadline: deadlineHit, candidates: candidates.length }, 502)
   }
 
+  const finalUrl = new URL(upstreamBase)
 
-  if (!upstream) return json({ error: lastError }, 502)
-
-  const finalUrl = new URL(upstream.url)
   const ct = upstream.headers.get('content-type') || ''
   const isPlaylist = ct.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(finalUrl.pathname + finalUrl.search)
 
