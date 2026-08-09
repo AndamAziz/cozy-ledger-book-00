@@ -185,11 +185,14 @@ Deno.serve(async (req) => {
   }
 
   let health: Health
+  const startedAt = Date.now()
   try {
     health = isXtreamUrl(source) ? await checkXtream(source) : await checkPlainM3U(source)
   } catch (e) {
     health = base('offline', e instanceof Error && e.name === 'AbortError' ? 'Provider timed out' : 'Provider unreachable')
   }
+  // Round-trip time of the probe itself — surfaced in the UI as provider latency.
+  health.latencyMs = Date.now() - startedAt
 
   cache.set(resolved.viewer.userId, { at: Date.now(), health })
   if (cache.size > 500) cache.delete(cache.keys().next().value as string)
