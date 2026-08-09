@@ -386,10 +386,89 @@ Deno.serve(async (req) => {
 
   const out = new Headers(cors)
   out.set('Content-Type', ct || 'application/octet-stream')
-  const cr = upstream.headers.get('content-range')
-  if (cr) out.set('Content-Range', cr)
   out.set('Accept-Ranges', 'bytes')
   out.set('Cache-Control', 'no-store')
+  const cr = upstream.headers.get('content-range')
+  const clen = upstream.headers.get('content-length')
 
+  // Upstream honoured the Range request: pass 206 + range headers straight
+  // through so the browser can size and seek the media.
+  if (cr) {
+    out.set('Content-Range', cr)
+    if (clen) out.set('Content-Length', clen)
+    return new Response(upstream.body, { status: upstream.status, headers: out })
+  }
+
+  // Upstream (or our relay) ignored Range and answered a full-body 200. A
+  // <video> element needs a 206 with Content-Range to start progressive
+  // playback, so synthesize one: skip `start` bytes and stop after the
+  // requested window instead of streaming the whole file.
+  const parsed = range ? /^bytes=(\d*)-(\d*)$/i.exec(range.trim()) : null
+  // A SUFFIX range (`bytes=-N`, used to read a non-faststart MP4's trailing
+  // `moov` atom) cannot be honoured without a known total size: answering it
+  // with leading bytes would hand the demuxer corrupt data. Be honest instead.
+  const suffixRange = !!parsed && !parsed[1] && !!parsed[2]
+  if (suffixRange && !clen) {
+    await upstream.body?.cancel().catch(() => undefined)
+    out.set('Content-Range', 'bytes */*')
+    return new Response(null, { status: 416, headers: out })
+  }
+  if (parsed && upstream.status === 200 && upstream.body) {
+    const total = clen ? Number(clen) : NaN
+    const start = parsed[1] ? Number(parsed[1]) : suffixRange ? Math.max(0, total - Number(parsed[2])) : 0
+    const endReq = parsed[1] && parsed[2] ? Number(parsed[2]) : suffixRange ? total - 1 : NaN
+
+    // Cap an open-ended range so we never buffer an entire movie in memory.
+    const OPEN_WINDOW = 4 * 1024 * 1024
+    const end = Number.isFinite(endReq)
+      ? endReq
+      : Number.isFinite(total)
+        ? total - 1
+        : start + OPEN_WINDOW - 1
+    if (!Number.isFinite(start) || start < 0 || end < start) {
+      await upstream.body.cancel().catch(() => undefined)
+      return new Response(null, { status: 416, headers: out })
+    }
+    const wanted = end - start + 1
+    const reader = upstream.body.getReader()
+    let skipped = 0
+    let sent = 0
+    const sliced = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done || !value) {
+            controller.close()
+            return
+          }
+          let chunk = value
+          if (skipped < start) {
+            const need = start - skipped
+            if (chunk.byteLength <= need) {
+              skipped += chunk.byteLength
+              continue
+            }
+            chunk = chunk.subarray(need)
+            skipped = start
+          }
+          if (sent + chunk.byteLength > wanted) chunk = chunk.subarray(0, wanted - sent)
+          sent += chunk.byteLength
+          controller.enqueue(chunk)
+          if (sent >= wanted) {
+            controller.close()
+            await reader.cancel().catch(() => undefined)
+          }
+          return
+        }
+      },
+      cancel: (reason) => reader.cancel(reason).catch(() => undefined),
+    })
+    out.set('Content-Range', `bytes ${start}-${end}/${Number.isFinite(total) ? total : '*'}`)
+    out.set('Content-Length', String(wanted))
+    return new Response(sliced, { status: 206, headers: out })
+  }
+
+  if (clen) out.set('Content-Length', clen)
   return new Response(upstream.body, { status: upstream.status, headers: out })
 })
+
