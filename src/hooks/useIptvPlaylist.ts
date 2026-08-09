@@ -145,9 +145,23 @@ export function toPlayableUrl(
 const FAIL_MEMO_MS = 45_000;
 const failMemo = new Map<string, { at: number; err: Error }>();
 
+/**
+ * Source-level circuit breaker. When the provider panel itself is down
+ * (connection dropped/refused), every category request would fail the same way,
+ * so we short-circuit all of them for a while instead of firing dozens of 502s.
+ */
+const OUTAGE_MS = 60_000;
+const outage = new Map<string, { at: number; err: Error }>();
+
+function isOutageError(e: unknown): boolean {
+  const err = e as IptvRequestError & { errorKind?: string; diagnostic?: { verdict?: string } };
+  return err?.diagnostic?.verdict === 'server_down' || err?.errorKind === 'connection';
+}
+
 async function get<T>(path: string, opts: { cache?: boolean; background?: boolean } = {}): Promise<T> {
   const useCache = opts.cache !== false && !path.includes('refresh=1');
   const cacheKey = `${activeSourceId ?? 'default'}|${path}`;
+  const sourceKey = activeSourceId ?? 'default';
   if (useCache) {
     // Stale entries are served instantly and refreshed in the background: the
     // provider allows one connection at a time, so waiting is what felt slow.
@@ -156,6 +170,8 @@ async function get<T>(path: string, opts: { cache?: boolean; background?: boolea
       if (!hit.fresh && !opts.background) void get<T>(path, { background: true }).catch(() => undefined);
       return hit.value;
     }
+    const down = outage.get(sourceKey);
+    if (down && Date.now() - down.at < OUTAGE_MS) throw down.err;
     const failed = failMemo.get(cacheKey);
     if (failed && Date.now() - failed.at < FAIL_MEMO_MS) throw failed.err;
   }
