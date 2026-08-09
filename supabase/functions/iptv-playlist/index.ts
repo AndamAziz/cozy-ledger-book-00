@@ -238,6 +238,7 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
  * Slow Xtream servers are common, so each call gets a retry with more headroom.
  */
 async function fetchJson<T>(
+  sk: string,
   url: string,
   timeoutMs = 15000,
   attempts = IPTV_USER_AGENTS.length,
@@ -308,7 +309,7 @@ async function fetchJson<T>(
  * Stream a huge Xtream JSON array and hand each object to `onRow`, without ever
  * materialising the whole payload. Returns early when `onRow` returns false.
  */
-async function scanArray(url: string, onRow: (row: Record<string, unknown>) => boolean) {
+async function scanArray(sk: string, url: string, onRow: (row: Record<string, unknown>) => boolean) {
   const deadline = Date.now() + 20_000
   // Streaming read: keep the body, so no snippet is consumed on success.
   // Rotate the player User-Agent until the provider answers with real data
@@ -406,7 +407,7 @@ const ACTIONS: Record<Kind, [string, string]> = {
  * Returns `{ user_info: { auth, status, … } }`. A network failure is NOT fatal
  * (the catalogue calls retry anyway); only an explicit auth rejection is.
  */
-async function xtreamLogin(api: string): Promise<void> {
+async function xtreamLogin(sk: string, api: string): Promise<void> {
   let info: Record<string, unknown> | null = null
   for (let i = 0; i < IPTV_USER_AGENTS.length && !info; i++) {
     const { res, diag } = await diagFetch('login', api, {
@@ -456,17 +457,18 @@ async function xtreamLogin(api: string): Promise<void> {
  * when a category is actually opened.
  */
 async function buildIndex(source: string) {
+  const sk = source
   const api = apiBase(source)
   const categories: CategoryInfo[] = []
 
   // Authenticate exactly like a native player before listing anything.
-  await xtreamLogin(api)
+  await xtreamLogin(sk, api)
 
 
   const lists = await Promise.all(
     (['live', 'vod', 'series'] as Kind[]).map(async (kind) => ({
       kind,
-      cats: await fetchJson<RawCategory[]>(`${api}&action=${ACTIONS[kind][0]}`),
+      cats: await fetchJson<RawCategory[]>(sk, `${api}&action=${ACTIONS[kind][0]}`),
     })),
   )
 
@@ -569,9 +571,9 @@ const CATEGORY_MAX = 12
 const categoryCache = new Map<string, { at: number; items: Item[] }>()
 
 /** Fallback for providers that ignore `category_id` on get_vod_streams/get_series. */
-async function scanCategory(api: string, kind: Kind, rawId: string): Promise<Item[]> {
+async function scanCategory(sk: string, api: string, kind: Kind, rawId: string): Promise<Item[]> {
   const items: Item[] = []
-  await scanArray(`${api}&action=${ACTIONS[kind][1]}`, (row) => {
+  await scanArray(sk, `${api}&action=${ACTIONS[kind][1]}`, (row) => {
     if (String(row.category_id ?? '') === rawId) {
       const item = toItem(row, kind)
       if (item) items.push(item)
@@ -581,11 +583,12 @@ async function scanCategory(api: string, kind: Kind, rawId: string): Promise<Ite
   return items
 }
 
-async function getCategoryItems(api: string, kind: Kind, rawId: string, key: string): Promise<Item[]> {
+async function getCategoryItems(sk: string, api: string, kind: Kind, rawId: string, key: string): Promise<Item[]> {
   const hit = categoryCache.get(key)
   if (hit && Date.now() - hit.at < (hit.items.length ? CATEGORY_TTL : EMPTY_TTL)) return hit.items
 
   const rows = await fetchJson<Record<string, unknown>[]>(
+    sk,
     `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
     15000,
     2,
@@ -596,7 +599,7 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
   // locally. Do the same for Live, Movies and Series so one bad lazy endpoint
   // does not leave the player with empty grids.
   if (rows === null) {
-    const scanned = await scanCategory(api, kind, rawId)
+    const scanned = await scanCategory(sk, api, kind, rawId)
     if (scanned.length) {
       categoryCache.set(key, { at: Date.now(), items: scanned })
       return scanned
@@ -613,7 +616,7 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
   let items = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
   if (!items.length) {
     try {
-      items = await scanCategory(api, kind, rawId)
+      items = await scanCategory(sk, api, kind, rawId)
     } catch {
       // keep the empty result
     }
@@ -649,7 +652,7 @@ interface EpisodeOut {
 }
 
 /** Fetch season/episode structure for one series via Xtream get_series_info. */
-async function getSeriesInfo(api: string, seriesId: string) {
+async function getSeriesInfo(sk: string, api: string, seriesId: string) {
   const url = `${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
   let data: Record<string, unknown> | null = null
   for (let i = 0; i < IPTV_USER_AGENTS.length && !data; i++) {
@@ -968,7 +971,7 @@ Deno.serve(async (req) => {
         return json(body)
       }
       if (!/^\d+$/.test(seriesId)) return json({ error: 'Invalid series id' }, 400)
-      return json(await getSeriesInfo(apiBase(source), seriesId))
+      return json(await getSeriesInfo(source, apiBase(source), seriesId))
     }
 
     const category = url.searchParams.get('category')
@@ -1008,14 +1011,14 @@ Deno.serve(async (req) => {
     if (category) {
       const kind = kindOf(category)
       const rawId = category.slice(category.indexOf(':') + 1)
-      list = await getCategoryItems(api, kind, rawId, `${digest(source)}|${category}`)
+      list = await getCategoryItems(source, api, kind, rawId, `${digest(source)}|${category}`)
       if (q) list = list.filter((s) => s.name.toLowerCase().includes(q))
     } else {
 
       const kindParam = url.searchParams.get('kind')
       const kind: Kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
       const cap = offset + limit
-      await scanArray(`${api}&action=${ACTIONS[kind][1]}`, (row) => {
+      await scanArray(source, `${api}&action=${ACTIONS[kind][1]}`, (row) => {
         const name = String(row.name ?? row.title ?? '')
         if (name.toLowerCase().includes(q)) {
           const item = toItem(row, kind)
