@@ -153,12 +153,14 @@ export async function egressFetch(
       }
     }
     // The relay itself rejected US (bad/missing X-Relay-Token). Its own 401/403
-    // must never be reported as a provider refusal: it advertises the relay
-    // token header in CORS and never proxies upstream headers on that path.
+    // must never be reported as a provider refusal — but the reverse matters
+    // just as much: the relay stamps its Express/CORS headers on EVERY reply,
+    // including proxied upstream ones, so those alone cannot identify a
+    // self-rejection. `X-Final-URL` is only present once the relay actually
+    // reached the provider, so a 401/403 carrying it is the provider's answer.
     if (res.status === 401 || res.status === 403) {
-      const acah = (res.headers.get('access-control-allow-headers') ?? '').toLowerCase()
-      const selfRejected = acah.includes('x-relay-token') || !!res.headers.get('x-powered-by')
-      if (selfRejected) {
+      const proxied = !!(res.headers.get('x-final-url') ?? res.headers.get('X-Final-URL'))
+      if (!proxied) {
         const tk = token()
         let ep = 'invalid'
         try { const u = new URL(egressUrl(target)); ep = `${u.host}${u.pathname}` } catch { /* ignore */ }
