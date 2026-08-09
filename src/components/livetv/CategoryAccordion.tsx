@@ -19,7 +19,7 @@ const PREVIEW_LIMIT = 12;
 /** Collapsible category row with a horizontal preview strip and a "See All" action. */
 export function CategoryAccordion({ category, kind, poster, onPlay, onSeeAll }: Props) {
   const [open, setOpen] = useState(false);
-  const { data, isLoading } = useIptvChannels(category.id, open, PREVIEW_LIMIT);
+  const { data, isLoading, isError, error, refetch } = useIptvChannels(category.id, open, PREVIEW_LIMIT);
   // Live categories get a periodically re-probed health verdict (sampled channels).
   const health = useCategoryHealth(category.id, data?.channels, kind, kind === 'live');
 
