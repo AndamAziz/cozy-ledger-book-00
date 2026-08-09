@@ -63,7 +63,11 @@ export function describeFetchError(e: unknown): string {
  */
 export async function relayFetch(
   url: string,
-  { timeoutMs = 10_000, maxBytes = 2_000_000 }: { timeoutMs?: number; maxBytes?: number } = {},
+  {
+    timeoutMs = 10_000,
+    maxBytes = 2_000_000,
+    relayTimeoutMs,
+  }: { timeoutMs?: number; maxBytes?: number; relayTimeoutMs?: number } = {},
 ): Promise<RelayResult> {
   let parsed: URL
   try {
@@ -96,7 +100,8 @@ export async function relayFetch(
           Origin: `${parsed.protocol}//${parsed.host}`,
           'X-Requested-With': 'com.nathnetwork.xciptv',
         },
-      })
+      }, { relayTimeoutMs: relayTimeoutMs ?? timeoutMs })
+
 
       const raw = await res.text()
       const body = raw.length > maxBytes ? raw.slice(0, maxBytes) : raw
