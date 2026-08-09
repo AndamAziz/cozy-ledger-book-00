@@ -40,10 +40,9 @@ const indexCache = new Map<string, IndexSnapshot>()
 const indexLoading = new Map<string, Promise<IndexSnapshot>>()
 const INDEX_MAX = 8
 
-function apiBase(raw: string) {
-  const { protocol, host, username, password } = parseXtream(raw)
-  return `${protocol}//${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-}
+/** Canonical `player_api.php` base (protocol/port corrected in iptvConfig). */
+const apiBase = (raw: string) => xtreamApiBase(raw)
+
 
 /** Pick the first usable artwork field an Xtream/M3U payload may expose. */
 function pickLogo(row: Record<string, unknown>): string | null {
