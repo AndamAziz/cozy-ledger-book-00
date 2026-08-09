@@ -404,10 +404,20 @@ Deno.serve(async (req) => {
   // playback, so synthesize one: skip `start` bytes and stop after the
   // requested window instead of streaming the whole file.
   const parsed = range ? /^bytes=(\d*)-(\d*)$/i.exec(range.trim()) : null
+  // A SUFFIX range (`bytes=-N`, used to read a non-faststart MP4's trailing
+  // `moov` atom) cannot be honoured without a known total size: answering it
+  // with leading bytes would hand the demuxer corrupt data. Be honest instead.
+  const suffixRange = !!parsed && !parsed[1] && !!parsed[2]
+  if (suffixRange && !clen) {
+    await upstream.body?.cancel().catch(() => undefined)
+    out.set('Content-Range', 'bytes */*')
+    return new Response(null, { status: 416, headers: out })
+  }
   if (parsed && upstream.status === 200 && upstream.body) {
     const total = clen ? Number(clen) : NaN
-    const start = parsed[1] ? Number(parsed[1]) : 0
-    const endReq = parsed[2] ? Number(parsed[2]) : NaN
+    const start = parsed[1] ? Number(parsed[1]) : suffixRange ? Math.max(0, total - Number(parsed[2])) : 0
+    const endReq = parsed[1] && parsed[2] ? Number(parsed[2]) : suffixRange ? total - 1 : NaN
+
     // Cap an open-ended range so we never buffer an entire movie in memory.
     const OPEN_WINDOW = 4 * 1024 * 1024
     const end = Number.isFinite(endReq)
