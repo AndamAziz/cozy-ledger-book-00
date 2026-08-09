@@ -275,11 +275,6 @@ Deno.serve(async (req) => {
         kind: 'm3u',
         url: 'https://iptv-org.github.io/iptv/countries/iq.m3u',
       },
-      {
-        name: 'Source B — MyRestreamer (Xtream)',
-        kind: 'xtream',
-        url: 'http://myrestreamer.com:8080/player_api.php?username=162360837276&password=6a69c61558b80',
-      },
     ]
     for (const [i, d] of defaults.entries()) {
       await db.from('iptv_sources').insert({

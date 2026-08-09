@@ -1,5 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { isXtreamUrl, xtreamApiBase } from '../_shared/iptvConfig.ts'
+import { isXtreamUrl, xtreamApiBases, learnScheme } from '../_shared/iptvConfig.ts'
 import { resolveViewer, serviceClient } from '../_shared/iptvViewer.ts'
 import { maskPlaylistUrl } from '../_shared/iptvCrypto.ts'
 import { egressFetch } from '../_shared/iptvEgress.ts'
@@ -45,12 +45,22 @@ function base(status: ProviderStatus, message: string): Health {
  * treats an HTML block page as a failure.
  */
 async function checkXtream(source: string): Promise<Health> {
-  const api = xtreamApiBase(source)
-  const res = await relayFetch(api, { timeoutMs: TIMEOUT_MS })
+  // Try every candidate origin (https/http) so any newly added provider is
+  // reachable without a code change; the first answering origin is remembered.
+  const bases = xtreamApiBases(source)
+  let res = await relayFetch(bases[0], { timeoutMs: TIMEOUT_MS })
+  for (let i = 1; i < bases.length && !res.ok; i += 1) {
+    res = await relayFetch(bases[i], { timeoutMs: TIMEOUT_MS })
+    if (res.ok) {
+      const u = new URL(bases[i])
+      learnScheme(u.host, u.protocol)
+    }
+  }
 
   if (!res.ok) {
     return base('offline', res.error ?? `Provider responded ${res.status}`)
   }
+
   if (isHtmlBlock(res.contentType, res.body)) {
     return base('offline', 'Provider answered a block page (HTML) instead of account data')
   }

@@ -83,11 +83,7 @@ interface DirectoryUser {
 /** Ready-made sources for one-tap setup. */
 
 const PRESETS = [
-  { label: 'Source A — Iraq (public M3U)', url: 'https://iptv-org.github.io/iptv/countries/iq.m3u' },
-  {
-    label: 'Source B — MyRestreamer (Xtream)',
-    url: 'http://myrestreamer.com:8080/player_api.php?username=162360837276&password=6a69c61558b80',
-  },
+  { label: 'Iraq', url: 'https://iptv-org.github.io/iptv/countries/iq.m3u' },
   { label: 'Kurdish', url: 'https://iptv-org.github.io/iptv/languages/kur.m3u' },
   { label: 'UK', url: 'https://iptv-org.github.io/iptv/countries/uk.m3u' },
   { label: 'Sports', url: 'https://iptv-org.github.io/iptv/categories/sports.m3u' },

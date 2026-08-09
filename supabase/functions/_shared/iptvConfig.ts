@@ -13,17 +13,59 @@ import { egressFetch } from './iptvEgress.ts'
  * scheme is corrected from the port before any request is built.
  */
 const TLS_PORTS = new Set(['443', '2087', '2096', '2083', '8443'])
+/** Ports that only ever speak cleartext on Xtream panels. */
+const PLAIN_PORTS = new Set(['80', '8080', '8000', '2082', '2086', '2095'])
+
+/**
+ * Learned scheme per host.
+ *
+ * Nothing about a provider is hardcoded: the first hop that actually succeeds
+ * (or fails) teaches the platform which scheme that host speaks, and every later
+ * URL for the same host is built with it. A brand-new provider added through the
+ * UI therefore self-configures — no port table entry, no code change.
+ */
+const learnedScheme = new Map<string, 'http:' | 'https:'>()
+
+/** Record the scheme that worked (or definitively failed) for a host. */
+export function learnScheme(host: string, protocol: string, ok = true) {
+  const proto = protocol === 'https:' || protocol === 'http:' ? protocol : null
+  if (!host || !proto) return
+  if (ok) learnedScheme.set(host, proto)
+  else if (learnedScheme.get(host) === proto) learnedScheme.delete(host)
+}
 
 /** Parse Xtream credentials out of an M3U playlist URL. */
 export function parseXtream(raw: string) {
   const u = new URL(raw)
-  const protocol = TLS_PORTS.has(u.port) ? 'https:' : u.protocol
+  const learned = learnedScheme.get(u.host)
+  const protocol = learned ?? (TLS_PORTS.has(u.port)
+    ? 'https:'
+    : PLAIN_PORTS.has(u.port)
+      ? 'http:'
+      : u.protocol)
   return {
     host: u.host,
     protocol,
     username: u.searchParams.get('username') ?? '',
     password: u.searchParams.get('password') ?? '',
   }
+}
+
+/**
+ * Both origins for a provider host, best guess first.
+ *
+ * Callers expand their candidate URLs over this list, so a provider that only
+ * answers on the *other* scheme still plays: the alternate origin is simply the
+ * next candidate. Returns a single entry when the port pins the scheme (443,
+ * 8080 …), because the alternate could never succeed there.
+ */
+export function xtreamOrigins(raw: string): string[] {
+  const { host, protocol } = parseXtream(raw)
+  const port = host.includes(':') ? host.split(':').pop()! : ''
+  const primary = `${protocol}//${host}`
+  if (TLS_PORTS.has(port) || PLAIN_PORTS.has(port)) return [primary]
+  const other = protocol === 'https:' ? 'http:' : 'https:'
+  return [primary, `${other}//${host}`]
 }
 
 /**
@@ -34,6 +76,14 @@ export function xtreamApiBase(raw: string): string {
   const { protocol, host, username, password } = parseXtream(raw)
   return `${protocol}//${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
 }
+
+/** Every API base worth trying, one per candidate origin (best guess first). */
+export function xtreamApiBases(raw: string): string[] {
+  const { username, password } = parseXtream(raw)
+  const qs = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+  return xtreamOrigins(raw).map((o) => `${o}/player_api.php?${qs}`)
+}
+
 
 
 /** True when the link looks like an Xtream Codes API playlist (has username + password). */

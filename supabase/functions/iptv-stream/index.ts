@@ -1,5 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
+import { parseXtream, isXtreamUrl, getM3U, xtreamOrigins } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
 import { egressFetch, finalUrlOf, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
@@ -190,15 +190,15 @@ Deno.serve(async (req) => {
     if (entry.headers) hRaw = encodeHeaderBag(entry.headers) || hRaw
   } else if (streamId) {
     if (!/^\d+$/.test(streamId)) return json({ error: 'Invalid id' }, 400)
-    const { host, protocol, username, password } = parseXtream(source)
-    const cred = `${protocol}//${host}`
-    if (kind === 'live') {
-      const hls = `${cred}/live/${username}/${password}/${streamId}.m3u8`
-      const ts = `${cred}/live/${username}/${password}/${streamId}.ts`
-      // `raw=1` (mpegts.js engine) wants the transport stream first; the default
-      // order prefers the HLS manifest, which survives slow links better.
-      candidates = rawFirst ? [ts, hls] : [hls, ts]
-    } else {
+    const { username, password } = parseXtream(source)
+    const build = (cred: string) => {
+      if (kind === 'live') {
+        const hls = `${cred}/live/${username}/${password}/${streamId}.m3u8`
+        const ts = `${cred}/live/${username}/${password}/${streamId}.ts`
+        // `raw=1` (mpegts.js engine) wants the transport stream first; the default
+        // order prefers the HLS manifest, which survives slow links better.
+        return rawFirst ? [ts, hls] : [hls, ts]
+      }
       // Provider's real container_extension (sent by the client as `ext`) is
       // tried FIRST and alone; the broad matrix is only a fallback when that
       // specific hint fails, so a correct hint commits on attempt #1.
@@ -207,8 +207,12 @@ Deno.serve(async (req) => {
       const primary = extHint ? [url(dirs[0], extHint), url(dirs[1], extHint)] : []
       const fallbackExts = ['mp4', 'mkv', 'avi'].filter((e) => e !== extHint)
       const fallback = fallbackExts.flatMap((ext) => dirs.map((d) => url(d, ext)))
-      candidates = [...new Set([...primary, ...fallback])]
+      return [...primary, ...fallback]
     }
+    // http/https are both tried (best guess first) so any provider works as-is.
+    candidates = [...new Set(xtreamOrigins(source).flatMap(build))]
+
+
 
   } else {
     return json({ error: 'Missing id or u parameter' }, 400)

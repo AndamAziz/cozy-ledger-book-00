@@ -1,5 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
+import { parseXtream, isXtreamUrl, getM3U, xtreamOrigins } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
 import { egressFetch, finalUrlOf, hasEgressProxy, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 import { absorbCookies, cookieHeaderFor, isCloudflareChallenge } from '../_shared/iptvCookies.ts'
@@ -168,8 +168,10 @@ async function fetchUpstream(
 
 
 function creds(raw: string) {
-  const { host, username, password } = parseXtream(raw)
-  return { host, protocol: 'http:', username, password }
+  // The scheme comes from parseXtream (port heuristics + learned scheme) — never
+  // assumed, so an https-only provider added through the UI just works.
+  const { host, protocol, username, password } = parseXtream(raw)
+  return { host, protocol, username, password }
 }
 
 
@@ -362,22 +364,29 @@ Deno.serve(async (req) => {
     candidates = [entry.url]
   } else if (streamId) {
     if (!/^\d+$/.test(streamId)) return err('Invalid id', 400)
-    const cred = `${protocol}//${host}`
-    const live = `${cred}/live/${username}/${password}/${streamId}.m3u8`
-    // Some panels only expose raw MPEG-TS for live channels (no HLS packaging).
-    const liveTs = `${cred}/live/${username}/${password}/${streamId}.ts`
-    // Always probe .mp4 first: Safari/iOS cannot play the Matroska container
-    // even with H.264/AAC inside, so .mkv is only ever a fallback.
-    const exts = [...new Set(['mp4', extHint, 'mkv', 'avi'].filter(Boolean))]
-    // Series episodes live under /series/, movies under /movie/ — try the likely one first.
-    const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
-    const vod = exts.flatMap((ext) => dirs.map((dir) => `${cred}/${dir}/${username}/${password}/${streamId}.${ext}`))
-    const browserUa = req.headers.get('user-agent') ?? ''
-    const needsNativeHls = /iphone|ipad|ipod/i.test(browserUa) || (/safari/i.test(browserUa) && !/chrome|chromium|crios|android/i.test(browserUa))
-    const liveCandidates = needsNativeHls || extHint === 'm3u8' ? [live, liveTs] : [liveTs, live]
-    candidates = kind === 'live' ? liveCandidates : [...vod, live]
+    const build = (cred: string) => {
+      const live = `${cred}/live/${username}/${password}/${streamId}.m3u8`
+      // Some panels only expose raw MPEG-TS for live channels (no HLS packaging).
+      const liveTs = `${cred}/live/${username}/${password}/${streamId}.ts`
+      // Always probe .mp4 first: Safari/iOS cannot play the Matroska container
+      // even with H.264/AAC inside, so .mkv is only ever a fallback.
+      const exts = [...new Set(['mp4', extHint, 'mkv', 'avi'].filter(Boolean))]
+      // Series episodes live under /series/, movies under /movie/ — try the likely one first.
+      const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
+      const vod = exts.flatMap((ext) => dirs.map((dir) => `${cred}/${dir}/${username}/${password}/${streamId}.${ext}`))
+      const browserUa = req.headers.get('user-agent') ?? ''
+      const needsNativeHls = /iphone|ipad|ipod/i.test(browserUa) || (/safari/i.test(browserUa) && !/chrome|chromium|crios|android/i.test(browserUa))
+      const liveCandidates = needsNativeHls || extHint === 'm3u8' ? [live, liveTs] : [liveTs, live]
+      return kind === 'live' ? liveCandidates : [...vod, live]
+    }
+    // Every origin the provider might answer on (http/https), best guess first —
+    // the alternate scheme is simply the next candidate, so no provider needs
+    // code or config to be reachable.
+    candidates = [...new Set(xtreamOrigins(source).flatMap(build))]
 
     upstream = new URL(candidates[0])
+
+
 
   } else if (passthrough) {
     try {
