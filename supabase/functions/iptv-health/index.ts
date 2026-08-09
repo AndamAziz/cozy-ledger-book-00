@@ -18,6 +18,8 @@ interface Health {
   maxConnections: number | null
   expiresAt: string | null
   checkedAt: string
+  /** Probe round-trip time in ms (filled in by the handler). */
+  latencyMs?: number
 }
 
 // Health is per provider account, so it is cached per user.
