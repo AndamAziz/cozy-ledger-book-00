@@ -60,10 +60,19 @@ export function describeFetchError(e: unknown): string {
 /**
  * Fetch a provider URL, retrying with alternative user agents when the
  * provider rejects the first handshake (many panels filter on UA).
+ *
+ * `directFirst` is for large public downloads (GitHub-hosted M3U files and the
+ * like): the egress relay is bandwidth-limited, so a multi-MB playlist is read
+ * straight from Supabase egress first and only relayed if that attempt fails.
  */
 export async function relayFetch(
   url: string,
-  { timeoutMs = 10_000, maxBytes = 2_000_000 }: { timeoutMs?: number; maxBytes?: number } = {},
+  {
+    timeoutMs = 10_000,
+    maxBytes = 2_000_000,
+    relayTimeoutMs,
+    directFirst = false,
+  }: { timeoutMs?: number; maxBytes?: number; relayTimeoutMs?: number; directFirst?: boolean } = {},
 ): Promise<RelayResult> {
   let parsed: URL
   try {
@@ -83,8 +92,16 @@ export async function relayFetch(
   }
 
   let last: RelayResult | null = null
+  // With `directFirst` the first pass bypasses the relay; later UA attempts go
+  // through it as usual, so a geo-blocked host is still reachable.
+  const attempts: Array<{ ua: string; direct: boolean }> = directFirst
+    ? [
+        { ua: IPTV_USER_AGENTS[0], direct: true },
+        ...IPTV_USER_AGENTS.map((ua) => ({ ua, direct: false })),
+      ]
+    : IPTV_USER_AGENTS.map((ua) => ({ ua, direct: false }))
 
-  for (const ua of IPTV_USER_AGENTS) {
+  for (const { ua, direct } of attempts) {
     try {
       const res = await egressFetch(parsed.toString(), {
         signal: AbortSignal.timeout(timeoutMs),
@@ -96,7 +113,9 @@ export async function relayFetch(
           Origin: `${parsed.protocol}//${parsed.host}`,
           'X-Requested-With': 'com.nathnetwork.xciptv',
         },
-      })
+      }, { relayTimeoutMs: relayTimeoutMs ?? timeoutMs, direct })
+
+
 
       const raw = await res.text()
       const body = raw.length > maxBytes ? raw.slice(0, maxBytes) : raw
@@ -128,8 +147,14 @@ export async function relayFetch(
         userAgent: ua,
         error: describeFetchError(e),
       }
-      // A timeout / refused connection will not improve with another UA.
-      if (last.error?.startsWith('Connection refused') || last.error?.startsWith('Host not found')) break
+      // A timeout / refused connection will not improve with another UA — and
+      // retrying a timeout would multiply the caller's deadline by 3.
+      if (
+        last.error?.startsWith('Connection refused') ||
+        last.error?.startsWith('Host not found') ||
+        last.error?.startsWith('Connection timed out')
+      ) break
+
     }
   }
 

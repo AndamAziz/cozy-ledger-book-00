@@ -5,9 +5,17 @@ import { relayFetch, xtreamAuthError } from '../_shared/iptvFetch.ts'
 
 // M3U files (especially GitHub-hosted playlists with thousands of lines) need
 // time to download — a short deadline reported a false "Connection timed out".
-const TIMEOUT_MS = 30_000
+const TIMEOUT_MS = 18_000
+/** Xtream catalogue actions return multi-MB JSON — give them room, but never
+ *  so much that the admin's Test button appears to hang. */
+const CATALOGUE_TIMEOUT_MS = 20_000
+/** After this much elapsed time the optional VOD/series counts are skipped. */
+const BUDGET_MS = 12_000
 /** Short deadline for the tiny sample playback probes. */
-const PROBE_TIMEOUT_MS = 8_000
+const PROBE_TIMEOUT_MS = 5_000
+
+
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -42,8 +50,22 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid JSON body' }, 400)
   }
 
-  const raw = typeof body.url === 'string' ? body.url.trim() : ''
-  if (!raw || raw.length > 2048) return json({ error: 'A playlist URL is required' }, 400)
+  const rawInput = typeof body.url === 'string' ? body.url.trim() : ''
+  if (!rawInput || rawInput.length > 2048) return json({ error: 'A playlist URL is required' }, 400)
+
+  // A pasted Xtream URL often already carries `action=get_live_streams`, whose
+  // answer can be several MB — far too heavy for a quick handshake test. Strip
+  // any `action` so the test starts from the tiny account endpoint; the
+  // catalogue is then counted deliberately further down.
+  let raw = rawInput
+  try {
+    const u = new URL(rawInput)
+    if (u.searchParams.has('action') && /player_api\.php$/i.test(u.pathname)) {
+      u.searchParams.delete('action')
+      raw = u.toString()
+    }
+  } catch { /* not a URL — handled below */ }
+
 
   let creds: ReturnType<typeof parseXtream>
   try {
@@ -81,7 +103,7 @@ Deno.serve(async (req) => {
   if (isM3uPlaylistUrl(raw) || !isXtreamUrl(raw)) {
     // Big playlists (tens of thousands of channels) must be read whole so the
     // channel count is accurate.
-    const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS, maxBytes: 60_000_000 })
+    const res = await relayFetch(raw, { timeoutMs: TIMEOUT_MS, maxBytes: 60_000_000, directFirst: true })
     if (!res.ok) return json({ ok: false, error: res.error ?? 'Could not reach the server', status: res.status })
     if (!/#EXTM3U|#EXTINF/i.test(res.body)) {
       return json({
@@ -110,7 +132,8 @@ Deno.serve(async (req) => {
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter((l) => /^https?:\/\//i.test(l))
-      .slice(0, 3)
+      .slice(0, 2)
+
     let onlineSample = 0
     for (const u of urls) {
       const probe = await relayFetch(u, { timeoutMs: PROBE_TIMEOUT_MS, maxBytes: 2048 })
@@ -143,43 +166,76 @@ Deno.serve(async (req) => {
 
   // 1. Account handshake: gives precise auth / connection-limit errors.
   const auth = await relayFetch(api, { timeoutMs: TIMEOUT_MS })
+  console.log(`[iptv-test] handshake ok=${auth.ok} status=${auth.status} in ${latency()}ms`)
   if (!auth.ok) return json({ ok: false, error: auth.error ?? 'Could not reach the server', status: auth.status })
   const authProblem = xtreamAuthError(auth.body)
   if (authProblem) return json({ ok: false, error: authProblem })
 
-  // 2. Channel list.
-  const list = await relayFetch(`${api}&action=get_live_streams`, { timeoutMs: TIMEOUT_MS })
-  if (!list.ok) return json({ ok: false, error: list.error ?? 'Could not reach the server', status: list.status })
+  // 2. Channel list — several MB on large panels, so it gets the long deadline
+  //    and a generous byte budget (a truncated body would fail parsing).
+  const list = await relayFetch(`${api}&action=get_live_streams`, {
+    timeoutMs: CATALOGUE_TIMEOUT_MS,
+    maxBytes: 60_000_000,
+  })
+  console.log(`[iptv-test] live list ok=${list.ok} bytes=${list.body.length} in ${latency()}ms`)
 
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(list.body)
-  } catch (_) {
-    return json({ ok: false, error: 'Server did not return a channel list (invalid JSON response)' })
+  // The account already authenticated, so a heavy/slow catalogue must not be
+  // reported as a dead server — report the successful handshake instead, with
+  // whatever the account endpoint told us about the subscription.
+  if (!list.ok) {
+    let account = ''
+    try {
+      const info = (JSON.parse(auth.body)?.user_info ?? {}) as Record<string, unknown>
+      const status = String(info.status ?? '')
+      const max = Number(info.max_connections ?? 0)
+      account = [status && `status ${status}`, max > 0 && `${max} slot${max > 1 ? 's' : ''}`]
+        .filter(Boolean)
+        .join(' · ')
+    } catch { /* handshake was not JSON */ }
+    return json({
+      ok: true,
+      kind: 'xtream',
+      channels: null,
+      latency_ms: latency(),
+      host: creds.host,
+      via: auth.userAgent,
+      compatible: true,
+      message: `Account authenticated${account ? ` (${account})` : ''} — channel list too slow to count (${
+        list.error ?? `HTTP ${list.status}`
+      })`,
+    })
   }
-  if (!Array.isArray(parsed) || parsed.length === 0) {
+
+
+  // Counting ids with a scan is far cheaper than JSON.parse on a multi-MB body.
+  const countIds = (body: string, key: string) => (body.match(new RegExp(`"${key}"\\s*:`, 'g')) ?? []).length
+  const liveCount = countIds(list.body, 'stream_id')
+  if (!liveCount) {
     return json({ ok: false, error: 'Connected, but no channels were returned' })
   }
+  const sampleIds = [...list.body.matchAll(/"stream_id"\s*:\s*"?(\d+)"?/g)].slice(0, 3).map((m) => m[1])
 
   // 3. Catalogue sizes (sequential — the provider allows one connection).
-  const countOf = async (action: string) => {
-    const r = await relayFetch(`${api}&action=${action}`, { timeoutMs: TIMEOUT_MS })
+  //    They are optional extras, so they share one budget: once the test has
+  //    already spent BUDGET_MS the counts are skipped rather than making the
+  //    admin wait minutes on a huge panel.
+  const countOf = async (action: string, key: string) => {
+    if (latency() > BUDGET_MS) return null
+    const r = await relayFetch(`${api}&action=${action}`, {
+      timeoutMs: CATALOGUE_TIMEOUT_MS,
+      maxBytes: 60_000_000,
+    })
     if (!r.ok) return null
-    try {
-      const arr = JSON.parse(r.body)
-      return Array.isArray(arr) ? arr.length : null
-    } catch {
-      return null
-    }
+    const n = countIds(r.body, key)
+    return n || null
   }
-  const vodCount = await countOf('get_vod_streams')
-  const seriesCount = await countOf('get_series')
+
+  const vodCount = await countOf('get_vod_streams', 'stream_id')
+  const seriesCount = await countOf('get_series', 'series_id')
+
 
   // 4. Sample playback probe: how many of the first channels really answer.
-  const sample = (parsed as Array<{ stream_id?: unknown }>)
-    .slice(0, 3)
-    .map((c) => String(c?.stream_id ?? ''))
-    .filter(Boolean)
+  const sample = sampleIds
   let onlineSample = 0
   for (const id of sample) {
     const target = `${creds.protocol}//${creds.host}${creds.basePath}/live/${encodeURIComponent(creds.username)}/${encodeURIComponent(
@@ -189,7 +245,7 @@ Deno.serve(async (req) => {
     if (probe.ok || probe.status === 206) onlineSample += 1
   }
 
-  const liveCount = parsed.length
+
   return json({
     ok: true,
     kind: 'xtream',
