@@ -41,8 +41,6 @@ const CODE_MAP: Record<number, RemoteAction> = {
   39: 'right',
   40: 'down',
   166: 'back', // BrowserBack
-  427: 'channelUp',
-  428: 'channelDown',
   179: 'playPause',
   412: 'rewind',
   413: 'stop',
