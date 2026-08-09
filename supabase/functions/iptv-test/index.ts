@@ -132,7 +132,8 @@ Deno.serve(async (req) => {
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter((l) => /^https?:\/\//i.test(l))
-      .slice(0, 3)
+      .slice(0, 2)
+
     let onlineSample = 0
     for (const u of urls) {
       const probe = await relayFetch(u, { timeoutMs: PROBE_TIMEOUT_MS, maxBytes: 2048 })
