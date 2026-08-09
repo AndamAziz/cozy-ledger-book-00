@@ -196,7 +196,11 @@ Deno.serve(async (req) => {
   const sampleIds = [...list.body.matchAll(/"stream_id"\s*:\s*"?(\d+)"?/g)].slice(0, 3).map((m) => m[1])
 
   // 3. Catalogue sizes (sequential — the provider allows one connection).
+  //    They are optional extras, so they share one budget: once the test has
+  //    already spent BUDGET_MS the counts are skipped rather than making the
+  //    admin wait minutes on a huge panel.
   const countOf = async (action: string, key: string) => {
+    if (latency() > BUDGET_MS) return null
     const r = await relayFetch(`${api}&action=${action}`, {
       timeoutMs: CATALOGUE_TIMEOUT_MS,
       maxBytes: 60_000_000,
@@ -206,9 +210,9 @@ Deno.serve(async (req) => {
     return n || null
   }
 
-
   const vodCount = await countOf('get_vod_streams', 'stream_id')
   const seriesCount = await countOf('get_series', 'series_id')
+
 
   // 4. Sample playback probe: how many of the first channels really answer.
   const sample = sampleIds
