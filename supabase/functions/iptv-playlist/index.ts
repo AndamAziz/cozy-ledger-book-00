@@ -255,21 +255,37 @@ const ACTIONS: Record<Kind, [string, string]> = {
  * (the catalogue calls retry anyway); only an explicit auth rejection is.
  */
 async function xtreamLogin(api: string): Promise<void> {
-  const { res, diag } = await diagFetch('login', api, {
-    timeoutMs: 15_000,
-    headers: { 'User-Agent': UA },
-  })
-  if (!res) {
-    lastUpstreamDiag = diag
-    return
-  }
   let info: Record<string, unknown> | null = null
-  try {
-    const json = JSON.parse(await res.text())
-    info = (json?.user_info ?? null) as Record<string, unknown> | null
-  } catch {
-    return
+  for (let i = 0; i < IPTV_USER_AGENTS.length && !info; i++) {
+    const { res, diag } = await diagFetch('login', api, {
+      timeoutMs: 15_000,
+      attempt: i + 1,
+      headers: { 'User-Agent': uaFor(i) },
+    })
+    if (!res) {
+      lastUpstreamDiag = diag
+      continue
+    }
+    const text = await res.text().catch(() => '')
+    if (isHtmlBlock(res.headers.get('content-type'), text)) {
+      lastUpstreamDiag = {
+        ...diag,
+        ok: false,
+        kind: 'http_error',
+        bodySnippet: text.slice(0, 500),
+        message: 'Provider answered a block page (HTML) instead of data',
+      }
+      logDiag('login:blocked', lastUpstreamDiag)
+      continue
+    }
+    try {
+      const json = JSON.parse(text)
+      info = (json?.user_info ?? null) as Record<string, unknown> | null
+    } catch {
+      return
+    }
   }
+
   if (!info) return
   const status = String(info.status ?? '').toLowerCase()
   const auth = Number(info.auth ?? 1)
