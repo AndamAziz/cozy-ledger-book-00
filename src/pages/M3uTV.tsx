@@ -428,41 +428,15 @@ export default function M3uTV() {
 
   const playChannel = (ch: Channel) => setCurrent(ch);
 
-  /* ---------------- derived ---------------- */
+  /* ---------------- derived (computed in a Web Worker) ---------------- */
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return channels.filter(
-      (c) =>
-        (activeGroup === 'all' || c.group === activeGroup) &&
-        (!q || c.name.toLowerCase().includes(q)),
-    );
-  }, [channels, activeGroup, query]);
+  // Grouping, search and sectioning for 40k+ channel playlists runs off the main
+  // thread, so typing or switching category never freezes the UI.
+  const { filtered, sections, groupCounts } = useChannelIndex(channels, activeGroup, query, 300);
 
+  // Sections are revealed progressively while scrolling instead of all at once.
+  const sectionWindow = useIncrementalList(sections.length, 6, [activeGroup, query, channels.length]);
 
-  const groupCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    channels.forEach((c) => {
-      map[c.group] = (map[c.group] || 0) + 1;
-    });
-    return map;
-  }, [channels]);
-
-  /** Split the visible items into per-category sections (max 300 items shown). */
-  const sections = useMemo(() => {
-    const map = new Map<string, Channel[]>();
-    filtered.slice(0, 300).forEach((c) => {
-      const key = c.group || 'Other';
-      const list = map.get(key);
-      if (list) list.push(c);
-      else map.set(key, [c]);
-    });
-    return [...map.entries()].map(([name, items]) => ({
-      name,
-      items,
-      movie: isMovieItem(items[0]),
-    }));
-  }, [filtered]);
 
 
   /* ---------------- ui ---------------- */
