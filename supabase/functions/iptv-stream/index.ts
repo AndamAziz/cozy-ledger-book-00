@@ -93,11 +93,64 @@ function rewritePlaylist(body: string, base: string, self: string, suffix: strin
     .join('\n')
 }
 
+/**
+ * Provider redirect resolution — generic fix for panels that answer the
+ * pre-redirect path (`/live/user/pass/123.m3u8`) with a 302 to a *tokenized*
+ * URL, while refusing (401/403) any request for the original path coming from
+ * our relay's IP.
+ *
+ * The initial 30x hop is therefore resolved DIRECTLY (edge → provider, which is
+ * only geo-blocked on the media hop, never on the redirect) and only the final
+ * tokenized URL is handed to the relay for the actual streaming hop.
+ *
+ * Applies to every provider: when there is no redirect the target is returned
+ * unchanged, so nothing is provider-specific.
+ */
+const redirectCache = new Map<string, { url: string; at: number }>()
+const REDIRECT_TTL_MS = 30_000
+
+async function resolveTokenizedUrl(
+  target: string,
+  headers: Record<string, string>,
+  signal: AbortSignal,
+): Promise<string> {
+  const hit = redirectCache.get(target)
+  if (hit && Date.now() - hit.at < REDIRECT_TTL_MS) return hit.url
+
+  let current = target
+  for (let hop = 0; hop < 4; hop++) {
+    let res: Response
+    try {
+      res = await fetch(current, { headers, redirect: 'manual', signal })
+    } catch {
+      break
+    }
+    const loc = res.headers.get('location')
+    // Never keep the redirect's body open — the account has a single slot.
+    await res.body?.cancel().catch(() => undefined)
+    if (res.status >= 300 && res.status < 400 && loc) {
+      try {
+        current = new URL(loc, current).toString()
+      } catch {
+        break
+      }
+      continue
+    }
+    break
+  }
+  if (current !== target) {
+    redirectCache.set(target, { url: current, at: Date.now() })
+    if (redirectCache.size > 200) redirectCache.delete(redirectCache.keys().next().value as string)
+  }
+  return current
+}
+
 const json = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { ...cors, 'Content-Type': 'application/json' },
   })
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -212,6 +265,7 @@ Deno.serve(async (req) => {
   const blockedRoutes = new Set<string>()
   let geoBlocked = false
 
+
   for (const { target, via, ua } of plan) {
     if (remaining() <= 500) {
       deadlineHit = true
@@ -237,13 +291,17 @@ Deno.serve(async (req) => {
     // next request instantly.
     const signal = AbortSignal.timeout(Math.max(1_500, Math.min(8_000, remaining() - 300)))
     try {
+      // Relay hop: resolve the provider's 302 ourselves first, then relay ONLY
+      // the final tokenized URL (the pre-redirect path is IP-refused there).
+      const hopTarget = via === 'relay' ? await resolveTokenizedUrl(target, headers, signal) : target
       const res =
         via === 'direct'
           ? await fetch(target, { headers, redirect: 'follow', signal })
-          : await egressFetch(target, { headers, redirect: 'follow', signal }, { stream: true })
+          : await egressFetch(hopTarget, { headers, redirect: 'follow', signal }, { stream: true })
       if (res.ok || res.status === 206) {
         const ctype = res.headers.get('content-type') || ''
-        const resolvedUrl = finalUrlOf(res, target)
+        const resolvedUrl = finalUrlOf(res, hopTarget)
+
         // Some providers answer 200 with a text error page for dead channels.
         // Verify manifests really are manifests before committing.
         let manifestPath = ''
