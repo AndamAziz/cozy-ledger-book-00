@@ -168,8 +168,10 @@ async function fetchUpstream(
 
 
 function creds(raw: string) {
-  const { host, username, password } = parseXtream(raw)
-  return { host, protocol: 'http:', username, password }
+  // The scheme comes from parseXtream (port heuristics + learned scheme) — never
+  // assumed, so an https-only provider added through the UI just works.
+  const { host, protocol, username, password } = parseXtream(raw)
+  return { host, protocol, username, password }
 }
 
 
