@@ -12,7 +12,7 @@ import {
   IptvRequestError,
 } from '@/hooks/useIptvPlaylist';
 import { IptvDiagnosticPanel } from '@/components/livetv/IptvDiagnosticPanel';
-import { IptvProviderStatusWidget } from '@/components/livetv/IptvProviderStatusWidget';
+
 import { recordProviderSuccess, recordProviderFailure } from '@/lib/iptvProviderStatus';
 import { ChannelCard } from '@/components/livetv/ChannelCard';
 
@@ -302,7 +302,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
           </div>
         )}
 
-        <IptvProviderStatusWidget className="mb-4" onRetry={doRefresh} refreshing={refreshing} />
+
 
         {!error && index?.warning && (
           <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.04] p-4 text-white/70">
