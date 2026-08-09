@@ -27,9 +27,18 @@ export function isRateLimited(status: number): boolean {
   return status === 429 || status === 503 || status === 509
 }
 
+export type HeaderLike = Headers | Record<string, string> | null | undefined
+
+const headerValue = (headers: HeaderLike, name: string): string | undefined => {
+  if (!headers) return undefined
+  if (headers instanceof Headers) return headers.get(name) ?? undefined
+  const hit = Object.entries(headers).find(([k]) => k.toLowerCase() === name)
+  return hit?.[1]
+}
+
 /** Parse `Retry-After` (seconds or HTTP date) into ms, clamped to the window. */
-export function retryAfterMs(headers: Headers | null | undefined): number | null {
-  const raw = headers?.get('retry-after')?.trim()
+export function retryAfterMs(headers: HeaderLike): number | null {
+  const raw = headerValue(headers, 'retry-after')?.trim()
   if (!raw) return null
   const secs = Number(raw)
   let ms: number
@@ -44,7 +53,7 @@ export function retryAfterMs(headers: Headers | null | undefined): number | null
 }
 
 /** Park a host after a rate-limit answer. Returns the cooldown length in ms. */
-export function markRateLimited(url: string, headers?: Headers | null): number {
+export function markRateLimited(url: string, headers?: HeaderLike): number {
   const host = hostOf(url)
   const ms = retryAfterMs(headers) ?? MIN_COOLDOWN_MS + Math.floor(Math.random() * 30_000)
   const until = Date.now() + ms

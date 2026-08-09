@@ -279,7 +279,7 @@ async function fetchJson<T>(
       diagBySource[sk] = diag
       // 429 is not a client problem: park the host instead of rotating UAs.
       if (isRateLimited(diag.status)) {
-        markRateLimited(url, diag.rawHeaders ?? null)
+        markRateLimited(url, diag.headers)
         break
       }
       if (i + 1 < attempts) await sleep(Math.min(backoffMs(i), Math.max(0, deadline - Date.now())))
@@ -697,7 +697,7 @@ async function getSeriesInfo(sk: string, api: string, seriesId: string) {
     if (!res) {
       diagBySource[sk] = diag
       if (isRateLimited(diag.status)) {
-        markRateLimited(url, diag.rawHeaders ?? null)
+        markRateLimited(url, diag.headers)
         break
       }
       continue
