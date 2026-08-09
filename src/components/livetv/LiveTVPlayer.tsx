@@ -300,16 +300,12 @@ export function LiveTVPlayer({
         const lvl = hls.levels?.[data.level];
         if (lvl) setAutoLabel(labelForLevel(lvl.height, lvl.bitrate));
       });
-      // Media playlists carry no CODECS attribute, so HEVC only shows up once a
-      // fragment is parsed / a source buffer is created.
+      // Media playlists carry no CODECS attribute, so the real codec only shows
+      // up once a fragment is parsed / a source buffer is created.
       hls.on(Hls.Events.BUFFER_CODECS, (_e, data) => {
         const codec = (data as { video?: { codec?: string } })?.video?.codec ?? '';
         if (!isUnsupportedHevc(codec)) return;
-        setLoading(false);
-        setCodecIssue('HEVC / H.265');
-        setTimeout(() => {
-          if (!disposed) safeDestroy();
-        }, 0);
+        flagCodec('HEVC / H.265');
       });
       hls.on(Hls.Events.ERROR, (_e, data) => {
         if (!data.fatal || disposed) return;
@@ -317,14 +313,11 @@ export function LiveTVPlayer({
         // way on every engine — flag it instead of cycling and blaming the feed.
         const d = data as unknown as { details?: string; mimeType?: string; reason?: string; error?: { message?: string } };
         const hint = [d.mimeType, d.reason, d.error?.message].filter(Boolean).join(' ');
-        if (/CodecError|IncompatibleCodecs/i.test(String(d.details ?? '')) || isUnsupportedHevc(hint)) {
-          setLoading(false);
-          setCodecIssue('HEVC / H.265');
-          setTimeout(() => {
-            if (!disposed) safeDestroy();
-          }, 0);
+        if (/CodecError|IncompatibleCodecs/i.test(String(d.details ?? ''))) {
+          flagCodec(isHevcCodec(hint) ? 'HEVC / H.265' : 'an unsupported video/audio codec');
           return;
         }
+
         // Same 3-stage in-place recovery ladder the IPTV M3U engine uses:
         // decoder glitches are recovered (then audio codec swapped), network
         // faults reload the manifest — only then do we fall to the next engine.
