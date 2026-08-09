@@ -165,37 +165,47 @@ Deno.serve(async (req) => {
   if (authProblem) return json({ ok: false, error: authProblem })
 
   // 2. Channel list — several MB on large panels, so it gets the long deadline
-  //    and a generous byte budget (a truncated body would fail JSON.parse).
+  //    and a generous byte budget (a truncated body would fail parsing).
   const list = await relayFetch(`${api}&action=get_live_streams`, {
     timeoutMs: CATALOGUE_TIMEOUT_MS,
     maxBytes: 60_000_000,
   })
-  if (!list.ok) return json({ ok: false, error: list.error ?? 'Could not reach the server', status: list.status })
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(list.body)
-  } catch (_) {
-    return json({ ok: false, error: 'Server did not return a channel list (invalid JSON response)' })
+  // The account already authenticated, so a heavy/slow catalogue must not be
+  // reported as a dead server — report the successful handshake instead.
+  if (!list.ok) {
+    return json({
+      ok: true,
+      kind: 'xtream',
+      channels: null,
+      latency_ms: latency(),
+      host: creds.host,
+      via: auth.userAgent,
+      compatible: true,
+      message: `Account authenticated in ${latency()} ms — channel list could not be counted (${
+        list.error ?? `HTTP ${list.status}`
+      })`,
+    })
   }
-  if (!Array.isArray(parsed) || parsed.length === 0) {
+
+  // Counting ids with a scan is far cheaper than JSON.parse on a multi-MB body.
+  const countIds = (body: string, key: string) => (body.match(new RegExp(`"${key}"\\s*:`, 'g')) ?? []).length
+  const liveCount = countIds(list.body, 'stream_id')
+  if (!liveCount) {
     return json({ ok: false, error: 'Connected, but no channels were returned' })
   }
+  const sampleIds = [...list.body.matchAll(/"stream_id"\s*:\s*"?(\d+)"?/g)].slice(0, 3).map((m) => m[1])
 
   // 3. Catalogue sizes (sequential — the provider allows one connection).
-  const countOf = async (action: string) => {
+  const countOf = async (action: string, key: string) => {
     const r = await relayFetch(`${api}&action=${action}`, {
       timeoutMs: CATALOGUE_TIMEOUT_MS,
       maxBytes: 60_000_000,
     })
     if (!r.ok) return null
-    try {
-      const arr = JSON.parse(r.body)
-      return Array.isArray(arr) ? arr.length : null
-    } catch {
-      return null
-    }
+    const n = countIds(r.body, key)
+    return n || null
   }
+
 
   const vodCount = await countOf('get_vod_streams')
   const seriesCount = await countOf('get_series')
