@@ -1,10 +1,11 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, Lock, Server, ShieldCheck, Timer, ArrowLeft } from 'lucide-react';
 import { StripeEmbeddedCheckout } from '@/components/StripeEmbeddedCheckout';
 import { useLiveTvAccess, formatCountdown } from '@/hooks/useLiveTvAccess';
 import { LiveTvStatusPanel } from '@/components/livetv/LiveTvStatusPanel';
 import { IptvSourceManager } from '@/components/livetv/IptvSourceManager';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface LiveTvSourcesContextValue {
   canManage: boolean;
@@ -41,6 +42,17 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
   const { user, access, hasServer, isLoading, refresh } = useLiveTvAccess();
   const [payOpen, setPayOpen] = useState(false);
   const [editServer, setEditServer] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setIsOwner(false);
+      return;
+    }
+    void supabase.rpc('has_role', { _user_id: user.id, _role: 'owner' }).then(({ data }) => {
+      setIsOwner(!!data);
+    });
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -115,10 +127,8 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isCeo = (user.email ?? '').toLowerCase() === 'andam@outlook.com';
-
-  // Regular users can never add a link — the CEO assigns one to their account.
-  if (!hasServer && !isCeo) {
+  // Regular users can never add a link — the owner assigns one to their account.
+  if (!hasServer && !isOwner) {
     return (
       <div className={SHELL}>
         <Server className="h-8 w-8 text-[#ff2d6f]" />
@@ -146,15 +156,15 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
       <div className={`${SHELL} py-10`}>
         <Server className="h-8 w-8 text-[#ff2d6f]" />
         <h1 className="text-lg font-extrabold">
-          {isCeo ? 'Your IPTV sources' : 'Your channels source'}
+           {isOwner ? 'Your IPTV sources' : 'Your channels source'}
         </h1>
         <p className="max-w-sm text-xs leading-relaxed text-white/45">
-          {isCeo
+           {isOwner
             ? 'Add one or more playlists (M3U or Xtream). Test a link before saving and switch between sources any time — each one loads only its own channels.'
             : 'Switch between the sources assigned to your account. Only the admin can add or change links.'}
         </p>
         <IptvSourceManager
-          canManage={isCeo}
+          canManage={isOwner}
           onChanged={() => {
             void refresh();
           }}
@@ -176,7 +186,7 @@ export function LiveTvGate({ children }: { children: React.ReactNode }) {
 
   return (
     <LiveTvSourcesContext.Provider
-      value={{ canManage: isCeo, openSourceManager: () => setEditServer(true) }}
+      value={{ canManage: isOwner, openSourceManager: () => setEditServer(true) }}
     >
       {access && !access.isActivated && (
         <div className="flex flex-wrap items-center justify-center gap-2 bg-gradient-to-r from-[#ff2d6f]/20 to-[#b026ff]/20 px-4 py-2 text-center text-[11px] font-bold text-white">

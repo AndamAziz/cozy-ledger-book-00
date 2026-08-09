@@ -44,8 +44,9 @@ Deno.serve(async (req) => {
   const action = String(body.action ?? 'get')
   const { data: isAdminData } = await db.rpc('has_role', { _user_id: user.id, _role: 'admin' })
   const isAdmin = !!isAdminData
-  // Only the CEO may create, replace or delete provider links — for anyone.
-  const isCeo = (user.email ?? '').toLowerCase() === 'andam@outlook.com'
+  const { data: isOwnerData } = await db.rpc('has_role', { _user_id: user.id, _role: 'owner' })
+  // Only the owner may create, replace, assign or delete provider links.
+  const isOwner = !!isOwnerData
 
   /** Encrypts + stores, returning the masked preview. Never logs the URL. */
   const store = async (userId: string, rawUrl: string) => {
@@ -262,7 +263,7 @@ Deno.serve(async (req) => {
       const { data } = await db.auth.admin.getUserById(userId)
       email = data?.user?.email ?? ''
     }
-    if (email.toLowerCase() !== 'andam@outlook.com') return
+    if (userId !== user.id || !isOwner) return
     const { count } = await db
       .from('iptv_sources')
       .select('id', { count: 'exact', head: true })
@@ -298,7 +299,7 @@ Deno.serve(async (req) => {
 
     // ---- CEO: assign one of my servers to a specific user ------------
     case 'search_users': {
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       const q = String(body.query ?? '').trim().toLowerCase()
       if (q.length < 2) return json({ users: [] })
       const found: { id: string; email: string }[] = []
@@ -316,7 +317,7 @@ Deno.serve(async (req) => {
     }
 
     case 'assign_source': {
-      if (!isCeo) return json({ error: 'Only the CEO can assign servers' }, 403)
+      if (!isOwner) return json({ error: 'Only the owner can assign servers' }, 403)
       const id = String(body.id ?? '')
       const targetId = String(body.targetUserId ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
@@ -378,7 +379,7 @@ Deno.serve(async (req) => {
 
     /** Everyone (except the CEO) currently holding a copy of one of my sources. */
     case 'assigned_users': {
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       const id = String(body.id ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
       const { data: src } = await db
@@ -408,7 +409,7 @@ Deno.serve(async (req) => {
 
     /** Revokes a source from one user: deletes their copy and re-points playback. */
     case 'unassign_source': {
-      if (!isCeo) return json({ error: 'Only the CEO can revoke servers' }, 403)
+      if (!isOwner) return json({ error: 'Only the owner can revoke servers' }, 403)
       const id = String(body.id ?? '')
       const targetId = String(body.targetUserId ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(targetId)) {
@@ -498,7 +499,7 @@ Deno.serve(async (req) => {
      * at least one provider link, with all of their sources.
      */
     case 'assigned_directory': {
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       const { data: rows } = await db
         .from('iptv_sources')
         .select('id, user_id, name, kind, playlist_masked, is_active, updated_at')
@@ -538,7 +539,7 @@ Deno.serve(async (req) => {
 
 
     case 'admin_save': {
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       const targetId = String(body.userId ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(targetId)) return json({ error: 'Invalid user' }, 400)
       return await store(targetId, String(body.playlistUrl ?? ''))
@@ -548,11 +549,11 @@ Deno.serve(async (req) => {
       return json(await readMasked(user.id))
 
     case 'save':
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       return await store(user.id, String(body.playlistUrl ?? ''))
 
     case 'clear':
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       return await store(user.id, '')
 
     case 'admin_list': {
@@ -578,6 +579,34 @@ Deno.serve(async (req) => {
       return json({ rows })
     }
 
+    // Account activation and source assignment are deliberately separate.
+    // Any admin may activate access, but a newly activated account starts with
+    // no source, no default grant and no legacy credential mirror.
+    case 'set_access': {
+      if (!isAdmin) return json({ error: 'Forbidden' }, 403)
+      const targetId = String(body.userId ?? '')
+      const activated = body.activated === true
+      if (!/^[0-9a-f-]{36}$/i.test(targetId)) return json({ error: 'Invalid user' }, 400)
+
+      if (activated) {
+        await db.from('user_source_access').delete().eq('user_id', targetId)
+        await db.from('iptv_sources').delete().eq('user_id', targetId)
+        await store(targetId, '')
+      }
+
+      const { error } = await db.from('livetv_access').upsert(
+        {
+          user_id: targetId,
+          is_activated: activated,
+          activated_at: activated ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      )
+      if (error) return json({ error: 'Could not update Live TV access' }, 500)
+      return json({ ok: true, activated, sources: activated ? [] : undefined })
+    }
+
     // ---- Multi-source management -------------------------------------
     // Each row in `iptv_sources` is an independent playlist (own credentials,
     // own channels). Exactly one row per user can be active; the active one is
@@ -599,7 +628,7 @@ Deno.serve(async (req) => {
 
 
     case 'save_source': {
-      if (!isCeo) return json({ error: 'Only the CEO can add or change provider links' }, 403)
+      if (!isOwner) return json({ error: 'Only the owner can add or change provider links' }, 403)
       const targetId = ownerId()
       if (!targetId) return json({ error: 'Forbidden' }, 403)
       const id = typeof body.id === 'string' ? body.id : null
@@ -661,7 +690,7 @@ Deno.serve(async (req) => {
     }
 
     case 'delete_source': {
-      if (!isCeo) return json({ error: 'Only the CEO can delete provider links' }, 403)
+      if (!isOwner) return json({ error: 'Only the owner can delete provider links' }, 403)
       const targetId = ownerId()
       if (!targetId) return json({ error: 'Forbidden' }, 403)
       const id = String(body.id ?? '')

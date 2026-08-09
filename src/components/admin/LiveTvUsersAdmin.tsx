@@ -37,6 +37,7 @@ export function LiveTvUsersAdmin() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [openSources, setOpenSources] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,6 +69,14 @@ export function LiveTvUsersAdmin() {
 
   useEffect(() => {
     void load();
+    void supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      const { data: owner } = await supabase.rpc('has_role', {
+        _user_id: data.user.id,
+        _role: 'owner',
+      });
+      setIsOwner(!!owner);
+    });
   }, [load]);
 
   const filtered = useMemo(() => {
@@ -97,17 +106,11 @@ export function LiveTvUsersAdmin() {
 
   const setActivation = async (row: Row, activated: boolean) => {
     setBusy(row.userId);
-    const { error } = await supabase.from('livetv_access').upsert(
-      {
-        user_id: row.userId,
-        is_activated: activated,
-        activated_at: activated ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    );
+    const { data, error } = await supabase.functions.invoke('iptv-server', {
+      body: { action: 'set_access', userId: row.userId, activated },
+    });
     setBusy(null);
-    if (error) toast({ title: 'Update failed', description: error.message, variant: 'destructive' });
+    if (error || data?.error) toast({ title: 'Update failed', description: data?.error ?? error?.message, variant: 'destructive' });
     else void load();
   };
 
@@ -159,7 +162,7 @@ export function LiveTvUsersAdmin() {
                   <span className="text-sm font-semibold">{row.email}</span>
                   <span className={`text-xs font-bold ${label.tone}`}>{label.text}</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                {isOwner && <div className="flex flex-wrap gap-2">
                   <Input
                     dir="ltr"
                     value={drafts[row.userId] ?? ''}
@@ -178,8 +181,8 @@ export function LiveTvUsersAdmin() {
                     <ListTree className="mr-1 h-3.5 w-3.5" />
                     {openSources === row.userId ? 'Hide sources' : 'Sources'}
                   </Button>
-                </div>
-                {openSources === row.userId && (
+                </div>}
+                {isOwner && openSources === row.userId && (
                   <div className="rounded-lg border bg-background/40 p-3">
                     <IptvSourceManager userId={row.userId} compact onChanged={() => void load()} />
                   </div>
