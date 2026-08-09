@@ -849,7 +849,12 @@ export function LiveTVPlayer({
         {loading && !error && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/55">
             <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
-            <p className="text-[11px] font-semibold tracking-wide text-white/55">Connecting to stream…</p>
+            <p className="text-[11px] font-semibold tracking-wide text-white/55">
+              {retrying
+                ? `Reconnecting… (${Math.min(attempt + 2, MAX_STREAM_RETRIES)}/${MAX_STREAM_RETRIES})`
+                : 'Connecting to stream…'}
+            </p>
+
           </div>
         )}
 
