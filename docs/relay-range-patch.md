@@ -19,7 +19,9 @@ app.all('/proxy', async (req, res) => {
   const upstreamHeaders = {
     'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
     'Accept': req.headers['accept'] || '*/*',
-    'Accept-Encoding': req.headers['accept-encoding'] || 'identity',
+    // MUST be 'identity': node fetch() transparently decompresses, so passing
+    // the client's gzip/br through makes the forwarded content-encoding lie.
+    'Accept-Encoding': 'identity',
   };
   if (req.headers['range']) upstreamHeaders['Range'] = req.headers['range'];
   if (req.headers['if-range']) upstreamHeaders['If-Range'] = req.headers['if-range'];
@@ -35,7 +37,9 @@ app.all('/proxy', async (req, res) => {
     });
 
     res.status(upstream.status);
-    const forward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'content-encoding', 'etag', 'last-modified', 'cache-control'];
+    // NOTE: 'content-encoding' is deliberately NOT forwarded — fetch() already
+    // decompressed the body, so forwarding it corrupts the response.
+    const forward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified', 'cache-control'];
     for (const h of forward) {
       const v = upstream.headers.get(h);
       if (v) res.setHeader(h, v);
@@ -105,3 +109,27 @@ curl -I -r 0-1023 "https://relay.andam.uk:8443/proxy?url=https%3A%2F%2Fexample.c
 ```
 
 You should see `HTTP/2 206` and a `content-range:` header.
+
+## Hotfix (2026-08-09): gzip regression
+
+The deployed relay currently returns `content-encoding: gzip` on an **already
+decompressed** body, because `fetch()` in Node transparently gunzips. Any client
+that trusts the header (our Deno edge functions do) fails with:
+
+```
+TypeError: Invalid gzip header
+```
+
+That is why Live / Movies / Series category listings return 502 right now.
+
+Two one-line changes fix it (both already applied in the handler above):
+
+1. Always send `'Accept-Encoding': 'identity'` upstream — never the client value.
+2. Remove `'content-encoding'` from the forwarded header list.
+
+Verify after restart — the header must be **absent**:
+
+```bash
+curl -sI -H "Accept-Encoding: gzip" -H "X-Relay-Token: $RELAY_TOKEN" \
+  "https://relay.andam.uk:8443/proxy?url=https%3A%2F%2Fapi.github.com%2Fmeta" | grep -i content-encoding
+```
