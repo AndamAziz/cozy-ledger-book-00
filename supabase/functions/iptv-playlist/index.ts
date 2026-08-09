@@ -594,12 +594,10 @@ async function buildIndex(source: string) {
       // and costs the provider (single-slot lines!) nothing extra.
       for (const [id, count] of counts) {
         if (!count) continue
-        const rawId = id.slice(id.indexOf(':') + 1)
         categoryCache.set(`${digest(source)}|${id}`, {
           at: Date.now(),
           items: items.filter((i) => i.categoryId === id),
         })
-        void rawId
       }
       while (categoryCache.size > CATEGORY_MAX) {
         categoryCache.delete(categoryCache.keys().next().value as string)
@@ -702,7 +700,7 @@ const CATEGORY_TTL = 10 * 60 * 1000
 // Genuinely empty answers are re-checked quickly — some providers only populate
 // a movie/series category through the full catalogue listing.
 const EMPTY_TTL = 60 * 1000
-const CATEGORY_MAX = 12
+const CATEGORY_MAX = 96
 const categoryCache = new Map<string, { at: number; items: Item[] }>()
 
 /** Fallback for providers that ignore `category_id` on get_vod_streams/get_series. */
