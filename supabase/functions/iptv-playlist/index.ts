@@ -47,9 +47,18 @@ interface CategoryInfo {
   name: string
   count: number
   kind: Kind
+  /**
+   * First few channels of the category, embedded in the index. The provider
+   * allows one connection at a time, so 90+ per-category requests would queue
+   * for minutes; native players show the first page immediately instead.
+   */
+  preview?: { id: string; name: string; logo: string | null; group: string; kind: Kind }[]
 }
 
 const TTL = 30 * 60 * 1000
+
+/** How many channels of each live category ride along inside the index. */
+const PREVIEW_SIZE = 24
 
 // The VOD/series catalogues are ~70MB each, so nothing global is kept in memory:
 // the index caches category lists only and item lists are fetched per category.
@@ -105,7 +114,7 @@ type IndexSnapshot = {
 const indexCache = new Map<string, IndexSnapshot>()
 const indexLoading = new Map<string, Promise<IndexSnapshot>>()
 const INDEX_MAX = 8
-const SHARED_INDEX_VERSION = 'xtream-index-v1'
+const SHARED_INDEX_VERSION = 'xtream-index-v2'
 const SHARED_INDEX_STALE_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
@@ -565,6 +574,7 @@ async function buildIndex(source: string) {
   // empty array, which surfaced as dozens of "No items in this category" rows.
   // The live catalogue is small enough to fetch once, so real counts are derived
   // from it and categories the line cannot actually access are dropped.
+  let liveCatalogueOk = false
   if (categories.some((c) => c.kind === 'live')) {
     const rows = await fetchJson<Record<string, unknown>[]>(
       sk,
@@ -615,8 +625,14 @@ async function buildIndex(source: string) {
         categories.push({ id, name, count, kind: 'live' })
       }
       for (const c of categories) {
-        if (c.kind === 'live') c.count = counts.get(c.id) ?? 0
+        if (c.kind !== 'live') continue
+        c.count = counts.get(c.id) ?? 0
+        c.preview = items
+          .filter((i) => i.categoryId === c.id)
+          .slice(0, PREVIEW_SIZE)
+          .map((i) => shape(i, c.name))
       }
+      liveCatalogueOk = true
       const trimmed = categories.filter((c) => c.kind !== 'live' || c.count > 0)
       categories.length = 0
       categories.push(...trimmed)
@@ -636,6 +652,29 @@ async function buildIndex(source: string) {
     }
   }
 
+
+  // The full live catalogue is what produces per-category counts AND the embedded
+  // first page. The provider only allows one connection at a time, so that call
+  // sometimes loses the race — reuse the last known-good snapshot instead of
+  // publishing an index with zero counts and no previews.
+  if (!liveCatalogueOk) {
+    const stale = await loadSharedIndex(source)
+    if (stale) {
+      const byId = new Map(stale.categories.map((c) => [c.id, c]))
+      for (const c of categories) {
+        const prev = c.kind === 'live' ? byId.get(c.id) : undefined
+        if (!prev) continue
+        c.count = prev.count
+        c.preview = prev.preview
+      }
+      for (const prev of stale.categories) {
+        if (prev.kind === 'live' && !categories.some((c) => c.id === prev.id)) categories.push(prev)
+      }
+      const kept = categories.filter((c) => c.kind !== 'live' || c.count > 0)
+      categories.length = 0
+      categories.push(...kept)
+    }
+  }
 
   if (!categories.length) {
     // Xtream sources ALWAYS live on player_api.php: many panels (Proxyshield &
@@ -679,7 +718,15 @@ async function buildIndex(source: string) {
     }
     throw new Error('Upstream returned no channels')
   }
-  return { at: Date.now(), source, categories, total: 0, partial, mode: 'xtream' as const }
+  return {
+    at: Date.now(),
+    source,
+    categories,
+    total: 0,
+    // A missing live catalogue means counts/previews are borrowed: retry soon.
+    partial: partial || !liveCatalogueOk,
+    mode: 'xtream' as const,
+  }
 }
 
 
