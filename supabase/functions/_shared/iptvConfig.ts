@@ -43,9 +43,15 @@ export function parseXtream(raw: string) {
     : PLAIN_PORTS.has(u.port)
       ? 'http:'
       : u.protocol)
+  // Some providers (and self-hosted reverse proxies) serve the panel under a
+  // path prefix, e.g. `http://host:8888/SECRET/panel.host/player_api.php`.
+  // Everything before the final path segment is part of the panel base and must
+  // be preserved, otherwise every built URL 404s.
+  const basePath = u.pathname.replace(/\/[^/]*$/, '').replace(/\/+$/, '')
   return {
     host: u.host,
     protocol,
+    basePath,
     username: u.searchParams.get('username') ?? '',
     password: u.searchParams.get('password') ?? '',
   }
@@ -60,12 +66,12 @@ export function parseXtream(raw: string) {
  * 8080 …), because the alternate could never succeed there.
  */
 export function xtreamOrigins(raw: string): string[] {
-  const { host, protocol } = parseXtream(raw)
+  const { host, protocol, basePath } = parseXtream(raw)
   const port = host.includes(':') ? host.split(':').pop()! : ''
-  const primary = `${protocol}//${host}`
+  const primary = `${protocol}//${host}${basePath}`
   if (TLS_PORTS.has(port) || PLAIN_PORTS.has(port)) return [primary]
   const other = protocol === 'https:' ? 'http:' : 'https:'
-  return [primary, `${other}//${host}`]
+  return [primary, `${other}//${host}${basePath}`]
 }
 
 /**
@@ -73,8 +79,8 @@ export function xtreamOrigins(raw: string): string[] {
  * builds `player_api.php` URLs (the stored path, e.g. `get.php`, is discarded).
  */
 export function xtreamApiBase(raw: string): string {
-  const { protocol, host, username, password } = parseXtream(raw)
-  return `${protocol}//${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+  const { protocol, host, basePath, username, password } = parseXtream(raw)
+  return `${protocol}//${host}${basePath}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
 }
 
 /** Every API base worth trying, one per candidate origin (best guess first). */

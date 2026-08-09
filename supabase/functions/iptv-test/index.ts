@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
 
 
   // --- Probe the Xtream playlist -------------------------------------------
-  const api = `${creds.protocol}//${creds.host}/player_api.php?username=${encodeURIComponent(
+  const api = `${creds.protocol}//${creds.host}${creds.basePath}/player_api.php?username=${encodeURIComponent(
     creds.username,
   )}&password=${encodeURIComponent(creds.password)}`
 
@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
     .filter(Boolean)
   let onlineSample = 0
   for (const id of sample) {
-    const target = `${creds.protocol}//${creds.host}/live/${encodeURIComponent(creds.username)}/${encodeURIComponent(
+    const target = `${creds.protocol}//${creds.host}${creds.basePath}/live/${encodeURIComponent(creds.username)}/${encodeURIComponent(
       creds.password,
     )}/${id}.ts`
     const probe = await relayFetch(target, { timeoutMs: PROBE_TIMEOUT_MS, maxBytes: 2048 })
