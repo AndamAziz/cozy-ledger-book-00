@@ -102,7 +102,7 @@ function Diagnostics({ result }: { result: TestResult }) {
   const rows: [string, string][] = [
     ['Connection', result.ok ? 'Online' : 'Failed'],
     ['Type', (result.kind ?? '—').toUpperCase()],
-    ['Live channels', result.live ?? result.channels != null ? String(result.live ?? result.channels) : '—'],
+    ['Live channels', (result.live ?? result.channels) != null ? String(result.live ?? result.channels) : '—'],
   ];
   if (result.vod != null) rows.push(['Movies (VOD)', String(result.vod)]);
   if (result.series != null) rows.push(['Series', String(result.series)]);
