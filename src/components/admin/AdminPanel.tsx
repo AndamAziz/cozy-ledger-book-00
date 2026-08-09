@@ -696,8 +696,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         </header>
 
         {/* Role context banner */}
-        {currentUserEmail && (
-          isCEO ? (
+        {isCEO ? (
             <div className="mb-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 to-primary/5 p-4 flex items-start gap-3">
               <Crown className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
@@ -710,8 +709,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               <Shield className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground">{t('adminBannerNote')}</p>
             </div>
-          )
-        )}
+          )}
 
         {/* Audit log trigger */}
         <div className="mb-6">

@@ -54,25 +54,16 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user is admin
+    // Only the owner may change another user's password.
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .single();
 
-    if (roleError || roleData?.role !== "admin") {
+    if (roleError || roleData?.role !== "owner") {
       return new Response(
-        JSON.stringify({ error: "Forbidden: Admin access required" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Only the CEO may change a user's password.
-    const CEO_EMAIL = "andam@outlook.com";
-    if ((user.email || "").toLowerCase() !== CEO_EMAIL) {
-      return new Response(
-        JSON.stringify({ error: "Forbidden: Only the CEO can change passwords" }),
+        JSON.stringify({ error: "Forbidden: Owner access required" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
