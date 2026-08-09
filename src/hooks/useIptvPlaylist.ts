@@ -158,17 +158,31 @@ function isOutageError(e: unknown): boolean {
   return err?.diagnostic?.verdict === 'server_down' || err?.errorKind === 'connection';
 }
 
+/**
+ * Fire-and-forget background refresh. Never rejects — a provider outage during a
+ * silent revalidation must not surface as an unhandled promise rejection.
+ */
+function revalidate<T>(path: string): void {
+  try {
+    void get<T>(path, { background: true }).catch(() => undefined);
+  } catch {
+    // ignore
+  }
+}
+
+
 async function get<T>(path: string, opts: { cache?: boolean; background?: boolean } = {}): Promise<T> {
   const useCache = opts.cache !== false && !path.includes('refresh=1');
   const cacheKey = `${activeSourceId ?? 'default'}|${path}`;
   const sourceKey = activeSourceId ?? 'default';
+  // Last-known-good payload, used to keep the UI alive when the panel is down.
+  const stale = useCache ? readCatalogEntry<T>(cacheKey) : null;
   if (useCache) {
     // Stale entries are served instantly and refreshed in the background: the
     // provider allows one connection at a time, so waiting is what felt slow.
-    const hit = readCatalogEntry<T>(cacheKey);
-    if (hit) {
-      if (!hit.fresh && !opts.background) void get<T>(path, { background: true }).catch(() => undefined);
-      return hit.value;
+    if (stale) {
+      if (!stale.fresh && !opts.background) revalidate<T>(path);
+      return stale.value;
     }
     const failed = failMemo.get(cacheKey);
     if (failed && Date.now() - failed.at < FAIL_MEMO_MS) throw failed.err;
@@ -177,7 +191,10 @@ async function get<T>(path: string, opts: { cache?: boolean; background?: boolea
   // Panel-level outage applies to every request (even refresh=1), otherwise a
   // dead provider produces one 502 per category.
   const downNow = outage.get(sourceKey);
-  if (downNow && Date.now() - downNow.at < OUTAGE_MS) throw downNow.err;
+  if (downNow && Date.now() - downNow.at < OUTAGE_MS) {
+    if (stale) return stale.value;
+    throw downNow.err;
+  }
 
   // Foreground requests jump ahead of prefetch work and never sit behind it.
   if (!opts.background) cancelBackgroundQueue();
@@ -224,6 +241,9 @@ async function get<T>(path: string, opts: { cache?: boolean; background?: boolea
           cancelBackgroundQueue();
         }
       }
+      // Prefer showing the last-known-good catalogue over an error screen.
+      const fallback = useCache ? readCatalogEntry<T>(cacheKey) : null;
+      if (fallback) return fallback.value;
       throw e;
     }
   }, { background: opts.background });
@@ -311,7 +331,7 @@ export function useIptvRefresh() {
   return async () => {
     clearCatalogCache();
     try {
-      await get<IptvIndex>('iptv-playlist?refresh=1');
+      await get<IptvIndex>('iptv-playlist?refresh=1').catch(() => undefined);
     } finally {
       clearCatalogCache();
       qc.removeQueries({ queryKey: ['iptv-index'] });
