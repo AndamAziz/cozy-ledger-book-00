@@ -8,20 +8,20 @@
 
 type IdleHandle = { cancel: () => void };
 
-interface IdleWindow extends Window {
-  requestIdleCallback?: (cb: (d: { timeRemaining: () => number }) => void, opts?: { timeout: number }) => number;
+type IdleApi = {
+  requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
   cancelIdleCallback?: (id: number) => void;
-}
+};
 
 export function onIdle(fn: () => void, timeout = 500): IdleHandle {
   if (typeof window === 'undefined') {
     fn();
     return { cancel: () => undefined };
   }
-  const w = window as IdleWindow;
-  if (typeof w.requestIdleCallback === 'function') {
-    const id = w.requestIdleCallback(() => fn(), { timeout });
-    return { cancel: () => w.cancelIdleCallback?.(id) };
+  const api = window as unknown as IdleApi;
+  if (typeof api.requestIdleCallback === 'function') {
+    const id = api.requestIdleCallback(() => fn(), { timeout });
+    return { cancel: () => api.cancelIdleCallback?.(id) };
   }
   const id = window.setTimeout(fn, 1);
   return { cancel: () => window.clearTimeout(id) };
