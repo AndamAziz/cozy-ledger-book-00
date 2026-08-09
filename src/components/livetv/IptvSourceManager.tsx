@@ -682,6 +682,29 @@ export function IptvSourceManager({
                         }${rowTest[s.id].message ? ` — ${rowTest[s.id].message}` : ''}`}
                 </p>
               )}
+              {rowHealth[s.id] && (
+                <p
+                  dir="ltr"
+                  className={`text-[10px] font-bold ${
+                    rowHealth[s.id].status === 'online'
+                      ? 'text-emerald-400'
+                      : rowHealth[s.id].status === 'slot_limit'
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
+                  }`}
+                >
+                  {rowHealth[s.id].status === 'online'
+                    ? 'Up'
+                    : rowHealth[s.id].status === 'slot_limit'
+                      ? 'Busy'
+                      : 'Down'}
+                  {rowHealth[s.id].latencyMs != null ? ` · ${rowHealth[s.id].latencyMs} ms` : ''}
+                  {rowHealth[s.id].maxConnections
+                    ? ` · ${rowHealth[s.id].activeConnections ?? '?'}/${rowHealth[s.id].maxConnections} slots`
+                    : ''}
+                  {rowHealth[s.id].message ? ` — ${rowHealth[s.id].message}` : ''}
+                </p>
+              )}
 
               <div className="flex flex-wrap gap-1.5 pt-1">
                 <button
@@ -697,6 +720,21 @@ export function IptvSourceManager({
                   )}
                   Test
                 </button>
+                {s.is_active && (
+                  <button
+                    type="button"
+                    onClick={() => void checkHealth(s)}
+                    disabled={healthBusy === s.id}
+                    className="flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 text-[10px] font-bold opacity-80 transition hover:border-sky-400/50 hover:opacity-100 disabled:opacity-40"
+                  >
+                    {healthBusy === s.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Activity className="h-3 w-3" />
+                    )}
+                    Health
+                  </button>
+                )}
                 {!s.is_active && (
                   <button
                     type="button"
