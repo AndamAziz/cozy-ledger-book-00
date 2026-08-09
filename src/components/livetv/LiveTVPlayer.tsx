@@ -16,6 +16,9 @@ import {
   resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
 } from '@/lib/resumePlayback';
 import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
+import { claimStreamSlot, unregisterStream } from '@/lib/streamSlot';
+import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
+
 import { TV_EVENT } from '@/lib/tvRemote';
 
 
@@ -82,6 +85,12 @@ export function LiveTVPlayer({
   /** Index into the engine chain: each failure advances to the next engine. */
   const [stage, setStage] = useState(0);
   const [attempt, setAttempt] = useState(0);
+  /** True while waiting out the backoff between whole-ladder retries. */
+  const [retrying, setRetrying] = useState(false);
+  /** Bumped by the manual Retry button to force a fresh ladder run. */
+  const [reload, setReload] = useState(0);
+
+
 
   const [levels, setLevels] = useState<QualityLevel[]>([]);
   const [selectedLevel, setSelectedLevel] = useState(-1);
@@ -111,6 +120,8 @@ export function LiveTVPlayer({
   useEffect(() => {
     setStage(0);
     setAttempt(0);
+    setRetrying(false);
+
     setLevels([]);
     setSelectedLevel(-1);
     setAutoLabel(null);
@@ -142,6 +153,8 @@ export function LiveTVPlayer({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    let retryTimer: number | undefined;
+
 
     // Destroying an engine is guarded: a throw here used to bubble up, hit the
     // error boundary and tear the whole player down mid-playback.
@@ -166,7 +179,10 @@ export function LiveTVPlayer({
       }
     };
 
-    safeDestroy();
+    // Hard-close the previous session and wait out the provider's release grace
+    // period: the account allows a single connection, so overlapping opens are
+    // what produced "max connections" errors when zapping channels.
+    const slotWait = claimStreamSlot(safeDestroy);
 
     setLoading(true);
     setError(false);
@@ -182,21 +198,28 @@ export function LiveTVPlayer({
      * failure so "Connecting to stream…" can never spin forever, even if the
      * backend hangs without returning an error.
      */
-    let watchdog: number | undefined = window.setTimeout(() => {
-      if (!disposed) nextEngine();
-    }, 15_000);
+    let watchdog: number | undefined;
     const clearWatchdog = () => {
       if (watchdog !== undefined) {
         clearTimeout(watchdog);
         watchdog = undefined;
       }
     };
+    const armWatchdog = () => {
+      watchdog = window.setTimeout(() => {
+        if (!disposed) nextEngine();
+      }, 15_000);
+    };
     const done = () => {
       clearWatchdog();
       setLoading(false);
     };
 
-    /** Move to the next engine, or surface the error once the ladder is spent. */
+    /**
+     * Move to the next engine; once the ladder is spent, retry the whole ladder
+     * up to MAX_STREAM_RETRIES times with a fixed backoff, then stop and ask the
+     * user to try again rather than looping forever.
+     */
     const nextEngine = () => {
       if (disposed) return;
       clearWatchdog();
@@ -204,6 +227,18 @@ export function LiveTVPlayer({
         setStage((s) => s + 1);
         return;
       }
+      if (attempt + 1 < MAX_STREAM_RETRIES) {
+        setRetrying(true);
+        safeDestroy();
+        retryTimer = window.setTimeout(() => {
+          if (disposed) return;
+          setRetrying(false);
+          setStage(0);
+          setAttempt((a) => a + 1);
+        }, STREAM_RETRY_DELAY_MS);
+        return;
+      }
+      setRetrying(false);
       setLoading(false);
       setError(true);
     };
@@ -213,7 +248,9 @@ export function LiveTVPlayer({
     video.addEventListener('canplay', done);
     video.addEventListener('loadeddata', done);
 
+    const attach = () => {
     if (engine === 'hls') {
+
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
       hlsRef.current = hls;
       let recovered = 0;
@@ -307,15 +344,26 @@ export function LiveTVPlayer({
         setLoading(false);
       });
     }
+    };
+
+    // Open the upstream connection only after the previous slot was released.
+    const startTimer = window.setTimeout(() => {
+      if (disposed) return;
+      armWatchdog();
+      attach();
+    }, slotWait);
 
     return () => {
       disposed = true;
       clearWatchdog();
+      clearTimeout(startTimer);
+      if (retryTimer !== undefined) clearTimeout(retryTimer);
       video.removeEventListener('playing', done);
       video.removeEventListener('canplay', done);
       video.removeEventListener('loadeddata', done);
       video.removeEventListener('error', onMediaError);
       safeDestroy();
+      unregisterStream(safeDestroy);
       try {
         video.pause();
         video.removeAttribute('src');
@@ -324,7 +372,8 @@ export function LiveTVPlayer({
         console.warn('video teardown failed', err);
       }
     };
-  }, [channel.id, channel.kind, channel.ext, engines, stage, attempt]);
+
+  }, [channel.id, channel.kind, channel.ext, engines, stage, attempt, reload]);
 
 
 
@@ -805,7 +854,12 @@ export function LiveTVPlayer({
         {loading && !error && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/55">
             <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
-            <p className="text-[11px] font-semibold tracking-wide text-white/55">Connecting to stream…</p>
+            <p className="text-[11px] font-semibold tracking-wide text-white/55">
+              {retrying
+                ? `Reconnecting… (${Math.min(attempt + 2, MAX_STREAM_RETRIES)}/${MAX_STREAM_RETRIES})`
+                : 'Connecting to stream…'}
+            </p>
+
           </div>
         )}
 
@@ -823,14 +877,19 @@ export function LiveTVPlayer({
                 This channel is not responding
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                The source may be unavailable right now. Retry, or pick another channel.
+                We tried {MAX_STREAM_RETRIES} times without luck. Please try again in a moment,
+                or pick another channel.
               </p>
               <div className="mt-4 flex justify-center gap-2">
                 <button
                   onClick={() => {
+                    setRetrying(false);
+                    setError(false);
                     setStage(0);
-                    setAttempt((a) => a + 1);
+                    setAttempt(0);
+                    setReload((r) => r + 1);
                   }}
+
                   className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
                   style={{ background: '#ff2d6f' }}
                 >

@@ -1,5 +1,13 @@
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  clearCatalogCache,
+  fetchWithBackoff,
+  queued,
+  readCatalogCache,
+  writeCatalogCache,
+} from '@/lib/iptvCatalog';
+
 
 export type IptvKind = 'live' | 'vod' | 'series';
 
@@ -129,34 +137,51 @@ export function toPlayableUrl(
 
 
 
-async function get<T>(path: string): Promise<T> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token ?? null;
-  accessToken = token;
-  const url = `${FN_BASE}/${path}${activeSourceId ? `${path.includes('?') ? '&' : '?'}source=${encodeURIComponent(activeSourceId)}` : ''}`;
-  const res = await fetch(url, {
-    headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` },
-  });
-  const json = await res.json().catch(() => null);
-  if (!res.ok) {
-    throw new IptvRequestError(json?.error ?? `Failed to load playlist (HTTP ${res.status})`, {
-      reqId: json?.reqId,
-      errorKind: json?.errorKind,
-      diagnostic: json?.diagnostic ?? null,
-    });
+async function get<T>(path: string, opts: { cache?: boolean } = {}): Promise<T> {
+  const useCache = opts.cache !== false && !path.includes('refresh=1');
+  const cacheKey = `${activeSourceId ?? 'default'}|${path}`;
+  if (useCache) {
+    const hit = readCatalogCache<T>(cacheKey);
+    if (hit) return hit;
   }
 
-  return json as T;
+  // One provider request at a time, max 3 attempts with a real backoff.
+  return await queued(async () => {
+    if (useCache) {
+      // A queued duplicate may have been filled while waiting.
+      const hit = readCatalogCache<T>(cacheKey);
+      if (hit) return hit;
+    }
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token ?? null;
+    accessToken = token;
+    const url = `${FN_BASE}/${path}${activeSourceId ? `${path.includes('?') ? '&' : '?'}source=${encodeURIComponent(activeSourceId)}` : ''}`;
+    const res = await fetchWithBackoff(url, {
+      headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` },
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new IptvRequestError(json?.error ?? `Failed to load playlist (HTTP ${res.status})`, {
+        reqId: json?.reqId,
+        errorKind: json?.errorKind,
+        diagnostic: json?.diagnostic ?? null,
+      });
+    }
+    if (useCache && json) writeCatalogCache(cacheKey, json);
+    return json as T;
+  });
 }
 
 export function useIptvIndex() {
   return useQuery({
     queryKey: ['iptv-index', activeSourceId],
     queryFn: () => get<IptvIndex>('iptv-playlist'),
-    staleTime: 15 * 60 * 1000,
-    retry: 1,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
+    retry: 0,
   });
 }
+
 
 export function useIptvChannels(categoryId: string | null, enabled: boolean, limit = 24) {
   return useQuery({
@@ -166,7 +191,9 @@ export function useIptvChannels(categoryId: string | null, enabled: boolean, lim
         `iptv-playlist?category=${encodeURIComponent(categoryId ?? '')}&limit=${limit}`,
       ),
     enabled: enabled && !!categoryId,
-    staleTime: 15 * 60 * 1000,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
+    retry: 0,
     // Paging keeps the already-rendered grid on screen instead of flashing skeletons.
     placeholderData: keepPreviousData,
   });
@@ -182,7 +209,8 @@ export function useIptvSearch(query: string, section: 'live' | 'vod' | 'series' 
         `iptv-playlist?q=${encodeURIComponent(q)}&kind=${section}&limit=90`,
       ),
     enabled: q.length >= 2,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    retry: 0,
   });
 }
 
@@ -192,10 +220,12 @@ export function useIptvSeriesInfo(seriesId: string | null) {
     queryKey: ['iptv-series', activeSourceId, seriesId],
     queryFn: () => get<IptvSeriesInfo>(`iptv-playlist?series=${encodeURIComponent(seriesId ?? '')}`),
     enabled: !!seriesId,
-    staleTime: 30 * 60 * 1000,
-    retry: 1,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
+    retry: 0,
   });
 }
+
 
 
 
@@ -207,13 +237,17 @@ export function useIptvSeriesInfo(seriesId: string | null) {
 export function useIptvRefresh() {
   const qc = useQueryClient();
   return async () => {
+    clearCatalogCache();
     try {
       await get<IptvIndex>('iptv-playlist?refresh=1');
     } finally {
+      clearCatalogCache();
       qc.removeQueries({ queryKey: ['iptv-index'] });
       qc.removeQueries({ queryKey: ['iptv-channels'] });
       qc.removeQueries({ queryKey: ['iptv-search'] });
+      qc.removeQueries({ queryKey: ['iptv-series'] });
       await qc.refetchQueries({ queryKey: ['iptv-index'] });
     }
+
   };
 }
