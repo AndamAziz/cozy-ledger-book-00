@@ -350,7 +350,7 @@ export const OnboardingScreen = ({ onComplete }: OnboardingScreenProps) => {
       <div className="relative z-10 flex items-center justify-between px-5 pt-5 sm:px-8 sm:pt-7">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-success flex items-center justify-center shadow-lg shadow-primary/30 overflow-hidden">
-            <img src="/app-icon.svg" alt="Central Tech Platform" className="w-6 h-6 object-contain" />
+            <img src="/logo.png" alt="ANDAM logo" className="w-6 h-6 object-contain" />
           </div>
           <span className="font-bold text-sm text-foreground">Central Tech Platform</span>
         </div>
