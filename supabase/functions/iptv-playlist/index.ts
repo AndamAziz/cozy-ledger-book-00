@@ -979,11 +979,12 @@ Deno.serve(async (req) => {
           total: index.total,
           categories: index.categories,
           updatedAt: new Date(index.at).toISOString(),
-          ...(index.warning ? { warning: index.warning } : {}),
+          ...(index.warning ? { warning: index.warning, reqId, diagnostic: index.diag ?? publicDiag(lastUpstreamDiag) } : {}),
         },
         200,
         300,
       )
+
 
     }
 
