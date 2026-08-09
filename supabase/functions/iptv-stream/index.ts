@@ -327,15 +327,17 @@ Deno.serve(async (req) => {
 
   if (!upstream) {
     // One actionable sentence, the way IPTV Smarters / VLC report failures.
-    const error: StreamError = rateLimited
-      ? streamError('RATE_LIMITED')
-      : geoBlocked
-        ? { code: 'GEO_BLOCKED', message: GEO_BLOCK_MESSAGE, retryable: true }
-        : deadlineHit
-          ? streamError('TIMEOUT', `${OVERALL_DEADLINE_MS / 1000}s`)
-          : (classified ?? classifyTransport(lastError))
+    const error: StreamError = slotLimited
+      ? streamError('MAX_CONNECTIONS')
+      : rateLimited
+        ? streamError('RATE_LIMITED')
+        : geoBlocked
+          ? { code: 'GEO_BLOCKED', message: GEO_BLOCK_MESSAGE, retryable: true }
+          : deadlineHit
+            ? streamError('TIMEOUT', `${OVERALL_DEADLINE_MS / 1000}s`)
+            : (classified ?? classifyTransport(lastError))
     console.error(
-      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, code: error.code, lastError, trace })}`,
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, slotLimited, code: error.code, lastError, trace })}`,
     )
     return json(
       {
@@ -345,11 +347,13 @@ Deno.serve(async (req) => {
         deadline: deadlineHit,
         geoBlocked,
         rateLimited,
+        slotLimited,
         detail: lastError,
         candidates: candidates.length,
       },
-      rateLimited ? 429 : 502,
+      rateLimited || slotLimited ? 429 : 502,
     )
+
   }
 
   const finalUrl = new URL(upstreamBase)
