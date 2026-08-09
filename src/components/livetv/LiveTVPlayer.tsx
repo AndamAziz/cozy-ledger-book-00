@@ -375,12 +375,9 @@ export function LiveTVPlayer({
             const codec = info?.videoCodec || info?.mimeType || '';
             if (!isUnsupportedHevc(codec)) return;
             codecBlocked = true;
-            setLoading(false);
-            setCodecIssue('HEVC / H.265');
-            setTimeout(() => {
-              if (!disposed) safeDestroy();
-            }, 0);
+            flagCodec(isHevcCodec(codec) ? 'HEVC / H.265' : codec);
           });
+
           player.on(mpegts.Events.ERROR, () => {
             if (codecBlocked) return;
 
