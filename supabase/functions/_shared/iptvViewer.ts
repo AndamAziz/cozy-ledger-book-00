@@ -11,11 +11,25 @@ import { decryptSecret, encryptSecret, maskPlaylistUrl } from './iptvCrypto.ts'
 
 export type ViewerError = 'UNAUTHORIZED' | 'NO_ACCESS' | 'NO_SERVER'
 
+/** One provider the caller is allowed to browse. */
+export interface ViewerSource {
+  id: string
+  name: string
+  kind: string
+  masked: string
+  isDefault: boolean
+}
+
 export interface Viewer {
   userId: string
   email: string | null
-  /** The caller's personal playlist URL. */
+  /** The caller's personal playlist URL (of the SELECTED source). */
   playlistUrl: string
+  /** `iptv_sources.id` the credentials came from (null for legacy rows). */
+  sourceId: string | null
+  sourceName: string | null
+  /** Every source granted to this account (empty for legacy single-row users). */
+  sources: ViewerSource[]
   isAdmin: boolean
   access: {
     trialEndsAt: string | null
@@ -23,6 +37,7 @@ export interface Viewer {
     hasAccess: boolean
   }
 }
+
 
 export interface ViewerFailure {
   error: ViewerError
