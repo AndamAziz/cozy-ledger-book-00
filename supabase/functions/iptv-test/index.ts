@@ -207,14 +207,11 @@ Deno.serve(async (req) => {
   }
 
 
-  const vodCount = await countOf('get_vod_streams')
-  const seriesCount = await countOf('get_series')
+  const vodCount = await countOf('get_vod_streams', 'stream_id')
+  const seriesCount = await countOf('get_series', 'series_id')
 
   // 4. Sample playback probe: how many of the first channels really answer.
-  const sample = (parsed as Array<{ stream_id?: unknown }>)
-    .slice(0, 3)
-    .map((c) => String(c?.stream_id ?? ''))
-    .filter(Boolean)
+  const sample = sampleIds
   let onlineSample = 0
   for (const id of sample) {
     const target = `${creds.protocol}//${creds.host}${creds.basePath}/live/${encodeURIComponent(creds.username)}/${encodeURIComponent(
@@ -224,7 +221,7 @@ Deno.serve(async (req) => {
     if (probe.ok || probe.status === 206) onlineSample += 1
   }
 
-  const liveCount = parsed.length
+
   return json({
     ok: true,
     kind: 'xtream',
