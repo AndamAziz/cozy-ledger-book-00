@@ -166,7 +166,10 @@ export function LiveTVPlayer({
       }
     };
 
-    safeDestroy();
+    // Hard-close the previous session and wait out the provider's release grace
+    // period: the account allows a single connection, so overlapping opens are
+    // what produced "max connections" errors when zapping channels.
+    const slotWait = claimStreamSlot(safeDestroy);
 
     setLoading(true);
     setError(false);
@@ -182,21 +185,28 @@ export function LiveTVPlayer({
      * failure so "Connecting to stream…" can never spin forever, even if the
      * backend hangs without returning an error.
      */
-    let watchdog: number | undefined = window.setTimeout(() => {
-      if (!disposed) nextEngine();
-    }, 15_000);
+    let watchdog: number | undefined;
     const clearWatchdog = () => {
       if (watchdog !== undefined) {
         clearTimeout(watchdog);
         watchdog = undefined;
       }
     };
+    const armWatchdog = () => {
+      watchdog = window.setTimeout(() => {
+        if (!disposed) nextEngine();
+      }, 15_000);
+    };
     const done = () => {
       clearWatchdog();
       setLoading(false);
     };
 
-    /** Move to the next engine, or surface the error once the ladder is spent. */
+    /**
+     * Move to the next engine; once the ladder is spent, retry the whole ladder
+     * up to MAX_STREAM_RETRIES times with a fixed backoff, then stop and ask the
+     * user to try again rather than looping forever.
+     */
     const nextEngine = () => {
       if (disposed) return;
       clearWatchdog();
@@ -204,6 +214,18 @@ export function LiveTVPlayer({
         setStage((s) => s + 1);
         return;
       }
+      if (attempt + 1 < MAX_STREAM_RETRIES) {
+        setRetrying(true);
+        safeDestroy();
+        retryTimer = window.setTimeout(() => {
+          if (disposed) return;
+          setRetrying(false);
+          setStage(0);
+          setAttempt((a) => a + 1);
+        }, STREAM_RETRY_DELAY_MS);
+        return;
+      }
+      setRetrying(false);
       setLoading(false);
       setError(true);
     };
@@ -213,7 +235,9 @@ export function LiveTVPlayer({
     video.addEventListener('canplay', done);
     video.addEventListener('loadeddata', done);
 
+    const attach = () => {
     if (engine === 'hls') {
+
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
       hlsRef.current = hls;
       let recovered = 0;
