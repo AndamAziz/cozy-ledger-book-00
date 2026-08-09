@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import M3uStreamView from '@/components/livetv/M3uStreamView';
 import { ChannelLogo } from '@/components/livetv/ChannelLogo';
 import type { StreamHeaders } from '@/lib/streamHeaders';
+import { useChannelIndex } from '@/hooks/useChannelIndex';
+import { useIncrementalList } from '@/hooks/useVirtualList';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
