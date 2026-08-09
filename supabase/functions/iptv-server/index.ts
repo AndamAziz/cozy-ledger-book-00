@@ -648,7 +648,16 @@ Deno.serve(async (req) => {
       const id = String(body.id ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
       const ok = await setActive(targetId, id)
+      // Keep the grant table's selection in step with the owner's active row.
+      const granted = await db
+        .from('user_source_access')
+        .select('id')
+        .eq('user_id', targetId)
+        .eq('source_id', id)
+        .maybeSingle()
+      if (granted.data?.id) await grantSource(targetId, id, true)
       return ok ? json({ ok: true }) : json({ error: 'Could not switch source' }, 500)
+
     }
 
     case 'delete_source': {
