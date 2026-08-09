@@ -48,32 +48,40 @@ export function SourcePicker({ className = '' }: { className?: string }) {
           type="button"
           data-tv
           aria-label="Switch IPTV source"
-          className={`flex h-8 max-w-[10rem] shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 text-[10px] font-bold leading-none text-muted-foreground transition hover:border-border hover:text-foreground active:scale-95 sm:text-[11px] ${className}`}
+          title={active ? `Source: ${safeName(active.name, active.kind)}` : 'Switch IPTV source'}
+          className={`shrink-0 rounded-lg p-2 text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground active:scale-90 ${className}`}
         >
           {isSwitching ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Server className="h-3.5 w-3.5 shrink-0" />
+            <Server className="h-4 w-4" />
           )}
-          <span className="truncate">{active ? safeName(active.name, active.kind) : 'Source'}</span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="z-[60] w-64">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+      <DropdownMenuContent align="end" className="z-[60] w-56 p-1">
+        <DropdownMenuLabel className="px-2 py-1 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
           My IPTV sources
         </DropdownMenuLabel>
         {sources.map((s) => (
-          <DropdownMenuItem key={s.id} onSelect={() => void pick(s.id)} className="gap-2">
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-semibold">{safeName(s.name, s.kind)}</span>
-              <span className="block truncate text-[10px] text-muted-foreground">
-                {s.kind === 'xtream' ? 'Xtream' : 'M3U'} · {s.masked || 'link hidden'}
-              </span>
+          <DropdownMenuItem
+            key={s.id}
+            onSelect={() => void pick(s.id)}
+            title={s.masked || undefined}
+            className="min-h-0 gap-1.5 px-2 py-1.5 text-xs"
+          >
+            <span className="min-w-0 flex-1 truncate font-semibold">{safeName(s.name, s.kind)}</span>
+            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+              {s.kind === 'xtream' ? 'XT' : 'M3U'}
             </span>
-            {s.id === active?.id && <Check className="h-4 w-4 shrink-0 text-primary" />}
+            {s.id === active?.id ? (
+              <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+            ) : (
+              <span className="h-3.5 w-3.5 shrink-0" />
+            )}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
+
