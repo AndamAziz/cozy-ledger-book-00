@@ -163,6 +163,7 @@ Deno.serve(async (req) => {
 
   // 1. Account handshake: gives precise auth / connection-limit errors.
   const auth = await relayFetch(api, { timeoutMs: TIMEOUT_MS })
+  console.log(`[iptv-test] handshake ok=${auth.ok} status=${auth.status} in ${latency()}ms`)
   if (!auth.ok) return json({ ok: false, error: auth.error ?? 'Could not reach the server', status: auth.status })
   const authProblem = xtreamAuthError(auth.body)
   if (authProblem) return json({ ok: false, error: authProblem })
@@ -173,6 +174,8 @@ Deno.serve(async (req) => {
     timeoutMs: CATALOGUE_TIMEOUT_MS,
     maxBytes: 60_000_000,
   })
+  console.log(`[iptv-test] live list ok=${list.ok} bytes=${list.body.length} in ${latency()}ms`)
+
   // The account already authenticated, so a heavy/slow catalogue must not be
   // reported as a dead server — report the successful handshake instead.
   if (!list.ok) {
