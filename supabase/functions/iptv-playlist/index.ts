@@ -560,6 +560,54 @@ async function buildIndex(source: string) {
     }
   }
 
+  // Many panels advertise the FULL provider category tree while the subscription
+  // only carries a subset: those extra categories answer `category_id=…` with an
+  // empty array, which surfaced as dozens of "No items in this category" rows.
+  // The live catalogue is small enough to fetch once, so real counts are derived
+  // from it and categories the line cannot actually access are dropped.
+  if (categories.some((c) => c.kind === 'live')) {
+    const rows = await fetchJson<Record<string, unknown>[]>(
+      sk,
+      `${api}&action=${ACTIONS.live[1]}`,
+      20000,
+      2,
+      'live:catalogue',
+    )
+    if (rows?.length) {
+      const items = rows.map((r) => toItem(r, 'live')).filter((i): i is Item => !!i)
+      const counts = new Map<string, number>()
+      for (const i of items) counts.set(i.categoryId, (counts.get(i.categoryId) ?? 0) + 1)
+
+      const known = new Set(categories.filter((c) => c.kind === 'live').map((c) => c.id))
+      // Channels can also sit in a category the list endpoint never returned.
+      for (const [id, count] of counts) {
+        if (!known.has(id)) categories.push({ id, name: 'Live', count, kind: 'live' })
+      }
+      for (const c of categories) {
+        if (c.kind === 'live') c.count = counts.get(c.id) ?? 0
+      }
+      const trimmed = categories.filter((c) => c.kind !== 'live' || c.count > 0)
+      categories.length = 0
+      categories.push(...trimmed)
+
+      // Reuse the payload we already paid for: opening a live category is instant
+      // and costs the provider (single-slot lines!) nothing extra.
+      for (const [id, count] of counts) {
+        if (!count) continue
+        const rawId = id.slice(id.indexOf(':') + 1)
+        categoryCache.set(`${digest(source)}|${id}`, {
+          at: Date.now(),
+          items: items.filter((i) => i.categoryId === id),
+        })
+        void rawId
+      }
+      while (categoryCache.size > CATEGORY_MAX) {
+        categoryCache.delete(categoryCache.keys().next().value as string)
+      }
+    }
+  }
+
+
   if (!categories.length) {
     // Xtream sources ALWAYS live on player_api.php: many panels (Proxyshield &
     // co) answer `get.php?type=m3u` with HTTP 200 and an EMPTY body, so falling
