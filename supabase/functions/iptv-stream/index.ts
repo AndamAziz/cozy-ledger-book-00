@@ -1,7 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
-import { egressFetch } from '../_shared/iptvEgress.ts'
+import { egressFetch, finalUrlOf } from '../_shared/iptvEgress.ts'
 
 /**
  * Lean Live TV stream proxy — a 1:1 copy of the playback pipeline used by the
@@ -21,7 +21,7 @@ const cors: Record<string, string> = {
   'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
 }
 
-import { IPTV_USER_AGENTS, isHtmlBlock } from '../_shared/iptvFetch.ts'
+import { IPTV_USER_AGENTS, isHtmlBlock, describeFetchError } from '../_shared/iptvFetch.ts'
 
 const SELF = (req: Request) =>
   `${(Deno.env.get('SUPABASE_URL') || new URL(req.url).origin).replace(/\/$/, '')}/functions/v1/iptv-stream`
@@ -291,7 +291,7 @@ Deno.serve(async (req) => {
       `${hRaw ? `&h=${encodeURIComponent(hRaw)}` : ''}`
 
     const text = await upstream.text()
-    return new Response(rewritePlaylist(text, upstream.url, SELF(req), suffix), {
+    return new Response(rewritePlaylist(text, upstreamBase, SELF(req), suffix), {
       status: upstream.status,
       headers: {
         ...cors,
