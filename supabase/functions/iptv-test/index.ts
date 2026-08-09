@@ -6,8 +6,11 @@ import { relayFetch, xtreamAuthError } from '../_shared/iptvFetch.ts'
 // M3U files (especially GitHub-hosted playlists with thousands of lines) need
 // time to download — a short deadline reported a false "Connection timed out".
 const TIMEOUT_MS = 30_000
+/** Xtream catalogue actions return multi-MB JSON — give them room. */
+const CATALOGUE_TIMEOUT_MS = 60_000
 /** Short deadline for the tiny sample playback probes. */
 const PROBE_TIMEOUT_MS = 8_000
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
