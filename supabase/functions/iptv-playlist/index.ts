@@ -87,7 +87,9 @@ async function saveSharedIndex(snapshot: IndexSnapshot): Promise<void> {
   if (!rest || !snapshot.categories.length || snapshot.partial) return
   try {
     const url_hash = await indexCacheKey(snapshot.source)
-    const entries_gz = await gzipText(JSON.stringify({ categories: snapshot.categories, total: snapshot.total }))
+    const entries_gz = await gzipText(
+      JSON.stringify({ categories: snapshot.categories, total: snapshot.total, mode: snapshot.mode ?? 'xtream' }),
+    )
     await fetch(`${rest.base}/rest/v1/iptv_playlist_cache?on_conflict=url_hash`, {
       method: 'POST',
       headers: {
