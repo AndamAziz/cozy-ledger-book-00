@@ -398,13 +398,35 @@ Deno.serve(async (req) => {
   )
 
 
-  // Upstream honoured the Range request: pass 206 + range headers straight
-  // through so the browser can size and seek the media.
+  // Upstream honoured the Range request: pass 206 + range headers through.
+  //
+  // BUT some Xtream panels answer a SUFFIX range (`bytes=-N`, which is exactly
+  // what a browser sends to read a non-faststart MP4's trailing `moov` atom)
+  // with a MALFORMED header that echoes the request instead of the resolved
+  // window: `Content-Range: bytes -131072/4181661025`. Per RFC 7233 that is
+  // invalid, so Chromium/Safari discard the whole response and the <video>
+  // element reports MEDIA_ERR_SRC_NOT_SUPPORTED with readyState 0 — the movie
+  // never starts. Normalise it from the total size and the body length before
+  // forwarding.
   if (cr) {
-    out.set('Content-Range', cr)
+    let fixed = cr
+    const wellFormed = /^bytes\s+\d+-\d+\/(\d+|\*)$/i.test(cr.trim())
+    if (!wellFormed) {
+      const total = Number(/\/(\d+)\s*$/.exec(cr)?.[1] ?? NaN)
+      const len = Number(clen ?? NaN)
+      if (Number.isFinite(total) && Number.isFinite(len) && len > 0 && len <= total) {
+        // A suffix window always ends at the last byte of the resource.
+        const end = total - 1
+        const start = Math.max(0, total - len)
+        fixed = `bytes ${start}-${end}/${total}`
+      }
+    }
+    if (fixed !== cr) console.log(`[iptv-stream:media] normalised Content-Range "${cr}" -> "${fixed}"`)
+    out.set('Content-Range', fixed)
     if (clen) out.set('Content-Length', clen)
     return new Response(upstream.body, { status: upstream.status, headers: out })
   }
+
 
   // Upstream (or our relay) ignored Range and answered a full-body 200. A
   // <video> element needs a 206 with Content-Range to start progressive
