@@ -499,6 +499,8 @@ async function buildIndex(source: string) {
         partial: true,
         mode: 'xtream' as const,
         warning: `The IPTV provider temporarily refused the catalogue request (${upstream.status} ${upstream.statusText ?? 'Forbidden'}).`,
+        diag: publicDiag(upstream),
+
       }
     }
     throw new Error('Upstream returned no channels')
