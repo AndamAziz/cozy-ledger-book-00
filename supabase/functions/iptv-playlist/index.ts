@@ -199,6 +199,54 @@ async function loadSharedIndex(source: string): Promise<IndexSnapshot | null> {
   }
 }
 
+/**
+ * Generic gzip blob cache on `iptv_playlist_cache` — used for series episode
+ * listings so a provider hiccup never empties a season the user already saw.
+ */
+async function saveBlob(key: string, version: string, value: unknown): Promise<void> {
+  const rest = cacheRest()
+  if (!rest) return
+  try {
+    await fetch(`${rest.base}/rest/v1/iptv_playlist_cache?on_conflict=url_hash`, {
+      method: 'POST',
+      headers: {
+        apikey: rest.key,
+        Authorization: `Bearer ${rest.key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify({
+        url_hash: key,
+        version,
+        entries_gz: await gzipText(JSON.stringify(value)),
+        updated_at: new Date().toISOString(),
+      }),
+    })
+  } catch (error) {
+    console.warn(`[iptv-playlist] blob save failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+async function loadBlob<T>(key: string, version: string, maxAgeMs: number): Promise<T | null> {
+  const rest = cacheRest()
+  if (!rest) return null
+  try {
+    const res = await fetch(
+      `${rest.base}/rest/v1/iptv_playlist_cache?url_hash=eq.${encodeURIComponent(key)}&version=eq.${version}&select=entries_gz,updated_at`,
+      { headers: { apikey: rest.key, Authorization: `Bearer ${rest.key}` } },
+    )
+    if (!res.ok) return null
+    const rows = (await res.json()) as { entries_gz: string; updated_at: string }[]
+    const row = rows[0]
+    if (!row) return null
+    const at = Date.parse(row.updated_at)
+    if (!Number.isFinite(at) || Date.now() - at > maxAgeMs) return null
+    return JSON.parse(await gunzipText(row.entries_gz)) as T
+  } catch {
+    return null
+  }
+}
+
 /** Canonical `player_api.php` base (protocol/port corrected in iptvConfig). */
 const apiBase = (raw: string) => xtreamApiBase(raw)
 
@@ -556,6 +604,11 @@ async function buildIndex(source: string) {
 async function getIndex(source: string, force = false): Promise<IndexSnapshot> {
   const hit = force ? undefined : indexCache.get(source)
   if (force) indexCache.delete(source)
+  // LRU touch: an actively browsed source never gets evicted by one-off traffic.
+  if (hit) {
+    indexCache.delete(source)
+    indexCache.set(source, hit)
+  }
   // Partial snapshots (a section failed upstream) are only trusted for a minute.
   if (hit && Date.now() - hit.at < (hit.partial ? 60_000 : TTL)) return hit
   let pending = force ? undefined : indexLoading.get(source)
@@ -564,9 +617,8 @@ async function getIndex(source: string, force = false): Promise<IndexSnapshot> {
       .then(async (i) => {
         indexCache.set(source, i)
         await saveSharedIndex(i)
-        if (indexCache.size > INDEX_MAX) {
-          const oldest = [...indexCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
-          if (oldest) indexCache.delete(oldest[0])
+        while (indexCache.size > INDEX_MAX) {
+          indexCache.delete(indexCache.keys().next().value as string)
         }
         return i
       })
@@ -615,7 +667,11 @@ async function scanCategory(sk: string, api: string, kind: Kind, rawId: string):
 
 async function getCategoryItems(sk: string, api: string, kind: Kind, rawId: string, key: string): Promise<Item[]> {
   const hit = categoryCache.get(key)
-  if (hit && Date.now() - hit.at < (hit.items.length ? CATEGORY_TTL : EMPTY_TTL)) return hit.items
+  if (hit && Date.now() - hit.at < (hit.items.length ? CATEGORY_TTL : EMPTY_TTL)) {
+    categoryCache.delete(key)
+    categoryCache.set(key, hit)
+    return hit.items
+  }
 
   const rows = await fetchJson<Record<string, unknown>[]>(
     sk,
@@ -652,10 +708,10 @@ async function getCategoryItems(sk: string, api: string, kind: Kind, rawId: stri
     }
   }
 
+  categoryCache.delete(key)
   categoryCache.set(key, { at: Date.now(), items })
-  if (categoryCache.size > CATEGORY_MAX) {
-    const oldest = [...categoryCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
-    if (oldest) categoryCache.delete(oldest[0])
+  while (categoryCache.size > CATEGORY_MAX) {
+    categoryCache.delete(categoryCache.keys().next().value as string)
   }
   return items
 }
@@ -681,8 +737,40 @@ interface EpisodeOut {
   duration: string | null
 }
 
-/** Fetch season/episode structure for one series via Xtream get_series_info. */
-async function getSeriesInfo(sk: string, api: string, seriesId: string) {
+const SERIES_VERSION = 'xtream-series-v1'
+const SERIES_STALE_MS = 7 * 24 * 60 * 60 * 1000
+
+type SeriesInfoOut = {
+  id: string
+  name: string
+  cover: string | null
+  plot: string | null
+  seasons: { season: number; episodes: EpisodeOut[] }[]
+}
+
+/**
+ * Season/episode structure for one series, persisted in the database: when the
+ * provider times out or answers 403 we serve the last known-good listing
+ * instead of an error, exactly like a native player's local cache.
+ */
+async function getSeriesInfo(sk: string, api: string, seriesId: string): Promise<SeriesInfoOut> {
+  const key = `${await indexCacheKey(`${sk}|series|${seriesId}`)}`
+  try {
+    const fresh = await fetchSeriesInfo(sk, api, seriesId)
+    await saveBlob(key, SERIES_VERSION, fresh)
+    return fresh
+  } catch (error) {
+    const cached = await loadBlob<SeriesInfoOut>(key, SERIES_VERSION, SERIES_STALE_MS)
+    if (cached?.seasons?.length) {
+      console.warn('[iptv-playlist] series upstream failed; serving cached episode listing')
+      return cached
+    }
+    throw error
+  }
+}
+
+/** Live Xtream `get_series_info` call (bounded by CATALOGUE_BUDGET_MS). */
+async function fetchSeriesInfo(sk: string, api: string, seriesId: string): Promise<SeriesInfoOut> {
   const url = `${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
   let data: Record<string, unknown> | null = null
   const deadline = Date.now() + CATALOGUE_BUDGET_MS
