@@ -176,12 +176,30 @@ export function LiveTVPlayer({
     const src = toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext, {
       raw: engine === 'mpegts',
     });
-    const done = () => setLoading(false);
     let disposed = false;
+    /**
+     * Load watchdog: if no frame arrives within 15s the stream is treated as a
+     * failure so "Connecting to stream…" can never spin forever, even if the
+     * backend hangs without returning an error.
+     */
+    let watchdog: number | undefined = window.setTimeout(() => {
+      if (!disposed) nextEngine();
+    }, 15_000);
+    const clearWatchdog = () => {
+      if (watchdog !== undefined) {
+        clearTimeout(watchdog);
+        watchdog = undefined;
+      }
+    };
+    const done = () => {
+      clearWatchdog();
+      setLoading(false);
+    };
 
     /** Move to the next engine, or surface the error once the ladder is spent. */
     const nextEngine = () => {
       if (disposed) return;
+      clearWatchdog();
       if (stage + 1 < engines.length) {
         setStage((s) => s + 1);
         return;
@@ -292,6 +310,7 @@ export function LiveTVPlayer({
 
     return () => {
       disposed = true;
+      clearWatchdog();
       video.removeEventListener('playing', done);
       video.removeEventListener('canplay', done);
       video.removeEventListener('loadeddata', done);

@@ -80,6 +80,7 @@ export async function egressFetch(
     // The relay is up but could not reach the provider (502/504/503): retry the
     // request directly so metadata keeps working while the VPS misbehaves.
     if (res.status === 502 || res.status === 503 || res.status === 504) {
+      console.warn(`[iptvEgress] relay unusable (HTTP ${res.status}) — falling back to direct`)
       await res.body?.cancel().catch(() => {})
       try {
         return await fetch(target, { ...init, redirect: 'follow' })
@@ -88,7 +89,8 @@ export async function egressFetch(
       }
     }
     return res
-  } catch (_e) {
+  } catch (e) {
+    console.warn(`[iptvEgress] relay unreachable (${e instanceof Error ? e.message : 'error'}) — falling back to direct`)
     return await fetch(target, { ...init, redirect: 'follow' })
   }
 }

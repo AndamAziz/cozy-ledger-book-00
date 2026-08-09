@@ -1,7 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
-import { egressFetch } from '../_shared/iptvEgress.ts'
+import { egressFetch, finalUrlOf, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
 /**
  * Lean Live TV stream proxy — a 1:1 copy of the playback pipeline used by the
@@ -21,7 +21,7 @@ const cors: Record<string, string> = {
   'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
 }
 
-import { IPTV_USER_AGENTS, isHtmlBlock } from '../_shared/iptvFetch.ts'
+import { IPTV_USER_AGENTS, isHtmlBlock, describeFetchError } from '../_shared/iptvFetch.ts'
 
 const SELF = (req: Request) =>
   `${(Deno.env.get('SUPABASE_URL') || new URL(req.url).origin).replace(/\/$/, '')}/functions/v1/iptv-stream`
@@ -144,10 +144,17 @@ Deno.serve(async (req) => {
       // order prefers the HLS manifest, which survives slow links better.
       candidates = rawFirst ? [ts, hls] : [hls, ts]
     } else {
-      const exts = [...new Set([extHint, 'mp4', 'mkv', 'avi'].filter(Boolean))]
+      // Provider's real container_extension (sent by the client as `ext`) is
+      // tried FIRST and alone; the broad matrix is only a fallback when that
+      // specific hint fails, so a correct hint commits on attempt #1.
       const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
-      candidates = exts.flatMap((ext) => dirs.map((d) => `${cred}/${d}/${username}/${password}/${streamId}.${ext}`))
+      const url = (d: string, ext: string) => `${cred}/${d}/${username}/${password}/${streamId}.${ext}`
+      const primary = extHint ? [url(dirs[0], extHint), url(dirs[1], extHint)] : []
+      const fallbackExts = ['mp4', 'mkv', 'avi'].filter((e) => e !== extHint)
+      const fallback = fallbackExts.flatMap((ext) => dirs.map((d) => url(d, ext)))
+      candidates = [...new Set([...primary, ...fallback])]
     }
+
   } else {
     return json({ error: 'Missing id or u parameter' }, 400)
   }
@@ -164,75 +171,132 @@ Deno.serve(async (req) => {
   const uaList = custom['User-Agent'] ? [custom['User-Agent']] : IPTV_USER_AGENTS
 
   let upstream: Response | null = null
+  /** Provider URL the committed response really came from (relay-aware). */
+  let upstreamBase = candidates[0] ?? ''
   let lastError = 'fetch failed'
+  let deadlineHit = false
+  const trace: string[] = []
+
+  const OVERALL_DEADLINE_MS = 12_000
+  const startedAt = Date.now()
+  const remaining = () => OVERALL_DEADLINE_MS - (Date.now() - startedAt)
+
+  /** Fatal per-host errors: another UA/transport will not help. */
+  const isDeadHost = (msg: string) =>
+    msg.startsWith('Connection refused') || msg.startsWith('Host not found')
+
+  // Attempt plan: every candidate gets a fast direct hop then the geo-relay with
+  // the primary UA. Only if the whole list fails do we rotate UAs — on the first
+  // (most likely) candidate only, instead of cross-producing the full matrix.
+  type Attempt = { target: string; via: 'direct' | 'relay'; ua: string }
+  const plan: Attempt[] = []
   for (const target of candidates) {
-    // Direct hop first (fast, and what the M3U module does); the geo-relay is a
-    // fallback for hosts that block Supabase egress — VOD files are often served
-    // from a different, stricter host than the live edge.
-    for (const via of ['direct', 'relay'] as const) {
-      for (const ua of uaList) {
-        const headers = { ...baseHeaders, 'User-Agent': ua }
-        try {
-          const res =
-            via === 'direct'
-              ? await fetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(20_000) })
-              : await egressFetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(25_000) })
-          if (res.ok || res.status === 206) {
-            const ctype = res.headers.get('content-type') || ''
-            // A WAF / panel block page arrives as HTML, sometimes with HTTP 200:
-            // never hand that to the player — retry with the next UA.
-            if (isHtmlBlock(ctype)) {
-              await res.body?.cancel().catch(() => undefined)
-              lastError = 'provider returned a block page (HTML)'
-              continue
-            }
-            // Some providers answer 200 with a text error page for dead
-            // channels. Verify manifests really are manifests before committing,
-            // otherwise fall through to the next candidate (raw TS).
-            const looksManifest =
-              ctype.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(new URL(res.url).pathname)
-            if (looksManifest) {
-              const text = await res.text()
-              if (isHtmlBlock(null, text)) {
-                lastError = 'provider returned a block page (HTML)'
-                continue
-              }
-              if (!text.trimStart().startsWith('#EXTM3U')) {
-                lastError = 'invalid manifest'
-                continue
-              }
-              upstream = new Response(text, {
-                status: 200,
-                headers: { 'Content-Type': 'application/vnd.apple.mpegurl' },
-              })
-              Object.defineProperty(upstream, 'url', { value: res.url })
-              break
-            }
-            upstream = res
-            break
-          }
-          lastError = `HTTP ${res.status}`
-          await res.body?.cancel().catch(() => undefined)
-        } catch (e) {
-          lastError = e instanceof Error ? e.message : 'fetch failed'
-        }
-      }
-      if (upstream) break
-    }
-    if (upstream) break
+    plan.push({ target, via: 'direct', ua: uaList[0] })
+    plan.push({ target, via: 'relay', ua: uaList[0] })
+  }
+  for (const ua of uaList.slice(1)) {
+    plan.push({ target: candidates[0], via: 'direct', ua })
+    plan.push({ target: candidates[0], via: 'relay', ua })
   }
 
+  const deadHosts = new Set<string>()
+  /** `host|via` pairs the provider geo-blocks — no UA rotation can fix those. */
+  const blockedRoutes = new Set<string>()
+  let geoBlocked = false
+
+  for (const { target, via, ua } of plan) {
+    if (remaining() <= 500) {
+      deadlineHit = true
+      break
+    }
+    let hostKey = target
+    try {
+      hostKey = new URL(target).host
+    } catch { /* keep raw */ }
+    if (deadHosts.has(hostKey)) continue
+    if (blockedRoutes.has(`${hostKey}|${via}`)) continue
+
+    const headers = { ...baseHeaders, 'User-Agent': ua }
+    // A FRESH signal per attempt — a signal that already fired would abort the
+    // next request instantly.
+    const signal = AbortSignal.timeout(Math.max(1_500, Math.min(8_000, remaining() - 300)))
+    try {
+      const res =
+        via === 'direct'
+          ? await fetch(target, { headers, redirect: 'follow', signal })
+          : await egressFetch(target, { headers, redirect: 'follow', signal })
+      if (res.ok || res.status === 206) {
+        const ctype = res.headers.get('content-type') || ''
+        const resolvedUrl = finalUrlOf(res, target)
+        // A WAF / panel block page arrives as HTML, sometimes with HTTP 200:
+        // never hand that to the player — retry with the next UA.
+        if (isHtmlBlock(ctype)) {
+          await res.body?.cancel().catch(() => undefined)
+          lastError = 'provider returned a block page (HTML)'
+          continue
+        }
+        // Some providers answer 200 with a text error page for dead channels.
+        // Verify manifests really are manifests before committing.
+        let manifestPath = ''
+        try {
+          manifestPath = new URL(resolvedUrl).pathname
+        } catch { /* ignore */ }
+        const looksManifest = ctype.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(manifestPath)
+        if (looksManifest) {
+          const text = await res.text()
+          if (isHtmlBlock(null, text)) {
+            lastError = 'provider returned a block page (HTML)'
+            continue
+          }
+          if (!text.trimStart().startsWith('#EXTM3U')) {
+            lastError = 'invalid manifest'
+            continue
+          }
+          upstream = new Response(text, {
+            status: 200,
+            headers: { 'Content-Type': 'application/vnd.apple.mpegurl' },
+          })
+          upstreamBase = resolvedUrl
+          break
+        }
+        upstream = res
+        upstreamBase = resolvedUrl
+        break
+      }
+      // 456/459/451: the panel refuses this egress IP (geo / stream block).
+      // Another User-Agent will never change that — stop hammering this route.
+      if (isGeoBlocked(res.status) || res.status === 456) {
+        geoBlocked = true
+        blockedRoutes.add(`${hostKey}|${via}`)
+      }
+      lastError = `HTTP ${res.status}`
+      trace.push(`${via}:${res.status}`)
+      await res.body?.cancel().catch(() => undefined)
+    } catch (e) {
+      lastError = describeFetchError(e)
+      trace.push(`${via}:err:${lastError.slice(0, 60)}`)
+      // Refused / DNS failure will not improve with another UA or transport.
+      if (via === 'direct' && isDeadHost(lastError)) deadHosts.add(hostKey)
+    }
+  }
 
   if (!upstream) {
+    const reason = geoBlocked
+      ? GEO_BLOCK_MESSAGE
+      : deadlineHit
+        ? `Stream did not start within ${OVERALL_DEADLINE_MS / 1000}s (last error: ${lastError})`
+        : lastError
     console.error(
-      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, lastError })}`,
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, lastError, trace })}`,
+    )
+    return json(
+      { error: reason, deadline: deadlineHit, geoBlocked, detail: lastError, candidates: candidates.length },
+      502,
     )
   }
 
+  const finalUrl = new URL(upstreamBase)
 
-  if (!upstream) return json({ error: lastError }, 502)
-
-  const finalUrl = new URL(upstream.url)
   const ct = upstream.headers.get('content-type') || ''
   const isPlaylist = ct.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(finalUrl.pathname + finalUrl.search)
 
@@ -245,7 +309,7 @@ Deno.serve(async (req) => {
       `${hRaw ? `&h=${encodeURIComponent(hRaw)}` : ''}`
 
     const text = await upstream.text()
-    return new Response(rewritePlaylist(text, upstream.url, SELF(req), suffix), {
+    return new Response(rewritePlaylist(text, upstreamBase, SELF(req), suffix), {
       status: upstream.status,
       headers: {
         ...cors,
