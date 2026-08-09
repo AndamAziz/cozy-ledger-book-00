@@ -219,6 +219,12 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
     [index, tab],
   );
 
+  // Hundreds of categories are mounted in batches as the user scrolls, so each
+  // tab switch paints in one frame instead of building every accordion up front.
+  const catWindow = useIncrementalList(categories.length, 12, [tab]);
+
+
+
   // Warm the local cache for the first rows so expanding one paints instantly.
   useEffect(() => {
     if (!categories.length) return;
