@@ -12,6 +12,8 @@ import {
   IptvRequestError,
 } from '@/hooks/useIptvPlaylist';
 import { IptvDiagnosticPanel } from '@/components/livetv/IptvDiagnosticPanel';
+import { IptvProviderStatusWidget } from '@/components/livetv/IptvProviderStatusWidget';
+import { recordProviderSuccess, recordProviderFailure } from '@/lib/iptvProviderStatus';
 import { ChannelCard } from '@/components/livetv/ChannelCard';
 
 import { PosterCard } from '@/components/livetv/PosterCard';
