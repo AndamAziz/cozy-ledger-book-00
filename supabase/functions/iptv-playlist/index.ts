@@ -5,8 +5,20 @@ import { classifyError, diagFetch, logDiag, redactUrl, verdictOf, type UpstreamD
 import { isHtmlBlock, uaFor, IPTV_USER_AGENTS } from '../_shared/iptvFetch.ts'
 
 
-/** Last upstream failure seen while serving the current request (per isolate). */
-let lastUpstreamDiag: UpstreamDiag | null = null
+/**
+ * Last upstream failure, keyed PER SOURCE.
+ *
+ * One isolate serves many users/providers concurrently: a single global would
+ * let provider A's 403 be reported as provider B's failure.
+ */
+const diagBySource = new Map<string, UpstreamDiag | null>()
+const DIAG_MAX = 50
+function setDiag(sk: string, diag: UpstreamDiag | null) {
+  diagBySource.delete(sk)
+  diagBySource.set(sk, diag)
+  while (diagBySource.size > DIAG_MAX) diagBySource.delete(diagBySource.keys().next().value as string)
+}
+const getDiag = (sk: string): UpstreamDiag | null => diagBySource.get(sk) ?? null
 
 type Kind = 'live' | 'vod' | 'series'
 
@@ -240,7 +252,7 @@ async function fetchJson<T>(
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
-      lastUpstreamDiag = diag
+      setDiag(sk, diag
       continue
     }
     let text = ''
@@ -248,12 +260,12 @@ async function fetchJson<T>(
       text = await res.text()
     } catch (e) {
       const { kind, message } = classifyError(e)
-      lastUpstreamDiag = { ...diag, ok: false, kind, message }
+      setDiag(sk, { ...diag, ok: false, kind, message }
       logDiag(`${tag}:read`, lastUpstreamDiag)
       continue
     }
     if (isHtmlBlock(res.headers.get('content-type'), text)) {
-      lastUpstreamDiag = {
+      setDiag(sk, {
         ...diag,
         ok: false,
         kind: 'http_error',
@@ -267,7 +279,7 @@ async function fetchJson<T>(
     try {
       const json = JSON.parse(text)
       if (Array.isArray(json)) return json as T
-      lastUpstreamDiag = {
+      setDiag(sk, {
         ...diag,
         ok: false,
         kind: 'parse_error',
@@ -276,7 +288,7 @@ async function fetchJson<T>(
       }
       logDiag(`${tag}:shape`, lastUpstreamDiag)
     } catch (e) {
-      lastUpstreamDiag = {
+      setDiag(sk, {
         ...diag,
         ok: false,
         kind: 'parse_error',
@@ -324,12 +336,12 @@ async function scanArray(url: string, onRow: (row: Record<string, unknown>) => b
     res = attempt.res
   }
   if (!res) {
-    lastUpstreamDiag = diag
+    setDiag(sk, diag
     return
   }
 
   if (!res.body) {
-    lastUpstreamDiag = { ...diag, ok: false, kind: 'parse_error', message: 'Upstream returned an empty body' }
+    setDiag(sk, { ...diag, ok: false, kind: 'parse_error', message: 'Upstream returned an empty body' }
     logDiag('scanArray:empty', lastUpstreamDiag)
     return
   }
@@ -370,7 +382,7 @@ async function scanArray(url: string, onRow: (row: Record<string, unknown>) => b
     }
   } catch (e) {
     const { kind, message } = classifyError(e)
-    lastUpstreamDiag = { ...diag, ok: false, kind, message: `Stream aborted while reading: ${message}` }
+    setDiag(sk, { ...diag, ok: false, kind, message: `Stream aborted while reading: ${message}` }
     logDiag('scanArray:stream', lastUpstreamDiag)
   }
 
@@ -403,12 +415,12 @@ async function xtreamLogin(api: string): Promise<void> {
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
-      lastUpstreamDiag = diag
+      setDiag(sk, diag
       continue
     }
     const text = await res.text().catch(() => '')
     if (isHtmlBlock(res.headers.get('content-type'), text)) {
-      lastUpstreamDiag = {
+      setDiag(sk, {
         ...diag,
         ok: false,
         kind: 'http_error',
@@ -647,14 +659,14 @@ async function getSeriesInfo(api: string, seriesId: string) {
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
-      lastUpstreamDiag = diag
+      setDiag(sk, diag
       continue
     }
     let text = ''
     try {
       text = await res.text()
       if (isHtmlBlock(res.headers.get('content-type'), text)) {
-        lastUpstreamDiag = {
+        setDiag(sk, {
           ...diag,
           ok: false,
           kind: 'http_error',
@@ -668,7 +680,7 @@ async function getSeriesInfo(api: string, seriesId: string) {
       if (json && typeof json === 'object') data = json as Record<string, unknown>
     } catch (e) {
 
-      lastUpstreamDiag = {
+      setDiag(sk, {
         ...diag,
         ok: false,
         kind: 'parse_error',
