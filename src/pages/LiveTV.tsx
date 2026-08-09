@@ -28,6 +28,7 @@ import { SeriesDetail } from '@/components/livetv/SeriesDetail';
 import { useProviderHealth } from '@/hooks/useIptvHealth';
 import { useLiveTvSources } from '@/components/livetv/LiveTvGate';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { useIncrementalList } from '@/hooks/useVirtualList';
 
 
 function tabOf(category: IptvCategory): LiveTab {
