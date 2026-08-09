@@ -631,16 +631,23 @@ export function IptvSourceManager({
                 <p
                   dir="ltr"
                   className={`text-[10px] font-bold ${
-                    rowTest[s.id].ok ? 'text-emerald-400' : 'text-rose-400'
+                    rowTest[s.id].ok
+                      ? 'text-emerald-400'
+                      : rowTest[s.id].errorKind === 'empty_catalogue'
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
                   }`}
                 >
                   {rowTest[s.id].ok
                     ? `Stream OK · ${rowTest[s.id].latency_ms ?? '—'} ms`
-                    : `${rowTest[s.id].errorKind ?? 'error'}${
-                        rowTest[s.id].status ? ` · ${rowTest[s.id].status}` : ''
-                      }${rowTest[s.id].message ? ` — ${rowTest[s.id].message}` : ''}`}
+                    : rowTest[s.id].errorKind === 'empty_catalogue'
+                      ? `Reachable · ${rowTest[s.id].message ?? 'empty category'}`
+                      : `${rowTest[s.id].errorKind ?? 'error'}${
+                          rowTest[s.id].status ? ` · ${rowTest[s.id].status}` : ''
+                        }${rowTest[s.id].message ? ` — ${rowTest[s.id].message}` : ''}`}
                 </p>
               )}
+
               <div className="flex flex-wrap gap-1.5 pt-1">
                 <button
                   type="button"
