@@ -273,31 +273,40 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
         )}
 
         {error && (
-          <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
+          <div className="mx-auto flex max-w-lg flex-col items-center justify-center gap-3 px-6 py-24 text-center">
             <AlertTriangle className="h-7 w-7 text-[#ff2d6f]" />
             <p className="text-sm font-bold">Playlist could not be loaded</p>
             <p className="text-xs text-white/45">{(error as Error).message}</p>
+            <IptvDiagnosticPanel
+              className="w-full"
+              reqId={(error as IptvRequestError).reqId}
+              diagnostic={(error as IptvRequestError).diagnostic}
+            />
           </div>
         )}
 
         {!error && index?.warning && (
-          <div className="mb-4 flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-4 text-white/70">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#ff2d6f]" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white">Provider catalogue unavailable</p>
-              <p className="mt-1 text-xs leading-relaxed text-white/50">{index.warning}</p>
+          <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.04] p-4 text-white/70">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#ff2d6f]" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-white">Provider catalogue unavailable</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/50">{index.warning}</p>
+              </div>
+              <button
+                type="button"
+                onClick={doRefresh}
+                disabled={refreshing}
+                className="shrink-0 rounded-lg border border-white/10 p-2 text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                aria-label="Retry playlist"
+              >
+                <RotateCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={doRefresh}
-              disabled={refreshing}
-              className="shrink-0 rounded-lg border border-white/10 p-2 text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
-              aria-label="Retry playlist"
-            >
-              <RotateCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
+            <IptvDiagnosticPanel className="mt-3" reqId={index.reqId} diagnostic={index.diagnostic} />
           </div>
         )}
+
 
         {searching ? (
           <section>
