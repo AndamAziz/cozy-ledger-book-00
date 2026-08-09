@@ -373,7 +373,7 @@ export function LiveTVPlayer({
       }
     };
 
-  }, [channel.id, channel.kind, channel.ext, engines, stage, attempt]);
+  }, [channel.id, channel.kind, channel.ext, engines, stage, attempt, reload]);
 
 
 
@@ -887,6 +887,7 @@ export function LiveTVPlayer({
                     setError(false);
                     setStage(0);
                     setAttempt(0);
+                    setReload((r) => r + 1);
                   }}
 
                   className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
