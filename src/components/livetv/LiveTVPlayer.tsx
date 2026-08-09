@@ -874,14 +874,18 @@ export function LiveTVPlayer({
                 This channel is not responding
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                The source may be unavailable right now. Retry, or pick another channel.
+                We tried {MAX_STREAM_RETRIES} times without luck. Please try again in a moment,
+                or pick another channel.
               </p>
               <div className="mt-4 flex justify-center gap-2">
                 <button
                   onClick={() => {
+                    setRetrying(false);
+                    setError(false);
                     setStage(0);
-                    setAttempt((a) => a + 1);
+                    setAttempt(0);
                   }}
+
                   className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
                   style={{ background: '#ff2d6f' }}
                 >
