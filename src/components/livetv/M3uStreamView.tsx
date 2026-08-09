@@ -393,32 +393,44 @@ export default function M3uStreamView({
           <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             {T.upNext} · {channels.length}
           </p>
-          <div className="space-y-1.5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pe-1">
-
-            {list.length === 0 && (
+          {/* Virtualised list: only the rows in view exist in the DOM. */}
+          <div
+            ref={rows.scrollRef}
+            className="max-h-[52vh] min-h-[220px] overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1 lg:pe-1"
+          >
+            {list.length === 0 ? (
               <p className="py-6 text-center text-xs text-muted-foreground">{T.none}</p>
-            )}
-            {list.map((c, i) => (
-              <button
-                key={`${c.url}-${i}`}
-                type="button"
-                onClick={() => handleSelect(c)}
-                className={`flex w-full items-center gap-2.5 rounded-lg border p-2 text-start transition ${
-                  c.url === channel.url
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border/50 bg-card hover:border-primary/40'
-                }`}
-              >
-                <ChannelLogo name={c.name} logo={c.logo} />
+            ) : (
+              <div style={rows.spacerStyle}>
+                <div style={rows.offsetStyle}>
+                  {list.slice(rows.start, rows.end).map((c, i) => {
+                    const index = rows.start + i;
+                    return (
+                      <button
+                        key={`${c.url}-${index}`}
+                        type="button"
+                        onClick={() => handleSelect(c)}
+                        style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
+                        className={`flex w-full items-center gap-2.5 rounded-lg border p-2 text-start transition ${
+                          c.url === channel.url
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border/50 bg-card hover:border-primary/40'
+                        }`}
+                      >
+                        <ChannelLogo name={c.name} logo={c.logo} />
 
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-bold">{c.name}</span>
-                </span>
-                <span className="flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md bg-muted px-1 text-[10px] font-bold text-muted-foreground">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-              </button>
-            ))}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-bold">{c.name}</span>
+                        </span>
+                        <span className="flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md bg-muted px-1 text-[10px] font-bold text-muted-foreground">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
