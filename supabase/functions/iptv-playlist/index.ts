@@ -591,7 +591,20 @@ async function buildIndex(source: string) {
           if (prefix && prefix.length <= 24) tally.set(prefix, (tally.get(prefix) ?? 0) + 1)
         }
         const best = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]
-        categories.push({ id, name: best && best[1] > 1 ? best[0] : 'Live', count, kind: 'live' })
+        let name = best && best[1] > 1 ? best[0] : 'Live'
+        // Providers often split one prefix over several groups (BEIN ×5); add the
+        // most common word after the separator so the tabs stay distinguishable.
+        if (categories.some((c) => c.kind === 'live' && c.name === name)) {
+          const words = new Map<string, number>()
+          for (const i of items) {
+            if (i.categoryId !== id) continue
+            const rest = i.name.split(/[▎|]/).slice(1).join(' ').trim().split(/\s+/)[0]
+            if (rest) words.set(rest, (words.get(rest) ?? 0) + 1)
+          }
+          const w = [...words.entries()].sort((a, b) => b[1] - a[1])[0]
+          if (w) name = `${name} ▎${w[0]}`
+        }
+        categories.push({ id, name, count, kind: 'live' })
       }
       for (const c of categories) {
         if (c.kind === 'live') c.count = counts.get(c.id) ?? 0
