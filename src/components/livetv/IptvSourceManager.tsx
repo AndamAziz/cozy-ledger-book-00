@@ -99,13 +99,22 @@ const call = async (body: Record<string, unknown>) => {
 };
 
 function Diagnostics({ result }: { result: TestResult }) {
-  const rows = [
+  const rows: [string, string][] = [
     ['Connection', result.ok ? 'Online' : 'Failed'],
     ['Type', (result.kind ?? '—').toUpperCase()],
-    ['Channels', result.channels != null ? String(result.channels) : '—'],
+    ['Live channels', result.live ?? result.channels != null ? String(result.live ?? result.channels) : '—'],
+  ];
+  if (result.vod != null) rows.push(['Movies (VOD)', String(result.vod)]);
+  if (result.series != null) rows.push(['Series', String(result.series)]);
+  if (result.online != null) rows.push(['Online channels', String(result.online)]);
+  if (result.sample_tested) {
+    rows.push(['Playback sample', `${result.sample_online ?? 0}/${result.sample_tested} playing`]);
+  }
+  rows.push(
     ['Response time', result.latency_ms != null ? `${result.latency_ms} ms` : '—'],
     ['Stream compatibility', result.ok ? (result.compatible ? 'Playable' : 'Unknown') : '—'],
-  ];
+  );
+
   return (
     <div
       className={`space-y-1 rounded-xl border p-3 text-[11px] ${
