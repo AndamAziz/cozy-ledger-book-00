@@ -810,6 +810,9 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          health_checked_at: string | null
+          health_message: string | null
+          health_status: string | null
           id: string
           is_active: boolean
           kind: string
@@ -823,6 +826,9 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          health_checked_at?: string | null
+          health_message?: string | null
+          health_status?: string | null
           id?: string
           is_active?: boolean
           kind?: string
@@ -836,6 +842,9 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          health_checked_at?: string | null
+          health_message?: string | null
+          health_status?: string | null
           id?: string
           is_active?: boolean
           kind?: string
