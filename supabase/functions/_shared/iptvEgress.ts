@@ -103,6 +103,22 @@ export function relayState() {
 const direct = (target: string, init: RequestInit) => fetch(target, { ...init, redirect: 'follow' })
 
 /**
+ * Sequential request gate.
+ *
+ * The provider account allows a single simultaneous connection, so catalogue /
+ * metadata hops are serialised per instance: they run one after another instead
+ * of in parallel. Media requests (`stream: true`) bypass the gate — they are the
+ * playback itself and are already single-slot by design.
+ */
+let gate: Promise<unknown> = Promise.resolve()
+function serialise<T>(task: () => Promise<T>): Promise<T> {
+  const run = gate.then(task, task)
+  gate = run.then(() => undefined, () => undefined)
+  return run
+}
+
+
+/**
  * Fetch an upstream IPTV URL through the relay (or directly when no relay is
  * configured / the breaker is open). The response body is NOT buffered —
  * callers stream it.
