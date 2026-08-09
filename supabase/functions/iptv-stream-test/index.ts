@@ -103,42 +103,104 @@ Deno.serve(async (req) => {
   // --- Xtream: resolve a live stream id, then probe the stream URL ----------
   const { host, protocol, username, password } = parseXtream(playlist)
   const api = `${protocol}//${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-  const category = typeof body.categoryId === 'string' && body.categoryId ? body.categoryId : DEFAULT_CATEGORY
+  const requestedCategory = typeof body.categoryId === 'string' && body.categoryId ? body.categoryId : ''
 
-  let streamId = typeof body.streamId === 'string' ? body.streamId : ''
-  if (!streamId) {
-    const listUrl = `${api}&action=get_live_streams&category_id=${encodeURIComponent(category)}`
+  /** First stream_id in a category, or '' when the category is genuinely empty. */
+  const firstStreamOf = async (categoryId: string) => {
+    const listUrl = `${api}&action=get_live_streams&category_id=${encodeURIComponent(categoryId)}`
     const { res, diag } = await diagFetchRaw('stream-test:list', listUrl, {
       timeoutMs: TIMEOUT_MS,
       headers,
       onDiag: capture,
     })
-    if (!res || !res.ok) return fail(diag, listUrl)
-    // Parsing is guarded separately from the fetch itself.
+    if (!res || !res.ok) return { error: fail(diag, listUrl) }
     try {
       const arr = await res.json()
-      streamId = String((Array.isArray(arr) ? arr[0]?.stream_id : '') ?? '')
+      return { id: String((Array.isArray(arr) ? arr[0]?.stream_id : '') ?? '') }
     } catch (e) {
-      return json({
-        ok: false,
-        errorKind: 'parse_error',
-        status: diag.status,
-        latency_ms: diag.durationMs,
-        message: e instanceof Error ? e.message : 'Invalid JSON from provider',
-        url: redactUrl(listUrl),
-      })
+      return {
+        error: json({
+          ok: false,
+          errorKind: 'parse_error',
+          status: diag.status,
+          latency_ms: diag.durationMs,
+          message: e instanceof Error ? e.message : 'Invalid JSON from provider',
+          url: redactUrl(listUrl),
+        }),
+      }
     }
+  }
+
+  let streamId = typeof body.streamId === 'string' ? body.streamId : ''
+  let probedCategory = requestedCategory
+  if (!streamId) {
+    // Category ids differ per panel — never assume a fixed one. Discover the
+    // real list and walk it until a category actually holds channels; empty
+    // categories are normal upstream and must not fail the source.
+    const candidates: string[] = requestedCategory ? [requestedCategory] : []
+    if (!requestedCategory) {
+      const catUrl = `${api}&action=get_live_categories`
+      const { res, diag } = await diagFetchRaw('stream-test:categories', catUrl, {
+        timeoutMs: TIMEOUT_MS,
+        headers,
+        onDiag: capture,
+      })
+      if (!res || !res.ok) return fail(diag, catUrl)
+      try {
+        const arr = await res.json()
+        if (Array.isArray(arr)) {
+          for (const c of arr) {
+            const id = String((c as { category_id?: unknown })?.category_id ?? '')
+            if (id) candidates.push(id)
+          }
+        }
+      } catch (e) {
+        return json({
+          ok: false,
+          errorKind: 'parse_error',
+          status: diag.status,
+          latency_ms: diag.durationMs,
+          message: e instanceof Error ? e.message : 'Invalid JSON from provider',
+          url: redactUrl(catUrl),
+        })
+      }
+      if (!candidates.length) {
+        return json({
+          ok: false,
+          errorKind: 'empty_catalogue',
+          status: diag.status,
+          latency_ms: diag.durationMs,
+          message: 'Provider returned no live categories',
+          url: redactUrl(catUrl),
+        })
+      }
+    }
+
+    let emptyCategories = 0
+    for (const candidate of candidates.slice(0, 8)) {
+      const result = await firstStreamOf(candidate)
+      if (result.error) return result.error
+      if (result.id) {
+        streamId = result.id
+        probedCategory = candidate
+        break
+      }
+      emptyCategories += 1
+    }
+
     if (!streamId) {
       return json({
         ok: false,
-        errorKind: 'parse_error',
-        status: diag.status,
-        latency_ms: diag.durationMs,
-        message: `No channels in category ${category}`,
-        url: redactUrl(listUrl),
+        errorKind: 'empty_catalogue',
+        status: 200,
+        message: requestedCategory
+          ? `Category ${requestedCategory} is empty on this provider`
+          : `No channels found in the first ${emptyCategories} categories`,
+        url: redactUrl(api),
       })
     }
   }
+
 
   const target = `${protocol}//${host}/live/${encodeURIComponent(username)}/${encodeURIComponent(password)}/${streamId}.ts`
   const { res, diag } = await diagFetchRaw('stream-test:live', target, {
