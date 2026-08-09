@@ -65,16 +65,12 @@ export const SplashScreen = ({ timedOut = false, onRetry }: SplashScreenProps) =
           </div>
 
           {/* Logo */}
-          <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto animate-scale-in">
-            <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary via-primary to-success shadow-2xl shadow-primary/40 animate-pulse"
-                 style={{ animationDuration: '2s' }} />
-            <div className="absolute inset-1 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary to-success flex items-center justify-center overflow-hidden">
-              <img 
-                src="/logo.png" 
-                alt="ANDAM logo" 
-                className="w-16 h-16 sm:w-24 sm:h-24 object-contain drop-shadow-lg"
-              />
-            </div>
+          <div className="relative w-28 h-28 sm:w-36 sm:h-36 mx-auto animate-scale-in">
+            <img
+              src="/logo-mark.png"
+              alt="ANDAM logo"
+              className="w-full h-full object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+            />
           </div>
         </div>
 

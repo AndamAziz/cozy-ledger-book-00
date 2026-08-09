@@ -49,11 +49,11 @@ export function Header({ currentMonthKey, currentMonthLabel, onMonthChange, onLo
         {companyName && (
           <div className="flex items-center justify-center gap-2 py-2 px-3 bg-gradient-to-r from-primary/15 via-primary/10 to-primary/15 border-b border-primary/15">
             <img
-              src="/logo.png"
+              src="/logo-mark.png"
               alt="ANDAM logo"
               width={32}
               height={32}
-              className="h-5 w-5 sm:h-6 sm:w-6 rounded-md object-cover flex-shrink-0"
+              className="h-6 w-6 sm:h-7 sm:w-7 object-contain flex-shrink-0"
             />
             <span className="text-xs sm:text-sm md:text-base font-bold text-primary truncate">{companyName}</span>
           </div>
