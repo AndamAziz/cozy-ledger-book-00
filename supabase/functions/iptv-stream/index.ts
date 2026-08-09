@@ -21,7 +21,7 @@ const cors: Record<string, string> = {
   'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
 }
 
-const UA = 'VLC/3.0.20 LibVLC/3.0.20'
+import { IPTV_USER_AGENTS, isHtmlBlock } from '../_shared/iptvFetch.ts'
 
 const SELF = (req: Request) =>
   `${(Deno.env.get('SUPABASE_URL') || new URL(req.url).origin).replace(/\/$/, '')}/functions/v1/iptv-stream`
@@ -154,13 +154,14 @@ Deno.serve(async (req) => {
 
   const range = req.headers.get('range')
   const custom = decodeHeaderBag(hRaw)
-  const headers: Record<string, string> = {
-    'User-Agent': UA,
+  const baseHeaders: Record<string, string> = {
     Accept: '*/*',
     ...custom,
     ...(range ? { Range: range } : {}),
   }
-
+  // A playlist-declared User-Agent wins; otherwise rotate through the player
+  // UAs so a panel that filters one client still serves the stream.
+  const uaList = custom['User-Agent'] ? [custom['User-Agent']] : IPTV_USER_AGENTS
 
   let upstream: Response | null = null
   let lastError = 'fetch failed'
@@ -169,42 +170,58 @@ Deno.serve(async (req) => {
     // fallback for hosts that block Supabase egress — VOD files are often served
     // from a different, stricter host than the live edge.
     for (const via of ['direct', 'relay'] as const) {
-      try {
-        const res =
-          via === 'direct'
-            ? await fetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(20_000) })
-            : await egressFetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(25_000) })
-        if (res.ok || res.status === 206) {
-          // Some providers answer 200 with an HTML/text error page for dead
-          // channels. Verify manifests really are manifests before committing,
-          // otherwise fall through to the next candidate (raw TS).
-          const ctype = res.headers.get('content-type') || ''
-          const looksManifest =
-            ctype.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(new URL(res.url).pathname)
-          if (looksManifest) {
-            const text = await res.text()
-            if (!text.trimStart().startsWith('#EXTM3U')) {
-              lastError = 'invalid manifest'
+      for (const ua of uaList) {
+        const headers = { ...baseHeaders, 'User-Agent': ua }
+        try {
+          const res =
+            via === 'direct'
+              ? await fetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(20_000) })
+              : await egressFetch(target, { headers, redirect: 'follow', signal: AbortSignal.timeout(25_000) })
+          if (res.ok || res.status === 206) {
+            const ctype = res.headers.get('content-type') || ''
+            // A WAF / panel block page arrives as HTML, sometimes with HTTP 200:
+            // never hand that to the player — retry with the next UA.
+            if (isHtmlBlock(ctype)) {
+              await res.body?.cancel().catch(() => undefined)
+              lastError = 'provider returned a block page (HTML)'
               continue
             }
-            upstream = new Response(text, {
-              status: 200,
-              headers: { 'Content-Type': 'application/vnd.apple.mpegurl' },
-            })
-            Object.defineProperty(upstream, 'url', { value: res.url })
+            // Some providers answer 200 with a text error page for dead
+            // channels. Verify manifests really are manifests before committing,
+            // otherwise fall through to the next candidate (raw TS).
+            const looksManifest =
+              ctype.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(new URL(res.url).pathname)
+            if (looksManifest) {
+              const text = await res.text()
+              if (isHtmlBlock(null, text)) {
+                lastError = 'provider returned a block page (HTML)'
+                continue
+              }
+              if (!text.trimStart().startsWith('#EXTM3U')) {
+                lastError = 'invalid manifest'
+                continue
+              }
+              upstream = new Response(text, {
+                status: 200,
+                headers: { 'Content-Type': 'application/vnd.apple.mpegurl' },
+              })
+              Object.defineProperty(upstream, 'url', { value: res.url })
+              break
+            }
+            upstream = res
             break
           }
-          upstream = res
-          break
+          lastError = `HTTP ${res.status}`
+          await res.body?.cancel().catch(() => undefined)
+        } catch (e) {
+          lastError = e instanceof Error ? e.message : 'fetch failed'
         }
-        lastError = `HTTP ${res.status}`
-        await res.body?.cancel().catch(() => undefined)
-      } catch (e) {
-        lastError = e instanceof Error ? e.message : 'fetch failed'
       }
+      if (upstream) break
     }
     if (upstream) break
   }
+
 
   if (!upstream) {
     console.error(

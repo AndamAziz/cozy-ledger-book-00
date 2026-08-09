@@ -1,10 +1,10 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { parseXtream, isXtreamUrl, getM3U, type M3uEntry } from '../_shared/iptvConfig.ts'
+import { parseXtream, isXtreamUrl, getM3U, xtreamApiBase, type M3uEntry } from '../_shared/iptvConfig.ts'
 import { resolveViewer } from '../_shared/iptvViewer.ts'
 import { classifyError, diagFetch, logDiag, type UpstreamDiag } from '../_shared/iptvDiag.ts'
+import { isHtmlBlock, uaFor, IPTV_USER_AGENTS } from '../_shared/iptvFetch.ts'
 
 
-const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 /** Last upstream failure seen while serving the current request (per isolate). */
 let lastUpstreamDiag: UpstreamDiag | null = null
 
@@ -40,10 +40,9 @@ const indexCache = new Map<string, IndexSnapshot>()
 const indexLoading = new Map<string, Promise<IndexSnapshot>>()
 const INDEX_MAX = 8
 
-function apiBase(raw: string) {
-  const { protocol, host, username, password } = parseXtream(raw)
-  return `${protocol}//${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-}
+/** Canonical `player_api.php` base (protocol/port corrected in iptvConfig). */
+const apiBase = (raw: string) => xtreamApiBase(raw)
+
 
 /** Pick the first usable artwork field an Xtream/M3U payload may expose. */
 function pickLogo(row: Record<string, unknown>): string | null {
@@ -86,12 +85,19 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
  * failed (timeout / error / non-array body) — an empty array is a valid answer.
  * Slow Xtream servers are common, so each call gets a retry with more headroom.
  */
-async function fetchJson<T>(url: string, timeoutMs = 15000, attempts = 2, tag = 'fetchJson'): Promise<T | null> {
+async function fetchJson<T>(
+  url: string,
+  timeoutMs = 15000,
+  attempts = IPTV_USER_AGENTS.length,
+  tag = 'fetchJson',
+): Promise<T | null> {
   for (let i = 0; i < attempts; i++) {
+    // Each attempt uses a different player User-Agent: panels behind a WAF
+    // reject some clients outright (403 or an HTML block page).
     const { res, diag } = await diagFetch(tag, url, {
       timeoutMs: timeoutMs * (i + 1),
       attempt: i + 1,
-      headers: { 'User-Agent': UA },
+      headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
       lastUpstreamDiag = diag
@@ -106,6 +112,18 @@ async function fetchJson<T>(url: string, timeoutMs = 15000, attempts = 2, tag = 
       logDiag(`${tag}:read`, lastUpstreamDiag)
       continue
     }
+    if (isHtmlBlock(res.headers.get('content-type'), text)) {
+      lastUpstreamDiag = {
+        ...diag,
+        ok: false,
+        kind: 'http_error',
+        bodySnippet: text.slice(0, 500),
+        message: 'Provider answered a block page (HTML) instead of data',
+      }
+      logDiag(`${tag}:blocked`, lastUpstreamDiag)
+      continue
+    }
+
     try {
       const json = JSON.parse(text)
       if (Array.isArray(json)) return json as T
@@ -141,14 +159,35 @@ async function fetchJson<T>(url: string, timeoutMs = 15000, attempts = 2, tag = 
 async function scanArray(url: string, onRow: (row: Record<string, unknown>) => boolean) {
   const deadline = Date.now() + 20_000
   // Streaming read: keep the body, so no snippet is consumed on success.
-  const { res, diag } = await diagFetch('scanArray', url, {
-    timeoutMs: 15_000,
-    headers: { 'User-Agent': UA },
-  })
+  // Rotate the player User-Agent until the provider answers with real data
+  // instead of a 403 / HTML block page.
+  let res: Response | null = null
+  let diag: UpstreamDiag | null = null
+  for (let i = 0; i < IPTV_USER_AGENTS.length && !res; i++) {
+    const attempt = await diagFetch('scanArray', url, {
+      timeoutMs: 15_000,
+      attempt: i + 1,
+      headers: { 'User-Agent': uaFor(i) },
+    })
+    diag = attempt.diag
+    if (attempt.res && isHtmlBlock(attempt.res.headers.get('content-type'))) {
+      await attempt.res.body?.cancel().catch(() => {})
+      diag = {
+        ...attempt.diag,
+        ok: false,
+        kind: 'http_error',
+        message: 'Provider answered a block page (HTML) instead of data',
+      }
+      logDiag('scanArray:blocked', diag)
+      continue
+    }
+    res = attempt.res
+  }
   if (!res) {
     lastUpstreamDiag = diag
     return
   }
+
   if (!res.body) {
     lastUpstreamDiag = { ...diag, ok: false, kind: 'parse_error', message: 'Upstream returned an empty body' }
     logDiag('scanArray:empty', lastUpstreamDiag)
@@ -216,21 +255,37 @@ const ACTIONS: Record<Kind, [string, string]> = {
  * (the catalogue calls retry anyway); only an explicit auth rejection is.
  */
 async function xtreamLogin(api: string): Promise<void> {
-  const { res, diag } = await diagFetch('login', api, {
-    timeoutMs: 15_000,
-    headers: { 'User-Agent': UA },
-  })
-  if (!res) {
-    lastUpstreamDiag = diag
-    return
-  }
   let info: Record<string, unknown> | null = null
-  try {
-    const json = JSON.parse(await res.text())
-    info = (json?.user_info ?? null) as Record<string, unknown> | null
-  } catch {
-    return
+  for (let i = 0; i < IPTV_USER_AGENTS.length && !info; i++) {
+    const { res, diag } = await diagFetch('login', api, {
+      timeoutMs: 15_000,
+      attempt: i + 1,
+      headers: { 'User-Agent': uaFor(i) },
+    })
+    if (!res) {
+      lastUpstreamDiag = diag
+      continue
+    }
+    const text = await res.text().catch(() => '')
+    if (isHtmlBlock(res.headers.get('content-type'), text)) {
+      lastUpstreamDiag = {
+        ...diag,
+        ok: false,
+        kind: 'http_error',
+        bodySnippet: text.slice(0, 500),
+        message: 'Provider answered a block page (HTML) instead of data',
+      }
+      logDiag('login:blocked', lastUpstreamDiag)
+      continue
+    }
+    try {
+      const json = JSON.parse(text)
+      info = (json?.user_info ?? null) as Record<string, unknown> | null
+    } catch {
+      return
+    }
   }
+
   if (!info) return
   const status = String(info.status ?? '').toLowerCase()
   const auth = Number(info.auth ?? 1)
@@ -399,11 +454,11 @@ interface EpisodeOut {
 async function getSeriesInfo(api: string, seriesId: string) {
   const url = `${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
   let data: Record<string, unknown> | null = null
-  for (let i = 0; i < 2 && !data; i++) {
+  for (let i = 0; i < IPTV_USER_AGENTS.length && !data; i++) {
     const { res, diag } = await diagFetch('getSeriesInfo', url, {
       timeoutMs: 15000 * (i + 1),
       attempt: i + 1,
-      headers: { 'User-Agent': UA },
+      headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
       lastUpstreamDiag = diag
@@ -412,9 +467,21 @@ async function getSeriesInfo(api: string, seriesId: string) {
     let text = ''
     try {
       text = await res.text()
+      if (isHtmlBlock(res.headers.get('content-type'), text)) {
+        lastUpstreamDiag = {
+          ...diag,
+          ok: false,
+          kind: 'http_error',
+          bodySnippet: text.slice(0, 500),
+          message: 'Provider answered a block page (HTML) instead of data',
+        }
+        logDiag('getSeriesInfo:blocked', lastUpstreamDiag)
+        continue
+      }
       const json = JSON.parse(text)
       if (json && typeof json === 'object') data = json as Record<string, unknown>
     } catch (e) {
+
       lastUpstreamDiag = {
         ...diag,
         ok: false,

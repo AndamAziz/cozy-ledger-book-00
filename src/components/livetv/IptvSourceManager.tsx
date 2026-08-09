@@ -36,8 +36,13 @@ export interface IptvSource {
   playlist_masked: string;
   is_active: boolean;
   last_test: TestResult | null;
+  /** Live verdict written by every automatic provider health check. */
+  health_status?: 'online' | 'slot_limit' | 'offline' | null;
+  health_message?: string | null;
+  health_checked_at?: string | null;
   updated_at: string;
 }
+
 
 interface RowTestResult {
   ok: boolean;
@@ -581,12 +586,30 @@ export function IptvSourceManager({
               <p dir="ltr" className="truncate text-[10px] opacity-50">
                 {s.playlist_masked}
               </p>
+              {s.health_status && (
+                <p
+                  className={`text-[10px] font-extrabold ${
+                    s.health_status === 'online'
+                      ? 'text-emerald-400'
+                      : s.health_status === 'slot_limit'
+                        ? 'text-amber-400'
+                        : 'text-rose-400'
+                  }`}
+                >
+                  {s.health_status === 'online' ? '● ONLINE' : s.health_status === 'slot_limit' ? '● BUSY' : '● OFFLINE'}
+                  {s.health_message ? ` · ${s.health_message}` : ''}
+                  {s.health_checked_at
+                    ? ` · ${new Date(s.health_checked_at).toLocaleTimeString()}`
+                    : ''}
+                </p>
+              )}
               {s.last_test && (
                 <p className="text-[10px] font-bold opacity-70">
                   Last test: {s.last_test.ok ? '✅' : '❌'}{' '}
                   {s.last_test.channels != null ? `${s.last_test.channels} ch · ` : ''}
                   {s.last_test.latency_ms != null ? `${s.last_test.latency_ms} ms` : ''}
                 </p>
+
               )}
               {rowTest[s.id] && (
                 <p

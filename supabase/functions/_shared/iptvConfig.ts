@@ -7,16 +7,34 @@ import { egressFetch } from './iptvEgress.ts'
  */
 
 
+/**
+ * Ports that only ever speak TLS on Xtream panels. A stored link may carry the
+ * wrong scheme (`http://host:2087/…`), which fails the TLS handshake — so the
+ * scheme is corrected from the port before any request is built.
+ */
+const TLS_PORTS = new Set(['443', '2087', '2096', '2083', '8443'])
+
 /** Parse Xtream credentials out of an M3U playlist URL. */
 export function parseXtream(raw: string) {
   const u = new URL(raw)
+  const protocol = TLS_PORTS.has(u.port) ? 'https:' : u.protocol
   return {
     host: u.host,
-    protocol: u.protocol,
+    protocol,
     username: u.searchParams.get('username') ?? '',
     password: u.searchParams.get('password') ?? '',
   }
 }
+
+/**
+ * Canonical Xtream API base for a stored source link — the single place that
+ * builds `player_api.php` URLs (the stored path, e.g. `get.php`, is discarded).
+ */
+export function xtreamApiBase(raw: string): string {
+  const { protocol, host, username, password } = parseXtream(raw)
+  return `${protocol}//${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+}
+
 
 /** True when the link looks like an Xtream Codes API playlist (has username + password). */
 export function isXtreamUrl(raw: string) {

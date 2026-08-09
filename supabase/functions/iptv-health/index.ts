@@ -1,9 +1,10 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { parseXtream, isXtreamUrl } from '../_shared/iptvConfig.ts'
-import { resolveViewer } from '../_shared/iptvViewer.ts'
+import { isXtreamUrl, xtreamApiBase } from '../_shared/iptvConfig.ts'
+import { resolveViewer, serviceClient } from '../_shared/iptvViewer.ts'
+import { maskPlaylistUrl } from '../_shared/iptvCrypto.ts'
 import { egressFetch } from '../_shared/iptvEgress.ts'
+import { relayFetch, xtreamAuthError, IPTV_USER_AGENTS, isHtmlBlock } from '../_shared/iptvFetch.ts'
 
-const UA = 'VLC/3.0.20 LibVLC/3.0.20'
 const TIMEOUT_MS = 6000
 /** Provider health is cheap but not free — reuse a recent result for this long. */
 const CACHE_TTL_MS = 20_000
@@ -22,32 +23,39 @@ interface Health {
 // Health is per provider account, so it is cached per user.
 const cache = new Map<string, { at: number; health: Health }>()
 
-async function timedFetch(url: string, init: RequestInit = {}) {
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
-  try {
-    return await egressFetch(url, {
-      ...init,
-      headers: { 'User-Agent': UA, ...(init.headers ?? {}) },
-      signal: ctrl.signal,
-    })
-  } finally {
-    clearTimeout(timer)
+function base(status: ProviderStatus, message: string): Health {
+  return {
+    status,
+    message,
+    activeConnections: null,
+    maxConnections: null,
+    expiresAt: null,
+    checkedAt: new Date().toISOString(),
   }
 }
 
+/**
+ * Xtream account check.
+ *
+ * The API base (including the correct scheme for TLS-only ports such as 2087)
+ * comes from the same `xtreamApiBase` helper the catalogue uses, and the request
+ * goes through `relayFetch`, which rotates the three player User-Agents and
+ * treats an HTML block page as a failure.
+ */
 async function checkXtream(source: string): Promise<Health> {
-  const { host, username, password } = parseXtream(source)
-  const api = `http://${host}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+  const api = xtreamApiBase(source)
+  const res = await relayFetch(api, { timeoutMs: TIMEOUT_MS })
 
-  const res = await timedFetch(api, { headers: { Accept: 'application/json' } })
   if (!res.ok) {
-    return base('offline', `Provider responded ${res.status}`)
+    return base('offline', res.error ?? `Provider responded ${res.status}`)
+  }
+  if (isHtmlBlock(res.contentType, res.body)) {
+    return base('offline', 'Provider answered a block page (HTML) instead of account data')
   }
 
   let info: Record<string, unknown> = {}
   try {
-    const json = await res.json()
+    const json = JSON.parse(res.body)
     info = (json?.user_info ?? {}) as Record<string, unknown>
   } catch {
     return base('offline', 'Provider returned an unreadable response')
@@ -64,9 +72,10 @@ async function checkXtream(source: string): Promise<Health> {
   const expTs = num(info.exp_date)
   const expiresAt = expTs ? new Date(expTs * 1000).toISOString() : null
 
+  const authProblem = xtreamAuthError(res.body)
   if (!authed || (accStatus && accStatus !== 'active')) {
     return {
-      ...base('offline', accStatus ? `Account ${accStatus}` : 'Provider rejected the credentials'),
+      ...base('offline', authProblem ?? (accStatus ? `Account ${accStatus}` : 'Provider rejected the credentials')),
       activeConnections: active,
       maxConnections: max,
       expiresAt,
@@ -89,22 +98,65 @@ async function checkXtream(source: string): Promise<Health> {
   }
 }
 
+/**
+ * Plain M3U check — a 1 KB ranged read, retried across the player User-Agents.
+ * The body is never buffered (playlists can be tens of MB).
+ */
 async function checkPlainM3U(source: string): Promise<Health> {
-  const res = await timedFetch(source, { headers: { Range: 'bytes=0-1024' } })
-  await res.body?.cancel()
-  if (res.status === 458 || res.status === 429 || res.status === 407) return base('slot_limit', 'Provider connection limit reached')
-  if (!res.ok) return base('offline', `Playlist responded ${res.status}`)
-  return base('online', 'Playlist is reachable')
+  let last: Health = base('offline', 'Playlist unreachable')
+  for (const ua of IPTV_USER_AGENTS) {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
+    try {
+      const res = await egressFetch(source, {
+        headers: { 'User-Agent': ua, Range: 'bytes=0-1024' },
+        signal: ctrl.signal,
+      })
+      const ctype = res.headers.get('content-type')
+      await res.body?.cancel().catch(() => {})
+      if (res.status === 458 || res.status === 429 || res.status === 407) {
+        return base('slot_limit', 'Provider connection limit reached')
+      }
+      if (res.ok && isHtmlBlock(ctype)) {
+        last = base('offline', 'Playlist host answered a block page (HTML)')
+        continue
+      }
+      if (!res.ok) {
+        last = base('offline', `Playlist responded ${res.status}`)
+        continue
+      }
+      return base('online', 'Playlist is reachable')
+    } catch (e) {
+      last = base(
+        'offline',
+        e instanceof Error && e.name === 'AbortError' ? 'Playlist timed out' : 'Playlist unreachable',
+      )
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+  return last
 }
 
-function base(status: ProviderStatus, message: string): Health {
-  return {
-    status,
-    message,
-    activeConnections: null,
-    maxConnections: null,
-    expiresAt: null,
-    checkedAt: new Date().toISOString(),
+/**
+ * Persist the verdict on the matching `iptv_sources` row so the admin panel
+ * shows live status without anyone pressing "Test". Matching is done on the
+ * masked URL, so a source assigned to another user is updated too.
+ */
+async function persistHealth(playlistUrl: string, health: Health) {
+  const masked = maskPlaylistUrl(playlistUrl)
+  if (!masked) return
+  try {
+    await serviceClient()
+      .from('iptv_sources')
+      .update({
+        health_status: health.status,
+        health_message: health.message,
+        health_checked_at: health.checkedAt,
+      })
+      .eq('playlist_masked', masked)
+  } catch (e) {
+    console.error('[iptv-health] persist failed', e instanceof Error ? e.message : e)
   }
 }
 
@@ -139,5 +191,6 @@ Deno.serve(async (req) => {
 
   cache.set(resolved.viewer.userId, { at: Date.now(), health })
   if (cache.size > 500) cache.delete(cache.keys().next().value as string)
+  await persistHealth(source, health)
   return json({ ...health, cached: false })
 })
