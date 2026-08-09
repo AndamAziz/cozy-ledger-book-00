@@ -7,9 +7,12 @@ import { relayFetch, xtreamAuthError } from '../_shared/iptvFetch.ts'
 // time to download — a short deadline reported a false "Connection timed out".
 const TIMEOUT_MS = 30_000
 /** Xtream catalogue actions return multi-MB JSON — give them room. */
-const CATALOGUE_TIMEOUT_MS = 60_000
+const CATALOGUE_TIMEOUT_MS = 45_000
+/** After this much elapsed time the optional VOD/series counts are skipped. */
+const BUDGET_MS = 18_000
 /** Short deadline for the tiny sample playback probes. */
 const PROBE_TIMEOUT_MS = 8_000
+
 
 
 Deno.serve(async (req) => {
