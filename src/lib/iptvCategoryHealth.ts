@@ -82,6 +82,10 @@ async function run() {
   running = true;
   try {
     while (queue.length) {
+      // Never compete with the user: every step waits for an idle slot, and the
+      // whole sweep pauses while the tab is in the background.
+      if (tabHidden()) break;
+      await idle();
       const id = queue.shift()!;
       const urls = (samples.get(id) ?? []).slice(0, CATEGORY_SAMPLE);
       if (!urls.length) continue;
@@ -89,6 +93,7 @@ async function run() {
       let online = 0;
       for (const url of urls) {
         if (await probe(url)) online += 1;
+        await idle();
       }
       set(id, { online, total: urls.length, checkedAt: new Date().toISOString(), checking: false });
     }
@@ -100,7 +105,8 @@ async function run() {
 function enqueue(id: string) {
   if (queue.includes(id) || getCategoryHealth(id).checking) return;
   queue.push(id);
-  void run();
+  // Kick the worker off the render path — probes must never delay a paint.
+  onIdle(() => void run(), 1000);
 }
 
 /** Register (or update) the sample of channel URLs representing a category. */
