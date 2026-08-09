@@ -130,7 +130,7 @@ function serialise<T>(task: () => Promise<T>): Promise<T> {
 export async function egressFetch(
   target: string,
   init: RequestInit = {},
-  opts: { direct?: boolean; stream?: boolean } = {},
+  opts: { direct?: boolean; stream?: boolean; relayTimeoutMs?: number } = {},
 ): Promise<Response> {
   // Catalogue/metadata hops are queued so the provider never sees a burst.
   if (!opts.stream) return await serialise(() => egressHop(target, init, opts))
@@ -140,7 +140,7 @@ export async function egressFetch(
 async function egressHop(
   target: string,
   init: RequestInit,
-  opts: { direct?: boolean; stream?: boolean },
+  opts: { direct?: boolean; stream?: boolean; relayTimeoutMs?: number },
 ): Promise<Response> {
   if (opts.direct || !hasEgressProxy()) return await direct(target, init)
   if (Date.now() < relayDownUntil) return await direct(target, init)
@@ -148,6 +148,9 @@ async function egressHop(
   try {
     // A crashed//hung relay must not consume the caller's whole deadline: race
     // the hop against a short timer and fall back to direct on expiry.
+    // Heavy catalogue payloads (get_live_streams can be several MB) need a
+    // longer allowance, which callers pass via `relayTimeoutMs`.
+    const hopTimeout = Math.max(1_000, opts.relayTimeoutMs ?? RELAY_TIMEOUT_MS)
     const hop = fetch(egressUrl(target), {
       ...init,
       redirect: 'follow',
@@ -155,16 +158,17 @@ async function egressHop(
     })
     let timer: number | undefined
     const timeout = new Promise<'timeout'>((resolve) => {
-      timer = setTimeout(() => resolve('timeout'), RELAY_TIMEOUT_MS)
+      timer = setTimeout(() => resolve('timeout'), hopTimeout)
     })
     const raced = await Promise.race([hop, timeout])
     if (timer !== undefined) clearTimeout(timer)
     if (raced === 'timeout') {
       // Never leak the abandoned hop's body.
       hop.then((r) => r.body?.cancel().catch(() => {})).catch(() => {})
-      tripRelay(`no response within ${RELAY_TIMEOUT_MS}ms`)
+      tripRelay(`no response within ${hopTimeout}ms`)
       return await direct(target, init)
     }
+
     const res = raced as Response
 
     // The relay is up but could not reach the provider (502/504/503): retry the
