@@ -31,12 +31,18 @@ export type RemoteAction =
 const CODE_MAP: Record<number, RemoteAction> = {
   8: 'back', // Backspace — Android TV / Fire TV back
   13: 'ok',
+  23: 'ok', // Android TV / Fire TV DPAD_CENTER
   27: 'back',
+  32: 'ok', // Space — some Android TV browsers report OK as Space
+  33: 'channelUp', // webOS / HbbTV PageUp = CH+
+  34: 'channelDown', // webOS / HbbTV PageDown = CH-
   37: 'left',
   38: 'up',
   39: 'right',
   40: 'down',
   166: 'back', // BrowserBack
+  427: 'channelUp',
+  428: 'channelDown',
   179: 'playPause',
   412: 'rewind',
   413: 'stop',
