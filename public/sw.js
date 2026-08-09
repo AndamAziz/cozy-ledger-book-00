@@ -1,4 +1,4 @@
-const CACHE_NAME = 'central-tech-platform-v4';
+const CACHE_NAME = 'central-tech-platform-v5';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache immediately on install
@@ -11,6 +11,7 @@ const PRECACHE_ASSETS = [
   '/app-icon-192.png',
   '/app-icon-512.png',
   '/favicon.ico',
+  '/logo-mark.png',
   '/apple-touch-icon.png',
   '/favicon-32x32.png',
   '/favicon-16x16.png'
