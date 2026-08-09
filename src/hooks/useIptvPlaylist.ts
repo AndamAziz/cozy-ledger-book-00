@@ -124,8 +124,15 @@ async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${FN_BASE}/${path}`, {
     headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` },
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.error ?? 'Failed to load playlist');
+  const json = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new IptvRequestError(json?.error ?? `Failed to load playlist (HTTP ${res.status})`, {
+      reqId: json?.reqId,
+      errorKind: json?.errorKind,
+      diagnostic: json?.diagnostic ?? null,
+    });
+  }
+
   return json as T;
 }
 
