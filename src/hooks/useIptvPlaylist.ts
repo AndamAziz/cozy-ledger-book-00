@@ -47,6 +47,7 @@ export interface IptvIndex {
   total: number;
   categories: IptvCategory[];
   updatedAt: string;
+  warning?: string;
 }
 
 const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
