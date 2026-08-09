@@ -1050,9 +1050,10 @@ Deno.serve(async (req) => {
         error: e instanceof Error ? e.message : String(e),
         reqId,
         errorKind: upstream?.kind ?? kind,
+        diagnostic: publicDiag(upstream),
         upstream: upstream
           ? {
-              url: upstream.url,
+              url: redactUrl(upstream.url),
               status: upstream.status,
               statusText: upstream.statusText,
               durationMs: upstream.durationMs,
@@ -1062,6 +1063,7 @@ Deno.serve(async (req) => {
       },
       upstream?.kind === 'timeout' ? 504 : 502,
     )
+
   }
 })
 
