@@ -22,6 +22,8 @@ const cors: Record<string, string> = {
 }
 
 import { IPTV_USER_AGENTS, isHtmlBlock, describeFetchError } from '../_shared/iptvFetch.ts'
+import { clearCooldown, cooldownLeft, isRateLimited, markRateLimited } from '../_shared/iptvCooldown.ts'
+import { classifyStatus, classifyTransport, streamError, type StreamError } from '../_shared/iptvErrors.ts'
 
 const SELF = (req: Request) =>
   `${(Deno.env.get('SUPABASE_URL') || new URL(req.url).origin).replace(/\/$/, '')}/functions/v1/iptv-stream`
@@ -200,6 +202,9 @@ Deno.serve(async (req) => {
   }
 
   const deadHosts = new Set<string>()
+  /** Best classified reason so far — shown to the user if nothing plays. */
+  let classified: StreamError | null = null
+  let rateLimited = false
   /** `host|via` pairs the provider geo-blocks — no UA rotation can fix those. */
   const blockedRoutes = new Set<string>()
   let geoBlocked = false
@@ -215,6 +220,14 @@ Deno.serve(async (req) => {
     } catch { /* keep raw */ }
     if (deadHosts.has(hostKey)) continue
     if (blockedRoutes.has(`${hostKey}|${via}`)) continue
+    // Never hammer a panel that just rate-limited us: that is how an egress IP
+    // earns a ban. Park it and report a retryable error instead.
+    if (cooldownLeft(target)) {
+      rateLimited = true
+      classified = streamError('RATE_LIMITED')
+      lastError = 'provider is rate limiting this connection'
+      continue
+    }
 
     const headers = { ...baseHeaders, 'User-Agent': ua }
     // A FRESH signal per attempt — a signal that already fired would abort the
@@ -261,8 +274,22 @@ Deno.serve(async (req) => {
         }
         upstream = res
         upstreamBase = resolvedUrl
+        clearCooldown(target)
         break
       }
+      // 429/509: throttled. Stop the whole plan for this host — a different UA
+      // or transport only deepens the throttle.
+      if (isRateLimited(res.status) && res.status !== 503) {
+        markRateLimited(target, res.headers)
+        rateLimited = true
+        classified = streamError('RATE_LIMITED', `HTTP ${res.status}`)
+        blockedRoutes.add(`${hostKey}|direct`)
+        blockedRoutes.add(`${hostKey}|relay`)
+        lastError = `HTTP ${res.status}`
+        await res.body?.cancel().catch(() => undefined)
+        continue
+      }
+      if (!classified || classified.code === 'UNKNOWN') classified = classifyStatus(res.status)
       // 456/459/451: the panel refuses this egress IP (geo / stream block).
       // Another User-Agent will never change that — stop hammering this route.
       if (isGeoBlocked(res.status) || res.status === 456) {
@@ -274,6 +301,7 @@ Deno.serve(async (req) => {
       await res.body?.cancel().catch(() => undefined)
     } catch (e) {
       lastError = describeFetchError(e)
+      if (!classified || classified.code === 'UNKNOWN') classified = classifyTransport(lastError)
       trace.push(`${via}:err:${lastError.slice(0, 60)}`)
       // Refused / DNS failure will not improve with another UA or transport.
       if (via === 'direct' && isDeadHost(lastError)) deadHosts.add(hostKey)
@@ -281,17 +309,29 @@ Deno.serve(async (req) => {
   }
 
   if (!upstream) {
-    const reason = geoBlocked
-      ? GEO_BLOCK_MESSAGE
-      : deadlineHit
-        ? `Stream did not start within ${OVERALL_DEADLINE_MS / 1000}s (last error: ${lastError})`
-        : lastError
+    // One actionable sentence, the way IPTV Smarters / VLC report failures.
+    const error: StreamError = rateLimited
+      ? streamError('RATE_LIMITED')
+      : geoBlocked
+        ? { code: 'GEO_BLOCKED', message: GEO_BLOCK_MESSAGE, retryable: true }
+        : deadlineHit
+          ? streamError('TIMEOUT', `${OVERALL_DEADLINE_MS / 1000}s`)
+          : (classified ?? classifyTransport(lastError))
     console.error(
-      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, lastError, trace })}`,
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, code: error.code, lastError, trace })}`,
     )
     return json(
-      { error: reason, deadline: deadlineHit, geoBlocked, detail: lastError, candidates: candidates.length },
-      502,
+      {
+        error: error.message,
+        code: error.code,
+        retryable: error.retryable,
+        deadline: deadlineHit,
+        geoBlocked,
+        rateLimited,
+        detail: lastError,
+        candidates: candidates.length,
+      },
+      rateLimited ? 429 : 502,
     )
   }
 

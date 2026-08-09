@@ -1613,6 +1613,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_source_access: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          is_default: boolean
+          source_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          is_default?: boolean
+          source_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          is_default?: boolean
+          source_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_source_access_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "iptv_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
