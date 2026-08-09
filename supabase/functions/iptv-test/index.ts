@@ -179,8 +179,18 @@ Deno.serve(async (req) => {
   console.log(`[iptv-test] live list ok=${list.ok} bytes=${list.body.length} in ${latency()}ms`)
 
   // The account already authenticated, so a heavy/slow catalogue must not be
-  // reported as a dead server — report the successful handshake instead.
+  // reported as a dead server — report the successful handshake instead, with
+  // whatever the account endpoint told us about the subscription.
   if (!list.ok) {
+    let account = ''
+    try {
+      const info = (JSON.parse(auth.body)?.user_info ?? {}) as Record<string, unknown>
+      const status = String(info.status ?? '')
+      const max = Number(info.max_connections ?? 0)
+      account = [status && `status ${status}`, max > 0 && `${max} slot${max > 1 ? 's' : ''}`]
+        .filter(Boolean)
+        .join(' · ')
+    } catch { /* handshake was not JSON */ }
     return json({
       ok: true,
       kind: 'xtream',
@@ -189,11 +199,12 @@ Deno.serve(async (req) => {
       host: creds.host,
       via: auth.userAgent,
       compatible: true,
-      message: `Account authenticated in ${latency()} ms — channel list could not be counted (${
+      message: `Account authenticated${account ? ` (${account})` : ''} — channel list too slow to count (${
         list.error ?? `HTTP ${list.status}`
       })`,
     })
   }
+
 
   // Counting ids with a scan is far cheaper than JSON.parse on a multi-MB body.
   const countIds = (body: string, key: string) => (body.match(new RegExp(`"${key}"\\s*:`, 'g')) ?? []).length
