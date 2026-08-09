@@ -388,8 +388,15 @@ Deno.serve(async (req) => {
   out.set('Content-Type', ct || 'application/octet-stream')
   out.set('Accept-Ranges', 'bytes')
   out.set('Cache-Control', 'no-store')
+  // Media stacks and debug fetches must be able to READ the range headers on a
+  // cross-origin response, otherwise CORS hides them and seeking breaks.
+  out.set('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type')
   const cr = upstream.headers.get('content-range')
   const clen = upstream.headers.get('content-length')
+  console.log(
+    `[iptv-stream:media] ${JSON.stringify({ kind, streamId, reqRange: range ?? null, upstreamStatus: upstream.status, ct, contentRange: cr, contentLength: clen })}`,
+  )
+
 
   // Upstream honoured the Range request: pass 206 + range headers straight
   // through so the browser can size and seek the media.
