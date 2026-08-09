@@ -39,6 +39,96 @@ type IndexSnapshot = { at: number; source: string; categories: CategoryInfo[]; t
 const indexCache = new Map<string, IndexSnapshot>()
 const indexLoading = new Map<string, Promise<IndexSnapshot>>()
 const INDEX_MAX = 8
+const SHARED_INDEX_VERSION = 'xtream-index-v1'
+const SHARED_INDEX_STALE_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * Xtream category lists are tiny but must survive edge-isolate restarts. The
+ * provider occasionally rejects every catalogue call with a short-lived 403;
+ * keeping the last successful index prevents that outage becoming a blank app.
+ */
+const cacheRest = () => {
+  const base = Deno.env.get('SUPABASE_URL')
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  return base && key ? { base: base.replace(/\/$/, ''), key } : null
+}
+
+async function indexCacheKey(source: string): Promise<string> {
+  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(source)))
+  return `xtream-${[...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')}`
+}
+
+async function gzipText(text: string): Promise<string> {
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))
+  const bytes = new Uint8Array(await new Response(stream).arrayBuffer())
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  }
+  return btoa(binary)
+}
+
+async function gunzipText(value: string): Promise<string> {
+  const binary = atob(value)
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0))
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))
+  return await new Response(stream).text()
+}
+
+async function saveSharedIndex(snapshot: IndexSnapshot): Promise<void> {
+  const rest = cacheRest()
+  if (!rest || !snapshot.categories.length || snapshot.partial) return
+  try {
+    const url_hash = await indexCacheKey(snapshot.source)
+    const entries_gz = await gzipText(JSON.stringify({ categories: snapshot.categories, total: snapshot.total }))
+    await fetch(`${rest.base}/rest/v1/iptv_playlist_cache?on_conflict=url_hash`, {
+      method: 'POST',
+      headers: {
+        apikey: rest.key,
+        Authorization: `Bearer ${rest.key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify({
+        url_hash,
+        version: SHARED_INDEX_VERSION,
+        entries_gz,
+        etag: null,
+        last_modified: null,
+        updated_at: new Date(snapshot.at).toISOString(),
+      }),
+    })
+  } catch (error) {
+    console.warn(`[iptv-playlist] shared index save failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+async function loadSharedIndex(source: string): Promise<IndexSnapshot | null> {
+  const rest = cacheRest()
+  if (!rest) return null
+  try {
+    const key = await indexCacheKey(source)
+    const res = await fetch(
+      `${rest.base}/rest/v1/iptv_playlist_cache?url_hash=eq.${encodeURIComponent(key)}&version=eq.${SHARED_INDEX_VERSION}&select=entries_gz,updated_at`,
+      { headers: { apikey: rest.key, Authorization: `Bearer ${rest.key}` } },
+    )
+    if (!res.ok) return null
+    const rows = (await res.json()) as { entries_gz: string; updated_at: string }[]
+    const row = rows[0]
+    if (!row) return null
+    const at = Date.parse(row.updated_at)
+    if (!Number.isFinite(at) || Date.now() - at > SHARED_INDEX_STALE_MS) return null
+    const parsed = JSON.parse(await gunzipText(row.entries_gz)) as {
+      categories?: CategoryInfo[]
+      total?: number
+    }
+    if (!Array.isArray(parsed.categories) || !parsed.categories.length) return null
+    return { at, source, categories: parsed.categories, total: Number(parsed.total ?? 0) }
+  } catch (error) {
+    console.warn(`[iptv-playlist] shared index load failed: ${error instanceof Error ? error.message : String(error)}`)
+    return null
+  }
+}
 
 /** Canonical `player_api.php` base (protocol/port corrected in iptvConfig). */
 const apiBase = (raw: string) => xtreamApiBase(raw)
@@ -341,13 +431,23 @@ async function getIndex(source: string, force = false): Promise<IndexSnapshot> {
   let pending = force ? undefined : indexLoading.get(source)
   if (!pending) {
     pending = buildIndex(source)
-      .then((i) => {
+      .then(async (i) => {
         indexCache.set(source, i)
+        await saveSharedIndex(i)
         if (indexCache.size > INDEX_MAX) {
           const oldest = [...indexCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
           if (oldest) indexCache.delete(oldest[0])
         }
         return i
+      })
+      .catch(async (error) => {
+        const stale = await loadSharedIndex(source)
+        if (!stale) throw error
+        console.warn(
+          `[iptv-playlist] upstream unavailable; serving last-known-good index from ${new Date(stale.at).toISOString()}`,
+        )
+        indexCache.set(source, stale)
+        return stale
       })
       .finally(() => {
         indexLoading.delete(source)
