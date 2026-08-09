@@ -85,12 +85,19 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
  * failed (timeout / error / non-array body) — an empty array is a valid answer.
  * Slow Xtream servers are common, so each call gets a retry with more headroom.
  */
-async function fetchJson<T>(url: string, timeoutMs = 15000, attempts = 2, tag = 'fetchJson'): Promise<T | null> {
+async function fetchJson<T>(
+  url: string,
+  timeoutMs = 15000,
+  attempts = IPTV_USER_AGENTS.length,
+  tag = 'fetchJson',
+): Promise<T | null> {
   for (let i = 0; i < attempts; i++) {
+    // Each attempt uses a different player User-Agent: panels behind a WAF
+    // reject some clients outright (403 or an HTML block page).
     const { res, diag } = await diagFetch(tag, url, {
       timeoutMs: timeoutMs * (i + 1),
       attempt: i + 1,
-      headers: { 'User-Agent': UA },
+      headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
       lastUpstreamDiag = diag
@@ -105,6 +112,18 @@ async function fetchJson<T>(url: string, timeoutMs = 15000, attempts = 2, tag = 
       logDiag(`${tag}:read`, lastUpstreamDiag)
       continue
     }
+    if (isHtmlBlock(res.headers.get('content-type'), text)) {
+      lastUpstreamDiag = {
+        ...diag,
+        ok: false,
+        kind: 'http_error',
+        bodySnippet: text.slice(0, 500),
+        message: 'Provider answered a block page (HTML) instead of data',
+      }
+      logDiag(`${tag}:blocked`, lastUpstreamDiag)
+      continue
+    }
+
     try {
       const json = JSON.parse(text)
       if (Array.isArray(json)) return json as T
