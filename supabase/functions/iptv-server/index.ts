@@ -598,7 +598,11 @@ Deno.serve(async (req) => {
         const uid = r.user_id as string
         ;(byUser[uid] ??= []).push({
           id: r.id,
-          name: String(r.name ?? 'Source'),
+          // Some legacy rows were named after the raw provider URL — mask those
+          // so admins never see credentials through this read-only view.
+          name: /^https?:\/\//i.test(String(r.name ?? ''))
+            ? maskPlaylistUrl(String(r.name))
+            : String(r.name ?? 'Source'),
           kind: String(r.kind ?? 'm3u'),
           isActive: !!r.is_active,
           isSelected: defaults.has(`${uid}:${r.id}`),
