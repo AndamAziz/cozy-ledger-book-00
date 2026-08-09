@@ -9,8 +9,11 @@ import {
   useIptvSearch,
   type IptvCategory,
   type IptvChannel,
+  IptvRequestError,
 } from '@/hooks/useIptvPlaylist';
+import { IptvDiagnosticPanel } from '@/components/livetv/IptvDiagnosticPanel';
 import { ChannelCard } from '@/components/livetv/ChannelCard';
+
 import { PosterCard } from '@/components/livetv/PosterCard';
 import { CategoryAccordion } from '@/components/livetv/CategoryAccordion';
 import { LiveTVPlayer } from '@/components/livetv/LiveTVPlayer';
