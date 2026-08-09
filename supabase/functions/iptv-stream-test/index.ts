@@ -14,6 +14,43 @@ import { diagFetchRaw, redactUrl, type UpstreamDiag } from '../_shared/iptvDiag.
 
 const UA = 'IPTVSmartersPro/4.0.4 (Linux; Android 12) ExoPlayerLib/2.19.1'
 const TIMEOUT_MS = 15_000
+/** Deadline for each redirect hop while resolving the tokenized URL. */
+const REDIRECT_TIMEOUT_MS = 8_000
+
+/**
+ * Same 302 resolver the player uses: providers hand out a short-lived tokenized
+ * URL and refuse the relay's IP on the pre-redirect `/live/...` path. Hops are
+ * followed from the edge function itself (manual redirects, bodies cancelled so
+ * the single provider slot is never held) and only the final URL is probed.
+ */
+async function resolveTokenizedUrl(target: string, headers: Record<string, string>): Promise<string> {
+  let current = target
+  for (let hop = 0; hop < 4; hop++) {
+    const ctl = new AbortController()
+    const timer = setTimeout(() => ctl.abort(), REDIRECT_TIMEOUT_MS)
+    let res: Response
+    try {
+      res = await fetch(current, { headers, redirect: 'manual', signal: ctl.signal })
+    } catch {
+      break
+    } finally {
+      clearTimeout(timer)
+    }
+    const loc = res.headers.get('location')
+    await res.body?.cancel().catch(() => undefined)
+    if (res.status >= 300 && res.status < 400 && loc) {
+      try {
+        current = new URL(loc, current).toString()
+      } catch {
+        break
+      }
+      continue
+    }
+    break
+  }
+  return current
+}
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -201,12 +238,14 @@ Deno.serve(async (req) => {
 
 
   const target = `${protocol}//${host}/live/${encodeURIComponent(username)}/${encodeURIComponent(password)}/${streamId}.ts`
-  const { res, diag } = await diagFetchRaw('stream-test:live', target, {
+  // Probe the real playable URL, not the pre-redirect path the provider blocks.
+  const playable = await resolveTokenizedUrl(target, headers)
+  const { res, diag } = await diagFetchRaw('stream-test:live', playable, {
     timeoutMs: TIMEOUT_MS,
     headers,
     onDiag: capture,
   })
-  if (!res || !res.ok) return fail(diag, target)
+  if (!res || !res.ok) return fail(diag, playable)
   // Release the provider slot immediately — single-slot accounts are common.
   await res.body?.cancel().catch(() => undefined)
   return json({
@@ -214,7 +253,9 @@ Deno.serve(async (req) => {
     latency_ms: diag.durationMs,
     status: diag.status,
     streamId,
+    redirected: playable !== target,
     contentType: diag.headers?.['content-type'] ?? null,
-    url: redactUrl(target),
+    url: redactUrl(playable),
+
   })
 })
