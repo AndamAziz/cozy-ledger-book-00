@@ -47,9 +47,18 @@ interface CategoryInfo {
   name: string
   count: number
   kind: Kind
+  /**
+   * First few channels of the category, embedded in the index. The provider
+   * allows one connection at a time, so 90+ per-category requests would queue
+   * for minutes; native players show the first page immediately instead.
+   */
+  preview?: { id: string; name: string; logo: string | null; group: string; kind: Kind }[]
 }
 
 const TTL = 30 * 60 * 1000
+
+/** How many channels of each live category ride along inside the index. */
+const PREVIEW_SIZE = 24
 
 // The VOD/series catalogues are ~70MB each, so nothing global is kept in memory:
 // the index caches category lists only and item lists are fetched per category.
@@ -105,7 +114,7 @@ type IndexSnapshot = {
 const indexCache = new Map<string, IndexSnapshot>()
 const indexLoading = new Map<string, Promise<IndexSnapshot>>()
 const INDEX_MAX = 8
-const SHARED_INDEX_VERSION = 'xtream-index-v1'
+const SHARED_INDEX_VERSION = 'xtream-index-v2'
 const SHARED_INDEX_STALE_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
@@ -615,7 +624,12 @@ async function buildIndex(source: string) {
         categories.push({ id, name, count, kind: 'live' })
       }
       for (const c of categories) {
-        if (c.kind === 'live') c.count = counts.get(c.id) ?? 0
+        if (c.kind !== 'live') continue
+        c.count = counts.get(c.id) ?? 0
+        c.preview = items
+          .filter((i) => i.categoryId === c.id)
+          .slice(0, PREVIEW_SIZE)
+          .map((i) => shape(i, c.name))
       }
       const trimmed = categories.filter((c) => c.kind !== 'live' || c.count > 0)
       categories.length = 0

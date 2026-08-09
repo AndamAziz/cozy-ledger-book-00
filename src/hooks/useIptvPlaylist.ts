@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -52,6 +53,12 @@ export interface IptvCategory {
   count: number;
   /** Section the category came from upstream: live channels, movies (vod) or series. */
   kind?: 'live' | 'vod' | 'series';
+  /**
+   * First page of channels, delivered inside the index so a category renders
+   * instantly instead of waiting for its own request behind the provider's
+   * single-connection queue.
+   */
+  preview?: IptvChannel[];
 }
 
 
@@ -110,8 +117,27 @@ let accessToken: string | null = null;
  * right provider even before the server-side default is updated.
  */
 let activeSourceId: string | null = null;
+/**
+ * Catalogue requests must not fire before we know WHICH provider to ask:
+ * firing an unscoped index first made every visit pay the (single-connection)
+ * provider round-trip twice.
+ */
+let sourceResolved = false;
+const readyListeners = new Set<() => void>();
 export function setActiveSourceId(id: string | null) {
   activeSourceId = id;
+  sourceResolved = true;
+  readyListeners.forEach((l) => l());
+}
+export function useSourceReady(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      readyListeners.add(cb);
+      return () => readyListeners.delete(cb);
+    },
+    () => sourceResolved,
+    () => false,
+  );
 }
 export const getActiveSourceId = () => activeSourceId;
 const sourceParam = () => (activeSourceId ? `&source=${encodeURIComponent(activeSourceId)}` : '');
@@ -265,9 +291,11 @@ export function prefetchIptvCategories(categoryIds: string[], limit = 12) {
 
 
 export function useIptvIndex() {
+  const ready = useSourceReady();
   return useQuery({
     queryKey: ['iptv-index', activeSourceId],
     queryFn: () => get<IptvIndex>('iptv-playlist'),
+    enabled: ready,
     staleTime: 60 * 60 * 1000,
     gcTime: 2 * 60 * 60 * 1000,
     retry: 0,
