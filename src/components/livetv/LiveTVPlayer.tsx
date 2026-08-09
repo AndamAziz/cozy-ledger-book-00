@@ -85,6 +85,9 @@ export function LiveTVPlayer({
   /** Index into the engine chain: each failure advances to the next engine. */
   const [stage, setStage] = useState(0);
   const [attempt, setAttempt] = useState(0);
+  /** True while waiting out the backoff between whole-ladder retries. */
+  const [retrying, setRetrying] = useState(false);
+
 
   const [levels, setLevels] = useState<QualityLevel[]>([]);
   const [selectedLevel, setSelectedLevel] = useState(-1);
