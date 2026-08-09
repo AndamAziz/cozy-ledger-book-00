@@ -43,11 +43,15 @@ export function parseXtream(raw: string) {
     : PLAIN_PORTS.has(u.port)
       ? 'http:'
       : u.protocol)
-  // Some providers (and self-hosted reverse proxies) serve the panel under a
-  // path prefix, e.g. `http://host:8888/SECRET/panel.host/player_api.php`.
-  // Everything before the final path segment is part of the panel base and must
-  // be preserved, otherwise every built URL 404s.
-  const basePath = u.pathname.replace(/\/[^/]*$/, '').replace(/\/+$/, '')
+  // Standard panels live at the origin root (`/player_api.php`, `/get.php`),
+  // so basePath stays '' for them — nothing changes for myrestreamer.com,
+  // plain M3U links, GitHub playlists, direct streams, etc.
+  //
+  // ONLY when a *custom intermediate path* wraps a known panel endpoint
+  // (e.g. `http://host:8888/VORTEX_SECRET_2026/line.dnsdns5.com/player_api.php`)
+  // is that prefix preserved, otherwise every built URL would 404.
+  const basePath = customPanelBasePath(u)
+
   return {
     host: u.host,
     protocol,
