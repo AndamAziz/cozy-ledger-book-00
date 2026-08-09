@@ -96,17 +96,37 @@ Deno.serve(async (req) => {
     }
     const channels = (res.body.match(/#EXTINF/gi) ?? []).length
     if (!channels) return json({ ok: false, error: 'Connected, but no channels were returned' })
+
+    // Sample probe: check the first few stream URLs in the playlist.
+    const urls = res.body
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => /^https?:\/\//i.test(l))
+      .slice(0, 3)
+    let onlineSample = 0
+    for (const u of urls) {
+      const probe = await relayFetch(u, { timeoutMs: TIMEOUT_MS, maxBytes: 2048 })
+      if (probe.ok || probe.status === 206) onlineSample += 1
+    }
+    const ratio = urls.length ? onlineSample / urls.length : 1
     return json({
       ok: true,
       kind: 'm3u',
       channels,
+      live: channels,
+      online: Math.round(channels * ratio),
+      sample_tested: urls.length,
+      sample_online: onlineSample,
       latency_ms: latency(),
       host: creds.host,
       via: res.userAgent,
-      compatible: true,
-      message: `Connected — ${channels} channels in ${latency()} ms`,
+      compatible: onlineSample > 0 || urls.length === 0,
+      message: urls.length
+        ? `Connected — ${channels} channels listed, ~${Math.round(channels * ratio)} online (${onlineSample}/${urls.length} sampled) in ${latency()} ms`
+        : `Connected — ${channels} channels in ${latency()} ms`,
     })
   }
+
 
   // --- Probe the Xtream playlist -------------------------------------------
   const api = `${creds.protocol}//${creds.host}/player_api.php?username=${encodeURIComponent(
