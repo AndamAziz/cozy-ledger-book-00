@@ -44,8 +44,9 @@ Deno.serve(async (req) => {
   const action = String(body.action ?? 'get')
   const { data: isAdminData } = await db.rpc('has_role', { _user_id: user.id, _role: 'admin' })
   const isAdmin = !!isAdminData
-  // Only the CEO may create, replace or delete provider links — for anyone.
-  const isCeo = (user.email ?? '').toLowerCase() === 'andam@outlook.com'
+  const { data: isOwnerData } = await db.rpc('has_role', { _user_id: user.id, _role: 'owner' })
+  // Only the owner may create, replace, assign or delete provider links.
+  const isOwner = !!isOwnerData
 
   /** Encrypts + stores, returning the masked preview. Never logs the URL. */
   const store = async (userId: string, rawUrl: string) => {
@@ -148,6 +149,110 @@ Deno.serve(async (req) => {
     return true
   }
 
+  // ---------------------------------------------------------------------------
+  // Multi-source grants (`user_source_access`): an account may be allowed to
+  // browse several providers and switch between them; exactly one grant is the
+  // selected ("default") one, and it is mirrored into the single-server vault
+  // row so every playback function keeps working unchanged.
+  // ---------------------------------------------------------------------------
+
+  /** Mirrors one specific source row into the single-server vault row. */
+  const syncSelected = async (userId: string, sourceId: string) => {
+    const { data } = await db
+      .from('iptv_sources')
+      .select('name, playlist_enc, playlist_masked')
+      .eq('id', sourceId)
+      .maybeSingle()
+    if (!data?.playlist_enc) return false
+    await db.from('user_iptv_servers').upsert(
+      {
+        user_id: userId,
+        playlist_url: '',
+        playlist_enc: data.playlist_enc as string,
+        playlist_masked: String(data.playlist_masked ?? ''),
+        provider_name: (data.name as string | null) ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' },
+    )
+    return true
+  }
+
+  /** Grants a source to a user, optionally making it their selected source. */
+  const grantSource = async (userId: string, sourceId: string, makeDefault: boolean) => {
+    if (makeDefault) {
+      await db
+        .from('user_source_access')
+        .update({ is_default: false })
+        .eq('user_id', userId)
+        .eq('is_default', true)
+    }
+    await db.from('user_source_access').upsert(
+      {
+        user_id: userId,
+        source_id: sourceId,
+        is_default: makeDefault,
+        granted_by: user.id,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,source_id' },
+    )
+    if (makeDefault) await syncSelected(userId, sourceId)
+  }
+
+  /** All sources one account may browse (grants, plus own rows for the CEO). */
+  const listGranted = async (userId: string) => {
+    const { data: grants } = await db
+      .from('user_source_access')
+      .select('source_id, is_default, iptv_sources(id, name, kind, playlist_masked, health_status, health_message)')
+      .eq('user_id', userId)
+      .order('created_at')
+
+    type Row = {
+      source_id: string
+      is_default: boolean
+      iptv_sources: {
+        id: string
+        name: string
+        kind: string
+        playlist_masked: string
+        health_status: string | null
+        health_message: string | null
+      } | null
+    }
+    const rows = ((grants ?? []) as unknown as Row[]).filter((r) => !!r.iptv_sources)
+    const out = rows.map((r) => ({
+      id: r.iptv_sources!.id,
+      name: r.iptv_sources!.name,
+      kind: r.iptv_sources!.kind,
+      masked: r.iptv_sources!.playlist_masked ?? '',
+      isDefault: !!r.is_default,
+      health: r.iptv_sources!.health_status ?? null,
+      healthMessage: r.iptv_sources!.health_message ?? null,
+    }))
+
+    // Sources the account owns directly (CEO pool) are always browsable.
+    const { data: owned } = await db
+      .from('iptv_sources')
+      .select('id, name, kind, playlist_masked, is_active, health_status, health_message')
+      .eq('user_id', userId)
+      .order('created_at')
+    for (const o of owned ?? []) {
+      if (out.some((s) => s.id === o.id)) continue
+      out.push({
+        id: o.id as string,
+        name: o.name as string,
+        kind: o.kind as string,
+        masked: String(o.playlist_masked ?? ''),
+        isDefault: !out.some((s) => s.isDefault) && !!o.is_active,
+        health: (o.health_status as string | null) ?? null,
+        healthMessage: (o.health_message as string | null) ?? null,
+      })
+    }
+    return out
+  }
+
+
   /**
    * The CEO account keeps the two reference sources ready to test/switch:
    * a public iptv-org M3U and the Xtream provider account.
@@ -158,7 +263,7 @@ Deno.serve(async (req) => {
       const { data } = await db.auth.admin.getUserById(userId)
       email = data?.user?.email ?? ''
     }
-    if (email.toLowerCase() !== 'andam@outlook.com') return
+    if (userId !== user.id || !isOwner) return
     const { count } = await db
       .from('iptv_sources')
       .select('id', { count: 'exact', head: true })
@@ -194,7 +299,7 @@ Deno.serve(async (req) => {
 
     // ---- CEO: assign one of my servers to a specific user ------------
     case 'search_users': {
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       const q = String(body.query ?? '').trim().toLowerCase()
       if (q.length < 2) return json({ users: [] })
       const found: { id: string; email: string }[] = []
@@ -212,7 +317,7 @@ Deno.serve(async (req) => {
     }
 
     case 'assign_source': {
-      if (!isCeo) return json({ error: 'Only the CEO can assign servers' }, 403)
+      if (!isOwner) return json({ error: 'Only the owner can assign servers' }, 403)
       const id = String(body.id ?? '')
       const targetId = String(body.targetUserId ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
@@ -261,12 +366,20 @@ Deno.serve(async (req) => {
 
       const ok = await setActive(targetId, newId!)
       if (!ok) return json({ error: 'Assigned but could not activate it' }, 500)
+      // Grant it in the many-to-many table too: an account can hold several
+      // providers and switch between them from the app.
+      const { count: grantCount } = await db
+        .from('user_source_access')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', targetId)
+      await grantSource(targetId, newId!, !grantCount)
       return json({ ok: true, email: targetEmail, name: payload.name })
+
     }
 
     /** Everyone (except the CEO) currently holding a copy of one of my sources. */
     case 'assigned_users': {
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       const id = String(body.id ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
       const { data: src } = await db
@@ -296,7 +409,7 @@ Deno.serve(async (req) => {
 
     /** Revokes a source from one user: deletes their copy and re-points playback. */
     case 'unassign_source': {
-      if (!isCeo) return json({ error: 'Only the CEO can revoke servers' }, 403)
+      if (!isOwner) return json({ error: 'Only the owner can revoke servers' }, 403)
       const id = String(body.id ?? '')
       const targetId = String(body.targetUserId ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(targetId)) {
@@ -324,6 +437,13 @@ Deno.serve(async (req) => {
       if (!targetRow) return json({ ok: true, email, alreadyRevoked: true })
 
       await db.from('iptv_sources').delete().eq('id', targetRow.id as string).eq('user_id', targetId)
+      // Revoke the grant for both the user's copy and the CEO pool row (older
+      // backfilled grants point at the pool row).
+      await db
+        .from('user_source_access')
+        .delete()
+        .eq('user_id', targetId)
+        .in('source_id', [targetRow.id as string, id])
 
       if (targetRow.is_active) {
         const { data: next } = await db
@@ -336,15 +456,50 @@ Deno.serve(async (req) => {
         if (next?.id) await setActive(targetId, next.id as string)
         else await store(targetId, '')
       }
+      // Keep a selected source when other grants remain.
+      const remaining = await listGranted(targetId)
+      if (remaining.length && !remaining.some((s) => s.isDefault)) {
+        await grantSource(targetId, remaining[0].id, true)
+      }
       return json({ ok: true, email })
     }
+
+    /** Every source the caller (or an admin's target user) may browse. */
+    case 'my_sources': {
+      const targetId = ownerId()
+      if (!targetId) return json({ error: 'Forbidden' }, 403)
+      return json({ sources: await listGranted(targetId) })
+    }
+
+    /** Switch the selected source (immediately effective for playback). */
+    case 'select_source': {
+      const targetId = ownerId()
+      if (!targetId) return json({ error: 'Forbidden' }, 403)
+      const id = String(body.id ?? '')
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
+      const allowed = await listGranted(targetId)
+      if (!allowed.some((s) => s.id === id)) return json({ error: 'That source is not available to you' }, 403)
+      await grantSource(targetId, id, true)
+      const owns = await db
+        .from('iptv_sources')
+        .select('id')
+        .eq('id', id)
+        .eq('user_id', targetId)
+        .maybeSingle()
+      if (owns.data?.id) await setActive(targetId, id)
+      if (!(await syncSelected(targetId, id))) {
+        return json({ error: 'That source has no stored credentials' }, 409)
+      }
+      return json({ ok: true, id, sources: await listGranted(targetId) })
+    }
+
 
     /**
      * CEO directory: every account (other than the CEO) that currently holds
      * at least one provider link, with all of their sources.
      */
     case 'assigned_directory': {
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       const { data: rows } = await db
         .from('iptv_sources')
         .select('id, user_id, name, kind, playlist_masked, is_active, updated_at')
@@ -384,7 +539,7 @@ Deno.serve(async (req) => {
 
 
     case 'admin_save': {
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       const targetId = String(body.userId ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(targetId)) return json({ error: 'Invalid user' }, 400)
       return await store(targetId, String(body.playlistUrl ?? ''))
@@ -394,11 +549,11 @@ Deno.serve(async (req) => {
       return json(await readMasked(user.id))
 
     case 'save':
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       return await store(user.id, String(body.playlistUrl ?? ''))
 
     case 'clear':
-      if (!isCeo) return json({ error: 'Forbidden' }, 403)
+      if (!isOwner) return json({ error: 'Forbidden' }, 403)
       return await store(user.id, '')
 
     case 'admin_list': {
@@ -424,6 +579,68 @@ Deno.serve(async (req) => {
       return json({ rows })
     }
 
+    /**
+     * Read-only visibility for admins: which source(s) each account holds.
+     * Returns names/types/selection only — never a URL, masked or otherwise —
+     * and mutates nothing. Assignment stays owner-only.
+     */
+    case 'admin_assigned_sources': {
+      if (!isAdmin) return json({ error: 'Forbidden' }, 403)
+      const [{ data: sources }, { data: grants }] = await Promise.all([
+        db.from('iptv_sources').select('id, user_id, name, kind, is_active, updated_at').order('created_at'),
+        db.from('user_source_access').select('user_id, source_id, is_default'),
+      ])
+      const defaults = new Set(
+        (grants ?? []).filter((g) => g.is_default).map((g) => `${g.user_id}:${g.source_id}`),
+      )
+      const byUser: Record<string, unknown[]> = {}
+      for (const r of sources ?? []) {
+        const uid = r.user_id as string
+        ;(byUser[uid] ??= []).push({
+          id: r.id,
+          // Some legacy rows were named after the raw provider URL — mask those
+          // so admins never see credentials through this read-only view.
+          name: /^https?:\/\//i.test(String(r.name ?? ''))
+            ? maskPlaylistUrl(String(r.name))
+            : String(r.name ?? 'Source'),
+          kind: String(r.kind ?? 'm3u'),
+          isActive: !!r.is_active,
+          isSelected: defaults.has(`${uid}:${r.id}`),
+          updatedAt: r.updated_at ?? null,
+        })
+      }
+      return json({ byUser })
+    }
+
+
+    // Account activation and source assignment are deliberately separate.
+    // Any admin may activate access, but a newly activated account starts with
+    // no source, no default grant and no legacy credential mirror.
+    case 'set_access': {
+      if (!isAdmin) return json({ error: 'Forbidden' }, 403)
+      const targetId = String(body.userId ?? '')
+      const activated = body.activated === true
+      if (!/^[0-9a-f-]{36}$/i.test(targetId)) return json({ error: 'Invalid user' }, 400)
+
+      if (activated) {
+        await db.from('user_source_access').delete().eq('user_id', targetId)
+        await db.from('iptv_sources').delete().eq('user_id', targetId)
+        await store(targetId, '')
+      }
+
+      const { error } = await db.from('livetv_access').upsert(
+        {
+          user_id: targetId,
+          is_activated: activated,
+          activated_at: activated ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      )
+      if (error) return json({ error: 'Could not update Live TV access' }, 500)
+      return json({ ok: true, activated, sources: activated ? [] : undefined })
+    }
+
     // ---- Multi-source management -------------------------------------
     // Each row in `iptv_sources` is an independent playlist (own credentials,
     // own channels). Exactly one row per user can be active; the active one is
@@ -445,7 +662,7 @@ Deno.serve(async (req) => {
 
 
     case 'save_source': {
-      if (!isCeo) return json({ error: 'Only the CEO can add or change provider links' }, 403)
+      if (!isOwner) return json({ error: 'Only the owner can add or change provider links' }, 403)
       const targetId = ownerId()
       if (!targetId) return json({ error: 'Forbidden' }, 403)
       const id = typeof body.id === 'string' ? body.id : null
@@ -494,11 +711,20 @@ Deno.serve(async (req) => {
       const id = String(body.id ?? '')
       if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
       const ok = await setActive(targetId, id)
+      // Keep the grant table's selection in step with the owner's active row.
+      const granted = await db
+        .from('user_source_access')
+        .select('id')
+        .eq('user_id', targetId)
+        .eq('source_id', id)
+        .maybeSingle()
+      if (granted.data?.id) await grantSource(targetId, id, true)
       return ok ? json({ ok: true }) : json({ error: 'Could not switch source' }, 500)
+
     }
 
     case 'delete_source': {
-      if (!isCeo) return json({ error: 'Only the CEO can delete provider links' }, 403)
+      if (!isOwner) return json({ error: 'Only the owner can delete provider links' }, 403)
       const targetId = ownerId()
       if (!targetId) return json({ error: 'Forbidden' }, 403)
       const id = String(body.id ?? '')

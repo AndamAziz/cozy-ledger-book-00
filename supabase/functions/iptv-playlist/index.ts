@@ -3,10 +3,29 @@ import { parseXtream, isXtreamUrl, getM3U, xtreamApiBase, type M3uEntry } from '
 import { resolveViewer } from '../_shared/iptvViewer.ts'
 import { classifyError, diagFetch, logDiag, redactUrl, verdictOf, type UpstreamDiag } from '../_shared/iptvDiag.ts'
 import { isHtmlBlock, uaFor, IPTV_USER_AGENTS } from '../_shared/iptvFetch.ts'
+import { backoffMs, clearCooldown, cooldownLeft, isRateLimited, markRateLimited, sleep } from '../_shared/iptvCooldown.ts'
+
+/**
+ * Hard wall-clock budget for ANY catalogue call. Without it, three escalating
+ * 15s attempts could keep a user waiting 90s before the first error.
+ */
+const CATALOGUE_BUDGET_MS = 15_000
 
 
-/** Last upstream failure seen while serving the current request (per isolate). */
-let lastUpstreamDiag: UpstreamDiag | null = null
+/**
+ * Last upstream failure, keyed PER SOURCE.
+ *
+ * One isolate serves many users/providers concurrently: a single global would
+ * let provider A's 403 be reported as provider B's failure.
+ */
+const diagBySource: Record<string, UpstreamDiag | null> = {}
+const DIAG_MAX = 50
+/** Keeps the per-source diagnostic map bounded. */
+function pruneDiags(keep: string) {
+  const keys = Object.keys(diagBySource)
+  if (keys.length <= DIAG_MAX) return
+  for (const k of keys.slice(0, keys.length - DIAG_MAX)) if (k !== keep) delete diagBySource[k]
+}
 
 type Kind = 'live' | 'vod' | 'series'
 
@@ -180,6 +199,54 @@ async function loadSharedIndex(source: string): Promise<IndexSnapshot | null> {
   }
 }
 
+/**
+ * Generic gzip blob cache on `iptv_playlist_cache` — used for series episode
+ * listings so a provider hiccup never empties a season the user already saw.
+ */
+async function saveBlob(key: string, version: string, value: unknown): Promise<void> {
+  const rest = cacheRest()
+  if (!rest) return
+  try {
+    await fetch(`${rest.base}/rest/v1/iptv_playlist_cache?on_conflict=url_hash`, {
+      method: 'POST',
+      headers: {
+        apikey: rest.key,
+        Authorization: `Bearer ${rest.key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify({
+        url_hash: key,
+        version,
+        entries_gz: await gzipText(JSON.stringify(value)),
+        updated_at: new Date().toISOString(),
+      }),
+    })
+  } catch (error) {
+    console.warn(`[iptv-playlist] blob save failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+async function loadBlob<T>(key: string, version: string, maxAgeMs: number): Promise<T | null> {
+  const rest = cacheRest()
+  if (!rest) return null
+  try {
+    const res = await fetch(
+      `${rest.base}/rest/v1/iptv_playlist_cache?url_hash=eq.${encodeURIComponent(key)}&version=eq.${version}&select=entries_gz,updated_at`,
+      { headers: { apikey: rest.key, Authorization: `Bearer ${rest.key}` } },
+    )
+    if (!res.ok) return null
+    const rows = (await res.json()) as { entries_gz: string; updated_at: string }[]
+    const row = rows[0]
+    if (!row) return null
+    const at = Date.parse(row.updated_at)
+    if (!Number.isFinite(at) || Date.now() - at > maxAgeMs) return null
+    return JSON.parse(await gunzipText(row.entries_gz)) as T
+  } catch {
+    return null
+  }
+}
+
 /** Canonical `player_api.php` base (protocol/port corrected in iptvConfig). */
 const apiBase = (raw: string) => xtreamApiBase(raw)
 
@@ -226,64 +293,88 @@ function toItem(r: Record<string, unknown>, kind: Kind): Item | null {
  * Slow Xtream servers are common, so each call gets a retry with more headroom.
  */
 async function fetchJson<T>(
+  sk: string,
   url: string,
   timeoutMs = 15000,
   attempts = IPTV_USER_AGENTS.length,
   tag = 'fetchJson',
 ): Promise<T | null> {
+  const deadline = Date.now() + CATALOGUE_BUDGET_MS
+  // A provider that just rate-limited us is left alone until its window ends.
+  const parked = cooldownLeft(url)
+  if (parked) {
+    diagBySource[sk] = {
+      ok: false,
+      kind: 'http_error',
+      url,
+      status: 429,
+      statusText: 'Too Many Requests',
+      message: `Provider is rate limiting; retrying in ${Math.ceil(parked / 1000)}s`,
+    } as UpstreamDiag
+    return null
+  }
   for (let i = 0; i < attempts; i++) {
+    const left = deadline - Date.now()
+    if (left < 1_000) break
     // Each attempt uses a different player User-Agent: panels behind a WAF
     // reject some clients outright (403 or an HTML block page).
     const { res, diag } = await diagFetch(tag, url, {
-      timeoutMs: timeoutMs * (i + 1),
+      timeoutMs: Math.min(timeoutMs * (i + 1), left),
       attempt: i + 1,
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
-      lastUpstreamDiag = diag
+      diagBySource[sk] = diag
+      // 429 is not a client problem: park the host instead of rotating UAs.
+      if (isRateLimited(diag.status)) {
+        markRateLimited(url, diag.headers)
+        break
+      }
+      if (i + 1 < attempts) await sleep(Math.min(backoffMs(i), Math.max(0, deadline - Date.now())))
       continue
     }
+    clearCooldown(url)
     let text = ''
     try {
       text = await res.text()
     } catch (e) {
       const { kind, message } = classifyError(e)
-      lastUpstreamDiag = { ...diag, ok: false, kind, message }
-      logDiag(`${tag}:read`, lastUpstreamDiag)
+      diagBySource[sk] = { ...diag, ok: false, kind, message }
+      logDiag(`${tag}:read`, diagBySource[sk])
       continue
     }
     if (isHtmlBlock(res.headers.get('content-type'), text)) {
-      lastUpstreamDiag = {
+      diagBySource[sk] = {
         ...diag,
         ok: false,
         kind: 'http_error',
         bodySnippet: text.slice(0, 500),
         message: 'Provider answered a block page (HTML) instead of data',
       }
-      logDiag(`${tag}:blocked`, lastUpstreamDiag)
+      logDiag(`${tag}:blocked`, diagBySource[sk])
       continue
     }
 
     try {
       const json = JSON.parse(text)
       if (Array.isArray(json)) return json as T
-      lastUpstreamDiag = {
+      diagBySource[sk] = {
         ...diag,
         ok: false,
         kind: 'parse_error',
         bodySnippet: text.slice(0, 500),
         message: 'Upstream returned JSON that is not an array',
       }
-      logDiag(`${tag}:shape`, lastUpstreamDiag)
+      logDiag(`${tag}:shape`, diagBySource[sk])
     } catch (e) {
-      lastUpstreamDiag = {
+      diagBySource[sk] = {
         ...diag,
         ok: false,
         kind: 'parse_error',
         bodySnippet: text.slice(0, 500),
         message: classifyError(e).message,
       }
-      logDiag(`${tag}:parse`, lastUpstreamDiag)
+      logDiag(`${tag}:parse`, diagBySource[sk])
     }
   }
   return null
@@ -296,7 +387,7 @@ async function fetchJson<T>(
  * Stream a huge Xtream JSON array and hand each object to `onRow`, without ever
  * materialising the whole payload. Returns early when `onRow` returns false.
  */
-async function scanArray(url: string, onRow: (row: Record<string, unknown>) => boolean) {
+async function scanArray(sk: string, url: string, onRow: (row: Record<string, unknown>) => boolean) {
   const deadline = Date.now() + 20_000
   // Streaming read: keep the body, so no snippet is consumed on success.
   // Rotate the player User-Agent until the provider answers with real data
@@ -324,13 +415,13 @@ async function scanArray(url: string, onRow: (row: Record<string, unknown>) => b
     res = attempt.res
   }
   if (!res) {
-    lastUpstreamDiag = diag
+    diagBySource[sk] = diag
     return
   }
 
   if (!res.body) {
-    lastUpstreamDiag = { ...diag, ok: false, kind: 'parse_error', message: 'Upstream returned an empty body' }
-    logDiag('scanArray:empty', lastUpstreamDiag)
+    diagBySource[sk] = { ...diag, ok: false, kind: 'parse_error', message: 'Upstream returned an empty body' }
+    logDiag('scanArray:empty', diagBySource[sk])
     return
   }
 
@@ -370,8 +461,8 @@ async function scanArray(url: string, onRow: (row: Record<string, unknown>) => b
     }
   } catch (e) {
     const { kind, message } = classifyError(e)
-    lastUpstreamDiag = { ...diag, ok: false, kind, message: `Stream aborted while reading: ${message}` }
-    logDiag('scanArray:stream', lastUpstreamDiag)
+    diagBySource[sk] = { ...diag, ok: false, kind, message: `Stream aborted while reading: ${message}` }
+    logDiag('scanArray:stream', diagBySource[sk])
   }
 
   try {
@@ -394,7 +485,7 @@ const ACTIONS: Record<Kind, [string, string]> = {
  * Returns `{ user_info: { auth, status, … } }`. A network failure is NOT fatal
  * (the catalogue calls retry anyway); only an explicit auth rejection is.
  */
-async function xtreamLogin(api: string): Promise<void> {
+async function xtreamLogin(sk: string, api: string): Promise<void> {
   let info: Record<string, unknown> | null = null
   for (let i = 0; i < IPTV_USER_AGENTS.length && !info; i++) {
     const { res, diag } = await diagFetch('login', api, {
@@ -403,19 +494,19 @@ async function xtreamLogin(api: string): Promise<void> {
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
-      lastUpstreamDiag = diag
+      diagBySource[sk] = diag
       continue
     }
     const text = await res.text().catch(() => '')
     if (isHtmlBlock(res.headers.get('content-type'), text)) {
-      lastUpstreamDiag = {
+      diagBySource[sk] = {
         ...diag,
         ok: false,
         kind: 'http_error',
         bodySnippet: text.slice(0, 500),
         message: 'Provider answered a block page (HTML) instead of data',
       }
-      logDiag('login:blocked', lastUpstreamDiag)
+      logDiag('login:blocked', diagBySource[sk])
       continue
     }
     try {
@@ -444,17 +535,18 @@ async function xtreamLogin(api: string): Promise<void> {
  * when a category is actually opened.
  */
 async function buildIndex(source: string) {
+  const sk = source
   const api = apiBase(source)
   const categories: CategoryInfo[] = []
 
   // Authenticate exactly like a native player before listing anything.
-  await xtreamLogin(api)
+  await xtreamLogin(sk, api)
 
 
   const lists = await Promise.all(
     (['live', 'vod', 'series'] as Kind[]).map(async (kind) => ({
       kind,
-      cats: await fetchJson<RawCategory[]>(`${api}&action=${ACTIONS[kind][0]}`),
+      cats: await fetchJson<RawCategory[]>(sk, `${api}&action=${ACTIONS[kind][0]}`),
     })),
   )
 
@@ -489,7 +581,7 @@ async function buildIndex(source: string) {
     } catch (error) {
       console.warn(`[iptv-playlist] M3U fallback failed: ${error instanceof Error ? error.message : String(error)}`)
     }
-    const upstream = lastUpstreamDiag
+    const upstream = diagBySource[sk]
     if (upstream?.status === 401 || upstream?.status === 403) {
       return {
         at: Date.now(),
@@ -512,6 +604,11 @@ async function buildIndex(source: string) {
 async function getIndex(source: string, force = false): Promise<IndexSnapshot> {
   const hit = force ? undefined : indexCache.get(source)
   if (force) indexCache.delete(source)
+  // LRU touch: an actively browsed source never gets evicted by one-off traffic.
+  if (hit) {
+    indexCache.delete(source)
+    indexCache.set(source, hit)
+  }
   // Partial snapshots (a section failed upstream) are only trusted for a minute.
   if (hit && Date.now() - hit.at < (hit.partial ? 60_000 : TTL)) return hit
   let pending = force ? undefined : indexLoading.get(source)
@@ -520,9 +617,8 @@ async function getIndex(source: string, force = false): Promise<IndexSnapshot> {
       .then(async (i) => {
         indexCache.set(source, i)
         await saveSharedIndex(i)
-        if (indexCache.size > INDEX_MAX) {
-          const oldest = [...indexCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
-          if (oldest) indexCache.delete(oldest[0])
+        while (indexCache.size > INDEX_MAX) {
+          indexCache.delete(indexCache.keys().next().value as string)
         }
         return i
       })
@@ -557,9 +653,9 @@ const CATEGORY_MAX = 12
 const categoryCache = new Map<string, { at: number; items: Item[] }>()
 
 /** Fallback for providers that ignore `category_id` on get_vod_streams/get_series. */
-async function scanCategory(api: string, kind: Kind, rawId: string): Promise<Item[]> {
+async function scanCategory(sk: string, api: string, kind: Kind, rawId: string): Promise<Item[]> {
   const items: Item[] = []
-  await scanArray(`${api}&action=${ACTIONS[kind][1]}`, (row) => {
+  await scanArray(sk, `${api}&action=${ACTIONS[kind][1]}`, (row) => {
     if (String(row.category_id ?? '') === rawId) {
       const item = toItem(row, kind)
       if (item) items.push(item)
@@ -569,11 +665,16 @@ async function scanCategory(api: string, kind: Kind, rawId: string): Promise<Ite
   return items
 }
 
-async function getCategoryItems(api: string, kind: Kind, rawId: string, key: string): Promise<Item[]> {
+async function getCategoryItems(sk: string, api: string, kind: Kind, rawId: string, key: string): Promise<Item[]> {
   const hit = categoryCache.get(key)
-  if (hit && Date.now() - hit.at < (hit.items.length ? CATEGORY_TTL : EMPTY_TTL)) return hit.items
+  if (hit && Date.now() - hit.at < (hit.items.length ? CATEGORY_TTL : EMPTY_TTL)) {
+    categoryCache.delete(key)
+    categoryCache.set(key, hit)
+    return hit.items
+  }
 
   const rows = await fetchJson<Record<string, unknown>[]>(
+    sk,
     `${api}&action=${ACTIONS[kind][1]}&category_id=${encodeURIComponent(rawId)}`,
     15000,
     2,
@@ -584,12 +685,12 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
   // locally. Do the same for Live, Movies and Series so one bad lazy endpoint
   // does not leave the player with empty grids.
   if (rows === null) {
-    const scanned = await scanCategory(api, kind, rawId)
+    const scanned = await scanCategory(sk, api, kind, rawId)
     if (scanned.length) {
       categoryCache.set(key, { at: Date.now(), items: scanned })
       return scanned
     }
-    const d = lastUpstreamDiag
+    const d = diagBySource[sk]
     throw new Error(
       d
         ? `Your IPTV provider did not respond (${d.kind}${d.status ? ` ${d.status}` : ''}${d.message ? `: ${d.message}` : ''}).`
@@ -601,16 +702,16 @@ async function getCategoryItems(api: string, kind: Kind, rawId: string, key: str
   let items = rows.map((r) => toItem(r, kind)).filter((i): i is Item => !!i)
   if (!items.length) {
     try {
-      items = await scanCategory(api, kind, rawId)
+      items = await scanCategory(sk, api, kind, rawId)
     } catch {
       // keep the empty result
     }
   }
 
+  categoryCache.delete(key)
   categoryCache.set(key, { at: Date.now(), items })
-  if (categoryCache.size > CATEGORY_MAX) {
-    const oldest = [...categoryCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
-    if (oldest) categoryCache.delete(oldest[0])
+  while (categoryCache.size > CATEGORY_MAX) {
+    categoryCache.delete(categoryCache.keys().next().value as string)
   }
   return items
 }
@@ -636,46 +737,85 @@ interface EpisodeOut {
   duration: string | null
 }
 
-/** Fetch season/episode structure for one series via Xtream get_series_info. */
-async function getSeriesInfo(api: string, seriesId: string) {
+const SERIES_VERSION = 'xtream-series-v1'
+const SERIES_STALE_MS = 7 * 24 * 60 * 60 * 1000
+
+type SeriesInfoOut = {
+  id: string
+  name: string
+  cover: string | null
+  plot: string | null
+  seasons: { season: number; episodes: EpisodeOut[] }[]
+}
+
+/**
+ * Season/episode structure for one series, persisted in the database: when the
+ * provider times out or answers 403 we serve the last known-good listing
+ * instead of an error, exactly like a native player's local cache.
+ */
+async function getSeriesInfo(sk: string, api: string, seriesId: string): Promise<SeriesInfoOut> {
+  const key = `${await indexCacheKey(`${sk}|series|${seriesId}`)}`
+  try {
+    const fresh = await fetchSeriesInfo(sk, api, seriesId)
+    await saveBlob(key, SERIES_VERSION, fresh)
+    return fresh
+  } catch (error) {
+    const cached = await loadBlob<SeriesInfoOut>(key, SERIES_VERSION, SERIES_STALE_MS)
+    if (cached?.seasons?.length) {
+      console.warn('[iptv-playlist] series upstream failed; serving cached episode listing')
+      return cached
+    }
+    throw error
+  }
+}
+
+/** Live Xtream `get_series_info` call (bounded by CATALOGUE_BUDGET_MS). */
+async function fetchSeriesInfo(sk: string, api: string, seriesId: string): Promise<SeriesInfoOut> {
   const url = `${api}&action=get_series_info&series_id=${encodeURIComponent(seriesId)}`
   let data: Record<string, unknown> | null = null
+  const deadline = Date.now() + CATALOGUE_BUDGET_MS
   for (let i = 0; i < IPTV_USER_AGENTS.length && !data; i++) {
+    const left = deadline - Date.now()
+    if (left < 1_000) break
     const { res, diag } = await diagFetch('getSeriesInfo', url, {
-      timeoutMs: 15000 * (i + 1),
+      timeoutMs: Math.min(15000 * (i + 1), left),
       attempt: i + 1,
       headers: { 'User-Agent': uaFor(i) },
     })
     if (!res) {
-      lastUpstreamDiag = diag
+      diagBySource[sk] = diag
+      if (isRateLimited(diag.status)) {
+        markRateLimited(url, diag.headers)
+        break
+      }
       continue
     }
     let text = ''
     try {
       text = await res.text()
       if (isHtmlBlock(res.headers.get('content-type'), text)) {
-        lastUpstreamDiag = {
+        diagBySource[sk] = {
           ...diag,
           ok: false,
           kind: 'http_error',
           bodySnippet: text.slice(0, 500),
           message: 'Provider answered a block page (HTML) instead of data',
         }
-        logDiag('getSeriesInfo:blocked', lastUpstreamDiag)
+        logDiag('getSeriesInfo:blocked', diagBySource[sk])
         continue
       }
       const json = JSON.parse(text)
       if (json && typeof json === 'object') data = json as Record<string, unknown>
     } catch (e) {
 
-      lastUpstreamDiag = {
+      diagBySource[sk] = {
         ...diag,
         ok: false,
         kind: 'parse_error',
         bodySnippet: text.slice(0, 500),
         message: classifyError(e).message,
       }
-      logDiag('getSeriesInfo:parse', lastUpstreamDiag)
+      logDiag('getSeriesInfo:parse', diagBySource[sk])
     }
   }
   if (!data) throw new Error('Your IPTV provider did not respond. Please try again.')
@@ -914,7 +1054,8 @@ Deno.serve(async (req) => {
 
 
   const reqId = crypto.randomUUID().slice(0, 8)
-  lastUpstreamDiag = null
+  /** Source key for this request; only known after the viewer is resolved. */
+  let sk = ''
   const reqUrl = new URL(req.url)
   console.log(
     `[iptv-playlist] ${JSON.stringify({
@@ -931,6 +1072,9 @@ Deno.serve(async (req) => {
     const resolved = await resolveViewer(req)
     if (!resolved.ok) return json({ error: resolved.message, code: resolved.error }, resolved.status)
     const source = resolved.viewer.playlistUrl
+    sk = source
+    diagBySource[sk] = null
+    pruneDiags(sk)
 
     const url = new URL(req.url)
 
@@ -956,7 +1100,7 @@ Deno.serve(async (req) => {
         return json(body)
       }
       if (!/^\d+$/.test(seriesId)) return json({ error: 'Invalid series id' }, 400)
-      return json(await getSeriesInfo(apiBase(source), seriesId))
+      return json(await getSeriesInfo(source, apiBase(source), seriesId))
     }
 
     const category = url.searchParams.get('category')
@@ -979,7 +1123,7 @@ Deno.serve(async (req) => {
           total: index.total,
           categories: index.categories,
           updatedAt: new Date(index.at).toISOString(),
-          ...(index.warning ? { warning: index.warning, reqId, diagnostic: index.diag ?? publicDiag(lastUpstreamDiag) } : {}),
+          ...(index.warning ? { warning: index.warning, reqId, diagnostic: index.diag ?? publicDiag(diagBySource[sk]) } : {}),
         },
         200,
         300,
@@ -996,14 +1140,14 @@ Deno.serve(async (req) => {
     if (category) {
       const kind = kindOf(category)
       const rawId = category.slice(category.indexOf(':') + 1)
-      list = await getCategoryItems(api, kind, rawId, `${digest(source)}|${category}`)
+      list = await getCategoryItems(source, api, kind, rawId, `${digest(source)}|${category}`)
       if (q) list = list.filter((s) => s.name.toLowerCase().includes(q))
     } else {
 
       const kindParam = url.searchParams.get('kind')
       const kind: Kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
       const cap = offset + limit
-      await scanArray(`${api}&action=${ACTIONS[kind][1]}`, (row) => {
+      await scanArray(source, `${api}&action=${ACTIONS[kind][1]}`, (row) => {
         const name = String(row.name ?? row.title ?? '')
         if (name.toLowerCase().includes(q)) {
           const item = toItem(row, kind)
@@ -1024,7 +1168,7 @@ Deno.serve(async (req) => {
 
   } catch (e) {
     const { kind, message } = classifyError(e)
-    const upstream = lastUpstreamDiag
+    const upstream = diagBySource[sk]
     console.error(
       `[iptv-playlist] ${JSON.stringify({
         reqId,

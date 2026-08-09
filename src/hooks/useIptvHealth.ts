@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toPlayableUrl, type IptvChannel, type IptvKind } from './useIptvPlaylist';
+import { getActiveSourceId, toPlayableUrl, type IptvChannel, type IptvKind } from './useIptvPlaylist';
 import {
   getChannelStatus,
   invalidateChannelStatuses,
@@ -27,11 +27,12 @@ export interface ProviderHealth {
 /** Periodic provider health check (auth, reachability, slot usage). */
 export function useProviderHealth(intervalMs = 60_000) {
   const query = useQuery({
-    queryKey: ['iptv-health'],
+    queryKey: ['iptv-health', getActiveSourceId()],
     queryFn: async (): Promise<ProviderHealth> => {
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token ?? ANON;
-      const res = await fetch(`${FN_BASE}/iptv-health`, {
+      const source = getActiveSourceId();
+      const res = await fetch(`${FN_BASE}/iptv-health${source ? `?source=${encodeURIComponent(source)}` : ''}`, {
         headers: { apikey: ANON, Authorization: `Bearer ${token}` },
       });
       return (await res.json()) as ProviderHealth;
