@@ -34,7 +34,27 @@ export function learnScheme(host: string, protocol: string, ok = true) {
   else if (learnedScheme.get(host) === proto) learnedScheme.delete(host)
 }
 
+/** Panel endpoints that mark the end of a (possibly prefixed) panel base. */
+const PANEL_ENDPOINT_RE = /^(player_api|panel_api|get|xmltv|enigma2|portal)\.php$/i
+
+/**
+ * The custom intermediate path a reverse-proxied panel is served under, or ''.
+ *
+ * Strictly conditional: it returns a prefix ONLY when the URL's last segment is
+ * a known panel endpoint AND there is at least one segment in front of it.
+ * Every standard provider URL (`/player_api.php`, `/get.php`), every plain M3U
+ * or direct-stream link, and every non-panel path returns '' — their parsing is
+ * completely unchanged.
+ */
+function customPanelBasePath(u: URL): string {
+  const segments = u.pathname.split('/').filter(Boolean)
+  if (segments.length < 2) return ''
+  if (!PANEL_ENDPOINT_RE.test(segments[segments.length - 1])) return ''
+  return '/' + segments.slice(0, -1).join('/')
+}
+
 /** Parse Xtream credentials out of an M3U playlist URL. */
+
 export function parseXtream(raw: string) {
   const u = new URL(raw)
   const learned = learnedScheme.get(u.host)
@@ -43,11 +63,15 @@ export function parseXtream(raw: string) {
     : PLAIN_PORTS.has(u.port)
       ? 'http:'
       : u.protocol)
-  // Some providers (and self-hosted reverse proxies) serve the panel under a
-  // path prefix, e.g. `http://host:8888/SECRET/panel.host/player_api.php`.
-  // Everything before the final path segment is part of the panel base and must
-  // be preserved, otherwise every built URL 404s.
-  const basePath = u.pathname.replace(/\/[^/]*$/, '').replace(/\/+$/, '')
+  // Standard panels live at the origin root (`/player_api.php`, `/get.php`),
+  // so basePath stays '' for them — nothing changes for myrestreamer.com,
+  // plain M3U links, GitHub playlists, direct streams, etc.
+  //
+  // ONLY when a *custom intermediate path* wraps a known panel endpoint
+  // (e.g. `http://host:8888/VORTEX_SECRET_2026/line.dnsdns5.com/player_api.php`)
+  // is that prefix preserved, otherwise every built URL would 404.
+  const basePath = customPanelBasePath(u)
+
   return {
     host: u.host,
     protocol,
