@@ -8,6 +8,7 @@
  */
 
 import { isSlotLimitPayload } from './iptvSlotRetry';
+import { onIdle, tabHidden } from './idle';
 
 export type ChannelStatus = 'unknown' | 'checking' | 'online' | 'busy' | 'offline';
 
@@ -77,6 +78,7 @@ async function probe(url: string): Promise<ChannelStatus> {
 }
 
 function pump() {
+  if (tabHidden()) return;
   while (running < MAX_PARALLEL && queue.length) {
     const job = queue.shift()!;
     running += 1;
@@ -84,7 +86,9 @@ function pump() {
       .then((status) => set(job.key, status))
       .finally(() => {
         running -= 1;
-        pump();
+        // Yield back to the browser before the next probe so grid scrolling and
+        // taps always win over background health checks.
+        onIdle(pump, 1000);
       });
   }
 }
@@ -97,7 +101,7 @@ export function requestChannelStatus(key: string, url: string) {
   set(key, 'checking', 0); // at=0 so 'checking' never counts as a fresh verdict
   cache.set(key, { status: 'checking', at: 0 });
   queue.push({ key, url });
-  pump();
+  onIdle(pump, 1000);
 }
 
 export function subscribeChannelStatus(key: string, fn: (s: ChannelStatus) => void): () => void {

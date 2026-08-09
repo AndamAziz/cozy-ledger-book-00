@@ -28,6 +28,7 @@ import { SeriesDetail } from '@/components/livetv/SeriesDetail';
 import { useProviderHealth } from '@/hooks/useIptvHealth';
 import { useLiveTvSources } from '@/components/livetv/LiveTvGate';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { useIncrementalList } from '@/hooks/useVirtualList';
 
 
 function tabOf(category: IptvCategory): LiveTab {
@@ -219,6 +220,12 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
     [index, tab],
   );
 
+  // Hundreds of categories are mounted in batches as the user scrolls, so each
+  // tab switch paints in one frame instead of building every accordion up front.
+  const catWindow = useIncrementalList(categories.length, 12, [tab]);
+
+
+
   // Warm the local cache for the first rows so expanding one paints instantly.
   useEffect(() => {
     if (!categories.length) return;
@@ -394,7 +401,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {categories.map((category) => (
+            {categories.slice(0, catWindow.limit).map((category) => (
               <CategoryAccordion
                 key={category.id}
                 category={category}
@@ -404,6 +411,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
                 onSeeAll={setFullCategory}
               />
             ))}
+            {catWindow.hasMore && <div ref={catWindow.sentinelRef} style={{ height: 24 }} />}
 
             {!isLoading && !error && categories.length === 0 && (
               <p className="py-24 text-center text-xs font-semibold text-white/40">No channels in this section.</p>

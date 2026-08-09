@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useIncrementalList } from "@/hooks/useVirtualList";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -920,6 +921,12 @@ export default function Movies() {
       )
     : baseList;
 
+  // Poster grid renders in batches and grows on scroll, so a long infinite-scroll
+  // session never keeps thousands of cards mounted at once.
+  const grid = useIncrementalList(filtered.length, 36, [view, genre, year, minRating, sortKey, searching]);
+
+
+
 
   return (
     <div
@@ -1321,11 +1328,14 @@ export default function Movies() {
               {t.noMovies}
             </div>
           ) : (
-            <Grid>
-              {filtered.map((m, i) => (
-                    <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} t={t} onClick={() => setSelected(m)} />
-              ))}
-            </Grid>
+            <>
+              <Grid>
+                {filtered.slice(0, grid.limit).map((m, i) => (
+                  <MovieCard key={`${m.tmdb_id}-${i}`} movie={m} t={t} onClick={() => setSelected(m)} />
+                ))}
+              </Grid>
+              {grid.hasMore && <div ref={grid.sentinelRef} style={{ height: 24 }} />}
+            </>
           ))}
 
         {/* Infinite scroll sentinel + loader (catalog views only) */}

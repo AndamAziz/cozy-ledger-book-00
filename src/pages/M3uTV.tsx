@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import M3uStreamView from '@/components/livetv/M3uStreamView';
 import { ChannelLogo } from '@/components/livetv/ChannelLogo';
 import type { StreamHeaders } from '@/lib/streamHeaders';
+import { useChannelIndex } from '@/hooks/useChannelIndex';
+import { useIncrementalList } from '@/hooks/useVirtualList';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -428,41 +430,15 @@ export default function M3uTV() {
 
   const playChannel = (ch: Channel) => setCurrent(ch);
 
-  /* ---------------- derived ---------------- */
+  /* ---------------- derived (computed in a Web Worker) ---------------- */
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return channels.filter(
-      (c) =>
-        (activeGroup === 'all' || c.group === activeGroup) &&
-        (!q || c.name.toLowerCase().includes(q)),
-    );
-  }, [channels, activeGroup, query]);
+  // Grouping, search and sectioning for 40k+ channel playlists runs off the main
+  // thread, so typing or switching category never freezes the UI.
+  const { filtered, sections, groupCounts } = useChannelIndex(channels, activeGroup, query, 300);
 
+  // Sections are revealed progressively while scrolling instead of all at once.
+  const sectionWindow = useIncrementalList(sections.length, 6, [activeGroup, query, channels.length]);
 
-  const groupCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    channels.forEach((c) => {
-      map[c.group] = (map[c.group] || 0) + 1;
-    });
-    return map;
-  }, [channels]);
-
-  /** Split the visible items into per-category sections (max 300 items shown). */
-  const sections = useMemo(() => {
-    const map = new Map<string, Channel[]>();
-    filtered.slice(0, 300).forEach((c) => {
-      const key = c.group || 'Other';
-      const list = map.get(key);
-      if (list) list.push(c);
-      else map.set(key, [c]);
-    });
-    return [...map.entries()].map(([name, items]) => ({
-      name,
-      items,
-      movie: isMovieItem(items[0]),
-    }));
-  }, [filtered]);
 
 
   /* ---------------- ui ---------------- */
@@ -750,7 +726,7 @@ export default function M3uTV() {
           <p className="py-20 text-center text-xs font-semibold text-muted-foreground">{T.noChannels}</p>
         ) : (
           <div className="space-y-8">
-            {sections.map((section) => (
+            {sections.slice(0, sectionWindow.limit).map((section) => (
               <section key={section.name} className="space-y-3">
                 {section.movie ? (
                   <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9">
@@ -814,6 +790,8 @@ export default function M3uTV() {
                 )}
               </section>
             ))}
+            {/* Reveals the next batch of categories as the user scrolls. */}
+            {sectionWindow.hasMore && <div ref={sectionWindow.sentinelRef} className="h-10" />}
           </div>
         )}
 
