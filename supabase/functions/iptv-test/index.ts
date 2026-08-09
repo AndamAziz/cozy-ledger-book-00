@@ -5,7 +5,7 @@ import { relayFetch, xtreamAuthError } from '../_shared/iptvFetch.ts'
 
 // M3U files (especially GitHub-hosted playlists with thousands of lines) need
 // time to download — a short deadline reported a false "Connection timed out".
-const TIMEOUT_MS = 20_000
+const TIMEOUT_MS = 30_000
 /** Short deadline for the tiny sample playback probes. */
 const PROBE_TIMEOUT_MS = 8_000
 
