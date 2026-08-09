@@ -102,14 +102,17 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
-  const CEO_EMAIL = 'andam@outlook.com';
-  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
-  const isCEO = (currentUserEmail || '').toLowerCase() === CEO_EMAIL;
+  const [isCEO, setIsCEO] = useState(false);
 
   useEffect(() => {
     fetchUsers();
-    supabase.auth.getUser().then(({ data }) => {
-      setCurrentUserEmail(data.user?.email ?? null);
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      const { data: owner } = await supabase.rpc('has_role', {
+        _user_id: data.user.id,
+        _role: 'owner',
+      });
+      setIsCEO(!!owner);
     });
   }, []);
 
@@ -129,7 +132,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         .from('user_roles')
         .select('user_id, role');
       
-      const adminUserIds = new Set(adminRoles?.filter(r => r.role === 'admin').map(r => r.user_id) || []);
+      const adminUserIds = new Set(adminRoles?.filter(r => r.role === 'admin' || r.role === 'owner').map(r => r.user_id) || []);
       
       // Mark admins but KEEP them in the list so they appear under the Admin filter
       const usersWithAdminStatus = data?.map(u => ({
