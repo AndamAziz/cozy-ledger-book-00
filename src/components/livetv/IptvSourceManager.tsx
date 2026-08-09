@@ -84,7 +84,6 @@ interface DirectoryUser {
 
 const PRESETS = [
   { label: 'Iraq', url: 'https://iptv-org.github.io/iptv/countries/iq.m3u' },
-  { label: 'Iraq (alt)', url: 'https://iptv-org.github.io/iptv/countries/iq.m3u' },
   { label: 'Kurdish', url: 'https://iptv-org.github.io/iptv/languages/kur.m3u' },
   { label: 'UK', url: 'https://iptv-org.github.io/iptv/countries/uk.m3u' },
   { label: 'Sports', url: 'https://iptv-org.github.io/iptv/categories/sports.m3u' },
