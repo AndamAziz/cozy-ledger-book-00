@@ -150,7 +150,7 @@ export function LiveTVPlayer({
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
-  const [isFull, setIsFull] = useState(false);
+  const [isFull, setIsFull] = useState(() => Boolean(fullscreenElement()));
   // VOD (movies / episodes) playback position — drives the seek bar.
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
