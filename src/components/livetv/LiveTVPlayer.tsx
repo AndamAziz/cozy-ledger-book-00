@@ -1050,15 +1050,20 @@ export function LiveTVPlayer({
                   : route.reason ?? 'Streaming through the relay proxy'}
                 className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] backdrop-blur-sm ${isLive ? '' : 'ml-auto'} ${
                   route.mode === 'direct'
-                    ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+                    ? 'border-sky-400/30 bg-sky-400/10 text-sky-200'
                     : 'border-amber-400/30 bg-amber-400/10 text-amber-200'
                 }`}
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full"
-                  style={{ background: route.mode === 'direct' ? '#34d399' : '#fbbf24' }}
+                  style={{ background: route.mode === 'direct' ? '#38bdf8' : '#fbbf24' }}
                 />
                 {route.mode === 'direct' ? 'Direct' : 'Relay'}
+              </span>
+            )}
+            {route?.mode === 'proxy' && route.reason && (
+              <span className="hidden max-w-[220px] truncate text-[10px] font-semibold text-white/50 md:inline">
+                {route.reason}
               </span>
             )}
             <button
