@@ -1012,7 +1012,7 @@ export function LiveTVPlayer({
           </div>
         )}
 
-        {error && !codecIssue && (
+        {error && !codecIssue && !blocked && (
 
           <div className="absolute inset-0 flex items-center justify-center px-6">
             <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.06] px-6 py-7 text-center shadow-2xl backdrop-blur-2xl">
