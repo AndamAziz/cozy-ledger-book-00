@@ -720,7 +720,12 @@ export function LiveTVPlayer({
 
   useEffect(() => {
     const onFs = () => setIsFull(Boolean(fullscreenElement()));
-    return onFullscreenChange(onFs);
+    const offDoc = onFullscreenChange(onFs);
+    const offVideo = onVideoFullscreenChange(videoRef.current, onFs);
+    return () => {
+      offDoc();
+      offVideo();
+    };
   }, []);
 
   const togglePlay = () => {
