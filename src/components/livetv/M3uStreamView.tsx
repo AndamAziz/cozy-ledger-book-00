@@ -231,7 +231,7 @@ export default function M3uStreamView({
       document.body.style.overflow = '';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, channels]);
+  }, [index, orderedChannels]);
 
   /* Smart TV remote: CH+/CH- zapping, play/pause, mute and Back. */
   useEffect(() => {
