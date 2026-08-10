@@ -484,7 +484,11 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
       {seriesItem && <SeriesDetail series={seriesItem} onClose={() => setSeriesItem(null)} />}
       {playing && (
         <ErrorBoundary>
-          <LiveTVPlayer channel={playing} onClose={() => setPlaying(null)} />
+          <LiveTVPlayer
+            channel={playing}
+            onClose={() => setPlaying(null)}
+            onZapChannel={playing.kind === 'live' || !playing.kind ? (d) => void zapChannel(d) : undefined}
+          />
         </ErrorBoundary>
       )}
 
