@@ -35,8 +35,7 @@ export function isTvMode(): boolean {
 /** Very constrained hardware — treat like a TV for effect-stripping purposes. */
 export function lowMemoryDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
-  const mem = (navigator as Navigator & { deviceMemory?: number; hardwareConcurrency?: number }).deviceMemory;
-  const ram = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? mem;
+  const ram = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
   return typeof ram === 'number' && ram > 0 && ram <= 1;
 }
 
