@@ -129,31 +129,21 @@ export function refreshCategoryHealth(id?: string) {
   if (id) {
     state.delete(id);
     emit(id);
-    enqueue(id);
     return;
   }
   samples.forEach((_urls, key) => {
     state.delete(key);
     emit(key);
-    enqueue(key);
   });
 }
 
-/** Background sweep: re-probe every registered category whose verdict expired. */
+/**
+ * Category stream probing is deliberately disabled. A Range request still
+ * opens a real viewer on many Xtream panels, so even a serial sweep eventually
+ * fills/holds the same account's slots while the user is only browsing.
+ */
 export function startCategoryHealthSweep(): () => void {
-  if (!sweeper) {
-    sweeper = setInterval(() => {
-      if (typeof document !== 'undefined' && document.hidden) return;
-      const now = Date.now();
-      samples.forEach((_urls, id) => {
-        if (isStale(getCategoryHealth(id), now)) enqueue(id);
-      });
-    }, CATEGORY_SWEEP_MS);
-  }
-  return () => {
-    if (sweeper) clearInterval(sweeper);
-    sweeper = null;
-  };
+  return () => undefined;
 }
 
 export function subscribeCategoryHealth(id: string, fn: (h: CategoryHealth) => void): () => void {
