@@ -136,6 +136,7 @@ export function LiveTVPlayer({
     setAttempt(0);
     setRetrying(false);
     setCodecIssue(null);
+    setBlocked(null);
 
 
     setLevels([]);
