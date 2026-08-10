@@ -7,6 +7,7 @@ import {
 
 import {
   toPlayableUrl, resolveDirectUrl, invalidateDirectUrl, markDirectSuccess, directStrikes,
+  directBlocked,
   type IptvChannel, type IptvEpisode,
 } from '@/hooks/useIptvPlaylist';
 import { directConnectBudgetMs, ladderRetryDelay } from '@/lib/directRetryPolicy';
