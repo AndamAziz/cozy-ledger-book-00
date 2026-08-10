@@ -5,6 +5,7 @@ import { ChannelCard } from './ChannelCard';
 import { PosterCard } from './PosterCard';
 import { CategoryStatusBadge } from './CategoryStatusBadge';
 import { useCategoryHealth } from '@/hooks/useCategoryHealth';
+import { setZapList } from '@/lib/zapList';
 
 interface Props {
   category: IptvCategory;
@@ -27,6 +28,11 @@ export function CategoryAccordion({ category, kind, poster, onPlay, onSeeAll }: 
   const total = data?.total ?? category.count;
   // Live categories get a periodically re-probed health verdict (sampled channels).
   const health = useCategoryHealth(category.id, channels ?? undefined, kind, kind === 'live');
+  // Remember this strip so CH+/CH- (remote, Xbox shoulder buttons) can zap.
+  const play = (c: IptvChannel) => {
+    setZapList(channels ?? undefined);
+    onPlay(c);
+  };
 
   return (
     <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl">
@@ -82,9 +88,9 @@ export function CategoryAccordion({ category, kind, poster, onPlay, onSeeAll }: 
                   {channels.map((channel) => (
                     <div key={channel.id} className={`shrink-0 ${poster ? 'w-[112px]' : 'w-[96px]'}`}>
                       {poster ? (
-                        <PosterCard channel={{ ...channel, kind }} onPlay={onPlay} />
+                        <PosterCard channel={{ ...channel, kind }} onPlay={play} />
                       ) : (
-                        <ChannelCard channel={{ ...channel, kind }} onPlay={onPlay} />
+                        <ChannelCard channel={{ ...channel, kind }} onPlay={play} />
                       )}
                     </div>
                   ))}

@@ -29,6 +29,8 @@ import { useProviderHealth } from '@/hooks/useIptvHealth';
 import { useLiveTvSources } from '@/components/livetv/LiveTvGate';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useIncrementalList } from '@/hooks/useVirtualList';
+import { setZapList, zapNeighbour } from '@/lib/zapList';
+import { TV_EVENT } from '@/lib/tvRemote';
 
 
 function tabOf(category: IptvCategory): LiveTab {
@@ -110,9 +112,23 @@ function CategorySection({
           <div className={gridClass}>
             {channels.map((channel) =>
               poster ? (
-                <PosterCard key={channel.id} channel={{ ...channel, kind }} onPlay={onPlay} />
+                <PosterCard
+                  key={channel.id}
+                  channel={{ ...channel, kind }}
+                  onPlay={(c) => {
+                    setZapList(channels);
+                    onPlay(c);
+                  }}
+                />
               ) : (
-                <ChannelCard key={channel.id} channel={{ ...channel, kind }} onPlay={onPlay} />
+                <ChannelCard
+                  key={channel.id}
+                  channel={{ ...channel, kind }}
+                  onPlay={(c) => {
+                    setZapList(channels);
+                    onPlay(c);
+                  }}
+                />
               ),
             )}
           </div>
@@ -232,6 +248,26 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
     const t = setTimeout(() => prefetchIptvCategories(categories.slice(0, 8).map((c) => c.id)), 300);
     return () => clearTimeout(t);
   }, [categories]);
+
+  // CH+ / CH- from a TV remote or an Xbox pad zaps within the list the user
+  // opened the current channel from.
+  useEffect(() => {
+    if (!playing) return;
+    const zap = (delta: number) => (e: Event) => {
+      const next = zapNeighbour(playing.id, delta);
+      if (!next) return;
+      e.preventDefault();
+      setPlaying({ ...next, kind: playing.kind });
+    };
+    const up = zap(1);
+    const down = zap(-1);
+    window.addEventListener(TV_EVENT.channelUp, up);
+    window.addEventListener(TV_EVENT.channelDown, down);
+    return () => {
+      window.removeEventListener(TV_EVENT.channelUp, up);
+      window.removeEventListener(TV_EVENT.channelDown, down);
+    };
+  }, [playing]);
 
   // Switching tabs returns to the category list.
   useEffect(() => {
@@ -372,9 +408,23 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
             <div className={usePoster ? GRID_POSTER : GRID_LIVE}>
               {results?.channels.map((channel) =>
                 usePoster ? (
-                  <PosterCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={openItem} />
+                  <PosterCard
+                    key={channel.id}
+                    channel={{ ...channel, kind: playbackKind }}
+                    onPlay={(c) => {
+                      setZapList(results?.channels);
+                      openItem(c);
+                    }}
+                  />
                 ) : (
-                  <ChannelCard key={channel.id} channel={{ ...channel, kind: playbackKind }} onPlay={openItem} />
+                  <ChannelCard
+                    key={channel.id}
+                    channel={{ ...channel, kind: playbackKind }}
+                    onPlay={(c) => {
+                      setZapList(results?.channels);
+                      openItem(c);
+                    }}
+                  />
                 ),
               )}
             </div>

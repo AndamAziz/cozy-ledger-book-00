@@ -850,7 +850,7 @@ export function LiveTVPlayer({
 
 
   return (
-    <div className="fixed inset-0 z-[90] flex flex-col bg-black/95 backdrop-blur-xl md:bg-[#07070b]/97 lg:flex-row lg:items-stretch">
+    <div data-tv-scope className="fixed inset-0 z-[90] flex flex-col bg-black/95 backdrop-blur-xl md:bg-[#07070b]/97 lg:flex-row lg:items-stretch">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
 
       {/* Slim permanent header — never auto-hides */}
