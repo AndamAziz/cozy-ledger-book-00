@@ -280,7 +280,10 @@ export default function M3uStreamView({
    */
   const handleSelect = (c: StreamChannel, rowIndex?: number) => {
     const tv = isTvMode();
-    if (tv && typeof rowIndex === 'number') focusIndexRef.current = rowIndex;
+    const active = document.activeElement as HTMLElement | null;
+    const fromDom = Number(active?.getAttribute?.('data-ch-row') ?? NaN);
+    const idx = typeof rowIndex === 'number' ? rowIndex : Number.isFinite(fromDom) ? fromDom : null;
+    if (tv && idx !== null) focusIndexRef.current = idx;
     onSelect(c);
 
     requestAnimationFrame(() => {
