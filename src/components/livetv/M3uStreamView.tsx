@@ -269,15 +269,32 @@ export default function M3uStreamView({
 
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  /** pick a channel from the list and bring the player back into view */
-  const handleSelect = (c: StreamChannel) => {
+  /** Row index the remote last activated — refocused after the list re-renders. */
+  const focusIndexRef = useRef<number | null>(null);
+
+  /**
+   * Pick a channel from the list. On a TV the D-pad focus must survive the
+   * re-render (the virtual list re-creates its rows), so we restore focus onto
+   * the same row instead of scrolling the picture into view.
+   */
+  const handleSelect = (c: StreamChannel, rowIndex?: number) => {
+    const tv = isTvMode();
+    if (tv && typeof rowIndex === 'number') focusIndexRef.current = rowIndex;
     onSelect(c);
-    
+
     requestAnimationFrame(() => {
+      if (tv) {
+        const idx = focusIndexRef.current;
+        if (idx !== null) {
+          document.querySelector<HTMLElement>(`[data-ch-row="${idx}"]`)?.focus({ preventScroll: true });
+        }
+        return;
+      }
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       shellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   };
+
 
 
   return createPortal(
