@@ -185,20 +185,23 @@ const DIRECT_TTL_MS = 60_000;
 
 /**
  * Not every provider sends CORS headers, and some geo-block whole regions, so
- * direct playback can be impossible for a given viewer/provider pair. The first
- * failure is remembered per source (6h) so the viewer pays that probe once
- * instead of on every channel.
+ * direct playback can be impossible for a given viewer/provider pair. Failures
+ * are counted per source and only park direct playback once a threshold is
+ * reached (escalating windows), so one unlucky attempt does not cost the viewer
+ * the faster path — see `@/lib/directRetryPolicy`.
  */
-const BLOCK_TTL_MS = 6 * 60 * 60 * 1000;
-const blockKey = () => `iptv-direct-blocked:${activeSourceId ?? 'default'}`;
-
 function directBlocked(): boolean {
-  try {
-    const at = Number(localStorage.getItem(blockKey()) ?? '0');
-    return at > 0 && Date.now() - at < BLOCK_TTL_MS;
-  } catch {
-    return false;
-  }
+  return isDirectParked(activeSourceId);
+}
+
+/** Recent consecutive direct failures for the active source. */
+export function directStrikes(): number {
+  return readDirectState(activeSourceId).strikes;
+}
+
+/** Direct playback produced frames: forget the failure history. */
+export function markDirectSuccess() {
+  recordDirectSuccess(activeSourceId);
 }
 
 export async function resolveDirectUrl(
@@ -235,19 +238,16 @@ export async function resolveDirectUrl(
 
 /**
  * A direct URL failed to play (CORS-less provider, geo-block, expired token):
- * forget it and stop attempting direct playback for this source for a while, so
- * playback falls back to the proxy immediately on the next channel.
+ * forget it and add a strike. Direct playback is only parked once the failure
+ * threshold is crossed, and the park window escalates with repeat failures.
  */
 export function invalidateDirectUrl(channelId: string) {
   for (const key of [...directCache.keys()]) {
     if (key.includes(`|${channelId}|`)) directCache.set(key, { url: null, at: Date.now() });
   }
-  try {
-    localStorage.setItem(blockKey(), String(Date.now()));
-  } catch {
-    // storage disabled — the in-memory cache still prevents a retry loop
-  }
+  recordDirectFailure(activeSourceId);
 }
+
 
 
 
