@@ -123,6 +123,14 @@ export function LiveTVPlayer({
   const [retrying, setRetrying] = useState(false);
   /** Bumped by the manual Retry button to force a fresh ladder run. */
   const [reload, setReload] = useState(0);
+  /**
+   * Direct-play state: once a direct provider URL fails for this channel we stop
+   * trying it and stream through the proxy for the rest of the session.
+   */
+  const directDead = useRef(false);
+  useEffect(() => {
+    directDead.current = false;
+  }, [channel.id]);
 
 
 
