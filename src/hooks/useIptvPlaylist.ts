@@ -168,6 +168,56 @@ export function toPlayableUrl(
   return `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}${rawPart}${sourceParam()}&soft=1&apikey=${ANON}${tokenPart}`;
 }
 
+/**
+ * Direct-play resolution.
+ *
+ * Media bytes must NOT travel through the Edge Function: that hop is what made
+ * Live TV and VOD stall (function CPU/wall-clock limits + an extra network leg).
+ * We therefore ask the function for the provider's final (tokenized) media URL
+ * and let the browser stream straight from the provider/CDN. Only https targets
+ * qualify — an http URL is blocked as mixed content on our https origin, so
+ * those channels transparently keep using the proxy path.
+ *
+ * Resolutions are memoised briefly so zapping does not re-handshake.
+ */
+const directCache = new Map<string, { url: string | null; at: number }>();
+const DIRECT_TTL_MS = 60_000;
+
+export async function resolveDirectUrl(
+  channelId: string,
+  kind: IptvKind = 'live',
+  ext?: string,
+  raw = false,
+): Promise<string | null> {
+  const key = `${activeSourceId ?? 'default'}|${channelId}|${kind}|${ext ?? ''}|${raw ? 1 : 0}`;
+  const hit = directCache.get(key);
+  if (hit && Date.now() - hit.at < DIRECT_TTL_MS) return hit.url;
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token ?? accessToken;
+    const extPart = ext ? `&ext=${encodeURIComponent(ext)}` : '';
+    const res = await fetch(
+      `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}${raw ? '&raw=1' : ''}${sourceParam()}&resolve=1&apikey=${ANON}`,
+      { headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` }, signal: AbortSignal.timeout(8000) },
+    );
+    const json = await res.json().catch(() => null);
+    const url = res.ok && json?.direct && typeof json.url === 'string' ? (json.url as string) : null;
+    directCache.set(key, { url, at: Date.now() });
+    return url;
+  } catch {
+    directCache.set(key, { url: null, at: Date.now() });
+    return null;
+  }
+}
+
+/** Forget a direct URL that failed to play, so the proxy path is used next. */
+export function invalidateDirectUrl(channelId: string) {
+  for (const key of [...directCache.keys()]) {
+    if (key.includes(`|${channelId}|`)) directCache.set(key, { url: null, at: Date.now() });
+  }
+}
+
+
 
 
 /** A path that just failed is not retried for this long (fail fast, no 20s stall). */
