@@ -168,6 +168,89 @@ export function toPlayableUrl(
   return `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}${rawPart}${sourceParam()}&soft=1&apikey=${ANON}${tokenPart}`;
 }
 
+/**
+ * Direct-play resolution.
+ *
+ * Media bytes must NOT travel through the Edge Function: that hop is what made
+ * Live TV and VOD stall (function CPU/wall-clock limits + an extra network leg).
+ * We therefore ask the function for the provider's final (tokenized) media URL
+ * and let the browser stream straight from the provider/CDN. Only https targets
+ * qualify — an http URL is blocked as mixed content on our https origin, so
+ * those channels transparently keep using the proxy path.
+ *
+ * Resolutions are memoised briefly so zapping does not re-handshake.
+ */
+const directCache = new Map<string, { url: string | null; at: number }>();
+const DIRECT_TTL_MS = 60_000;
+
+/**
+ * Not every provider sends CORS headers, and some geo-block whole regions, so
+ * direct playback can be impossible for a given viewer/provider pair. The first
+ * failure is remembered per source (6h) so the viewer pays that probe once
+ * instead of on every channel.
+ */
+const BLOCK_TTL_MS = 6 * 60 * 60 * 1000;
+const blockKey = () => `iptv-direct-blocked:${activeSourceId ?? 'default'}`;
+
+function directBlocked(): boolean {
+  try {
+    const at = Number(localStorage.getItem(blockKey()) ?? '0');
+    return at > 0 && Date.now() - at < BLOCK_TTL_MS;
+  } catch {
+    return false;
+  }
+}
+
+export async function resolveDirectUrl(
+  channelId: string,
+  kind: IptvKind = 'live',
+  ext?: string,
+  raw = false,
+): Promise<string | null> {
+  if (directBlocked()) return null;
+  const key = `${activeSourceId ?? 'default'}|${channelId}|${kind}|${ext ?? ''}|${raw ? 1 : 0}`;
+  const hit = directCache.get(key);
+  if (hit && Date.now() - hit.at < DIRECT_TTL_MS) return hit.url;
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token ?? accessToken;
+    const extPart = ext ? `&ext=${encodeURIComponent(ext)}` : '';
+    // Manual abort timer (AbortSignal.timeout is missing on older WebViews/TVs).
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 8000);
+    const res = await fetch(
+      `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}${raw ? '&raw=1' : ''}${sourceParam()}&resolve=1&apikey=${ANON}`,
+      { headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` }, signal: ac.signal },
+    );
+    clearTimeout(timer);
+    const json = await res.json().catch(() => null);
+    const url = res.ok && json?.direct && typeof json.url === 'string' ? (json.url as string) : null;
+    directCache.set(key, { url, at: Date.now() });
+    return url;
+  } catch {
+    directCache.set(key, { url: null, at: Date.now() });
+    return null;
+  }
+}
+
+/**
+ * A direct URL failed to play (CORS-less provider, geo-block, expired token):
+ * forget it and stop attempting direct playback for this source for a while, so
+ * playback falls back to the proxy immediately on the next channel.
+ */
+export function invalidateDirectUrl(channelId: string) {
+  for (const key of [...directCache.keys()]) {
+    if (key.includes(`|${channelId}|`)) directCache.set(key, { url: null, at: Date.now() });
+  }
+  try {
+    localStorage.setItem(blockKey(), String(Date.now()));
+  } catch {
+    // storage disabled — the in-memory cache still prevents a retry loop
+  }
+}
+
+
+
 
 
 /** A path that just failed is not retried for this long (fail fast, no 20s stall). */

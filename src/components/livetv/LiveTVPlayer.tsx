@@ -5,7 +5,10 @@ import {
   Play, Pause, Volume2, VolumeX, RotateCcw, Rewind, FastForward,
 } from 'lucide-react';
 
-import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
+import {
+  toPlayableUrl, resolveDirectUrl, invalidateDirectUrl,
+  type IptvChannel, type IptvEpisode,
+} from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 import { useLogoFallback } from '@/lib/logoFallback';
 import {
@@ -120,6 +123,14 @@ export function LiveTVPlayer({
   const [retrying, setRetrying] = useState(false);
   /** Bumped by the manual Retry button to force a fresh ladder run. */
   const [reload, setReload] = useState(0);
+  /**
+   * Direct-play state: once a direct provider URL fails for this channel we stop
+   * trying it and stream through the proxy for the rest of the session.
+   */
+  const directDead = useRef(false);
+  useEffect(() => {
+    directDead.current = false;
+  }, [channel.id]);
 
 
 
@@ -223,9 +234,14 @@ export function LiveTVPlayer({
 
     const engine = engines[Math.min(stage, engines.length - 1)] ?? 'native';
     // mpegts.js needs the transport-stream variant, not an HLS manifest.
-    const src = toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext, {
+    const proxySrc = toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext, {
       raw: engine === 'mpegts',
     });
+    // Preferred source: the provider's own (tokenized) URL, streamed straight to
+    // the browser. `src` is reassigned once before any engine attaches, so every
+    // closure below (recovery reloads included) sees the source actually in use.
+    let src = proxySrc;
+    let usingDirect = false;
     let disposed = false;
     /** Stop everything and tell the viewer the codec — not the feed — is the problem. */
     const flagCodec = (label: string) => {
@@ -253,7 +269,9 @@ export function LiveTVPlayer({
     const armWatchdog = () => {
       watchdog = window.setTimeout(() => {
         if (!disposed) nextEngine();
-      }, 15_000);
+        // Direct playback either starts fast or is unreachable — fail over to the
+        // proxy quickly instead of holding the viewer on a spinner for 15s.
+      }, usingDirect ? 8_000 : 15_000);
     };
     const done = () => {
       clearWatchdog();
@@ -269,6 +287,17 @@ export function LiveTVPlayer({
     const nextEngine = () => {
       if (disposed || diagnosing) return;
       clearWatchdog();
+      // Direct playback failed (CORS-less provider, expired token, blocked
+      // segment): drop straight back to the proxy for the SAME engine instead of
+      // burning a ladder step — no diagnosis needed, the proxy path is proven.
+      if (usingDirect) {
+        usingDirect = false;
+        directDead.current = true;
+        invalidateDirectUrl(channel.id);
+        safeDestroy();
+        setReload((r) => r + 1);
+        return;
+      }
       // Before burning more attempts, ask the proxy what actually went wrong.
       // A single-slot provider (HTTP 458/429 MAX_CONNECTIONS) must be reported
       // honestly, and the ladder MUST stay paused while we ask — otherwise the
@@ -286,7 +315,7 @@ export function LiveTVPlayer({
       } catch {
         /* best-effort socket release */
       }
-      window.setTimeout(() => void diagnoseStream(src).then((diag) => {
+      window.setTimeout(() => void diagnoseStream(proxySrc).then((diag) => {
         diagnosing = false;
         if (disposed) return;
         if (diag) {
@@ -390,8 +419,10 @@ export function LiveTVPlayer({
         // Same 3-stage in-place recovery ladder the IPTV M3U engine uses:
         // decoder glitches are recovered (then audio codec swapped), network
         // faults reload the manifest — only then do we fall to the next engine.
-
-        if (recovered < 3) {
+        // Exception: a direct provider URL is either reachable or it is not
+        // (CORS-less response, geo-block, expired token). Retrying it in place
+        // only delays the proven proxy path, so we bail out on the first fault.
+        if (recovered < 3 && !usingDirect) {
           recovered += 1;
           try {
             if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -473,8 +504,28 @@ export function LiveTVPlayer({
     // Open the upstream connection only after the previous slot was released.
     const startTimer = window.setTimeout(() => {
       if (disposed) return;
-      armWatchdog();
-      attach();
+      // Ask for the direct media URL first (a tiny JSON handshake, not the
+      // bytes). Only if the provider has no browser-safe https URL do we stream
+      // through the Edge Function proxy.
+      const begin = () => {
+        if (disposed) return;
+        armWatchdog();
+        attach();
+      };
+      if (directDead.current) {
+        begin();
+        return;
+      }
+      void resolveDirectUrl(channel.id, channel.kind ?? 'live', channel.ext, engine === 'mpegts')
+        .then((direct) => {
+          if (disposed) return;
+          if (direct) {
+            src = direct;
+            usingDirect = true;
+          }
+          begin();
+        })
+        .catch(() => begin());
     }, slotWait);
 
     return () => {
