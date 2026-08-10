@@ -152,4 +152,3 @@ export function startGamepadBridge(dispatch: (action: RemoteAction) => void): ()
   };
 }
 
-}
