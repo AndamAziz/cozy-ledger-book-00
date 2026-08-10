@@ -721,9 +721,49 @@ export function IptvSourceManager({
                   <span className="ms-auto text-[10px] font-extrabold text-emerald-400">ACTIVE</span>
                 )}
               </div>
-              <p dir="ltr" className="truncate text-[10px] opacity-50">
-                {s.playlist_masked}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p dir="ltr" className="min-w-0 flex-1 truncate text-[10px] opacity-50">
+                  {s.playlist_masked}
+                </p>
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => void toggleReveal(s)}
+                    disabled={revealBusy === s.id}
+                    aria-label={revealed[s.id] ? 'Hide link' : 'Show real link'}
+                    className="flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 px-2 py-0.5 text-[9px] font-bold text-amber-300 transition hover:border-amber-500/60 disabled:opacity-40"
+                  >
+                    {revealBusy === s.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : revealed[s.id] ? (
+                      <EyeOff className="h-3 w-3" />
+                    ) : (
+                      <Eye className="h-3 w-3" />
+                    )}
+                    {revealed[s.id] ? 'Hide' : 'Show'}
+                  </button>
+                )}
+              </div>
+              {canManage && revealed[s.id] && (
+                <div className="space-y-1 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2">
+                  <p dir="ltr" className="break-all text-[10px] font-bold text-amber-100">
+                    {revealed[s.id]}
+                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[9px] font-bold text-amber-300/70">
+                      CEO only · hides automatically
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void copyRevealed(s)}
+                      className="flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-[9px] font-bold opacity-80 transition hover:opacity-100"
+                    >
+                      <Copy className="h-3 w-3" /> Copy
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {s.health_status && (
                 <p
                   className={`text-[10px] font-extrabold ${
