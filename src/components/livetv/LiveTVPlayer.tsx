@@ -840,16 +840,23 @@ export function LiveTVPlayer({
 
 
 
-  // Auto-hide the controls layer after a few seconds on every device.
+  // Auto-hide the controls layer (incl. next/previous) a few seconds after the
+  // last interaction. The nonce restarts the timer even when the bar is already
+  // open, so tapping "next" re-arms the countdown instead of keeping it visible.
+  const [barNonce, setBarNonce] = useState(0);
   useEffect(() => {
     if (!barOpen) return;
     if (paused) return;
     const t = setTimeout(() => setBarOpen(false), 3000);
     return () => clearTimeout(t);
-  }, [barOpen, paused]);
+  }, [barOpen, paused, barNonce]);
 
 
-  const revealBar = () => setBarOpen(true);
+  const revealBar = () => {
+    setBarOpen(true);
+    setBarNonce((n) => n + 1);
+  };
+
 
 
   return (
@@ -952,7 +959,7 @@ export function LiveTVPlayer({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setBarOpen(true);
+                revealBar();
                 onZapChannel(-1);
               }}
               aria-label="Previous channel"
@@ -968,7 +975,7 @@ export function LiveTVPlayer({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setBarOpen(true);
+                revealBar();
                 onZapChannel(1);
               }}
               aria-label="Next channel"
