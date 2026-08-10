@@ -10,9 +10,6 @@
  * hammered by a grid of categories.
  */
 
-import { isSlotLimitPayload } from './iptvSlotRetry';
-import { idle, onIdle, tabHidden } from './idle';
-
 /** A verdict older than this is shown as "stale" and re-probed. */
 export const CATEGORY_TTL_MS = 5 * 60 * 1000;
 /** How often the background worker looks for stale categories. */
@@ -34,9 +31,6 @@ const EMPTY: CategoryHealth = { online: 0, total: 0, checkedAt: null, checking: 
 const state = new Map<string, CategoryHealth>();
 const samples = new Map<string, string[]>();
 const listeners = new Map<string, Set<(h: CategoryHealth) => void>>();
-const queue: string[] = [];
-let running = false;
-let sweeper: ReturnType<typeof setInterval> | null = null;
 
 export function isStale(health: CategoryHealth, now = Date.now()): boolean {
   return !health.checkedAt || now - new Date(health.checkedAt).getTime() >= CATEGORY_TTL_MS;
@@ -54,60 +48,6 @@ function emit(id: string) {
 function set(id: string, patch: Partial<CategoryHealth>) {
   state.set(id, { ...getCategoryHealth(id), ...patch });
   emit(id);
-}
-
-async function probe(url: string): Promise<boolean> {
-  try {
-    const res = await fetch(url, {
-      headers: { Accept: 'application/json', Range: 'bytes=0-0' },
-      cache: 'no-store',
-    });
-    if (res.ok) {
-      await res.body?.cancel().catch(() => undefined);
-      return true;
-    }
-    const ct = res.headers.get('content-type') ?? '';
-    if (!ct.includes('json')) {
-      await res.body?.cancel().catch(() => undefined);
-      return false;
-    }
-    // A slot-limit refusal means the channel exists and the line is simply busy.
-    return isSlotLimitPayload(await res.json().catch(() => null));
-  } catch {
-    return false;
-  }
-}
-
-async function run() {
-  if (running) return;
-  running = true;
-  try {
-    while (queue.length) {
-      // Never compete with the user: every step waits for an idle slot, and the
-      // whole sweep pauses while the tab is in the background.
-      if (tabHidden()) break;
-      await idle();
-      const id = queue.shift()!;
-      const urls = (samples.get(id) ?? []).slice(0, CATEGORY_SAMPLE);
-      if (!urls.length) continue;
-      set(id, { checking: true });
-      let online = 0;
-      for (const url of urls) {
-        if (await probe(url)) online += 1;
-        await idle();
-      }
-      set(id, { online, total: urls.length, checkedAt: new Date().toISOString(), checking: false });
-    }
-  } finally {
-    running = false;
-  }
-}
-
-function enqueue(id: string) {
-  if (queue.includes(id) || getCategoryHealth(id).checking) return;
-  queue.push(id);
-  // Kick the worker off the render path — probes must never delay a paint.
-  onIdle(() => void run(), 1000);
 }
 
 /** Register (or update) the sample of channel URLs representing a category. */
