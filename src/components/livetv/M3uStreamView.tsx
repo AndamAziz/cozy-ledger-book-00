@@ -273,11 +273,16 @@ export default function M3uStreamView({
   }, [query]);
 
   // Full list (no cap) — only the visible rows are rendered, see useVirtualList.
-  // The currently selected channel is always pinned to the top of the list.
+  // The selected channel is pinned to the top for visibility only; zapping still
+  // follows the playlist's original order (see step()).
   const list = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
-    return q ? orderedChannels.filter((c) => c.name.toLowerCase().includes(q)) : orderedChannels;
-  }, [orderedChannels, debouncedQuery]);
+    const base = q ? channels.filter((c) => c.name.toLowerCase().includes(q)) : channels;
+    const i = base.findIndex((c) => c.url === channel.url);
+    if (i <= 0) return base;
+    return [base[i], ...base.slice(0, i), ...base.slice(i + 1)];
+  }, [channels, channel.url, debouncedQuery]);
+
 
   const rows = useVirtualList(list.length, { rowHeight: ROW_HEIGHT, gap: ROW_GAP });
   useEffect(() => {
