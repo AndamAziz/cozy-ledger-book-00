@@ -470,7 +470,7 @@ export default function M3uStreamView({
             />
           </div>
           <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-            {T.upNext} · {channels.length}
+            {T.upNext} · {orderedChannels.length}
           </p>
           {/* Virtualised list: only the rows in view exist in the DOM. */}
           <div
