@@ -7,6 +7,7 @@ import {
   remoteAction,
   type RemoteAction,
 } from '@/lib/tvRemote';
+import { markTvMode } from '@/lib/tvMode';
 
 /** Is the element actually on screen and interactive? */
 function visible(el: Element): boolean {
@@ -55,7 +56,7 @@ function emit(name: string): boolean {
  */
 export function useTvRemote() {
   useEffect(() => {
-    if (isTvDevice()) document.body.setAttribute('data-tv', 'true');
+    if (isTvDevice()) markTvMode();
 
     const move = (dir: 'up' | 'down' | 'left' | 'right') => {
       const pool = candidates();
@@ -81,7 +82,7 @@ export function useTvRemote() {
 
       // Remote-style keys reveal a TV/D-pad user even when the UA is generic.
       if (action === 'channelUp' || action === 'channelDown' || action === 'up' || action === 'down') {
-        document.body.setAttribute('data-tv', 'true');
+        markTvMode();
       }
 
       const active = document.activeElement as HTMLElement | null;

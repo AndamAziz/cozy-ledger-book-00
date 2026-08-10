@@ -1,0 +1,76 @@
+/**
+ * Smart TV mode: detection + memory-lean playback tuning.
+ *
+ * Living-room browsers (Tizen, webOS, Android TV, Fire TV) run on ~1-1.5GB RAM
+ * with weak GPUs. Two things kill them: compositor-heavy CSS (backdrop blur,
+ * infinite animations, huge shadows) and streaming engines that buffer tens of
+ * megabytes. `initTvMode()` flips a `data-tv` attribute on <html>/<body> that
+ * `index.css` uses to strip the expensive effects, and the config helpers below
+ * shrink the HLS / mpegts buffers so long sessions don't OOM.
+ */
+
+import { isTvDevice } from './tvRemote';
+
+/** Mark the document as TV-driven. Safe to call repeatedly. */
+export function markTvMode(): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.setAttribute('data-tv', 'true');
+  document.body?.setAttribute('data-tv', 'true');
+}
+
+/** Detect a TV/set-top browser as early as possible (before first paint). */
+export function initTvMode(ua?: string): boolean {
+  if (typeof document === 'undefined') return false;
+  const tv = isTvDevice(ua ?? navigator.userAgent) || lowMemoryDevice();
+  if (tv) markTvMode();
+  return tv;
+}
+
+/** True once TV mode is active (UA sniff or a D-pad key was pressed). */
+export function isTvMode(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.hasAttribute('data-tv') || !!document.body?.hasAttribute('data-tv');
+}
+
+/** Very constrained hardware — treat like a TV for effect-stripping purposes. */
+export function lowMemoryDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ram = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  return typeof ram === 'number' && ram > 0 && ram <= 1;
+}
+
+/**
+ * hls.js config. On TVs we cap the forward buffer and disable back-buffer
+ * retention so the SourceBuffer stays small (a 20s+90s buffer on a 1080p feed
+ * is ~60MB of decoded data — enough to crash Tizen).
+ */
+export function hlsConfigFor(tv = isTvMode()) {
+  return tv
+    ? {
+        enableWorker: true,
+        lowLatencyMode: false,
+        maxBufferLength: 8,
+        maxMaxBufferLength: 12,
+        maxBufferSize: 12 * 1000 * 1000,
+        backBufferLength: 0,
+        liveSyncDurationCount: 3,
+        fragLoadingMaxRetry: 2,
+        capLevelToPlayerSize: true,
+      }
+    : { enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 };
+}
+
+/** mpegts.js config: smaller stash + no back buffer on TV. */
+export function mpegtsConfigFor(tv = isTvMode()) {
+  return tv
+    ? {
+        enableWorker: true,
+        liveBufferLatencyChasing: true,
+        lazyLoad: false,
+        enableStashBuffer: false,
+        autoCleanupSourceBuffer: true,
+        autoCleanupMaxBackwardDuration: 8,
+        autoCleanupMinBackwardDuration: 4,
+      }
+    : { enableWorker: true, liveBufferLatencyChasing: true, lazyLoad: false };
+}

@@ -675,3 +675,111 @@ body[data-tv] [tabindex]:focus {
     }
   }
 }
+
+/* ============================================================
+   SMART TV MODE (html[data-tv] / body[data-tv])
+   Tizen, webOS, Android TV and Fire TV browsers composite on weak GPUs with
+   ~1GB of RAM. Blur filters, infinite animations and huge shadows are the top
+   cause of stutter and tab crashes there, so strip them all in TV mode and keep
+   only flat surfaces plus a strong focus ring.
+   ============================================================ */
+
+[data-tv] *,
+[data-tv] *::before,
+[data-tv] *::after {
+  /* Kill compositor-heavy effects (backdrop-blur, blur-*, drop-shadow) */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  /* No long transitions: TV browsers drop frames mid-tween */
+  transition-duration: 100ms !important;
+}
+
+/* Infinite/decorative motion off — keeps the CPU free for the decoder */
+[data-tv] .animate-pulse,
+[data-tv] .pulse,
+[data-tv] .animate-spin.is-decorative,
+[data-tv] .animate-fade-in,
+[data-tv] .animate-scale-in,
+[data-tv] .animate-enter,
+[data-tv] .animate-slide-in-right,
+[data-tv] [class*="animate-[pulse"],
+[data-tv] [class*="animate-[ping"] {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Flatten translucent glass panels into opaque surfaces (cheaper + readable) */
+[data-tv] .glass,
+[data-tv] .glass-card,
+[data-tv] [class*="backdrop-blur"] {
+  background-color: hsl(var(--card)) !important;
+  box-shadow: none !important;
+}
+
+/* Decorative radial-gradient glow blobs: hidden, they cost a full-screen layer */
+[data-tv] .tv-hide,
+[data-tv] .pointer-events-none[class*="blur-"] {
+  display: none !important;
+}
+
+/* Never scale images/posters on hover — forces re-rasterisation each frame */
+[data-tv] .group:hover img,
+[data-tv] .hover-scale:hover {
+  transform: none !important;
+}
+
+/* Legible from the sofa: bump base type + generous rhythm */
+[data-tv] {
+  font-size: 18px;
+}
+[data-tv] .text-\[10px\],
+[data-tv] .text-\[11px\],
+[data-tv] .text-xs {
+  font-size: 0.875rem !important;
+  line-height: 1.35 !important;
+}
+
+/* Bigger remote targets */
+[data-tv] button,
+[data-tv] a[role="button"],
+[data-tv] [role="button"],
+[data-tv] [role="option"],
+[data-tv] [role="tab"] {
+  min-height: 2.75rem;
+}
+
+/* Unmistakable D-pad focus ring on every interactive surface, incl. cards */
+[data-tv] :focus-visible,
+[data-tv] a:focus,
+[data-tv] button:focus,
+[data-tv] [role="button"]:focus,
+[data-tv] [role="option"]:focus,
+[data-tv] [role="tab"]:focus,
+[data-tv] [tabindex]:focus {
+  outline: 4px solid hsl(var(--primary)) !important;
+  outline-offset: 3px;
+  border-radius: 0.75rem;
+  box-shadow: 0 0 0 8px hsl(var(--primary) / 0.28) !important;
+  z-index: 2;
+  position: relative;
+}
+
+/* Roomier grids on TV panels so cards aren't postage stamps */
+@media (min-width: 1280px) {
+  [data-tv] .tv-grid {
+    gap: 1.25rem;
+  }
+}
+
+/* Users who ask the OS for less motion get the same lean treatment */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
