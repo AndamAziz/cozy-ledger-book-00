@@ -78,9 +78,15 @@ export function useTvRemote() {
       else if (dir === 'down' || dir === 'up') window.scrollBy({ top: dir === 'down' ? 320 : -320, behavior: 'smooth' });
     };
 
-    const onKey = (e: KeyboardEvent) => {
-      const action: RemoteAction | null = remoteAction(e);
-      if (!action) return;
+    /**
+     * Run a remote action. `e` is present for keyboard/remote presses and
+     * absent for gamepad-driven actions (nothing to preventDefault there).
+     */
+    const run = (action: RemoteAction, e?: KeyboardEvent) => {
+      const stop = () => {
+        e?.preventDefault();
+        e?.stopPropagation();
+      };
 
       // Remote-style keys reveal a TV/D-pad user even when the UA is generic.
       if (action === 'channelUp' || action === 'channelDown' || action === 'up' || action === 'down') {
@@ -98,8 +104,7 @@ export function useTvRemote() {
           if (active?.getAttribute('role') === 'slider' || active?.tagName === 'VIDEO') return;
           // Let native listbox/menu/tab widgets keep their own arrow semantics.
           if (active?.closest('[role="listbox"],[role="menu"],[role="tablist"],[cmdk-root]')) return;
-          e.preventDefault();
-          e.stopPropagation();
+          stop();
           move(action);
           return;
         }
@@ -115,33 +120,32 @@ export function useTvRemote() {
           ) {
             return;
           }
-          // Always activate explicitly: TV remotes are inconsistent about
-          // whether Enter/OK produces a native click, and preventDefault stops
-          // the browser from firing a second one.
-          e.preventDefault();
-          e.stopPropagation();
+          // Always activate explicitly: TV remotes and console browsers are
+          // inconsistent about whether OK produces a native click, and
+          // preventDefault stops the browser firing a second one.
+          stop();
           active.click();
           return;
         }
         case 'back': {
-          if (editing(active) && e.key === 'Backspace') return;
-          e.preventDefault();
+          if (editing(active) && e?.key === 'Backspace') return;
+          e?.preventDefault();
           if (emit(TV_EVENT.back)) return;
           if (window.history.length > 1) window.history.back();
           return;
         }
         case 'channelUp':
-          e.preventDefault();
+          e?.preventDefault();
           emit(TV_EVENT.channelUp);
           return;
         case 'channelDown':
-          e.preventDefault();
+          e?.preventDefault();
           emit(TV_EVENT.channelDown);
           return;
         case 'playPause':
         case 'play':
         case 'pause':
-          e.preventDefault();
+          e?.preventDefault();
           emit(TV_EVENT.playPause);
           return;
         case 'stop':
@@ -161,9 +165,25 @@ export function useTvRemote() {
       }
     };
 
+    const onKey = (e: KeyboardEvent) => {
+      const action = remoteAction(e);
+      if (action) run(action, e);
+    };
+
+    // Controllers (Xbox Edge, Android TV pads, desktop browsers with a pad)
+    // feed the exact same action pipeline as the remote.
+    const stopPad = startGamepadBridge((action) => {
+      markTvMode();
+      run(action);
+    });
+
     window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      stopPad();
+    };
   }, []);
+
 }
 
 /** Zero-markup mount point for the remote driver. */
