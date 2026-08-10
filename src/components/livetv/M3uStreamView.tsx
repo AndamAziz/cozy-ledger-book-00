@@ -193,6 +193,14 @@ export default function M3uStreamView({
     setUseProxy(false);
   }, [channel.url]);
 
+  /* TV zapping toast: always show the channel we switched to, then fade out */
+  useEffect(() => {
+    setZap(channel.name);
+    const t = setTimeout(() => setZap(null), 2600);
+    return () => clearTimeout(t);
+  }, [channel.url, channel.name]);
+
+
   /* keyboard shortcuts (arrows are reserved for D-pad focus navigation) */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
