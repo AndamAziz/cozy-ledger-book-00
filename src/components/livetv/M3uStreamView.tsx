@@ -425,9 +425,21 @@ export default function M3uStreamView({
                       <button
                         key={`${c.url}-${index}`}
                         type="button"
-                        onClick={() => handleSelect(c)}
+                        data-ch-row={index}
+                        onClick={() => handleSelect(c, index)}
+                        // TV remotes are inconsistent: some send OK as keyCode 13
+                        // with an empty `key`, Android TV sends 23, Fire TV sends
+                        // Space. Handle every variant explicitly on the row.
+                        onKeyDown={(e) => {
+                          const action = remoteAction(e.nativeEvent);
+                          if (action !== 'ok') return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          markTvMode();
+                          handleSelect(c, index);
+                        }}
                         style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
-                        className={`flex w-full items-center gap-2.5 rounded-lg border p-2 text-start transition ${
+                        className={`flex w-full items-center gap-2.5 rounded-lg border p-2 text-start transition focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                           c.url === channel.url
                             ? 'border-primary bg-primary/10'
                             : 'border-border/50 bg-card hover:border-primary/40'
