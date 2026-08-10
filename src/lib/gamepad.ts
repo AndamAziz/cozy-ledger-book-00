@@ -80,75 +80,127 @@ export function shouldFire(
   return gap >= (held < FIRST_REPEAT_MS ? FIRST_REPEAT_MS : REPEAT_MS);
 }
 
+/** Idle detection cadence: slower on TV/console browsers to spare CPU. */
+export function idleIntervalMs(tv: boolean): number {
+  return tv ? 1000 : 500;
+}
+
+/** Minimum gap between active polls (~30Hz on TV, ~60Hz elsewhere). */
+export function activePollMs(tv: boolean): number {
+  return tv ? 33 : 16;
+}
+
 /**
  * Start polling connected gamepads and dispatch actions. Returns a cleanup fn.
  * No-ops in environments without the Gamepad API.
+ *
+ * Cost control: no polling at all while the tab is hidden, a slow timer while
+ * no pad is attached, and a frame-rate gate while one is — so low-RAM Smart TV
+ * and console browsers stay responsive.
  */
 export function startGamepadBridge(dispatch: (action: RemoteAction) => void): () => void {
   if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') {
     return () => undefined;
   }
+  const tv = isTvMode() || lowMemoryDevice();
+  const idleGap = idleIntervalMs(tv);
+  const pollGap = activePollMs(tv);
+
   const held = new Map<RemoteAction, { since: number; last: number }>();
   let raf = 0;
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
+  let lastPoll = 0;
 
+  const hidden = () => typeof document !== 'undefined' && document.hidden;
   const pads = () => Array.from(navigator.getGamepads?.() ?? []).filter(Boolean).slice(0, 4);
 
-  /** Cheap 250ms poll while nothing is attached — pads often only appear after
+  /** Cheap slow poll while nothing is attached — pads often only appear after
    * the first button press, and some consoles never fire `gamepadconnected`. */
   const idle = () => {
     if (stopped) return;
     idleTimer = setTimeout(() => {
       if (stopped) return;
-      if (pads().length) raf = requestAnimationFrame(tick);
+      if (!hidden() && pads().length) raf = requestAnimationFrame(tick);
       else idle();
-    }, 250);
+    }, idleGap);
   };
 
-  const tick = () => {
+  const tick = (now = 0) => {
     if (stopped) return;
+    if (hidden()) {
+      held.clear();
+      idle();
+      return;
+    }
+    // Frame gate: skip the (allocating) getGamepads read on extra frames.
+    if (now - lastPoll < pollGap) {
+      raf = requestAnimationFrame(tick);
+      return;
+    }
+    lastPoll = now;
+
     const list = pads();
     if (!list.length) {
       held.clear();
       idle();
       return;
     }
-    const now = performance.now();
     const active = new Set<RemoteAction>();
     for (const pad of list) {
       for (const action of padActions(pad as unknown as PadSnapshot)) active.add(action);
     }
-    for (const action of active) {
-      const state = held.get(action);
-      if (shouldFire(now, state)) {
-        dispatch(action);
-        held.set(action, { since: state?.since ?? now, last: now });
+    if (active.size || held.size) {
+      const ts = performance.now();
+      for (const action of active) {
+        const state = held.get(action);
+        if (shouldFire(ts, state)) {
+          dispatch(action);
+          held.set(action, { since: state?.since ?? ts, last: ts });
+        }
       }
-    }
-    for (const action of Array.from(held.keys())) {
-      if (!active.has(action)) held.delete(action);
+      for (const action of Array.from(held.keys())) {
+        if (!active.has(action)) held.delete(action);
+      }
     }
     raf = requestAnimationFrame(tick);
   };
 
-  const onConnect = () => {
+  const resume = () => {
+    if (stopped) return;
     if (idleTimer) clearTimeout(idleTimer);
     cancelAnimationFrame(raf);
-    if (!stopped) raf = requestAnimationFrame(tick);
+    lastPoll = 0;
+    if (hidden()) idle();
+    else raf = requestAnimationFrame(tick);
   };
-  window.addEventListener('gamepadconnected', onConnect);
-  window.addEventListener('gamepaddisconnected', () => held.clear());
 
-  if (pads().length) raf = requestAnimationFrame(tick);
+  const onVisibility = () => {
+    if (hidden()) {
+      cancelAnimationFrame(raf);
+      held.clear();
+      if (idleTimer) clearTimeout(idleTimer);
+      idle();
+    } else {
+      resume();
+    }
+  };
+
+  window.addEventListener('gamepadconnected', resume);
+  window.addEventListener('gamepaddisconnected', () => held.clear());
+  document.addEventListener?.('visibilitychange', onVisibility);
+
+  if (!hidden() && pads().length) raf = requestAnimationFrame(tick);
   else idle();
 
   return () => {
     stopped = true;
-    window.removeEventListener('gamepadconnected', onConnect);
+    window.removeEventListener('gamepadconnected', resume);
+    document.removeEventListener?.('visibilitychange', onVisibility);
     if (idleTimer) clearTimeout(idleTimer);
     cancelAnimationFrame(raf);
     held.clear();
   };
 }
+
 
