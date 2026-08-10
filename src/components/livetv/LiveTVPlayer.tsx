@@ -269,7 +269,9 @@ export function LiveTVPlayer({
     const armWatchdog = () => {
       watchdog = window.setTimeout(() => {
         if (!disposed) nextEngine();
-      }, 15_000);
+        // Direct playback either starts fast or is unreachable — fail over to the
+        // proxy quickly instead of holding the viewer on a spinner for 15s.
+      }, usingDirect ? 8_000 : 15_000);
     };
     const done = () => {
       clearWatchdog();
