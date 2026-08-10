@@ -134,6 +134,15 @@ export function LiveTVPlayer({
     directDead.current = false;
   }, [channel.id]);
 
+  /**
+   * Which route the current playback attempt uses, plus why we fell back —
+   * surfaced to the viewer as a small badge on the player.
+   */
+  const [route, setRoute] = useState<{ mode: 'direct' | 'proxy'; reason?: string } | null>(null);
+  useEffect(() => {
+    setRoute(null);
+  }, [channel.id]);
+
 
 
   const [levels, setLevels] = useState<QualityLevel[]>([]);
