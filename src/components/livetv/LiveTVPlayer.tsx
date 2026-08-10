@@ -39,6 +39,9 @@ interface QualityLevel {
   label: string;
 }
 
+/** Xtream panels can keep a closed live socket counted briefly while draining. */
+const LIVE_RELEASE_GRACE_MS = 1_500;
+
 /** Bucket a level height into a friendly label. */
 function labelForLevel(height?: number, bitrate?: number): string {
   if (height && height > 0) return `${height}p`;
@@ -258,7 +261,10 @@ export function LiveTVPlayer({
     // period: the account allows a single connection, so overlapping opens are
     // what produced "max connections" errors when zapping channels.
     const slotTeardown = (channel.kind ?? 'live') === 'live' ? hardStopLive : safeDestroy;
-    const slotWait = claimStreamSlot(slotTeardown);
+    const claimedWait = claimStreamSlot(slotTeardown);
+    const slotWait = (channel.kind ?? 'live') === 'live'
+      ? Math.max(claimedWait, LIVE_RELEASE_GRACE_MS)
+      : claimedWait;
 
     setLoading(true);
     setError(false);
