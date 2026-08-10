@@ -166,6 +166,10 @@ export function IptvSourceManager({
   const [url, setUrl] = useState('');
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<TestResult | null>(null);
+  // CEO only: decrypted links, per row, auto-hidden after 30s.
+  const [revealed, setRevealed] = useState<Record<string, string>>({});
+  const [revealBusy, setRevealBusy] = useState<string | null>(null);
+
   // Per-row stream-resolver probe (does not block the row UI).
   const [rowTesting, setRowTesting] = useState<string | null>(null);
   const [rowTest, setRowTest] = useState<Record<string, RowTestResult>>({});
