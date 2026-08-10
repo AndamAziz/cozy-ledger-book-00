@@ -183,12 +183,31 @@ export function toPlayableUrl(
 const directCache = new Map<string, { url: string | null; at: number }>();
 const DIRECT_TTL_MS = 60_000;
 
+/**
+ * Not every provider sends CORS headers, and some geo-block whole regions, so
+ * direct playback can be impossible for a given viewer/provider pair. The first
+ * failure is remembered per source (6h) so the viewer pays that probe once
+ * instead of on every channel.
+ */
+const BLOCK_TTL_MS = 6 * 60 * 60 * 1000;
+const blockKey = () => `iptv-direct-blocked:${activeSourceId ?? 'default'}`;
+
+function directBlocked(): boolean {
+  try {
+    const at = Number(localStorage.getItem(blockKey()) ?? '0');
+    return at > 0 && Date.now() - at < BLOCK_TTL_MS;
+  } catch {
+    return false;
+  }
+}
+
 export async function resolveDirectUrl(
   channelId: string,
   kind: IptvKind = 'live',
   ext?: string,
   raw = false,
 ): Promise<string | null> {
+  if (directBlocked()) return null;
   const key = `${activeSourceId ?? 'default'}|${channelId}|${kind}|${ext ?? ''}|${raw ? 1 : 0}`;
   const hit = directCache.get(key);
   if (hit && Date.now() - hit.at < DIRECT_TTL_MS) return hit.url;
@@ -210,12 +229,22 @@ export async function resolveDirectUrl(
   }
 }
 
-/** Forget a direct URL that failed to play, so the proxy path is used next. */
+/**
+ * A direct URL failed to play (CORS-less provider, geo-block, expired token):
+ * forget it and stop attempting direct playback for this source for a while, so
+ * playback falls back to the proxy immediately on the next channel.
+ */
 export function invalidateDirectUrl(channelId: string) {
   for (const key of [...directCache.keys()]) {
     if (key.includes(`|${channelId}|`)) directCache.set(key, { url: null, at: Date.now() });
   }
+  try {
+    localStorage.setItem(blockKey(), String(Date.now()));
+  } catch {
+    // storage disabled — the in-memory cache still prevents a retry loop
+  }
 }
+
 
 
 
