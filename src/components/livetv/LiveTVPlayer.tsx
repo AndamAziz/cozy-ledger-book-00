@@ -6,9 +6,10 @@ import {
 } from 'lucide-react';
 
 import {
-  toPlayableUrl, resolveDirectUrl, invalidateDirectUrl,
+  toPlayableUrl, resolveDirectUrl, invalidateDirectUrl, markDirectSuccess, directStrikes,
   type IptvChannel, type IptvEpisode,
 } from '@/hooks/useIptvPlaylist';
+import { directConnectBudgetMs, ladderRetryDelay } from '@/lib/directRetryPolicy';
 import { accentFor, initialsFor } from './ChannelCard';
 import { useLogoFallback } from '@/lib/logoFallback';
 import {
