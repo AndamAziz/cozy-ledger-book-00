@@ -27,6 +27,7 @@ import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY
 
 
 import { TV_EVENT } from '@/lib/tvRemote';
+import { hlsConfigFor, mpegtsConfigFor } from '@/lib/tvMode';
 
 
 
