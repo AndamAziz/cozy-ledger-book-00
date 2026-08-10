@@ -36,9 +36,14 @@ type FsElement = HTMLElement & {
   webkitRequestFullscreen?: () => void;
   msRequestFullscreen?: () => void;
 };
-type FsVideo = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
+type FsVideo = HTMLVideoElement & {
+  webkitEnterFullscreen?: () => void;
+  webkitBeginFullscreen?: () => void;
+  webkitEndFullscreen?: () => void;
+};
 type FsDoc = Document & {
   webkitFullscreenElement?: Element | null;
+  msFullscreenElement?: Element | null;
   webkitExitFullscreen?: () => void;
   msExitFullscreen?: () => void;
 };
@@ -46,7 +51,12 @@ type FsDoc = Document & {
 export function fullscreenElement(): Element | null {
   if (typeof document === 'undefined') return null;
   const d = document as FsDoc;
-  return d.fullscreenElement ?? d.webkitFullscreenElement ?? null;
+  return (
+    d.fullscreenElement ??
+    d.webkitFullscreenElement ??
+    d.msFullscreenElement ??
+    null
+  );
 }
 
 /** Enter/exit fullscreen with iOS + legacy WebKit/Edge fallbacks. */
@@ -56,7 +66,11 @@ export function toggleFullscreen(
 ): void {
   const d = document as FsDoc;
   if (fullscreenElement()) {
-    (d.exitFullscreen?.bind(d) ?? d.webkitExitFullscreen ?? d.msExitFullscreen)?.();
+    (
+      d.exitFullscreen?.bind(d) ??
+      d.webkitExitFullscreen ??
+      d.msExitFullscreen
+    )?.();
     return;
   }
   const el = shell as FsElement | null;
@@ -70,16 +84,40 @@ export function toggleFullscreen(
     el.requestFullscreen().catch(() => undefined);
     return;
   }
-  el?.webkitRequestFullscreen?.() ?? el?.msRequestFullscreen?.() ?? v?.webkitEnterFullscreen?.();
+  el?.webkitRequestFullscreen?.() ??
+    el?.msRequestFullscreen?.() ??
+    v?.webkitEnterFullscreen?.();
 }
 
 /** Subscribe to fullscreen changes across vendor prefixes. */
 export function onFullscreenChange(handler: () => void): () => void {
   document.addEventListener('fullscreenchange', handler);
   document.addEventListener('webkitfullscreenchange', handler);
+  document.addEventListener('MSFullscreenChange', handler);
   return () => {
     document.removeEventListener('fullscreenchange', handler);
     document.removeEventListener('webkitfullscreenchange', handler);
+    document.removeEventListener('MSFullscreenChange', handler);
+  };
+}
+
+/**
+ * Subscribe to iOS video-element fullscreen events (webkitbeginfullscreen /
+ * webkitendfullscreen). These do not fire on document in iPhone/iPad, so the
+ * document listener alone misses them.
+ */
+export function onVideoFullscreenChange(
+  video: HTMLVideoElement | null,
+  handler: () => void,
+): () => void {
+  if (!video) return () => undefined;
+  const v = video as FsVideo;
+  const wrapped = () => handler();
+  v.addEventListener('webkitbeginfullscreen', wrapped);
+  v.addEventListener('webkitendfullscreen', wrapped);
+  return () => {
+    v.removeEventListener('webkitbeginfullscreen', wrapped);
+    v.removeEventListener('webkitendfullscreen', wrapped);
   };
 }
 
