@@ -234,9 +234,14 @@ export function LiveTVPlayer({
 
     const engine = engines[Math.min(stage, engines.length - 1)] ?? 'native';
     // mpegts.js needs the transport-stream variant, not an HLS manifest.
-    const src = toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext, {
+    const proxySrc = toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext, {
       raw: engine === 'mpegts',
     });
+    // Preferred source: the provider's own (tokenized) URL, streamed straight to
+    // the browser. `src` is reassigned once before any engine attaches, so every
+    // closure below (recovery reloads included) sees the source actually in use.
+    let src = proxySrc;
+    let usingDirect = false;
     let disposed = false;
     /** Stop everything and tell the viewer the codec — not the feed — is the problem. */
     const flagCodec = (label: string) => {
