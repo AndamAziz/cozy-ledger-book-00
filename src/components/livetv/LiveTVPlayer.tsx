@@ -530,6 +530,12 @@ export function LiveTVPlayer({
         attach();
       };
       if (directDead.current) {
+        setRoute({ mode: 'proxy', reason: 'Direct provider link failed for this channel' });
+        begin();
+        return;
+      }
+      if (directBlocked()) {
+        setRoute({ mode: 'proxy', reason: 'Direct route paused after repeated failures' });
         begin();
         return;
       }
@@ -539,10 +545,16 @@ export function LiveTVPlayer({
           if (direct) {
             src = direct;
             usingDirect = true;
+            setRoute({ mode: 'direct' });
+          } else {
+            setRoute({ mode: 'proxy', reason: 'Provider has no browser-safe direct URL' });
           }
           begin();
         })
-        .catch(() => begin());
+        .catch(() => {
+          if (!disposed) setRoute({ mode: 'proxy', reason: 'Direct link handshake failed' });
+          begin();
+        });
     }, slotWait);
 
     return () => {
