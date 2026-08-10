@@ -655,6 +655,33 @@ Deno.serve(async (req) => {
       return json({ sources: data ?? [] })
     }
 
+    // Owner (CEO) only: decrypt and return the real playlist URL. This is the
+    // ONLY path in the whole system that ever emits credentials to a browser.
+    // Every access is written to the admin activity log.
+    case 'reveal_source': {
+      if (!isOwner) return json({ error: 'Only the owner can view provider credentials' }, 403)
+      const id = String(body.id ?? '')
+      if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Invalid source' }, 400)
+      const { data: row } = await db
+        .from('iptv_sources')
+        .select('id, name, user_id, playlist_enc')
+        .eq('id', id)
+        .maybeSingle()
+      if (!row) return json({ error: 'Source not found' }, 404)
+      const plain = await decryptSecret(row.playlist_enc as string | null)
+      if (!plain) return json({ error: 'No stored link for this source' }, 404)
+      await db.from('admin_activity_logs').insert({
+        admin_id: user.id,
+        admin_email: user.email ?? '',
+        action_type: 'iptv_source_reveal',
+        target_user_id: row.user_id as string,
+        details: { source_id: row.id, source_name: row.name },
+      })
+      return json({ ok: true, url: plain })
+    }
+
+
+
 
     case 'save_source': {
       if (!isOwner) return json({ error: 'Only the owner can add or change provider links' }, 403)
