@@ -91,6 +91,9 @@ export function LiveTVPlayer({
    * an honest message beats cycling engines and reporting "not responding".
    */
   const [codecIssue, setCodecIssue] = useState<string | null>(null);
+  /** Provider-side refusal (slot limit, throttle, auth) reported by the proxy. */
+  const [blocked, setBlocked] = useState<StreamDiagnosis | null>(null);
+
 
   /** Index into the engine chain: each failure advances to the next engine. */
   const [stage, setStage] = useState(0);
