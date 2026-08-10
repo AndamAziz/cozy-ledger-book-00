@@ -419,8 +419,10 @@ export function LiveTVPlayer({
         // Same 3-stage in-place recovery ladder the IPTV M3U engine uses:
         // decoder glitches are recovered (then audio codec swapped), network
         // faults reload the manifest — only then do we fall to the next engine.
-
-        if (recovered < 3) {
+        // Exception: a direct provider URL is either reachable or it is not
+        // (CORS-less response, geo-block, expired token). Retrying it in place
+        // only delays the proven proxy path, so we bail out on the first fault.
+        if (recovered < 3 && !usingDirect) {
           recovered += 1;
           try {
             if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
