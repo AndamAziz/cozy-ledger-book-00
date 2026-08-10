@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import {
   X, Loader2, AlertTriangle, SkipBack, SkipForward,
   Maximize2, RefreshCw, Signal, Search, Volume2, VolumeX,
+  Play,
 } from 'lucide-react';
 import { ChannelLogo } from './ChannelLogo';
 import { nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen } from '@/lib/playback';
