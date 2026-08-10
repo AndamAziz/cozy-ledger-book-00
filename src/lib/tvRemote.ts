@@ -88,7 +88,21 @@ const KEY_MAP: Record<string, RemoteAction> = {
   VolumeMute: 'mute',
   Info: 'info',
   ContextMenu: 'info',
+  // Xbox / Edge on console + Chrome "gamepad as keyboard" mappings.
+  GamepadA: 'ok',
+  GamepadB: 'back',
+  GamepadDpadUp: 'up',
+  GamepadDpadDown: 'down',
+  GamepadDpadLeft: 'left',
+  GamepadDpadRight: 'right',
+  GamepadRightShoulder: 'channelUp',
+  GamepadLeftShoulder: 'channelDown',
+  GamepadStart: 'playPause',
+  GamepadView: 'info',
+  Accept: 'ok',
+  Cancel: 'back',
 };
+
 
 /** Map a keyboard/remote event onto a remote action, or null when unhandled. */
 export function remoteAction(e: Pick<KeyboardEvent, 'key' | 'keyCode'>): RemoteAction | null {
