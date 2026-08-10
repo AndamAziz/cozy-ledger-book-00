@@ -11,7 +11,8 @@ import {
 import { ChannelLogo } from './ChannelLogo';
 import { nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen } from '@/lib/playback';
 import { needsProxy, resolveStreamSource, type StreamHeaders } from '@/lib/streamHeaders';
-import { TV_EVENT } from '@/lib/tvRemote';
+import { TV_EVENT, remoteAction } from '@/lib/tvRemote';
+import { isTvMode, markTvMode } from '@/lib/tvMode';
 import { useVirtualList } from '@/hooks/useVirtualList';
 
 
@@ -184,12 +185,10 @@ export default function M3uStreamView({
     setUseProxy(false);
   }, [channel.url]);
 
-  /* keyboard shortcuts */
+  /* keyboard shortcuts (arrows are reserved for D-pad focus navigation) */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowRight') step(1);
-      if (e.key === 'ArrowLeft') step(-1);
     };
     window.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
@@ -271,15 +270,35 @@ export default function M3uStreamView({
 
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  /** pick a channel from the list and bring the player back into view */
-  const handleSelect = (c: StreamChannel) => {
+  /** Row index the remote last activated — refocused after the list re-renders. */
+  const focusIndexRef = useRef<number | null>(null);
+
+  /**
+   * Pick a channel from the list. On a TV the D-pad focus must survive the
+   * re-render (the virtual list re-creates its rows), so we restore focus onto
+   * the same row instead of scrolling the picture into view.
+   */
+  const handleSelect = (c: StreamChannel, rowIndex?: number) => {
+    const tv = isTvMode();
+    const active = document.activeElement as HTMLElement | null;
+    const fromDom = Number(active?.getAttribute?.('data-ch-row') ?? NaN);
+    const idx = typeof rowIndex === 'number' ? rowIndex : Number.isFinite(fromDom) ? fromDom : null;
+    if (tv && idx !== null) focusIndexRef.current = idx;
     onSelect(c);
-    
+
     requestAnimationFrame(() => {
+      if (tv) {
+        const idx = focusIndexRef.current;
+        if (idx !== null) {
+          document.querySelector<HTMLElement>(`[data-ch-row="${idx}"]`)?.focus({ preventScroll: true });
+        }
+        return;
+      }
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       shellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   };
+
 
 
   return createPortal(
@@ -409,9 +428,21 @@ export default function M3uStreamView({
                       <button
                         key={`${c.url}-${index}`}
                         type="button"
-                        onClick={() => handleSelect(c)}
+                        data-ch-row={index}
+                        onClick={() => handleSelect(c, index)}
+                        // TV remotes are inconsistent: some send OK as keyCode 13
+                        // with an empty `key`, Android TV sends 23, Fire TV sends
+                        // Space. Handle every variant explicitly on the row.
+                        onKeyDown={(e) => {
+                          const action = remoteAction(e.nativeEvent);
+                          if (action !== 'ok') return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          markTvMode();
+                          handleSelect(c, index);
+                        }}
                         style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
-                        className={`flex w-full items-center gap-2.5 rounded-lg border p-2 text-start transition ${
+                        className={`flex w-full items-center gap-2.5 rounded-lg border p-2 text-start transition focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                           c.url === channel.url
                             ? 'border-primary bg-primary/10'
                             : 'border-border/50 bg-card hover:border-primary/40'

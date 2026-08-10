@@ -97,15 +97,28 @@ export function useTvRemote() {
           // Let native listbox/menu/tab widgets keep their own arrow semantics.
           if (active?.closest('[role="listbox"],[role="menu"],[role="tablist"],[cmdk-root]')) return;
           e.preventDefault();
+          e.stopPropagation();
           move(action);
           return;
         }
         case 'ok': {
           if (editing(active)) return;
-          if (active && active !== document.body && e.key !== 'Enter' && e.key !== ' ') {
-            e.preventDefault();
-            active.click();
+          if (!active || active === document.body) return;
+          // Native widgets (select, video controls, listbox/menu/tab) keep their
+          // own activation semantics.
+          if (
+            active.tagName === 'SELECT' ||
+            active.tagName === 'VIDEO' ||
+            active.closest('[role="listbox"],[role="menu"],[role="tablist"],[cmdk-root]')
+          ) {
+            return;
           }
+          // Always activate explicitly: TV remotes are inconsistent about
+          // whether Enter/OK produces a native click, and preventDefault stops
+          // the browser from firing a second one.
+          e.preventDefault();
+          e.stopPropagation();
+          active.click();
           return;
         }
         case 'back': {
