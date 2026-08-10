@@ -488,30 +488,46 @@ export default function M3uStreamView({
                           handleSelect(c, index);
                         }}
                         style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
-                        className={`flex w-full items-center gap-2.5 rounded-lg border p-2 text-start transition focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                        className={`group relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg border p-2 text-start transition-all duration-300 ease-out focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                           active
-                            ? 'border-primary bg-primary/20 ring-2 ring-primary/60'
-                            : 'border-border/50 bg-card hover:border-primary/40'
+                            ? 'z-10 translate-x-1 scale-[1.02] border-primary/80 bg-gradient-to-r from-primary/30 via-primary/15 to-transparent shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45)] ring-2 ring-primary/70'
+                            : 'border-border/50 bg-card hover:border-primary/40 hover:bg-primary/[0.06]'
                         }`}
                       >
-                        <ChannelLogo name={c.name} logo={c.logo} />
+                        {/* Active left accent bar */}
+                        {active && (
+                          <span className="pointer-events-none absolute inset-y-2 left-0 w-1 rounded-full bg-gradient-to-b from-primary via-emerald-400 to-primary" />
+                        )}
+
+                        <ChannelLogo
+                          name={c.name}
+                          logo={c.logo}
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg ${
+                            active ? 'bg-primary/15 ring-1 ring-primary/40' : 'bg-muted/50'
+                          }`}
+                        />
 
                         <span className="min-w-0 flex-1">
-                          <span className={`block truncate text-xs font-bold ${active ? 'text-primary' : ''}`}>
+                          <span className={`block truncate text-xs font-bold ${active ? 'text-primary' : 'text-foreground'}`}>
                             {c.name}
                           </span>
                           {active && (
-                            <span className="block truncate text-[10px] font-semibold text-muted-foreground">
+                            <span className="flex items-center gap-1 truncate text-[10px] font-semibold text-primary/80">
+                              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary))]" />
                               {loadingStream ? T.switching : T.nowPlaying}
                             </span>
                           )}
                         </span>
+
+                        {active && !loadingStream && (
+                          <Play className="h-4 w-4 shrink-0 text-primary" fill="currentColor" />
+                        )}
                         {active && loadingStream ? (
                           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
                         ) : (
                           <span
                             className={`flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md px-1 text-[10px] font-bold ${
-                              active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                              active ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted text-muted-foreground'
                             }`}
                           >
                             {String(index + 1).padStart(2, '0')}
