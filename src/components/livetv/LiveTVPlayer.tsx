@@ -285,6 +285,17 @@ export function LiveTVPlayer({
     const nextEngine = () => {
       if (disposed || diagnosing) return;
       clearWatchdog();
+      // Direct playback failed (CORS-less provider, expired token, blocked
+      // segment): drop straight back to the proxy for the SAME engine instead of
+      // burning a ladder step — no diagnosis needed, the proxy path is proven.
+      if (usingDirect) {
+        usingDirect = false;
+        directDead.current = true;
+        invalidateDirectUrl(channel.id);
+        safeDestroy();
+        setReload((r) => r + 1);
+        return;
+      }
       // Before burning more attempts, ask the proxy what actually went wrong.
       // A single-slot provider (HTTP 458/429 MAX_CONNECTIONS) must be reported
       // honestly, and the ladder MUST stay paused while we ask — otherwise the
