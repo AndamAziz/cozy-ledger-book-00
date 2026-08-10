@@ -373,6 +373,31 @@ export default function M3uStreamView({
                 <p className="text-[11px] font-semibold text-white/80">{T.loading}</p>
               </div>
             )}
+
+            {/* Zapping / now-playing banner — large enough to read across a room */}
+            {zap && !error && (
+              <div
+                data-zap-banner
+                className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-center p-3"
+              >
+                <div className="flex max-w-full items-center gap-2 rounded-lg border border-primary/50 bg-black/75 px-3 py-2 shadow-lg">
+                  {loadingStream ? (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+                  ) : (
+                    <Signal className="h-4 w-4 shrink-0 text-primary" />
+                  )}
+                  <span className="min-w-0">
+                    <span className="block text-[9px] font-bold uppercase tracking-wider text-primary">
+                      {loadingStream ? T.switching : T.nowPlaying}
+                    </span>
+                    <span className="block truncate text-sm font-bold text-white md:text-base">
+                      {String(index + 1).padStart(2, '0')} · {zap}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/85 px-6 text-center">
                 <AlertTriangle className="h-7 w-7 text-destructive" />
