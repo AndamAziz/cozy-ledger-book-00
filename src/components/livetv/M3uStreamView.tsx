@@ -490,7 +490,7 @@ export default function M3uStreamView({
                         style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
                         className={`group relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg border p-2 text-start transition-all duration-300 ease-out focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                           active
-                            ? 'z-10 translate-x-1 scale-[1.02] border-primary/80 bg-gradient-to-r from-primary/30 via-primary/15 to-transparent shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45)] ring-2 ring-primary/70'
+                            ? 'z-10 scale-[1.02] border-primary/80 bg-gradient-to-r from-primary/30 via-primary/15 to-transparent shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45)] ring-2 ring-primary/70'
                             : 'border-border/50 bg-card hover:border-primary/40 hover:bg-primary/[0.06]'
                         }`}
                       >
