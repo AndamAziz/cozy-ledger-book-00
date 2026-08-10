@@ -270,13 +270,17 @@ export function LiveTVPlayer({
     const armWatchdog = () => {
       watchdog = window.setTimeout(() => {
         if (!disposed) nextEngine();
-        // Direct playback either starts fast or is unreachable — fail over to the
-        // proxy quickly instead of holding the viewer on a spinner for 15s.
-      }, usingDirect ? 8_000 : 15_000);
+        // Direct playback either starts fast or is unreachable. The budget shrinks
+        // with each recent direct failure so failover to the proven proxy path
+        // gets quicker instead of parking the viewer on a spinner.
+      }, usingDirect ? directConnectBudgetMs(directStrikes()) : 15_000);
     };
     const done = () => {
       clearWatchdog();
       setLoading(false);
+      // Frames arrived over the direct path: clear its failure history so the
+      // fast route stays enabled for the rest of the session.
+      if (usingDirect) markDirectSuccess();
     };
 
     /**
