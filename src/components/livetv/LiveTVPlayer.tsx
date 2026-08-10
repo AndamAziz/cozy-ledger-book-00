@@ -309,6 +309,7 @@ export function LiveTVPlayer({
         usingDirect = false;
         directDead.current = true;
         invalidateDirectUrl(channel.id);
+        setRoute({ mode: 'proxy', reason: 'Direct stream stalled — switched to relay' });
         safeDestroy();
         setReload((r) => r + 1);
         return;
