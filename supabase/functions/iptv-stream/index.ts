@@ -230,6 +230,39 @@ Deno.serve(async (req) => {
   // UAs so a panel that filters one client still serves the stream.
   const uaList = custom['User-Agent'] ? [custom['User-Agent']] : IPTV_USER_AGENTS
 
+  /**
+   * `resolve=1` — direct-play handshake.
+   *
+   * Streaming megabytes of TS/MP4 through an Edge Function adds a hop, a CPU
+   * budget and a hard wall-clock limit: that is what produced the buffering and
+   * timeouts. So the browser asks for the *URL* instead of the bytes: we resolve
+   * the provider's tokenized location server-side (credentials never leave the
+   * server beyond the signed URL the provider itself issues) and the player
+   * fetches media straight from the CDN.
+   *
+   * `direct` is only true for https targets — an http URL would be blocked as
+   * mixed content on our https origin, and those keep using the proxy path.
+   */
+  if (reqUrl.searchParams.get('resolve') === '1') {
+    const target = candidates[0]
+    if (!target) return json({ error: 'No candidate' }, 404)
+    let url = target
+    try {
+      url = await resolveTokenizedUrl(
+        target,
+        { ...baseHeaders, 'User-Agent': uaList[0] },
+        AbortSignal.timeout(6_000),
+      )
+    } catch {
+      // Redirect probing failed: the un-resolved candidate is still worth a try.
+    }
+    return new Response(
+      JSON.stringify({ url, direct: /^https:\/\//i.test(url), candidates: candidates.length }),
+      { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=20' } },
+    )
+  }
+
+
   let upstream: Response | null = null
   /** Provider URL the committed response really came from (relay-aware). */
   let upstreamBase = candidates[0] ?? ''
