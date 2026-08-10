@@ -77,35 +77,22 @@ export default function M3uStreamView({
     nowPlaying: ku ? 'ئێستا' : 'Now playing',
   };
 
-  const [orderedChannels, setOrderedChannels] = useState(channels);
-
-  useEffect(() => {
-    setOrderedChannels((prev) => {
-      const same = prev.length === channels.length && prev.every((c, i) => c.url === channels[i].url);
-      return same ? prev : channels;
-    });
-  }, [channels]);
-
-  useEffect(() => {
-    setOrderedChannels((prev) => {
-      const idx = prev.findIndex((c) => c.url === channel.url);
-      if (idx <= 0) return prev;
-      return [prev[idx], ...prev.slice(0, idx), ...prev.slice(idx + 1)];
-    });
-  }, [channel.url]);
-
+  // Zapping always walks the playlist's own stable order, so Next/Previous keep
+  // moving forward through the whole list instead of bouncing between two rows.
   const index = useMemo(
-    () => orderedChannels.findIndex((c) => c.url === channel.url),
-    [orderedChannels, channel.url],
+    () => channels.findIndex((c) => c.url === channel.url),
+    [channels, channel.url],
   );
 
   const step = (delta: number) => {
-    if (!orderedChannels.length) return;
-    const next = orderedChannels[(index + delta + orderedChannels.length) % orderedChannels.length];
-    if (!next) return;
+    if (!channels.length) return;
+    const base = index < 0 ? 0 : index;
+    const next = channels[(base + delta + channels.length) % channels.length];
+    if (!next || next.url === channel.url) return;
     setZap(next.name);
     onSelect(next);
   };
+
 
 
   const retry = useCallback(() => {
