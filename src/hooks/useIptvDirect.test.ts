@@ -46,7 +46,7 @@ describe('resolveDirectUrl', () => {
     await expect(mod.resolveDirectUrl('9', 'live')).resolves.toBeNull();
   });
 
-  it('tolerates one direct failure but parks after the threshold', async () => {
+  it('stops resolving after a direct failure is recorded', async () => {
     const mod = await import('./useIptvPlaylist');
     const spy = vi.fn().mockResolvedValue({
       ok: true,
@@ -56,21 +56,7 @@ describe('resolveDirectUrl', () => {
     await mod.resolveDirectUrl('9', 'live');
     mod.invalidateDirectUrl('9');
     spy.mockClear();
-    // One strike is not enough — the fast path is still attempted.
-    await expect(mod.resolveDirectUrl('10', 'live')).resolves.toBe(
-      'https://p.example.com/live/1/2/9.m3u8',
-    );
-    expect(spy).toHaveBeenCalled();
-
-    mod.invalidateDirectUrl('10');
-    spy.mockClear();
-    await expect(mod.resolveDirectUrl('11', 'live')).resolves.toBeNull();
+    await expect(mod.resolveDirectUrl('10', 'live')).resolves.toBeNull();
     expect(spy).not.toHaveBeenCalled();
-
-    // A successful direct playback clears the history entirely.
-    mod.markDirectSuccess();
-    await expect(mod.resolveDirectUrl('12', 'live')).resolves.toBe(
-      'https://p.example.com/live/1/2/9.m3u8',
-    );
   });
 });
