@@ -57,6 +57,9 @@ export default function M3uStreamView({
   const [muted, setMuted] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState('');
+  /** Channel name shown in the big TV "zapping" toast (CH+/CH-, OK, list click). */
+  const [zap, setZap] = useState<string | null>(null);
+
 
   const T = {
     upNext: ku ? 'کەناڵەکانی تر' : 'Up next',
