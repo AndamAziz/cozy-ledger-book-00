@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import {
   X, Loader2, AlertTriangle, Maximize2, Minimize2, Settings2, RefreshCw,
-  Play, Pause, Volume2, VolumeX, RotateCcw, Rewind, FastForward,
+  Play, Pause, Volume2, VolumeX, RotateCcw, Rewind, FastForward, SkipBack, SkipForward,
 } from 'lucide-react';
 
 import {
