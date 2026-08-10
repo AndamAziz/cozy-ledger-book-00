@@ -290,10 +290,23 @@ export default function M3uStreamView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedQuery]);
 
-  /* top bar stays permanently visible — slim enough to never cover the picture */
+  /* top bar stays permanently visible — slim enough to never cover the picture.
+     The in-picture next/previous buttons, however, must never sit permanently on
+     top of the live stream: they appear on interaction and fade after 3s. */
+  const [zapBarOpen, setZapBarOpen] = useState(false);
+  const [zapBarNonce, setZapBarNonce] = useState(0);
+  useEffect(() => {
+    if (!zapBarOpen) return;
+    const t = setTimeout(() => setZapBarOpen(false), 3000);
+    return () => clearTimeout(t);
+  }, [zapBarOpen, zapBarNonce]);
+
   const revealBar = () => {
     onVideoTap?.();
+    setZapBarOpen(true);
+    setZapBarNonce((n) => n + 1);
   };
+
 
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -387,11 +400,12 @@ export default function M3uStreamView({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    revealBar();
                     step(-1);
                   }}
                   aria-label={T.prev}
                   data-tv
-                  className="absolute start-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/20 bg-black/55 p-2.5 text-white/85 shadow-lg transition hover:bg-black/80 hover:text-white active:scale-90 md:p-3"
+                  className={`absolute start-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/20 bg-black/55 p-2.5 text-white/85 shadow-lg transition-all duration-300 hover:bg-black/80 hover:text-white active:scale-90 md:p-3 ${zapBarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
                 >
                   <SkipBack className="h-4 w-4 md:h-5 md:w-5" />
                 </button>
@@ -400,11 +414,12 @@ export default function M3uStreamView({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    revealBar();
                     step(1);
                   }}
                   aria-label={T.next}
                   data-tv
-                  className="absolute end-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/20 bg-black/55 p-2.5 text-white/85 shadow-lg transition hover:bg-black/80 hover:text-white active:scale-90 md:p-3"
+                  className={`absolute end-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/20 bg-black/55 p-2.5 text-white/85 shadow-lg transition-all duration-300 hover:bg-black/80 hover:text-white active:scale-90 md:p-3 ${zapBarOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
                 >
                   <SkipForward className="h-4 w-4 md:h-5 md:w-5" />
                 </button>
