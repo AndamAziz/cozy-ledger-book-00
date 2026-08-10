@@ -245,6 +245,18 @@ export function LiveTVPlayer({
     const nextEngine = () => {
       if (disposed) return;
       clearWatchdog();
+      // Before burning more attempts, ask the proxy what actually went wrong.
+      // A single-slot provider (HTTP 458) must be reported honestly instead of
+      // being hammered by the retry ladder.
+      void diagnoseStream(src).then((diag) => {
+        if (disposed || !diag) return;
+        safeDestroy();
+        clearWatchdog();
+        if (retryTimer !== undefined) clearTimeout(retryTimer);
+        setRetrying(false);
+        setLoading(false);
+        setBlocked(diag);
+      });
       if (stage + 1 < engines.length) {
         setStage((s) => s + 1);
         return;
@@ -264,6 +276,7 @@ export function LiveTVPlayer({
       setLoading(false);
       setError(true);
     };
+
     const onMediaError = () => nextEngine();
 
     video.addEventListener('playing', done);
