@@ -71,6 +71,8 @@ interface Props {
   onSelectEpisode?: (episode: IptvEpisode) => void;
   /** Kept for API compatibility with callers. */
   onSlotLimit?: () => void;
+  /** Zap to the next (+1) / previous (-1) channel of the list it was opened from. */
+  onZapChannel?: (delta: number) => void;
 }
 
 /**
@@ -84,6 +86,7 @@ export function LiveTVPlayer({
   episodes,
   currentEpisodeId,
   onSelectEpisode,
+  onZapChannel,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
