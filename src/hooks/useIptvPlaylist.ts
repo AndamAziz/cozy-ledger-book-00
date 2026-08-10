@@ -215,10 +215,14 @@ export async function resolveDirectUrl(
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token ?? accessToken;
     const extPart = ext ? `&ext=${encodeURIComponent(ext)}` : '';
+    // Manual abort timer (AbortSignal.timeout is missing on older WebViews/TVs).
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 8000);
     const res = await fetch(
       `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}${raw ? '&raw=1' : ''}${sourceParam()}&resolve=1&apikey=${ANON}`,
-      { headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` }, signal: AbortSignal.timeout(8000) },
+      { headers: { apikey: ANON, Authorization: `Bearer ${token ?? ANON}` }, signal: ac.signal },
     );
+    clearTimeout(timer);
     const json = await res.json().catch(() => null);
     const url = res.ok && json?.direct && typeof json.url === 'string' ? (json.url as string) : null;
     directCache.set(key, { url, at: Date.now() });
