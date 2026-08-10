@@ -19,7 +19,9 @@ import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff
 import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
 
 import { claimStreamSlot, unregisterStream } from '@/lib/streamSlot';
+import { diagnoseStream, type StreamDiagnosis } from '@/lib/streamDiagnose';
 import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
+
 
 import { TV_EVENT } from '@/lib/tvRemote';
 
