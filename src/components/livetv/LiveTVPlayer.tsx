@@ -959,7 +959,7 @@ export function LiveTVPlayer({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setBarOpen(true);
+                revealBar();
                 onZapChannel(-1);
               }}
               aria-label="Previous channel"
@@ -975,7 +975,7 @@ export function LiveTVPlayer({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setBarOpen(true);
+                revealBar();
                 onZapChannel(1);
               }}
               aria-label="Next channel"
