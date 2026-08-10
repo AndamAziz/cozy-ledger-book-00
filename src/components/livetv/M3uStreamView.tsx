@@ -184,12 +184,10 @@ export default function M3uStreamView({
     setUseProxy(false);
   }, [channel.url]);
 
-  /* keyboard shortcuts */
+  /* keyboard shortcuts (arrows are reserved for D-pad focus navigation) */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowRight') step(1);
-      if (e.key === 'ArrowLeft') step(-1);
     };
     window.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
