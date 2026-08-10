@@ -489,8 +489,28 @@ export function LiveTVPlayer({
     // Open the upstream connection only after the previous slot was released.
     const startTimer = window.setTimeout(() => {
       if (disposed) return;
-      armWatchdog();
-      attach();
+      // Ask for the direct media URL first (a tiny JSON handshake, not the
+      // bytes). Only if the provider has no browser-safe https URL do we stream
+      // through the Edge Function proxy.
+      const begin = () => {
+        if (disposed) return;
+        armWatchdog();
+        attach();
+      };
+      if (directDead.current) {
+        begin();
+        return;
+      }
+      void resolveDirectUrl(channel.id, channel.kind ?? 'live', channel.ext, engine === 'mpegts')
+        .then((direct) => {
+          if (disposed) return;
+          if (direct) {
+            src = direct;
+            usingDirect = true;
+          }
+          begin();
+        })
+        .catch(() => begin());
     }, slotWait);
 
     return () => {
