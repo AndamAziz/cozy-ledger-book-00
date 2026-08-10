@@ -122,17 +122,22 @@ export function useBotNotifications() {
   }, []);
 
   // Trigger a once-per-day daily summary (idempotent server-side).
+  // The function requires a JWT, so signed-out visitors must never call it.
   const requestDailySummary = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
     const today = new Date().toDateString();
     const key = "bot_daily_summary_day";
     if (localStorage.getItem(key) === today) return;
     localStorage.setItem(key, today);
     try {
-      await supabase.functions.invoke("bots-engine", { body: { action: "daily-summary" } });
+      const { error } = await supabase.functions.invoke("bots-engine", { body: { action: "daily-summary" } });
+      if (error) localStorage.removeItem(key);
     } catch {
       localStorage.removeItem(key);
     }
   }, []);
+
 
   useEffect(() => {
     // Ask for browser notification permission on the first user gesture —
