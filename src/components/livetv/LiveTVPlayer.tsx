@@ -350,7 +350,9 @@ export function LiveTVPlayer({
           setRetrying(false);
           setStage(0);
           setAttempt((a) => a + 1);
-        }, STREAM_RETRY_DELAY_MS);
+          // Jittered exponential backoff (capped): a struggling / single-slot
+          // provider gets progressively more room instead of a fixed re-dial.
+        }, ladderRetryDelay(attempt, STREAM_RETRY_DELAY_MS));
         return;
       }
       setRetrying(false);
