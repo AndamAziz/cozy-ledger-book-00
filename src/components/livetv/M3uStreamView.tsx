@@ -77,14 +77,31 @@ export default function M3uStreamView({
     nowPlaying: ku ? 'ئێستا' : 'Now playing',
   };
 
+  const [orderedChannels, setOrderedChannels] = useState(channels);
+
+  useEffect(() => {
+    setOrderedChannels((prev) => {
+      const same = prev.length === channels.length && prev.every((c, i) => c.url === channels[i].url);
+      return same ? prev : channels;
+    });
+  }, [channels]);
+
+  useEffect(() => {
+    setOrderedChannels((prev) => {
+      const idx = prev.findIndex((c) => c.url === channel.url);
+      if (idx <= 0) return prev;
+      return [prev[idx], ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+    });
+  }, [channel.url]);
+
   const index = useMemo(
-    () => channels.findIndex((c) => c.url === channel.url),
-    [channels, channel.url],
+    () => orderedChannels.findIndex((c) => c.url === channel.url),
+    [orderedChannels, channel.url],
   );
 
   const step = (delta: number) => {
-    if (!channels.length) return;
-    const next = channels[(index + delta + channels.length) % channels.length];
+    if (!orderedChannels.length) return;
+    const next = orderedChannels[(index + delta + orderedChannels.length) % orderedChannels.length];
     if (!next) return;
     setZap(next.name);
     onSelect(next);
