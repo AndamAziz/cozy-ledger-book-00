@@ -766,6 +766,18 @@ body[data-tv] [tabindex]:focus {
   position: relative;
 }
 
+/* ---- TV overscan safe zone ----
+   Tizen/webOS/Android TV browsers crop ~2-5% of each edge, so anything stuck to
+   top:0 (source-switcher banner, page headers) lands off-screen. Push sticky
+   bars down and give the page a matching top pad so nothing is clipped. */
+[data-tv] .tv-sticky-safe {
+  top: max(3vh, 28px) !important;
+}
+[data-tv] .tv-safe-top-pad {
+  padding-top: max(3vh, 28px) !important;
+}
+
+
 /* Roomier grids on TV panels so cards aren't postage stamps */
 @media (min-width: 1280px) {
   [data-tv] .tv-grid {
