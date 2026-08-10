@@ -465,11 +465,15 @@ export default function M3uStreamView({
                 <div style={rows.offsetStyle}>
                   {list.slice(rows.start, rows.end).map((c, i) => {
                     const index = rows.start + i;
+                    const active = c.url === channel.url;
                     return (
                       <button
                         key={`${c.url}-${index}`}
                         type="button"
                         data-ch-row={index}
+                        data-active={active ? 'true' : undefined}
+                        aria-current={active ? 'true' : undefined}
+                        aria-busy={active && loadingStream ? 'true' : undefined}
                         onClick={() => handleSelect(c, index)}
                         // TV remotes are inconsistent: some send OK as keyCode 13
                         // with an empty `key`, Android TV sends 23, Fire TV sends
@@ -484,20 +488,36 @@ export default function M3uStreamView({
                         }}
                         style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
                         className={`flex w-full items-center gap-2.5 rounded-lg border p-2 text-start transition focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                          c.url === channel.url
-                            ? 'border-primary bg-primary/10'
+                          active
+                            ? 'border-primary bg-primary/20 ring-2 ring-primary/60'
                             : 'border-border/50 bg-card hover:border-primary/40'
                         }`}
                       >
                         <ChannelLogo name={c.name} logo={c.logo} />
 
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-bold">{c.name}</span>
+                          <span className={`block truncate text-xs font-bold ${active ? 'text-primary' : ''}`}>
+                            {c.name}
+                          </span>
+                          {active && (
+                            <span className="block truncate text-[10px] font-semibold text-muted-foreground">
+                              {loadingStream ? T.switching : T.nowPlaying}
+                            </span>
+                          )}
                         </span>
-                        <span className="flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md bg-muted px-1 text-[10px] font-bold text-muted-foreground">
-                          {String(index + 1).padStart(2, '0')}
-                        </span>
+                        {active && loadingStream ? (
+                          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+                        ) : (
+                          <span
+                            className={`flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md px-1 text-[10px] font-bold ${
+                              active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                        )}
                       </button>
+
                     );
                   })}
                 </div>
