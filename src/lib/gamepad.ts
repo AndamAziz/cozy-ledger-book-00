@@ -36,24 +36,31 @@ export const BUTTON_MAP: Record<number, RemoteAction> = {
 const AXIS_DEADZONE = 0.6;
 
 export interface PadSnapshot {
-  buttons: readonly { pressed: boolean }[];
+  buttons: readonly { pressed: boolean; value?: number }[];
   axes: readonly number[];
 }
 
-/** Actions currently asserted by a pad snapshot (buttons + left stick). */
+/** Actions currently asserted by a pad snapshot (buttons + sticks + D-pad axes). */
 export function padActions(pad: PadSnapshot): RemoteAction[] {
   const out: RemoteAction[] = [];
   pad.buttons?.forEach((b, i) => {
     const action = BUTTON_MAP[i];
-    if (b?.pressed && action) out.push(action);
+    if (action && (b?.pressed || (b?.value ?? 0) > 0.5)) out.push(action);
   });
-  const [x = 0, y = 0] = pad.axes ?? [];
-  if (x <= -AXIS_DEADZONE) out.push('left');
-  else if (x >= AXIS_DEADZONE) out.push('right');
-  if (y <= -AXIS_DEADZONE) out.push('up');
-  else if (y >= AXIS_DEADZONE) out.push('down');
+  const axes = pad.axes ?? [];
+  const push = (x: number, y: number) => {
+    if (x <= -AXIS_DEADZONE) out.push('left');
+    else if (x >= AXIS_DEADZONE) out.push('right');
+    if (y <= -AXIS_DEADZONE) out.push('up');
+    else if (y >= AXIS_DEADZONE) out.push('down');
+  };
+  push(axes[0] ?? 0, axes[1] ?? 0);
+  // Non-standard mappings (some Xbox/Android TV drivers) expose the D-pad as
+  // axes 6/7 instead of buttons 12–15.
+  if (axes.length > 7) push(axes[6] ?? 0, axes[7] ?? 0);
   return out;
 }
+
 
 /** First press fires instantly; holding repeats at a readable cadence. */
 export const FIRST_REPEAT_MS = 380;
