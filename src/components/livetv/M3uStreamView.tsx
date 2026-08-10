@@ -378,6 +378,40 @@ export default function M3uStreamView({
               className="h-full w-full bg-black"
             />
 
+            {/* In-picture zapping controls — stay reachable in fullscreen, where
+                the controls below the player are not rendered by the browser. */}
+            {channels.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    step(-1);
+                  }}
+                  aria-label={T.prev}
+                  data-tv
+                  className="absolute start-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/20 bg-black/55 p-2.5 text-white/85 shadow-lg transition hover:bg-black/80 hover:text-white active:scale-90 md:p-3"
+                >
+                  <SkipBack className="h-4 w-4 md:h-5 md:w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    step(1);
+                  }}
+                  aria-label={T.next}
+                  data-tv
+                  className="absolute end-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/20 bg-black/55 p-2.5 text-white/85 shadow-lg transition hover:bg-black/80 hover:text-white active:scale-90 md:p-3"
+                >
+                  <SkipForward className="h-4 w-4 md:h-5 md:w-5" />
+                </button>
+              </>
+            )}
+
+
             {loadingStream && !error && (
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/70">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />

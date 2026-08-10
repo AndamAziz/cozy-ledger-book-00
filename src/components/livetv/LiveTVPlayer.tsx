@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import {
   X, Loader2, AlertTriangle, Maximize2, Minimize2, Settings2, RefreshCw,
-  Play, Pause, Volume2, VolumeX, RotateCcw, Rewind, FastForward,
+  Play, Pause, Volume2, VolumeX, RotateCcw, Rewind, FastForward, SkipBack, SkipForward,
 } from 'lucide-react';
 
 import {
@@ -71,6 +71,8 @@ interface Props {
   onSelectEpisode?: (episode: IptvEpisode) => void;
   /** Kept for API compatibility with callers. */
   onSlotLimit?: () => void;
+  /** Zap to the next (+1) / previous (-1) channel of the list it was opened from. */
+  onZapChannel?: (delta: number) => void;
 }
 
 /**
@@ -84,6 +86,7 @@ export function LiveTVPlayer({
   episodes,
   currentEpisodeId,
   onSelectEpisode,
+  onZapChannel,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -939,6 +942,47 @@ export function LiveTVPlayer({
           playsInline
           autoPlay
         />
+
+        {/* Channel zapping inside the picture — the only controls reachable while
+            the shell is in fullscreen. */}
+        {onZapChannel && !error && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setBarOpen(true);
+                onZapChannel(-1);
+              }}
+              aria-label="Previous channel"
+              data-tv
+              className={`absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/15 bg-black/55 p-2.5 text-white/85 shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/80 hover:text-white active:scale-90 sm:p-3 ${
+                barOpen || paused ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+            >
+              <SkipBack className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setBarOpen(true);
+                onZapChannel(1);
+              }}
+              aria-label="Next channel"
+              data-tv
+              className={`absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/15 bg-black/55 p-2.5 text-white/85 shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/80 hover:text-white active:scale-90 sm:p-3 ${
+                barOpen || paused ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+            >
+              <SkipForward className="h-5 w-5" />
+            </button>
+          </>
+        )}
+
+
 
         {/* Center play / pause — small circular control, fades with the bar */}
         {!loading && !error && (

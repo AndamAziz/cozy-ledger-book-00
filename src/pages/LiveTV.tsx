@@ -249,8 +249,17 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
     return () => clearTimeout(t);
   }, [categories]);
 
-  // CH+ / CH- from a TV remote or an Xbox pad zaps within the list the user
-  // opened the current channel from.
+  // Zap within the list the current channel was opened from — used by the
+  // in-picture Next/Previous buttons (which stay usable in fullscreen) and by
+  // CH+ / CH- from a TV remote or an Xbox pad.
+  const zapChannel = (delta: number) => {
+    if (!playing) return false;
+    const next = zapNeighbour(playing.id, delta);
+    if (!next) return false;
+    setPlaying({ ...next, kind: playing.kind });
+    return true;
+  };
+
   useEffect(() => {
     if (!playing) return;
     const zap = (delta: number) => (e: Event) => {
@@ -475,7 +484,11 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
       {seriesItem && <SeriesDetail series={seriesItem} onClose={() => setSeriesItem(null)} />}
       {playing && (
         <ErrorBoundary>
-          <LiveTVPlayer channel={playing} onClose={() => setPlaying(null)} />
+          <LiveTVPlayer
+            channel={playing}
+            onClose={() => setPlaying(null)}
+            onZapChannel={playing.kind === 'live' || !playing.kind ? (d) => void zapChannel(d) : undefined}
+          />
         </ErrorBoundary>
       )}
 
