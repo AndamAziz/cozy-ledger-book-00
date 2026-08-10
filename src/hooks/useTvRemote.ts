@@ -97,6 +97,7 @@ export function useTvRemote() {
           // Let native listbox/menu/tab widgets keep their own arrow semantics.
           if (active?.closest('[role="listbox"],[role="menu"],[role="tablist"],[cmdk-root]')) return;
           e.preventDefault();
+          e.stopPropagation();
           move(action);
           return;
         }
