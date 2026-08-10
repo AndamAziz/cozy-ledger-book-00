@@ -44,8 +44,8 @@ describe('directRetryPolicy', () => {
   });
 
   it('decays strikes after a long quiet period', () => {
-    recordDirectFailure('s3', 0);
-    expect(readDirectState('s3', 13 * 60 * 60 * 1000).strikes).toBe(0);
+    recordDirectFailure('s3', 1_000);
+    expect(readDirectState('s3', 1_000 + 13 * 60 * 60 * 1000).strikes).toBe(0);
   });
 
   it('tightens the connect budget as strikes accumulate', () => {
