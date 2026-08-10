@@ -19,7 +19,9 @@ import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff
 import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
 
 import { claimStreamSlot, unregisterStream } from '@/lib/streamSlot';
+import { diagnoseStream, type StreamDiagnosis } from '@/lib/streamDiagnose';
 import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
+
 
 import { TV_EVENT } from '@/lib/tvRemote';
 
@@ -89,6 +91,9 @@ export function LiveTVPlayer({
    * an honest message beats cycling engines and reporting "not responding".
    */
   const [codecIssue, setCodecIssue] = useState<string | null>(null);
+  /** Provider-side refusal (slot limit, throttle, auth) reported by the proxy. */
+  const [blocked, setBlocked] = useState<StreamDiagnosis | null>(null);
+
 
   /** Index into the engine chain: each failure advances to the next engine. */
   const [stage, setStage] = useState(0);
@@ -131,6 +136,7 @@ export function LiveTVPlayer({
     setAttempt(0);
     setRetrying(false);
     setCodecIssue(null);
+    setBlocked(null);
 
 
     setLevels([]);
@@ -245,6 +251,18 @@ export function LiveTVPlayer({
     const nextEngine = () => {
       if (disposed) return;
       clearWatchdog();
+      // Before burning more attempts, ask the proxy what actually went wrong.
+      // A single-slot provider (HTTP 458) must be reported honestly instead of
+      // being hammered by the retry ladder.
+      void diagnoseStream(src).then((diag) => {
+        if (disposed || !diag) return;
+        safeDestroy();
+        clearWatchdog();
+        if (retryTimer !== undefined) clearTimeout(retryTimer);
+        setRetrying(false);
+        setLoading(false);
+        setBlocked(diag);
+      });
       if (stage + 1 < engines.length) {
         setStage((s) => s + 1);
         return;
@@ -264,6 +282,7 @@ export function LiveTVPlayer({
       setLoading(false);
       setError(true);
     };
+
     const onMediaError = () => nextEngine();
 
     video.addEventListener('playing', done);
@@ -914,7 +933,7 @@ export function LiveTVPlayer({
 
         )}
 
-        {loading && !error && !codecIssue && (
+        {loading && !error && !codecIssue && !blocked && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/55">
             <Loader2 className="h-8 w-8 animate-spin" style={{ color: accent }} />
             <p className="text-[11px] font-semibold tracking-wide text-white/55">
@@ -925,6 +944,44 @@ export function LiveTVPlayer({
 
           </div>
         )}
+
+        {blocked && !codecIssue && (
+          <div className="absolute inset-0 flex items-center justify-center px-6">
+            <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.06] px-6 py-7 text-center shadow-2xl backdrop-blur-2xl">
+              <span
+                className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
+                style={{ background: 'rgba(255,176,32,0.16)' }}
+              >
+                <AlertTriangle className="h-6 w-6" style={{ color: '#ffb020' }} />
+              </span>
+              <p className="text-sm font-extrabold tracking-tight text-white">{blocked.title}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-white/50">{blocked.detail}</p>
+              <div className="mt-4 flex justify-center gap-2">
+                <button
+                  onClick={() => {
+                    setBlocked(null);
+                    setRetrying(false);
+                    setError(false);
+                    setStage(0);
+                    setAttempt(0);
+                    setReload((r) => r + 1);
+                  }}
+                  className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
+                  style={{ background: '#ffb020' }}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> Retry
+                </button>
+                <button
+                  onClick={onClose}
+                  className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 transition hover:border-white/40 hover:text-white active:scale-95"
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {codecIssue && (
           <div className="absolute inset-0 flex items-center justify-center px-6">
@@ -955,7 +1012,7 @@ export function LiveTVPlayer({
           </div>
         )}
 
-        {error && !codecIssue && (
+        {error && !codecIssue && !blocked && (
 
           <div className="absolute inset-0 flex items-center justify-center px-6">
             <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.06] px-6 py-7 text-center shadow-2xl backdrop-blur-2xl">
