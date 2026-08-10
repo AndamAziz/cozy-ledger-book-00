@@ -5,7 +5,10 @@ import {
   Play, Pause, Volume2, VolumeX, RotateCcw, Rewind, FastForward,
 } from 'lucide-react';
 
-import { toPlayableUrl, type IptvChannel, type IptvEpisode } from '@/hooks/useIptvPlaylist';
+import {
+  toPlayableUrl, resolveDirectUrl, invalidateDirectUrl,
+  type IptvChannel, type IptvEpisode,
+} from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
 import { useLogoFallback } from '@/lib/logoFallback';
 import {
