@@ -13,7 +13,7 @@ import { accentFor, initialsFor } from './ChannelCard';
 import { useLogoFallback } from '@/lib/logoFallback';
 import {
   nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen,
-  onFullscreenChange, fullscreenElement,
+  onFullscreenChange, fullscreenElement, onVideoFullscreenChange,
 } from '@/lib/playback';
 import {
   resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
