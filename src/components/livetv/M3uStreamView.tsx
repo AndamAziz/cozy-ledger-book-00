@@ -286,10 +286,11 @@ export default function M3uStreamView({
   }, [query]);
 
   // Full list (no cap) — only the visible rows are rendered, see useVirtualList.
+  // The currently selected channel is always pinned to the top of the list.
   const list = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
-    return q ? channels.filter((c) => c.name.toLowerCase().includes(q)) : channels;
-  }, [channels, debouncedQuery]);
+    return q ? orderedChannels.filter((c) => c.name.toLowerCase().includes(q)) : orderedChannels;
+  }, [orderedChannels, debouncedQuery]);
 
   const rows = useVirtualList(list.length, { rowHeight: ROW_HEIGHT, gap: ROW_GAP });
   useEffect(() => {
