@@ -295,7 +295,7 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
         <link rel="canonical" href={meta.path} />
       </Helmet>
 
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#07070b]/90 safe-x top-bar-safe pb-3 backdrop-blur-xl">
+      <header className="tv-sticky-safe sticky top-0 z-30 border-b border-white/10 bg-[#07070b]/90 safe-x top-bar-safe pb-3 backdrop-blur-xl">
         <div className="mb-3 flex items-center gap-2 sm:gap-3">
           <Link
             to="/"

@@ -451,9 +451,9 @@ export default function M3uTV() {
         <link rel="canonical" href="/iptv" />
       </Helmet>
 
-      <div className="wide-shell page-shell space-y-4 py-4 sm:space-y-5 sm:py-5">
+      <div className="wide-shell page-shell tv-safe-top-pad space-y-4 py-4 sm:space-y-5 sm:py-5">
         {/* Slim persistent header — fixed pixel sizing so it stays identical across all screens */}
-        <div data-testid="iptv-banner" className="sticky top-0 z-30 -mx-1 flex h-[42px] items-center gap-[6px] rounded-full border border-destructive/25 bg-card/70 px-[10px] py-0 shadow-sm backdrop-blur-xl">
+        <div data-testid="iptv-banner" className="tv-sticky-safe sticky top-0 z-30 -mx-1 flex h-[42px] items-center gap-[6px] rounded-full border border-destructive/25 bg-card/70 px-[10px] py-0 shadow-sm backdrop-blur-xl">
           <Button
             variant="ghost"
             size="icon"
