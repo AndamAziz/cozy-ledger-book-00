@@ -77,14 +77,31 @@ export default function M3uStreamView({
     nowPlaying: ku ? 'ئێستا' : 'Now playing',
   };
 
+  const [orderedChannels, setOrderedChannels] = useState(channels);
+
+  useEffect(() => {
+    setOrderedChannels((prev) => {
+      const same = prev.length === channels.length && prev.every((c, i) => c.url === channels[i].url);
+      return same ? prev : channels;
+    });
+  }, [channels]);
+
+  useEffect(() => {
+    setOrderedChannels((prev) => {
+      const idx = prev.findIndex((c) => c.url === channel.url);
+      if (idx <= 0) return prev;
+      return [prev[idx], ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+    });
+  }, [channel.url]);
+
   const index = useMemo(
-    () => channels.findIndex((c) => c.url === channel.url),
-    [channels, channel.url],
+    () => orderedChannels.findIndex((c) => c.url === channel.url),
+    [orderedChannels, channel.url],
   );
 
   const step = (delta: number) => {
-    if (!channels.length) return;
-    const next = channels[(index + delta + channels.length) % channels.length];
+    if (!orderedChannels.length) return;
+    const next = orderedChannels[(index + delta + orderedChannels.length) % orderedChannels.length];
     if (!next) return;
     setZap(next.name);
     onSelect(next);
@@ -214,7 +231,7 @@ export default function M3uStreamView({
       document.body.style.overflow = '';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, channels]);
+  }, [index, orderedChannels]);
 
   /* Smart TV remote: CH+/CH- zapping, play/pause, mute and Back. */
   useEffect(() => {
@@ -252,7 +269,7 @@ export default function M3uStreamView({
       for (const [name, fn] of Object.entries(handlers)) window.removeEventListener(name, fn);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, channels, onClose]);
+  }, [index, orderedChannels, onClose]);
 
   const goFullscreen = () => {
     // iPhone can only fullscreen the video element itself; legacy WebKit and
@@ -269,10 +286,11 @@ export default function M3uStreamView({
   }, [query]);
 
   // Full list (no cap) — only the visible rows are rendered, see useVirtualList.
+  // The currently selected channel is always pinned to the top of the list.
   const list = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
-    return q ? channels.filter((c) => c.name.toLowerCase().includes(q)) : channels;
-  }, [channels, debouncedQuery]);
+    return q ? orderedChannels.filter((c) => c.name.toLowerCase().includes(q)) : orderedChannels;
+  }, [orderedChannels, debouncedQuery]);
 
   const rows = useVirtualList(list.length, { rowHeight: ROW_HEIGHT, gap: ROW_GAP });
   useEffect(() => {
@@ -452,7 +470,7 @@ export default function M3uStreamView({
             />
           </div>
           <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-            {T.upNext} · {channels.length}
+            {T.upNext} · {orderedChannels.length}
           </p>
           {/* Virtualised list: only the rows in view exist in the DOM. */}
           <div
