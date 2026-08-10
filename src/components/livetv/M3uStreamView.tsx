@@ -72,6 +72,8 @@ export default function M3uStreamView({
     next: ku ? 'دواتر' : 'Next',
     close: ku ? 'داخستن' : 'Close',
     none: ku ? 'هیچ کەناڵێک نەدۆزرایەوە' : 'No channels found',
+    switching: ku ? 'گوێزانەوەی کەناڵ...' : 'Switching channel...',
+    nowPlaying: ku ? 'ئێستا' : 'Now playing',
   };
 
   const index = useMemo(
@@ -82,8 +84,11 @@ export default function M3uStreamView({
   const step = (delta: number) => {
     if (!channels.length) return;
     const next = channels[(index + delta + channels.length) % channels.length];
-    if (next) onSelect(next);
+    if (!next) return;
+    setZap(next.name);
+    onSelect(next);
   };
+
 
   const retry = useCallback(() => {
     setError(false);
