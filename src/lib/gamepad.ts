@@ -22,6 +22,8 @@ export const BUTTON_MAP: Record<number, RemoteAction> = {
   3: 'playPause', // Y / triangle
   4: 'channelDown', // LB
   5: 'channelUp', // RB
+  6: 'channelDown', // LT
+  7: 'channelUp', // RT
   8: 'back', // View / Select
   9: 'playPause', // Menu / Start
   12: 'up', // D-pad
@@ -30,27 +32,35 @@ export const BUTTON_MAP: Record<number, RemoteAction> = {
   15: 'right',
 };
 
+
 const AXIS_DEADZONE = 0.6;
 
 export interface PadSnapshot {
-  buttons: readonly { pressed: boolean }[];
+  buttons: readonly { pressed: boolean; value?: number }[];
   axes: readonly number[];
 }
 
-/** Actions currently asserted by a pad snapshot (buttons + left stick). */
+/** Actions currently asserted by a pad snapshot (buttons + sticks + D-pad axes). */
 export function padActions(pad: PadSnapshot): RemoteAction[] {
   const out: RemoteAction[] = [];
   pad.buttons?.forEach((b, i) => {
     const action = BUTTON_MAP[i];
-    if (b?.pressed && action) out.push(action);
+    if (action && (b?.pressed || (b?.value ?? 0) > 0.5)) out.push(action);
   });
-  const [x = 0, y = 0] = pad.axes ?? [];
-  if (x <= -AXIS_DEADZONE) out.push('left');
-  else if (x >= AXIS_DEADZONE) out.push('right');
-  if (y <= -AXIS_DEADZONE) out.push('up');
-  else if (y >= AXIS_DEADZONE) out.push('down');
+  const axes = pad.axes ?? [];
+  const push = (x: number, y: number) => {
+    if (x <= -AXIS_DEADZONE) out.push('left');
+    else if (x >= AXIS_DEADZONE) out.push('right');
+    if (y <= -AXIS_DEADZONE) out.push('up');
+    else if (y >= AXIS_DEADZONE) out.push('down');
+  };
+  push(axes[0] ?? 0, axes[1] ?? 0);
+  // Non-standard mappings (some Xbox/Android TV drivers) expose the D-pad as
+  // axes 6/7 instead of buttons 12–15.
+  if (axes.length > 7) push(axes[6] ?? 0, axes[7] ?? 0);
   return out;
 }
+
 
 /** First press fires instantly; holding repeats at a readable cadence. */
 export const FIRST_REPEAT_MS = 380;
@@ -80,18 +90,33 @@ export function startGamepadBridge(dispatch: (action: RemoteAction) => void): ()
   }
   const held = new Map<RemoteAction, { since: number; last: number }>();
   let raf = 0;
-  let running = false;
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  let stopped = false;
+
+  const pads = () => Array.from(navigator.getGamepads?.() ?? []).filter(Boolean).slice(0, 4);
+
+  /** Cheap 250ms poll while nothing is attached — pads often only appear after
+   * the first button press, and some consoles never fire `gamepadconnected`. */
+  const idle = () => {
+    if (stopped) return;
+    idleTimer = setTimeout(() => {
+      if (stopped) return;
+      if (pads().length) raf = requestAnimationFrame(tick);
+      else idle();
+    }, 250);
+  };
 
   const tick = () => {
-    const pads = Array.from(navigator.getGamepads?.() ?? []).filter(Boolean).slice(0, 4);
-    if (!pads.length) {
-      running = false;
+    if (stopped) return;
+    const list = pads();
+    if (!list.length) {
       held.clear();
+      idle();
       return;
     }
     const now = performance.now();
     const active = new Set<RemoteAction>();
-    for (const pad of pads) {
+    for (const pad of list) {
       for (const action of padActions(pad as unknown as PadSnapshot)) active.add(action);
     }
     for (const action of active) {
@@ -107,21 +132,23 @@ export function startGamepadBridge(dispatch: (action: RemoteAction) => void): ()
     raf = requestAnimationFrame(tick);
   };
 
-  const start = () => {
-    if (running) return;
-    running = true;
-    raf = requestAnimationFrame(tick);
+  const onConnect = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    cancelAnimationFrame(raf);
+    if (!stopped) raf = requestAnimationFrame(tick);
   };
-
-  const onConnect = () => start();
   window.addEventListener('gamepadconnected', onConnect);
-  // A pad may already be attached (page reload on a console).
-  if (Array.from(navigator.getGamepads?.() ?? []).some(Boolean)) start();
+  window.addEventListener('gamepaddisconnected', () => held.clear());
+
+  if (pads().length) raf = requestAnimationFrame(tick);
+  else idle();
 
   return () => {
+    stopped = true;
     window.removeEventListener('gamepadconnected', onConnect);
+    if (idleTimer) clearTimeout(idleTimer);
     cancelAnimationFrame(raf);
-    running = false;
     held.clear();
   };
 }
+
