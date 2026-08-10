@@ -313,7 +313,7 @@ export function LiveTVPlayer({
       } catch {
         /* best-effort socket release */
       }
-      window.setTimeout(() => void diagnoseStream(src).then((diag) => {
+      window.setTimeout(() => void diagnoseStream(proxySrc).then((diag) => {
         diagnosing = false;
         if (disposed) return;
         if (diag) {
