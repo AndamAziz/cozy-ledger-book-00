@@ -248,21 +248,33 @@ export function LiveTVPlayer({
      * up to MAX_STREAM_RETRIES times with a fixed backoff, then stop and ask the
      * user to try again rather than looping forever.
      */
+    let diagnosing = false;
     const nextEngine = () => {
-      if (disposed) return;
+      if (disposed || diagnosing) return;
       clearWatchdog();
       // Before burning more attempts, ask the proxy what actually went wrong.
-      // A single-slot provider (HTTP 458) must be reported honestly instead of
-      // being hammered by the retry ladder.
+      // A single-slot provider (HTTP 458/429 MAX_CONNECTIONS) must be reported
+      // honestly, and the ladder MUST stay paused while we ask — otherwise the
+      // probe plus the next engine fight over the one available slot.
+      diagnosing = true;
       void diagnoseStream(src).then((diag) => {
-        if (disposed || !diag) return;
-        safeDestroy();
-        clearWatchdog();
-        if (retryTimer !== undefined) clearTimeout(retryTimer);
-        setRetrying(false);
-        setLoading(false);
-        setBlocked(diag);
+        diagnosing = false;
+        if (disposed) return;
+        if (diag) {
+          safeDestroy();
+          clearWatchdog();
+          if (retryTimer !== undefined) clearTimeout(retryTimer);
+          setRetrying(false);
+          setLoading(false);
+          setBlocked(diag);
+          return;
+        }
+        advanceLadder();
       });
+    };
+
+    const advanceLadder = () => {
+      if (disposed) return;
       if (stage + 1 < engines.length) {
         setStage((s) => s + 1);
         return;
@@ -284,6 +296,7 @@ export function LiveTVPlayer({
     };
 
     const onMediaError = () => nextEngine();
+
 
     video.addEventListener('playing', done);
     video.addEventListener('canplay', done);
