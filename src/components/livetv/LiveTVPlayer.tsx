@@ -85,7 +85,12 @@ export function LiveTVPlayer({
   const shellRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   /** mpegts.js player instance (raw MPEG-TS live feeds). */
-  const tsRef = useRef<{ destroy: () => void } | null>(null);
+  const tsRef = useRef<{
+    pause?: () => void;
+    unload?: () => void;
+    detachMediaElement?: () => void;
+    destroy: () => void;
+  } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -208,6 +213,8 @@ export function LiveTVPlayer({
       hlsRef.current = null;
       if (inst) {
         try {
+          inst.stopLoad();
+          inst.detachMedia();
           inst.destroy();
         } catch (err) {
           console.warn('hls destroy failed', err);
@@ -217,6 +224,9 @@ export function LiveTVPlayer({
       tsRef.current = null;
       if (ts) {
         try {
+          ts.pause?.();
+          ts.unload?.();
+          ts.detachMediaElement?.();
           ts.destroy();
         } catch (err) {
           console.warn('mpegts destroy failed', err);
@@ -224,10 +234,31 @@ export function LiveTVPlayer({
       }
     };
 
+    /**
+     * Live-only hard stop. Destroying hls.js/mpegts.js is not sufficient on
+     * every browser: the media element may keep its native fetch/socket alive
+     * until its source is explicitly removed and load() resets the resource.
+     * Register this complete teardown with the single-slot guard so channel
+     * zapping closes the old Xtream viewer before the next one is requested.
+     */
+    const hardStopLive = () => {
+      safeDestroy();
+      if ((channel.kind ?? 'live') !== 'live') return;
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        video.srcObject = null;
+        video.load();
+      } catch (err) {
+        console.warn('live stream teardown failed', err);
+      }
+    };
+
     // Hard-close the previous session and wait out the provider's release grace
     // period: the account allows a single connection, so overlapping opens are
     // what produced "max connections" errors when zapping channels.
-    const slotWait = claimStreamSlot(safeDestroy);
+    const slotTeardown = (channel.kind ?? 'live') === 'live' ? hardStopLive : safeDestroy;
+    const slotWait = claimStreamSlot(slotTeardown);
 
     setLoading(true);
     setError(false);
@@ -537,14 +568,21 @@ export function LiveTVPlayer({
       video.removeEventListener('canplay', done);
       video.removeEventListener('loadeddata', done);
       video.removeEventListener('error', onMediaError);
-      safeDestroy();
-      unregisterStream(safeDestroy);
-      try {
-        video.pause();
-        video.removeAttribute('src');
-        video.load();
-      } catch (err) {
-        console.warn('video teardown failed', err);
+      if ((channel.kind ?? 'live') === 'live') {
+        // Count this as a real slot release. The next Live TV effect will wait
+        // for the provider grace window before opening its upstream request.
+        releaseActiveStream();
+      } else {
+        // Preserve the existing, working Movies/Series teardown path exactly.
+        safeDestroy();
+        unregisterStream(slotTeardown);
+        try {
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
+        } catch (err) {
+          console.warn('video teardown failed', err);
+        }
       }
     };
 
