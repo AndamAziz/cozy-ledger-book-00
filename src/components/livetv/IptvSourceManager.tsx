@@ -593,7 +593,42 @@ export function IptvSourceManager({
                         <p dir="ltr" className="truncate text-[9px] opacity-50">
                           {s.playlist_masked}
                         </p>
+                        {canManage && revealed[s.id] && (
+                          <p
+                            dir="ltr"
+                            className="break-all rounded-lg border border-amber-500/30 bg-amber-500/10 p-1.5 text-[9px] font-bold text-amber-100"
+                          >
+                            {revealed[s.id]}
+                          </p>
+                        )}
                         <div className="flex flex-wrap gap-1.5">
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={() => void toggleReveal(s)}
+                              disabled={revealBusy === s.id}
+                              className="flex items-center gap-1 rounded-full border border-amber-500/30 px-2.5 py-1 text-[10px] font-bold text-amber-300 transition hover:border-amber-500/60 disabled:opacity-40"
+                            >
+                              {revealBusy === s.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : revealed[s.id] ? (
+                                <EyeOff className="h-3 w-3" />
+                              ) : (
+                                <Eye className="h-3 w-3" />
+                              )}
+                              {revealed[s.id] ? 'Hide' : 'Show link'}
+                            </button>
+                          )}
+                          {canManage && revealed[s.id] && (
+                            <button
+                              type="button"
+                              onClick={() => void copyRevealed(s)}
+                              className="flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-bold opacity-80 transition hover:opacity-100"
+                            >
+                              <Copy className="h-3 w-3" /> Copy
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => {
