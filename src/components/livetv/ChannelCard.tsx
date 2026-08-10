@@ -1,6 +1,6 @@
 import { Radio } from 'lucide-react';
 import type { IptvChannel } from '@/hooks/useIptvPlaylist';
-import { useChannelHealth, useProviderHealth } from '@/hooks/useIptvHealth';
+import { useProviderHealth } from '@/hooks/useIptvHealth';
 import { HealthBadge } from './HealthBadge';
 import { useLogoFallback } from '@/lib/logoFallback';
 
@@ -34,18 +34,15 @@ export function ChannelCard({ channel, onPlay }: Props) {
 
   const { data: provider } = useProviderHealth();
   const nameOffline = /offline|no signal|\bnot working\b/i.test(channel.name);
-  // Single-slot accounts can't spare a connection for probing — trust the provider check.
-  const canProbe = provider?.status === 'online' && !nameOffline && (provider?.maxConnections ?? 0) > 1;
-  const health = useChannelHealth(channel, canProbe);
   const status = nameOffline
     ? 'offline'
     : provider?.status === 'offline'
       ? 'offline'
       : provider?.status === 'slot_limit'
         ? 'busy'
-        : health === 'unknown' && provider?.status === 'online'
+        : provider?.status === 'online'
           ? 'online'
-          : health;
+          : 'unknown';
 
 
   return (

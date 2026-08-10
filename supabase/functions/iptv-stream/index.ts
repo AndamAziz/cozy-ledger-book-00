@@ -245,17 +245,19 @@ Deno.serve(async (req) => {
   const isDeadHost = (msg: string) =>
     msg.startsWith('Connection refused') || msg.startsWith('Host not found')
 
-  // Attempt plan: every candidate gets a fast direct hop then the geo-relay with
-  // the primary UA. Only if the whole list fails do we rotate UAs — on the first
-  // (most likely) candidate only, instead of cross-producing the full matrix.
+  // Attempt plan: media ALWAYS goes through the configured egress relay first.
+  // This provider rejects the Edge region with non-standard 45x statuses (458
+  // included), so probing it directly first both creates a false
+  // MAX_CONNECTIONS verdict and can briefly occupy the account's only slot.
+  // egressFetch already falls back to direct when the relay itself is down, so a
+  // second explicit direct request here is unnecessary and harmful for
+  // max_connections=1 accounts.
   type Attempt = { target: string; via: 'direct' | 'relay'; ua: string }
   const plan: Attempt[] = []
   for (const target of candidates) {
-    plan.push({ target, via: 'direct', ua: uaList[0] })
     plan.push({ target, via: 'relay', ua: uaList[0] })
   }
   for (const ua of uaList.slice(1)) {
-    plan.push({ target: candidates[0], via: 'direct', ua })
     plan.push({ target: candidates[0], via: 'relay', ua })
   }
 
@@ -346,15 +348,19 @@ Deno.serve(async (req) => {
         clearCooldown(target)
         break
       }
-      // 458/407: the Xtream panel refuses because every viewing slot on the
-      // account is in use. Retrying (or rotating UA/transport) only holds MORE
-      // slots open, which is what kept live TV permanently broken. Drain the
-      // body to release the socket and stop the plan for this host at once.
+      // 458/407 from the relayed provider response means the Xtream account is
+      // genuinely at its viewing limit. Drain it and stop this host. We do not
+      // classify a direct-route 458 as MAX_CONNECTIONS: several panels use that
+      // same private status for blocked datacentre IPs.
       if (res.status === 458 || res.status === 407) {
-        slotLimited = true
-        classified = streamError('MAX_CONNECTIONS', `HTTP ${res.status}`)
-        blockedRoutes.add(`${hostKey}|direct`)
-        blockedRoutes.add(`${hostKey}|relay`)
+        if (via === 'relay') {
+          slotLimited = true
+          classified = streamError('MAX_CONNECTIONS', `HTTP ${res.status}`)
+          blockedRoutes.add(`${hostKey}|relay`)
+        } else {
+          geoBlocked = true
+          blockedRoutes.add(`${hostKey}|direct`)
+        }
         lastError = `HTTP ${res.status}`
         await res.body?.cancel().catch(() => undefined)
         continue

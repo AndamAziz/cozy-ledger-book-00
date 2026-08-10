@@ -1,7 +1,7 @@
 import { Clapperboard } from 'lucide-react';
 import type { IptvChannel } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
-import { useChannelHealth, useProviderHealth } from '@/hooks/useIptvHealth';
+import { useProviderHealth } from '@/hooks/useIptvHealth';
 import { HealthBadge } from './HealthBadge';
 import { useLogoFallback } from '@/lib/logoFallback';
 
@@ -18,9 +18,6 @@ export function PosterCard({ channel, onPlay }: Props) {
   const showPoster = !!logo.src;
 
   const { data: provider } = useProviderHealth();
-  // Series are containers (no direct stream), so only probe playable items.
-  const probeable = channel.kind !== 'series' && provider?.status === 'online' && (provider?.maxConnections ?? 0) > 1;
-  const health = useChannelHealth(channel, probeable);
   const status =
     channel.kind === 'series'
       ? 'unknown'
@@ -28,9 +25,9 @@ export function PosterCard({ channel, onPlay }: Props) {
         ? 'offline'
         : provider?.status === 'slot_limit'
           ? 'busy'
-          : health === 'unknown' && provider?.status === 'online'
+          : provider?.status === 'online'
             ? 'online'
-            : health;
+            : 'unknown';
 
   return (
     <button
