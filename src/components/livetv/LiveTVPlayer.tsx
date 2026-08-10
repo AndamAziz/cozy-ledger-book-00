@@ -400,7 +400,7 @@ export function LiveTVPlayer({
     const attach = () => {
     if (engine === 'hls') {
 
-      const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
+      const hls = new Hls(hlsConfigFor());
       hlsRef.current = hls;
       let recovered = 0;
       try {
@@ -495,7 +495,7 @@ export function LiveTVPlayer({
           }
           const player = mpegts.createPlayer(
             { type: 'mpegts', isLive: (channel.kind ?? 'live') === 'live', url: src },
-            { enableWorker: true, liveBufferLatencyChasing: true, lazyLoad: false },
+            mpegtsConfigFor(),
           );
           tsRef.current = player;
           let codecBlocked = false;
