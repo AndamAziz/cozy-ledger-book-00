@@ -910,13 +910,6 @@ export function LiveTVPlayer({
             </div>
           )}
           <button
-            onClick={handleFullscreen}
-            aria-label="Fullscreen"
-            className="rounded-lg p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
-          >
-            <Maximize2 className="h-4 w-4" />
-          </button>
-          <button
             onClick={onClose}
             aria-label="Close player"
             className="rounded-lg p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white active:scale-90"
