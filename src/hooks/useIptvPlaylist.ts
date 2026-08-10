@@ -162,7 +162,10 @@ export function toPlayableUrl(
   const extPart = ext ? `&ext=${encodeURIComponent(ext)}` : '';
   const tokenPart = accessToken ? `&token=${encodeURIComponent(accessToken)}` : '';
   const rawPart = opts?.raw ? '&raw=1' : '';
-  return `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}${rawPart}${sourceParam()}&apikey=${ANON}${tokenPart}`;
+  // `soft=1` keeps expected provider refusals (single-slot busy / throttled)
+  // from becoming uncaught browser-level 4xx runtime errors. The body still
+  // carries the exact machine code and the player diagnoses it normally.
+  return `${FN_BASE}/iptv-stream?id=${encodeURIComponent(channelId)}&kind=${kind}${extPart}${rawPart}${sourceParam()}&soft=1&apikey=${ANON}${tokenPart}`;
 }
 
 

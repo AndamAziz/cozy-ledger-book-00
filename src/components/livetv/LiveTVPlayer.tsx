@@ -18,7 +18,7 @@ import {
 import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
 import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
 
-import { claimStreamSlot, unregisterStream } from '@/lib/streamSlot';
+import { claimStreamSlot, releaseActiveStream, unregisterStream } from '@/lib/streamSlot';
 import { diagnoseStream, type StreamDiagnosis } from '@/lib/streamDiagnose';
 import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
 
@@ -274,7 +274,19 @@ export function LiveTVPlayer({
       // honestly, and the ladder MUST stay paused while we ask — otherwise the
       // probe plus the next engine fight over the one available slot.
       diagnosing = true;
-      void diagnoseStream(src).then((diag) => {
+      // Close the failed media socket before the diagnostic request. Xtream
+      // accounts with max_connections=1 otherwise see the diagnostic itself as
+      // a competing viewer and answer 458 even when no other device is active.
+      safeDestroy();
+      releaseActiveStream();
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      } catch {
+        /* best-effort socket release */
+      }
+      window.setTimeout(() => void diagnoseStream(src).then((diag) => {
         diagnosing = false;
         if (disposed) return;
         if (diag) {
@@ -287,7 +299,7 @@ export function LiveTVPlayer({
           return;
         }
         advanceLadder();
-      });
+      }), 900);
     };
 
     const advanceLadder = () => {
