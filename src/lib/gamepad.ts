@@ -22,6 +22,8 @@ export const BUTTON_MAP: Record<number, RemoteAction> = {
   3: 'playPause', // Y / triangle
   4: 'channelDown', // LB
   5: 'channelUp', // RB
+  6: 'channelDown', // LT
+  7: 'channelUp', // RT
   8: 'back', // View / Select
   9: 'playPause', // Menu / Start
   12: 'up', // D-pad
@@ -29,6 +31,7 @@ export const BUTTON_MAP: Record<number, RemoteAction> = {
   14: 'left',
   15: 'right',
 };
+
 
 const AXIS_DEADZONE = 0.6;
 
