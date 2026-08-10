@@ -269,7 +269,7 @@ export default function M3uStreamView({
       for (const [name, fn] of Object.entries(handlers)) window.removeEventListener(name, fn);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, channels, onClose]);
+  }, [index, orderedChannels, onClose]);
 
   const goFullscreen = () => {
     // iPhone can only fullscreen the video element itself; legacy WebKit and
