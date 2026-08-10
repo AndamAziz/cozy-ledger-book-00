@@ -988,6 +988,7 @@ export function LiveTVPlayer({
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">{blocked.detail}</p>
               <div className="mt-4 flex justify-center gap-2">
                 <button
+                  disabled={cooldown > 0}
                   onClick={() => {
                     setBlocked(null);
                     setRetrying(false);
@@ -996,11 +997,13 @@ export function LiveTVPlayer({
                     setAttempt(0);
                     setReload((r) => r + 1);
                   }}
-                  className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
+                  className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                   style={{ background: '#ffb020' }}
                 >
-                  <RefreshCw className="h-3.5 w-3.5" /> Retry
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  {cooldown > 0 ? `Retry in ${cooldown}s` : 'Retry'}
                 </button>
+
                 <button
                   onClick={onClose}
                   className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 transition hover:border-white/40 hover:text-white active:scale-95"
