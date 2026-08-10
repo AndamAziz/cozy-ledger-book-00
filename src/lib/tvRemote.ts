@@ -53,10 +53,22 @@ const CODE_MAP: Record<number, RemoteAction> = {
   448: 'info',
   457: 'info', // Tizen INFO
   461: 'back', // webOS / LG back
+  // Windows VirtualKey gamepad codes (Edge on Xbox, UWP WebView).
+  195: 'ok', // GamepadA
+  196: 'back', // GamepadB
+  199: 'channelUp', // GamepadRightShoulder
+  200: 'channelDown', // GamepadLeftShoulder
+  203: 'up',
+  204: 'down',
+  205: 'left',
+  206: 'right',
+  207: 'playPause', // GamepadMenu
+  208: 'info', // GamepadView
   10009: 'back', // Tizen return
   10182: 'back', // Tizen exit
   10252: 'playPause', // Tizen MediaPlayPause
 };
+
 
 const KEY_MAP: Record<string, RemoteAction> = {
   ArrowUp: 'up',
