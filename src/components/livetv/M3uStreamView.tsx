@@ -218,7 +218,7 @@ export default function M3uStreamView({
       document.body.style.overflow = '';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, orderedChannels]);
+  }, [index, channels]);
 
   /* Smart TV remote: CH+/CH- zapping, play/pause, mute and Back. */
   useEffect(() => {
@@ -256,7 +256,7 @@ export default function M3uStreamView({
       for (const [name, fn] of Object.entries(handlers)) window.removeEventListener(name, fn);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, orderedChannels, onClose]);
+  }, [index, channels, onClose]);
 
   const goFullscreen = () => {
     // iPhone can only fullscreen the video element itself; legacy WebKit and
@@ -462,7 +462,7 @@ export default function M3uStreamView({
             />
           </div>
           <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-            {T.upNext} · {orderedChannels.length}
+            {T.upNext} · {channels.length}
           </p>
           {/* Virtualised list: only the rows in view exist in the DOM. */}
           <div
