@@ -7,7 +7,9 @@ import {
   remoteAction,
   type RemoteAction,
 } from '@/lib/tvRemote';
+import { startGamepadBridge } from '@/lib/gamepad';
 import { markTvMode } from '@/lib/tvMode';
+
 
 /** Is the element actually on screen and interactive? */
 function visible(el: Element): boolean {
