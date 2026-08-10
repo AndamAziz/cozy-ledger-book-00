@@ -403,6 +403,52 @@ export function IptvSourceManager({
     }
   };
 
+  /**
+   * CEO only: pull the decrypted link from the vault for a single row.
+   * Nothing is cached beyond this component's state and it auto-hides again
+   * after 30s so the credentials never linger on screen.
+   */
+  const toggleReveal = async (s: IptvSource) => {
+    if (revealed[s.id]) {
+      setRevealed((prev) => {
+        const next = { ...prev };
+        delete next[s.id];
+        return next;
+      });
+      return;
+    }
+    setRevealBusy(s.id);
+    try {
+      const data = await call({ action: 'reveal_source', id: s.id });
+      const link = String(data?.url ?? '');
+      setRevealed((prev) => ({ ...prev, [s.id]: link }));
+      window.setTimeout(() => {
+        setRevealed((prev) => {
+          if (prev[s.id] !== link) return prev;
+          const next = { ...prev };
+          delete next[s.id];
+          return next;
+        });
+      }, 30_000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not reveal that link');
+    } finally {
+      setRevealBusy(null);
+    }
+  };
+
+  const copyRevealed = async (s: IptvSource) => {
+    const link = revealed[s.id];
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success('Link copied');
+    } catch {
+      toast.error('Could not copy');
+    }
+  };
+
+
   const remove = async (s: IptvSource) => {
     setBusy(s.id);
     try {
