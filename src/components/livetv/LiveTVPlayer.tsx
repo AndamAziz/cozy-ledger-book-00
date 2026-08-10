@@ -13,7 +13,7 @@ import { accentFor, initialsFor } from './ChannelCard';
 import { useLogoFallback } from '@/lib/logoFallback';
 import {
   nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen,
-  onFullscreenChange, fullscreenElement,
+  onFullscreenChange, fullscreenElement, onVideoFullscreenChange,
 } from '@/lib/playback';
 import {
   resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
@@ -150,7 +150,7 @@ export function LiveTVPlayer({
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
-  const [isFull, setIsFull] = useState(false);
+  const [isFull, setIsFull] = useState(() => Boolean(fullscreenElement()));
   // VOD (movies / episodes) playback position — drives the seek bar.
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -720,7 +720,12 @@ export function LiveTVPlayer({
 
   useEffect(() => {
     const onFs = () => setIsFull(Boolean(fullscreenElement()));
-    return onFullscreenChange(onFs);
+    const offDoc = onFullscreenChange(onFs);
+    const offVideo = onVideoFullscreenChange(videoRef.current, onFs);
+    return () => {
+      offDoc();
+      offVideo();
+    };
   }, []);
 
   const togglePlay = () => {
