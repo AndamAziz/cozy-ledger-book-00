@@ -49,11 +49,11 @@ export function ChannelCard({ channel, onPlay }: Props) {
     <button
       type="button"
       onClick={() => onPlay(channel)}
-      className="group relative flex w-full flex-col items-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-white/25 active:scale-[0.97]"
+      className="group relative flex w-full flex-col items-center gap-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-white/25 active:scale-[0.97] focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       style={{ boxShadow: `0 8px 24px -14px ${accent}` }}
     >
       <span
-        className="pointer-events-none absolute inset-x-0 -top-10 h-20 opacity-40 blur-2xl transition-opacity group-hover:opacity-70"
+        className="tv-hide pointer-events-none absolute inset-x-0 -top-10 h-20 opacity-40 blur-2xl transition-opacity group-hover:opacity-70"
         style={{ background: `radial-gradient(circle, ${accent}, transparent 70%)` }}
       />
 
