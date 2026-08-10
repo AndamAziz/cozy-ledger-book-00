@@ -162,6 +162,7 @@ Deno.serve(async (req) => {
   const kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
   const extHint = (reqUrl.searchParams.get('ext') ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase()
   const rawFirst = reqUrl.searchParams.get('raw') === '1'
+  const softErrors = reqUrl.searchParams.get('soft') === '1'
 
   // Every stream is served from the caller's OWN provider account.
   const resolved = await resolveViewer(req)
@@ -416,7 +417,7 @@ Deno.serve(async (req) => {
         detail: lastError,
         candidates: candidates.length,
       },
-      rateLimited || slotLimited ? 429 : 502,
+       softErrors && (rateLimited || slotLimited) ? 200 : rateLimited || slotLimited ? 429 : 502,
     )
 
   }

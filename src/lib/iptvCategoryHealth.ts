@@ -114,7 +114,10 @@ function enqueue(id: string) {
 export function registerCategorySample(id: string, urls: string[]) {
   if (!urls.length) return;
   samples.set(id, urls.slice(0, CATEGORY_SAMPLE));
-  if (isStale(getCategoryHealth(id))) enqueue(id);
+  // Do not probe playable stream URLs while the viewer browses. Even a one-byte
+  // Range request opens a real Xtream viewing connection on many panels, and a
+  // category grid can therefore consume the account's only slot before Play is
+  // pressed. Provider-level health remains the safe catalogue/auth signal.
 }
 
 export function unregisterCategorySample(id: string) {

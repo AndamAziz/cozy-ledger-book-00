@@ -43,6 +43,30 @@ export async function diagnoseStream(src: string, timeoutMs = 12_000): Promise<S
       headers: { Range: 'bytes=0-1' },
       signal: ctrl.signal,
     });
+    const contentType = res.headers.get('content-type') ?? '';
+    // Playback URLs use `soft=1`: expected provider refusals are returned as a
+    // JSON 200 so the browser/runtime overlay does not treat them as an
+    // unhandled Edge Function failure. Decode that payload before the normal
+    // successful-media fast path.
+    if (contentType.includes('json')) {
+      const text = await res.text();
+      let code = '';
+      let message = '';
+      try {
+        const json = JSON.parse(text) as { code?: string; error?: string; message?: string };
+        code = json.code ?? '';
+        message = json.message ?? json.error ?? '';
+      } catch {
+        return null;
+      }
+      if (!TITLES[code]) return null;
+      return {
+        code,
+        title: TITLES[code],
+        detail: DETAILS[code] ?? message ?? 'The provider refused this stream.',
+        waitOnly: code === 'MAX_CONNECTIONS' || code === 'RATE_LIMITED',
+      };
+    }
     if (res.ok || res.status === 206) {
       // Playable after all — nothing to report.
       try {
