@@ -11,7 +11,8 @@ import {
 import { ChannelLogo } from './ChannelLogo';
 import { nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen } from '@/lib/playback';
 import { needsProxy, resolveStreamSource, type StreamHeaders } from '@/lib/streamHeaders';
-import { TV_EVENT } from '@/lib/tvRemote';
+import { TV_EVENT, remoteAction } from '@/lib/tvRemote';
+import { isTvMode, markTvMode } from '@/lib/tvMode';
 import { useVirtualList } from '@/hooks/useVirtualList';
 
 
