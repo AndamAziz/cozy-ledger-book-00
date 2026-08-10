@@ -7,6 +7,7 @@ import {
 
 import {
   toPlayableUrl, resolveDirectUrl, invalidateDirectUrl, markDirectSuccess, directStrikes,
+  directBlocked,
   type IptvChannel, type IptvEpisode,
 } from '@/hooks/useIptvPlaylist';
 import { directConnectBudgetMs, ladderRetryDelay } from '@/lib/directRetryPolicy';
@@ -131,6 +132,15 @@ export function LiveTVPlayer({
   const directDead = useRef(false);
   useEffect(() => {
     directDead.current = false;
+  }, [channel.id]);
+
+  /**
+   * Which route the current playback attempt uses, plus why we fell back —
+   * surfaced to the viewer as a small badge on the player.
+   */
+  const [route, setRoute] = useState<{ mode: 'direct' | 'proxy'; reason?: string } | null>(null);
+  useEffect(() => {
+    setRoute(null);
   }, [channel.id]);
 
 
@@ -299,6 +309,7 @@ export function LiveTVPlayer({
         usingDirect = false;
         directDead.current = true;
         invalidateDirectUrl(channel.id);
+        setRoute({ mode: 'proxy', reason: 'Direct stream stalled — switched to relay' });
         safeDestroy();
         setReload((r) => r + 1);
         return;
@@ -520,6 +531,12 @@ export function LiveTVPlayer({
         attach();
       };
       if (directDead.current) {
+        setRoute({ mode: 'proxy', reason: 'Direct provider link failed for this channel' });
+        begin();
+        return;
+      }
+      if (directBlocked()) {
+        setRoute({ mode: 'proxy', reason: 'Direct route paused after repeated failures' });
         begin();
         return;
       }
@@ -529,10 +546,16 @@ export function LiveTVPlayer({
           if (direct) {
             src = direct;
             usingDirect = true;
+            setRoute({ mode: 'direct' });
+          } else {
+            setRoute({ mode: 'proxy', reason: 'Provider has no browser-safe direct URL' });
           }
           begin();
         })
-        .catch(() => begin());
+        .catch(() => {
+          if (!disposed) setRoute({ mode: 'proxy', reason: 'Direct link handshake failed' });
+          begin();
+        });
     }, slotWait);
 
     return () => {
@@ -1018,6 +1041,29 @@ export function LiveTVPlayer({
               <span className="ml-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.07] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/85 backdrop-blur-sm">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: '#ff2d6f' }} />
                 Live
+              </span>
+            )}
+            {route && (
+              <span
+                title={route.mode === 'direct'
+                  ? 'Streaming straight from the provider (fastest route)'
+                  : route.reason ?? 'Streaming through the relay proxy'}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] backdrop-blur-sm ${isLive ? '' : 'ml-auto'} ${
+                  route.mode === 'direct'
+                    ? 'border-sky-400/30 bg-sky-400/10 text-sky-200'
+                    : 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+                }`}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ background: route.mode === 'direct' ? '#38bdf8' : '#fbbf24' }}
+                />
+                {route.mode === 'direct' ? 'Direct' : 'Relay'}
+              </span>
+            )}
+            {route?.mode === 'proxy' && route.reason && (
+              <span className="hidden max-w-[220px] truncate text-[10px] font-semibold text-white/50 md:inline">
+                {route.reason}
               </span>
             )}
             <button

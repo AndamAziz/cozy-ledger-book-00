@@ -196,7 +196,7 @@ const DIRECT_TTL_MS = 60_000;
  * reached (escalating windows), so one unlucky attempt does not cost the viewer
  * the faster path — see `@/lib/directRetryPolicy`.
  */
-function directBlocked(): boolean {
+export function directBlocked(): boolean {
   return isDirectParked(activeSourceId);
 }
 
