@@ -1043,6 +1043,24 @@ export function LiveTVPlayer({
                 Live
               </span>
             )}
+            {route && (
+              <span
+                title={route.mode === 'direct'
+                  ? 'Streaming straight from the provider (fastest route)'
+                  : route.reason ?? 'Streaming through the relay proxy'}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] backdrop-blur-sm ${isLive ? '' : 'ml-auto'} ${
+                  route.mode === 'direct'
+                    ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+                    : 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+                }`}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ background: route.mode === 'direct' ? '#34d399' : '#fbbf24' }}
+                />
+                {route.mode === 'direct' ? 'Direct' : 'Relay'}
+              </span>
+            )}
             <button
               type="button"
               onClick={handleFullscreen}
