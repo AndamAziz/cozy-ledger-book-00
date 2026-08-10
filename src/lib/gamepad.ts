@@ -13,6 +13,7 @@
  */
 
 import type { RemoteAction } from './tvRemote';
+import { isTvMode, lowMemoryDevice } from './tvMode';
 
 /** Standard-mapping button index → action. */
 export const BUTTON_MAP: Record<number, RemoteAction> = {
