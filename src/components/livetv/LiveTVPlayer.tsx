@@ -943,6 +943,47 @@ export function LiveTVPlayer({
           autoPlay
         />
 
+        {/* Channel zapping inside the picture — the only controls reachable while
+            the shell is in fullscreen. */}
+        {onZapChannel && !error && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setBarOpen(true);
+                onZapChannel(-1);
+              }}
+              aria-label="Previous channel"
+              data-tv
+              className={`absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/15 bg-black/55 p-2.5 text-white/85 shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/80 hover:text-white active:scale-90 sm:p-3 ${
+                barOpen || paused ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+            >
+              <SkipBack className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setBarOpen(true);
+                onZapChannel(1);
+              }}
+              aria-label="Next channel"
+              data-tv
+              className={`absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/15 bg-black/55 p-2.5 text-white/85 shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-black/80 hover:text-white active:scale-90 sm:p-3 ${
+                barOpen || paused ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+            >
+              <SkipForward className="h-5 w-5" />
+            </button>
+          </>
+        )}
+
+
+
         {/* Center play / pause — small circular control, fades with the bar */}
         {!loading && !error && (
           <button
