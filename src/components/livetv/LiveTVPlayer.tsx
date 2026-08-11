@@ -126,6 +126,8 @@ export function LiveTVPlayer({
    * (single-slot / rate limit). Retrying instantly just re-triggers HTTP 458.
    */
   const [cooldown, setCooldown] = useState(0);
+  /** Silent auto-recovery from wait-only provider refusals (slot limit/throttle). */
+  const slotWaits = useRef(0);
 
   useEffect(() => {
     if (!blocked?.waitOnly) {
