@@ -620,34 +620,52 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
 
   // ---- Chart image analysis ----
+  /**
+   * Aborts the in-flight SSE analysis request. A streaming response holds one of
+   * the browser's few per-host connections open, which blocks other requests
+   * (player segments, price polls) — so it is always cancelled when a new
+   * analysis starts or the component unmounts.
+   */
+  const streamAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => streamAbortRef.current?.abort(), []);
+
   const consumeStream = async (resp: Response, onChunk: (s: string) => void) => {
     const reader = resp.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
     let acc = '';
     let done = false;
-    while (!done) {
-      const { done: d, value } = await reader.read();
-      if (d) break;
-      buffer += decoder.decode(value, { stream: true });
-      let idx: number;
-      while ((idx = buffer.indexOf('\n')) !== -1) {
-        let line = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 1);
-        if (line.endsWith('\r')) line = line.slice(0, -1);
-        if (line.startsWith(':') || line.trim() === '') continue;
-        if (!line.startsWith('data: ')) continue;
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === '[DONE]') { done = true; break; }
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) { acc += content; onChunk(acc); }
-        } catch {
-          buffer = line + '\n' + buffer;
-          break;
+    try {
+      while (!done) {
+        const { done: d, value } = await reader.read();
+        if (d) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf('\n')) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') { done = true; break; }
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) { acc += content; onChunk(acc); }
+          } catch {
+            buffer = line + '\n' + buffer;
+            break;
+          }
         }
       }
+    } finally {
+      // Free the connection immediately — a half-read stream keeps the socket
+      // (and one of the 6 per-host slots) busy until the server times out.
+      try {
+        await reader.cancel();
+      } catch { /* already closed */ }
+      reader.releaseLock();
     }
   };
 
@@ -719,11 +737,16 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     setImageText('');
     // Kick off the structured buy/sell target detection in parallel with the text analysis.
     void analyzeImageSummary(dataUrls);
+    // Only one streaming analysis at a time — cancel any previous one first.
+    streamAbortRef.current?.abort();
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
     try {
       const resp = await fetch(fnUrl, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({ mode: 'image', symbol, images: dataUrls, chartTimeframe, lang: langMode }),
+        signal: controller.signal,
       });
       if (!resp.ok || !resp.body) {
         let msg = biLabel('هەڵەیەک ڕوویدا لە شیکاری وێنە.', 'Image analysis failed.');
@@ -735,8 +758,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       }
       await consumeStream(resp, setImageText);
     } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
       setImageError(err instanceof Error ? err.message : biLabel('هەڵەیەک ڕوویدا.', 'Something went wrong.'));
     } finally {
+      if (streamAbortRef.current === controller) streamAbortRef.current = null;
       setImageLoading(false);
     }
   };

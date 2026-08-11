@@ -218,7 +218,16 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
 
 
   // Series open a season/episode detail sheet; everything else plays directly.
-  const openItem = (c: IptvChannel) => (c.kind === 'series' ? setSeriesItem(c) : setPlaying(c));
+  // The two surfaces are mutually exclusive so only one player can be mounted.
+  const openItem = (c: IptvChannel) => {
+    if (c.kind === 'series') {
+      setPlaying(null);
+      setSeriesItem(c);
+    } else {
+      setSeriesItem(null);
+      setPlaying(c);
+    }
+  };
 
   // Movies / Series / Replay items are on-demand containers, not live channels.
   const playbackKind: 'live' | 'vod' | 'series' =
@@ -482,9 +491,12 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
       <LiveBottomNav active={tab} onChange={(t) => navigate(TAB_META[t].path)} />
 
       {seriesItem && <SeriesDetail series={seriesItem} onClose={() => setSeriesItem(null)} />}
-      {playing && (
+      {playing && !seriesItem && (
         <ErrorBoundary>
+          {/* `key` forces a full remount per channel: the old video element and
+              its engine are unmounted instead of being reused mid-stream. */}
           <LiveTVPlayer
+            key={playing.id}
             channel={playing}
             onClose={() => setPlaying(null)}
             onZapChannel={playing.kind === 'live' || !playing.kind ? (d) => void zapChannel(d) : undefined}

@@ -22,6 +22,7 @@ import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff
 import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
 
 import { claimStreamSlot, releaseActiveStream, unregisterStream } from '@/lib/streamSlot';
+import { acquirePlayerMount, releasePlayerMount } from '@/lib/playerMount';
 import { diagnoseStream, type StreamDiagnosis } from '@/lib/streamDiagnose';
 import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
 
@@ -98,6 +99,18 @@ export function LiveTVPlayer({
     detachMediaElement?: () => void;
     destroy: () => void;
   } | null>(null);
+
+  /**
+   * Single-instance guard: if another player overlay is still mounted (e.g. a
+   * series episode player while a live channel is opened), it is closed here so
+   * only one media element ever streams.
+   */
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const token = acquirePlayerMount(() => closeRef.current());
+    return () => releasePlayerMount(token);
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
