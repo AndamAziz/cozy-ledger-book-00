@@ -737,11 +737,16 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     setImageText('');
     // Kick off the structured buy/sell target detection in parallel with the text analysis.
     void analyzeImageSummary(dataUrls);
+    // Only one streaming analysis at a time — cancel any previous one first.
+    streamAbortRef.current?.abort();
+    const controller = new AbortController();
+    streamAbortRef.current = controller;
     try {
       const resp = await fetch(fnUrl, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({ mode: 'image', symbol, images: dataUrls, chartTimeframe, lang: langMode }),
+        signal: controller.signal,
       });
       if (!resp.ok || !resp.body) {
         let msg = biLabel('هەڵەیەک ڕوویدا لە شیکاری وێنە.', 'Image analysis failed.');
@@ -753,8 +758,10 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
       }
       await consumeStream(resp, setImageText);
     } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
       setImageError(err instanceof Error ? err.message : biLabel('هەڵەیەک ڕوویدا.', 'Something went wrong.'));
     } finally {
+      if (streamAbortRef.current === controller) streamAbortRef.current = null;
       setImageLoading(false);
     }
   };
