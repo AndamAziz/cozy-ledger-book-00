@@ -373,12 +373,29 @@ export function LiveTVPlayer({
         diagnosing = false;
         if (disposed) return;
         if (diag) {
+          // Slot / throttle refusals clear by themselves. Never interrupt the
+          // viewer with a popup for those — silently wait out the provider and
+          // reconnect behind the normal loading spinner.
+          if (diag.waitOnly && slotWaits.current < MAX_SLOT_WAITS) {
+            slotWaits.current += 1;
+            safeDestroy();
+            releaseActiveStream();
+            setRetrying(true);
+            retryTimer = window.setTimeout(() => {
+              if (disposed) return;
+              setRetrying(false);
+              setStage(0);
+              setReload((r) => r + 1);
+            }, SLOT_WAIT_MS);
+            return;
+          }
           safeDestroy();
           clearWatchdog();
           if (retryTimer !== undefined) clearTimeout(retryTimer);
           setRetrying(false);
           setLoading(false);
-          setBlocked(diag);
+          if (diag.waitOnly) setError(true);
+          else setBlocked(diag);
           return;
         }
         advanceLadder();
