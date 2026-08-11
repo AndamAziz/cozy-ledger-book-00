@@ -144,7 +144,7 @@ export default function M3uStreamView({
     const useHlsJs = !native && !looksProgressive && Hls.isSupported();
 
     if (useHlsJs) {
-      const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
+      const hls = new Hls(hlsConfigFor());
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);

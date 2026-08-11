@@ -78,6 +78,7 @@ export function hlsConfigFor(tv = isTvMode()) {
         backBufferLength: 30,
         liveSyncDurationCount: 4,
         fragLoadingMaxRetry: 6,
+        capLevelToPlayerSize: false,
       };
 }
 
