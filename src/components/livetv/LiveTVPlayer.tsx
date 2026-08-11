@@ -26,6 +26,10 @@ import { acquirePlayerMount, releasePlayerMount } from '@/lib/playerMount';
 import { diagnoseStream, type StreamDiagnosis } from '@/lib/streamDiagnose';
 import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
 
+/** Silent wait-out for the provider's single-slot / throttle refusals. */
+const SLOT_WAIT_MS = 6_000;
+const MAX_SLOT_WAITS = 4;
+
 
 import { TV_EVENT } from '@/lib/tvRemote';
 import { hlsConfigFor, mpegtsConfigFor } from '@/lib/tvMode';
