@@ -581,18 +581,22 @@ export function LiveTVPlayer({
     // Open the upstream connection only after the previous slot was released.
     const startTimer = window.setTimeout(() => {
       if (disposed) return;
-      // Ask for the direct media URL first (a tiny JSON handshake, not the
-      // bytes). Only if the provider has no browser-safe https URL do we stream
-      // through the Edge Function proxy.
       const begin = () => {
         if (disposed) return;
         armWatchdog();
         attach();
       };
-      if (directDead.current) {
+      // LIVE (Direct tab): proxy-only. A direct provider URL opens a SECOND
+      // Xtream viewer connection next to the one the proxy/handshake already
+      // holds, and single-slot accounts answer 458 — which is exactly what made
+      // Direct live channels loop through "Reconnecting…". The proxy path is
+      // proven, so live never handshakes for a direct URL.
+      if ((channel.kind ?? 'live') === 'live' || directDead.current) {
         begin();
         return;
       }
+      // Movies / series keep the direct-first handshake (a tiny JSON call, not
+      // the bytes) — that path is working and must not change.
       void resolveDirectUrl(channel.id, channel.kind ?? 'live', channel.ext, engine === 'mpegts')
         .then((direct) => {
           if (disposed) return;
@@ -604,6 +608,7 @@ export function LiveTVPlayer({
         })
         .catch(() => begin());
     }, slotWait);
+
 
     return () => {
       disposed = true;
