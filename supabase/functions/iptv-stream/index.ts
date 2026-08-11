@@ -331,9 +331,15 @@ Deno.serve(async (req) => {
     // next request instantly.
     const signal = AbortSignal.timeout(Math.max(1_500, Math.min(8_000, remaining() - 300)))
     try {
-      // Relay hop: resolve the provider's 302 ourselves first, then relay ONLY
-      // the final tokenized URL (the pre-redirect path is IP-refused there).
-      const hopTarget = via === 'relay' ? await resolveTokenizedUrl(target, headers, signal) : target
+      // Live streams must use exactly ONE upstream connection. Resolving a 302
+      // directly before opening the relayed media request briefly occupies the
+      // subscriber's only Xtream slot; the actual relay request then receives
+      // HTTP 458/MAX_CONNECTIONS. Let the relay follow the live redirect in the
+      // same request instead. Keep the established token-resolution path for
+      // Movies/Series, whose playback and Range handling already work.
+      const hopTarget = via === 'relay' && kind !== 'live'
+        ? await resolveTokenizedUrl(target, headers, signal)
+        : target
       const res =
         via === 'direct'
           ? await fetch(target, { headers, redirect: 'follow', signal })
