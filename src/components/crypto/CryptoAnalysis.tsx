@@ -635,28 +635,37 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
     let buffer = '';
     let acc = '';
     let done = false;
-    while (!done) {
-      const { done: d, value } = await reader.read();
-      if (d) break;
-      buffer += decoder.decode(value, { stream: true });
-      let idx: number;
-      while ((idx = buffer.indexOf('\n')) !== -1) {
-        let line = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 1);
-        if (line.endsWith('\r')) line = line.slice(0, -1);
-        if (line.startsWith(':') || line.trim() === '') continue;
-        if (!line.startsWith('data: ')) continue;
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === '[DONE]') { done = true; break; }
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) { acc += content; onChunk(acc); }
-        } catch {
-          buffer = line + '\n' + buffer;
-          break;
+    try {
+      while (!done) {
+        const { done: d, value } = await reader.read();
+        if (d) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf('\n')) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') { done = true; break; }
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) { acc += content; onChunk(acc); }
+          } catch {
+            buffer = line + '\n' + buffer;
+            break;
+          }
         }
       }
+    } finally {
+      // Free the connection immediately — a half-read stream keeps the socket
+      // (and one of the 6 per-host slots) busy until the server times out.
+      try {
+        await reader.cancel();
+      } catch { /* already closed */ }
+      reader.releaseLock();
     }
   };
 
