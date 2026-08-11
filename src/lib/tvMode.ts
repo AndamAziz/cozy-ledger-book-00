@@ -43,22 +43,45 @@ export function lowMemoryDevice(): boolean {
  * hls.js config. On TVs we cap the forward buffer and disable back-buffer
  * retention so the SourceBuffer stays small (a 20s+90s buffer on a 1080p feed
  * is ~60MB of decoded data — enough to crash Tizen).
+ *
+ * Segments travel provider → relay → edge → browser, which realistically takes
+ * 15-30s for a 10s segment. `lowLatencyMode` (edge-hugging) plus hls.js' default
+ * 20s fragment timeout therefore produced hard stalls on perfectly healthy
+ * streams, so live playback runs with a generous fragment timeout and a real
+ * cushion instead of playing at the live edge.
  */
 export function hlsConfigFor(tv = isTvMode()) {
+  const patience = {
+    lowLatencyMode: false,
+    fragLoadingTimeOut: 60_000,
+    manifestLoadingTimeOut: 30_000,
+    levelLoadingTimeOut: 30_000,
+    fragLoadingMaxRetryTimeout: 8_000,
+  };
   return tv
     ? {
         enableWorker: true,
-        lowLatencyMode: false,
-        maxBufferLength: 8,
-        maxMaxBufferLength: 12,
-        maxBufferSize: 12 * 1000 * 1000,
+        ...patience,
+        maxBufferLength: 16,
+        maxMaxBufferLength: 24,
+        maxBufferSize: 16 * 1000 * 1000,
         backBufferLength: 0,
-        liveSyncDurationCount: 3,
-        fragLoadingMaxRetry: 2,
+        liveSyncDurationCount: 4,
+        fragLoadingMaxRetry: 4,
         capLevelToPlayerSize: true,
       }
-    : { enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 };
+    : {
+        enableWorker: true,
+        ...patience,
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
+        backBufferLength: 30,
+        liveSyncDurationCount: 4,
+        fragLoadingMaxRetry: 6,
+        capLevelToPlayerSize: false,
+      };
 }
+
 
 /** mpegts.js config: smaller stash + no back buffer on TV. */
 export function mpegtsConfigFor(tv = isTvMode()) {

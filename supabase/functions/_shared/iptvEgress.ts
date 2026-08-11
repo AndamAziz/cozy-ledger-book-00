@@ -78,6 +78,12 @@ export function egressHeaders(base: HeadersInit = {}): Headers {
  * cooldown probes the relay again (half-open).
  */
 const RELAY_TIMEOUT_MS = 4_000
+/**
+ * Media hops are slow by nature (a 10s segment is several MB over the relay),
+ * so they get a long allowance and never open the breaker: a single slow segment
+ * header must not force every later request onto the direct (geo-blocked) path.
+ */
+const RELAY_STREAM_TIMEOUT_MS = 45_000
 const RELAY_COOLDOWN_MS = 45_000
 let relayDownUntil = 0
 let relayLastError = ''
@@ -150,7 +156,10 @@ async function egressHop(
     // the hop against a short timer and fall back to direct on expiry.
     // Heavy catalogue payloads (get_live_streams can be several MB) need a
     // longer allowance, which callers pass via `relayTimeoutMs`.
-    const hopTimeout = Math.max(1_000, opts.relayTimeoutMs ?? RELAY_TIMEOUT_MS)
+    const hopTimeout = Math.max(
+      1_000,
+      opts.relayTimeoutMs ?? (opts.stream ? RELAY_STREAM_TIMEOUT_MS : RELAY_TIMEOUT_MS),
+    )
     const hop = fetch(egressUrl(target), {
       ...init,
       redirect: 'follow',
@@ -165,7 +174,8 @@ async function egressHop(
     if (raced === 'timeout') {
       // Never leak the abandoned hop's body.
       hop.then((r) => r.body?.cancel().catch(() => {})).catch(() => {})
-      tripRelay(`no response within ${hopTimeout}ms`)
+      if (opts.stream) console.warn(`[iptvEgress] media hop timed out after ${hopTimeout}ms`)
+      else tripRelay(`no response within ${hopTimeout}ms`)
       return await direct(target, init)
     }
 
@@ -174,7 +184,7 @@ async function egressHop(
     // The relay is up but could not reach the provider (502/504/503): retry the
     // request directly so metadata keeps working while the VPS misbehaves.
     if (res.status === 502 || res.status === 503 || res.status === 504) {
-      tripRelay(`HTTP ${res.status}`)
+      if (!opts.stream) tripRelay(`HTTP ${res.status}`)
       await res.body?.cancel().catch(() => {})
       try {
         return await direct(target, init)

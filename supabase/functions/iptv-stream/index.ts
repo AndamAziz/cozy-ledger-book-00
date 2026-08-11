@@ -109,13 +109,58 @@ function rewritePlaylist(body: string, base: string, self: string, suffix: strin
 const redirectCache = new Map<string, { url: string; at: number }>()
 const REDIRECT_TTL_MS = 30_000
 
+/**
+ * Origin-level memory of the redirect ("scheme") the provider hands out.
+ *
+ * Segment URLs are unique, so a per-URL cache never hits: every single segment
+ * paid a fresh manual redirect-follow (up to 4 hops, ~700ms) AND briefly touched
+ * the account's only viewing slot. The redirect is a property of the ORIGIN, not
+ * of the segment, so we remember `origin -> origin` once per channel/host and
+ * apply it to every later segment with zero extra round trips.
+ */
+const originRedirects = new Map<string, { origin: string; at: number }>()
+const ORIGIN_TTL_MS = 10 * 60 * 1000
+
+/** True for media segments/keys, which must never trigger a redirect probe. */
+export const isSegmentUrl = (url: string) =>
+  /\.(ts|m4s|aac|vtt|key)(\?|$)/i.test(url)
+
+function applyOriginRedirect(target: string): string {
+  try {
+    const u = new URL(target)
+    const hit = originRedirects.get(u.origin)
+    if (!hit || Date.now() - hit.at > ORIGIN_TTL_MS) return target
+    return `${hit.origin}${u.pathname}${u.search}`
+  } catch {
+    return target
+  }
+}
+
+function rememberOriginRedirect(from: string, to: string) {
+  try {
+    const a = new URL(from)
+    const b = new URL(to)
+    // Only a pure host/scheme move is reusable; a path rewrite is per-URL.
+    if (a.origin === b.origin || a.pathname !== b.pathname) return
+    originRedirects.set(a.origin, { origin: b.origin, at: Date.now() })
+    if (originRedirects.size > 100) {
+      originRedirects.delete(originRedirects.keys().next().value as string)
+    }
+  } catch {
+    // unparsable — nothing to learn
+  }
+}
+
 async function resolveTokenizedUrl(
   target: string,
   headers: Record<string, string>,
   signal: AbortSignal,
+  opts: { probe?: boolean } = {},
 ): Promise<string> {
   const hit = redirectCache.get(target)
   if (hit && Date.now() - hit.at < REDIRECT_TTL_MS) return hit.url
+  // Segments reuse the origin learned from the manifest hop instead of probing.
+  if (opts.probe === false) return applyOriginRedirect(target)
 
   let current = target
   for (let hop = 0; hop < 4; hop++) {
@@ -139,6 +184,7 @@ async function resolveTokenizedUrl(
     break
   }
   if (current !== target) {
+    rememberOriginRedirect(target, current)
     redirectCache.set(target, { url: current, at: Date.now() })
     if (redirectCache.size > 200) redirectCache.delete(redirectCache.keys().next().value as string)
   }
@@ -333,7 +379,10 @@ Deno.serve(async (req) => {
     try {
       // Relay hop: resolve the provider's 302 ourselves first, then relay ONLY
       // the final tokenized URL (the pre-redirect path is IP-refused there).
-      const hopTarget = via === 'relay' ? await resolveTokenizedUrl(target, headers, signal) : target
+      const hopTarget =
+        via === 'relay'
+          ? await resolveTokenizedUrl(target, headers, signal, { probe: !isSegmentUrl(target) })
+          : target
       const res =
         via === 'direct'
           ? await fetch(target, { headers, redirect: 'follow', signal })
