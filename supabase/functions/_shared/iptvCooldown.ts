@@ -24,10 +24,7 @@ export function hostOf(url: string): string {
 
 /** True when a provider status means "you are being rate limited / throttled". */
 export function isRateLimited(status: number): boolean {
-  // 503 is deliberately EXCLUDED: panels return it for transient upstream
-  // hiccups on ordinary segment traffic, and parking the host for 30-120s over
-  // one slow segment is what turned a blip into a dead channel.
-  return status === 429 || status === 509
+  return status === 429 || status === 503 || status === 509
 }
 
 export type HeaderLike = Headers | Record<string, string> | null | undefined

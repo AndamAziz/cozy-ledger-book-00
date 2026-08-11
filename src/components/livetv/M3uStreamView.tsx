@@ -13,7 +13,7 @@ import { ChannelLogo } from './ChannelLogo';
 import { nativeHlsSupported, playWithAutoplayFallback, toggleFullscreen } from '@/lib/playback';
 import { needsProxy, resolveStreamSource, type StreamHeaders } from '@/lib/streamHeaders';
 import { TV_EVENT, remoteAction } from '@/lib/tvRemote';
-import { hlsConfigFor, isTvMode, markTvMode } from '@/lib/tvMode';
+import { isTvMode, markTvMode } from '@/lib/tvMode';
 import { useVirtualList } from '@/hooks/useVirtualList';
 
 
@@ -144,7 +144,7 @@ export default function M3uStreamView({
     const useHlsJs = !native && !looksProgressive && Hls.isSupported();
 
     if (useHlsJs) {
-      const hls = new Hls(hlsConfigFor());
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(video);
