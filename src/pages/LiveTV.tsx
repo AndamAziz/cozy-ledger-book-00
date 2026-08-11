@@ -218,7 +218,16 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
 
 
   // Series open a season/episode detail sheet; everything else plays directly.
-  const openItem = (c: IptvChannel) => (c.kind === 'series' ? setSeriesItem(c) : setPlaying(c));
+  // The two surfaces are mutually exclusive so only one player can be mounted.
+  const openItem = (c: IptvChannel) => {
+    if (c.kind === 'series') {
+      setPlaying(null);
+      setSeriesItem(c);
+    } else {
+      setSeriesItem(null);
+      setPlaying(c);
+    }
+  };
 
   // Movies / Series / Replay items are on-demand containers, not live channels.
   const playbackKind: 'live' | 'vod' | 'series' =
