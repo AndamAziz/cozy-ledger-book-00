@@ -491,9 +491,12 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
       <LiveBottomNav active={tab} onChange={(t) => navigate(TAB_META[t].path)} />
 
       {seriesItem && <SeriesDetail series={seriesItem} onClose={() => setSeriesItem(null)} />}
-      {playing && (
+      {playing && !seriesItem && (
         <ErrorBoundary>
+          {/* `key` forces a full remount per channel: the old video element and
+              its engine are unmounted instead of being reused mid-stream. */}
           <LiveTVPlayer
+            key={playing.id}
             channel={playing}
             onClose={() => setPlaying(null)}
             onZapChannel={playing.kind === 'live' || !playing.kind ? (d) => void zapChannel(d) : undefined}
