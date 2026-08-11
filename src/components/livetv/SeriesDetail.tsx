@@ -216,6 +216,7 @@ export function SeriesDetail({ series, onClose }: Props) {
       {currentEpisode && (
         <ErrorBoundary>
           <LiveTVPlayer
+            key={currentEpisode.id}
             channel={episodeChannel(series, currentEpisode)}
             onClose={() => setCurrentEpisode(null)}
             episodes={episodes}
