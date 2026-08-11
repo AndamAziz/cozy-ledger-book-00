@@ -620,6 +620,15 @@ export function CryptoAnalysis({ symbol, candles, currentPrice, change24h, inter
 
 
   // ---- Chart image analysis ----
+  /**
+   * Aborts the in-flight SSE analysis request. A streaming response holds one of
+   * the browser's few per-host connections open, which blocks other requests
+   * (player segments, price polls) — so it is always cancelled when a new
+   * analysis starts or the component unmounts.
+   */
+  const streamAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => streamAbortRef.current?.abort(), []);
+
   const consumeStream = async (resp: Response, onChunk: (s: string) => void) => {
     const reader = resp.body!.getReader();
     const decoder = new TextDecoder();
