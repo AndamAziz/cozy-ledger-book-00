@@ -99,6 +99,18 @@ export function LiveTVPlayer({
     destroy: () => void;
   } | null>(null);
 
+  /**
+   * Single-instance guard: if another player overlay is still mounted (e.g. a
+   * series episode player while a live channel is opened), it is closed here so
+   * only one media element ever streams.
+   */
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const token = acquirePlayerMount(() => closeRef.current());
+    return () => releasePlayerMount(token);
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   /**
