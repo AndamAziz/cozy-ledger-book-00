@@ -77,8 +77,27 @@ async function probe(url: string): Promise<ChannelStatus> {
   }
 }
 
+/**
+ * While a player is mounted the provider account may only have a single viewing
+ * slot free — background probes would steal it from the live stream.
+ */
+let probingPaused = false;
+
+export function setChannelProbingPaused(paused: boolean) {
+  probingPaused = paused;
+  if (paused) {
+    queue.length = 0;
+  } else {
+    onIdle(pump, 1000);
+  }
+}
+
+export function isChannelProbingPaused(): boolean {
+  return probingPaused;
+}
+
 function pump() {
-  if (tabHidden()) return;
+  if (tabHidden() || probingPaused) return;
   while (running < MAX_PARALLEL && queue.length) {
     const job = queue.shift()!;
     running += 1;
@@ -95,6 +114,7 @@ function pump() {
 
 /** Queue a probe when the cached verdict is missing or stale. */
 export function requestChannelStatus(key: string, url: string) {
+  if (probingPaused) return;
   const entry = cache.get(key);
   if (isFresh(entry) || entry?.status === 'checking') return;
   if (queue.some((j) => j.key === key)) return;
@@ -103,6 +123,7 @@ export function requestChannelStatus(key: string, url: string) {
   queue.push({ key, url });
   onIdle(pump, 1000);
 }
+
 
 export function subscribeChannelStatus(key: string, fn: (s: ChannelStatus) => void): () => void {
   const set_ = listeners.get(key) ?? new Set();
