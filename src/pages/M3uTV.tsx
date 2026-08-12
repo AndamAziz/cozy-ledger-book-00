@@ -449,7 +449,7 @@ export default function M3uTV() {
           </Badge>
           <div className="min-w-0 flex-1" />
 
-          <span className="shrink-0 rounded-full bg-secondary/60 px-[8px] py-[2px] text-[10px] font-semibold leading-none">
+          <span className="flex h-[24px] shrink-0 items-center justify-center rounded-full bg-secondary/60 px-[8px] text-[10px] font-semibold leading-none">
             {channels.length.toLocaleString()} <span className="font-medium text-muted-foreground">{T.channels}</span>
           </span>
         </div>
