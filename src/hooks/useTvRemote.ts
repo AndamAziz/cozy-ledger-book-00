@@ -129,6 +129,9 @@ export function useTvRemote() {
         }
         case 'back': {
           if (editing(active) && e?.key === 'Backspace') return;
+          // Off TV, "back-equivalent" inputs (Backspace, mouse back button, a
+          // drifting gamepad) must never tear down a running player.
+          if (!isTvDevice() && isPlayerMounted()) return;
           e?.preventDefault();
           if (emit(TV_EVENT.back)) return;
           if (window.history.length > 1) window.history.back();
@@ -149,6 +152,7 @@ export function useTvRemote() {
           emit(TV_EVENT.playPause);
           return;
         case 'stop':
+          if (!isTvDevice() && isPlayerMounted()) return;
           emit(TV_EVENT.stop);
           return;
         case 'rewind':
@@ -166,9 +170,13 @@ export function useTvRemote() {
     };
 
     const onKey = (e: KeyboardEvent) => {
+      // Backspace is a typing/navigation key on desktop and mobile keyboards —
+      // only treat it as a remote "Back" on real TV devices.
+      if ((e.key === 'Backspace' || e.keyCode === 8) && !isTvDevice()) return;
       const action = remoteAction(e);
       if (action) run(action, e);
     };
+
 
     // Controllers (Xbox Edge, Android TV pads, desktop browsers with a pad)
     // feed the exact same action pipeline as the remote.
