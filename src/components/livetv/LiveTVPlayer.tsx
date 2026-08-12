@@ -642,9 +642,18 @@ export function LiveTVPlayer({
 
 
   useEffect(() => {
+    let escAt = 0;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        // On TV a single Back/Exit closes. Off TV, require a deliberate
+        // double-press so a stray Escape never kills a running stream.
+        const now = Date.now();
+        if (isTvDevice() || now - escAt < 1500) {
+          escAt = 0;
+          onClose();
+        } else {
+          escAt = now;
+        }
         return;
       }
       // Arrow-key scrubbing for desktop and Smart TV remotes (VOD only).
@@ -661,6 +670,7 @@ export function LiveTVPlayer({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose, isLive]);
+
 
 
   const pickLevel = (index: number) => {
