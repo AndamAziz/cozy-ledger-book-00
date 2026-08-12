@@ -2,16 +2,29 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getActiveSourceId, toPlayableUrl, type IptvChannel, type IptvKind } from './useIptvPlaylist';
+import { isPlayerMounted, subscribePlayerMount } from '@/lib/playerMount';
 import {
   getChannelStatus,
   invalidateChannelStatuses,
   requestChannelStatus,
+  setChannelProbingPaused,
   subscribeChannelStatus,
   type ChannelStatus,
 } from '@/lib/iptvHealth';
 
 const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+
+/** True while a video player overlay is mounted (probing must stand down). */
+function usePlayerMounted(): boolean {
+  const [mounted, setMounted] = useState(isPlayerMounted);
+  useEffect(() => {
+    setMounted(isPlayerMounted());
+    return subscribePlayerMount(setMounted);
+  }, []);
+  return mounted;
+}
+
 
 export type ProviderStatus = 'online' | 'slot_limit' | 'offline';
 
