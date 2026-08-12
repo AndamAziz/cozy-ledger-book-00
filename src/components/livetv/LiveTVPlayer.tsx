@@ -864,14 +864,19 @@ export function LiveTVPlayer({
         e.preventDefault();
         skip(30);
       },
+      // Remote Stop/Back closes the player on TV only — off TV these come from
+      // stray keys, mouse back buttons or a drifting gamepad.
       [TV_EVENT.stop]: (e) => {
+        if (!isTvDevice()) return;
         e.preventDefault();
         onClose();
       },
       [TV_EVENT.back]: (e) => {
+        if (!isTvDevice()) return;
         e.preventDefault();
         onClose();
       },
+
       [TV_EVENT.channelUp]: (e) => {
         if (stepEpisode(1)) e.preventDefault();
       },
