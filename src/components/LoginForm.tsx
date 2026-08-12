@@ -343,7 +343,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 onClick={() => switchTab(false)}
                 className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
                   !isSignupMode 
-                    ? 'bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground text-white shadow-lg shadow-gold/30' 
+                    ? 'bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground shadow-lg shadow-gold/30' 
                     : 'text-white/45 hover:text-white/70'
                 }`}
               >
@@ -354,7 +354,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 onClick={() => switchTab(true)}
                 className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
                   isSignupMode 
-                    ? 'bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground text-white shadow-lg shadow-gold/30' 
+                    ? 'bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground shadow-lg shadow-gold/30' 
                     : 'text-white/45 hover:text-white/70'
                 }`}
               >
