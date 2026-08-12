@@ -222,53 +222,63 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-[#08070a]">
       {/* Language Switcher - Top Right */}
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
         <LanguageSwitcher />
       </div>
-      
-      {/* Decorative background elements */}
+
+      {/* Cinematic golden light rays */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-1/4 -left-20 w-72 h-72 rounded-full bg-primary/20 blur-[120px]" />
-        <div className="absolute bottom-1/4 -right-20 w-80 h-80 rounded-full bg-success/15 blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-info/10 blur-[150px]" />
+        <div
+          className="absolute -top-[35%] left-1/2 -translate-x-1/2 w-[160vw] h-[110vh] opacity-[0.55]"
+          style={{
+            background:
+              'conic-gradient(from 200deg at 50% 0%, transparent 0deg, hsl(var(--gold)/0.35) 14deg, transparent 24deg, transparent 38deg, hsl(var(--gold)/0.22) 48deg, transparent 58deg, transparent 74deg, hsl(var(--gold)/0.30) 84deg, transparent 96deg, transparent 116deg, hsl(var(--gold)/0.18) 126deg, transparent 140deg)',
+            filter: 'blur(14px)',
+          }}
+        />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[70vw] h-[70vw] max-w-[620px] max-h-[620px] rounded-full bg-gold/20 blur-[120px]" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#08070a] via-[#08070a]/85 to-transparent" />
       </div>
-      
+
       <div className="w-full max-w-[440px] relative z-10 animate-scale-in">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl border border-gold/20 bg-black/45 backdrop-blur-2xl shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)]">
           {/* Top decoration line */}
-          <div className="h-1 bg-gradient-to-r from-primary via-info to-primary" />
-          
+          <div className="h-[2px] bg-gradient-to-r from-transparent via-gold to-transparent" />
+
           <div className="p-6 sm:p-10">
             {/* Logo & Title */}
             <div className="text-center mb-8">
-              <div className="relative inline-block mb-4">
-                <div className="w-20 h-20 rounded-[20px] bg-gradient-to-br from-primary to-success mx-auto flex items-center justify-center shadow-xl shadow-primary/30">
-                  <span className="text-4xl">💼</span>
-                </div>
-                <div className="absolute -top-1 -right-1 text-xl animate-pulse">✨</div>
-              </div>
-              <h1 className="text-2xl font-bold text-primary mb-2">
-                {t('financialManagement')}
+              <img
+                src="/logo-mark.png"
+                alt="ANDAM logo"
+                width={96}
+                height={96}
+                className="mx-auto mb-3 h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-[0_6px_20px_hsl(var(--gold)/0.45)]"
+              />
+              <h1 className="text-3xl sm:text-[2rem] font-extrabold tracking-[0.16em] bg-gradient-to-b from-gold via-gold to-gold/60 bg-clip-text text-transparent">
+                ALL IN ONE
               </h1>
-              <p className="text-slate-400 text-sm">
+              <div className="mx-auto mt-3 h-px w-24 bg-gradient-to-r from-transparent via-gold/60 to-transparent" />
+              <p className="text-white/45 text-xs sm:text-sm mt-3 tracking-wide">
                 {isSignupMode ? t('signup') : t('login')}
               </p>
             </div>
+
             
             {isForgotMode ? (
               <div className="animate-fade-in">
                 {resetSent ? (
                   <div className="text-center space-y-6">
-                    <div className="w-16 h-16 rounded-full bg-success/20 mx-auto flex items-center justify-center">
-                      <Mail className="w-8 h-8 text-success" />
+                    <div className="w-16 h-16 rounded-full bg-gold/15 mx-auto flex items-center justify-center">
+                      <Mail className="w-8 h-8 text-gold" />
                     </div>
-                    <p className="text-slate-300 text-sm">{t('resetLinkSentDesc')}</p>
+                    <p className="text-white/70 text-sm">{t('resetLinkSentDesc')}</p>
                     <Button
                       type="button"
                       onClick={() => switchTab(false)}
-                      className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success text-base font-bold rounded-xl"
+                      className="w-full py-4 h-auto bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground text-base font-bold rounded-xl"
                     >
                       {t('backToLogin')}
                     </Button>
@@ -277,10 +287,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   <form onSubmit={handleForgotPassword} className="space-y-6">
                     <div className="text-center mb-2">
                       <h2 className="text-lg font-bold text-white mb-1">{t('resetPasswordTitle')}</h2>
-                      <p className="text-slate-400 text-sm">{t('resetPasswordDesc')}</p>
+                      <p className="text-white/45 text-sm">{t('resetPasswordDesc')}</p>
                     </div>
                     <div className="relative group">
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 text-xl z-10">
                         <Mail className="w-5 h-5" />
                       </span>
                       <input
@@ -289,10 +299,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder=" "
                         disabled={isLoading}
-                        className="peer w-full py-4 pr-12 pl-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                        className="peer w-full py-4 pr-12 pl-4 bg-white/[0.04] border-2 border-white/10 rounded-xl text-white text-base outline-none transition-all focus:border-gold/60 focus:bg-white/[0.07] placeholder-transparent"
                       />
-                      <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
-                        peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                      <label className="absolute right-12 top-4 text-white/45 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-black/70 to-transparent px-1
+                        peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-gold
                         peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                         {t('email')}
                       </label>
@@ -300,7 +310,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                     <Button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success hover:shadow-lg hover:shadow-primary/40 text-base font-bold rounded-xl transition-all duration-300"
+                      className="w-full py-4 h-auto bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground hover:shadow-lg hover:shadow-gold/40 text-base font-bold rounded-xl transition-all duration-300"
                     >
                       {isLoading ? (
                         <div className="flex items-center gap-2">
@@ -315,7 +325,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                       <button
                         type="button"
                         onClick={() => switchTab(false)}
-                        className="text-sm text-primary hover:text-success font-semibold transition-colors"
+                        className="text-sm text-gold hover:text-gold/70 font-semibold transition-colors"
                         disabled={isLoading}
                       >
                         {t('backToLogin')}
@@ -327,14 +337,14 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
             ) : (
             <>
             {/* Tabs */}
-            <div className="flex gap-2 mb-8 bg-slate-800/50 p-1.5 rounded-xl">
+            <div className="flex gap-2 mb-8 bg-white/[0.04] p-1.5 rounded-xl">
               <button
                 type="button"
                 onClick={() => switchTab(false)}
                 className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
                   !isSignupMode 
-                    ? 'bg-gradient-to-r from-primary to-success text-white shadow-lg shadow-primary/30' 
-                    : 'text-slate-400 hover:text-slate-300'
+                    ? 'bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground shadow-lg shadow-gold/30' 
+                    : 'text-white/45 hover:text-white/70'
                 }`}
               >
                 {t('login')}
@@ -344,8 +354,8 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 onClick={() => switchTab(true)}
                 className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
                   isSignupMode 
-                    ? 'bg-gradient-to-r from-primary to-success text-white shadow-lg shadow-primary/30' 
-                    : 'text-slate-400 hover:text-slate-300'
+                    ? 'bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground shadow-lg shadow-gold/30' 
+                    : 'text-white/45 hover:text-white/70'
                 }`}
               >
                 {t('signup')}
@@ -356,7 +366,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               {/* Company Name - Only in signup mode */}
               {isSignupMode && (
                 <div className="relative group">
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 text-xl z-10">
                     <Building2 className="w-5 h-5" />
                   </span>
                   <input
@@ -365,10 +375,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder=" "
                     disabled={isLoading}
-                    className="peer w-full py-4 pr-12 pl-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                    className="peer w-full py-4 pr-12 pl-4 bg-white/[0.04] border-2 border-white/10 rounded-xl text-white text-base outline-none transition-all focus:border-gold/60 focus:bg-white/[0.07] placeholder-transparent"
                   />
-                  <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
-                    peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                  <label className="absolute right-12 top-4 text-white/45 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-black/70 to-transparent px-1
+                    peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-gold
                     peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                     {t('companyName')}
                   </label>
@@ -377,7 +387,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               
               {/* Email */}
               <div className="relative group">
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 text-xl z-10">
                   <Mail className="w-5 h-5" />
                 </span>
                 <input
@@ -386,10 +396,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder=" "
                   disabled={isLoading}
-                  className="peer w-full py-4 pr-12 pl-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                  className="peer w-full py-4 pr-12 pl-4 bg-white/[0.04] border-2 border-white/10 rounded-xl text-white text-base outline-none transition-all focus:border-gold/60 focus:bg-white/[0.07] placeholder-transparent"
                 />
-                <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
-                  peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                <label className="absolute right-12 top-4 text-white/45 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-black/70 to-transparent px-1
+                  peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-gold
                   peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                   {t('email')}
                 </label>
@@ -397,7 +407,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               
               {/* Password */}
               <div className="relative group">
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 text-xl z-10">
                   <Lock className="w-5 h-5" />
                 </span>
                 <input
@@ -406,17 +416,17 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder=" "
                   disabled={isLoading}
-                  className="peer w-full py-4 pr-12 pl-12 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                  className="peer w-full py-4 pr-12 pl-12 bg-white/[0.04] border-2 border-white/10 rounded-xl text-white text-base outline-none transition-all focus:border-gold/60 focus:bg-white/[0.07] placeholder-transparent"
                 />
-                <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
-                  peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                <label className="absolute right-12 top-4 text-white/45 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-black/70 to-transparent px-1
+                  peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-gold
                   peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                   {t('password')}
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-primary transition-colors p-1"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white/35 hover:text-gold transition-colors p-1"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -428,7 +438,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   <button
                     type="button"
                     onClick={openForgotMode}
-                    className="text-sm text-primary hover:text-success font-medium transition-colors"
+                    className="text-sm text-gold hover:text-gold/70 font-medium transition-colors"
                     disabled={isLoading}
                   >
                     {t('forgotPassword')}
@@ -440,7 +450,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               {isSignupMode && (
                 <div>
                   <div className="relative group">
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 text-xl z-10">
                       <Lock className="w-5 h-5" />
                     </span>
                     <input
@@ -449,21 +459,21 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder=" "
                       disabled={isLoading}
-                      className={`peer w-full py-4 pr-12 pl-12 bg-slate-800/60 border-2 rounded-xl text-white text-base outline-none transition-all focus:bg-slate-800/80 placeholder-transparent ${
+                      className={`peer w-full py-4 pr-12 pl-12 bg-white/[0.04] border-2 rounded-xl text-white text-base outline-none transition-all focus:bg-white/[0.07] placeholder-transparent ${
                         passwordsMismatch
                           ? 'border-destructive focus:border-destructive'
-                          : 'border-slate-700/50 focus:border-primary'
+                          : 'border-white/10 focus:border-gold/60'
                       }`}
                     />
-                    <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
-                      peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                    <label className="absolute right-12 top-4 text-white/45 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-black/70 to-transparent px-1
+                      peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-gold
                       peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                       {t('confirmPassword')}
                     </label>
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-primary transition-colors p-1"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-white/35 hover:text-gold transition-colors p-1"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -480,7 +490,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               {/* Submit Button */}
               <Button 
                 type="submit" 
-                className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 text-base font-bold rounded-xl transition-all duration-300 mt-2"
+                className="w-full py-4 h-auto bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground hover:shadow-lg hover:shadow-gold/40 hover:-translate-y-0.5 active:translate-y-0 text-base font-bold rounded-xl transition-all duration-300 mt-2"
                 disabled={isLoading || passwordsMismatch}
               >
               {isLoading ? (
@@ -505,10 +515,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
             {/* Divider */}
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-700/50"></div>
+                <div className="w-full border-t border-white/10"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-slate-900/80 text-slate-500">—</span>
+                <span className="px-3 bg-black/60 text-white/35">—</span>
               </div>
             </div>
             
@@ -518,7 +528,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               onClick={handleGoogleLogin}
               disabled={isLoading || isGoogleLoading}
               variant="outline"
-              className="w-full py-4 h-auto bg-slate-800/60 border-2 border-slate-700/50 hover:border-primary/50 hover:bg-slate-800/80 text-white text-base font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3"
+              className="w-full py-4 h-auto bg-white/[0.04] border-2 border-white/10 hover:border-gold/40 hover:bg-white/[0.07] text-white text-base font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3"
             >
               {isGoogleLoading ? (
                 <div className="flex items-center gap-2">
@@ -552,11 +562,11 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
             
             {/* Footer */}
             <div className="text-center mt-6">
-              <p className="text-slate-500 text-sm">
+              <p className="text-white/35 text-sm">
                 <button
                   type="button"
                   onClick={() => switchTab(!isSignupMode)}
-                  className="text-primary hover:text-success font-semibold transition-colors"
+                  className="text-gold hover:text-gold/70 font-semibold transition-colors"
                   disabled={isLoading}
                 >
                   {isSignupMode ? t('login') : t('signup')}
@@ -570,16 +580,16 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
         
         {/* Bottom decoration */}
         <div className="flex justify-center gap-2 mt-6">
-          <div className="w-2 h-2 rounded-full bg-primary/50" />
-          <div className="w-2 h-2 rounded-full bg-success/50" />
-          <div className="w-2 h-2 rounded-full bg-info/50" />
+          <div className="w-2 h-2 rounded-full bg-gold/60" />
+          <div className="w-2 h-2 rounded-full bg-gold/35" />
+          <div className="w-2 h-2 rounded-full bg-gold/20" />
         </div>
 
         {/* Trust & Security link */}
         <div className="flex justify-center mt-5">
           <Link
             to="/trust"
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-primary transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-white/35 hover:text-gold transition-colors"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Trust &amp; Security</span>
