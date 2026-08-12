@@ -9,6 +9,8 @@ import {
 } from '@/lib/tvRemote';
 import { startGamepadBridge } from '@/lib/gamepad';
 import { markTvMode } from '@/lib/tvMode';
+import { isPlayerMounted } from '@/lib/playerMount';
+
 
 
 /** Is the element actually on screen and interactive? */
