@@ -433,7 +433,7 @@ export default function M3uTV() {
         {/* Slim persistent header — fixed pixel sizing so it stays identical across all screens */}
         <div
           data-testid="iptv-banner"
-          className="tv-sticky-safe sticky top-0 z-30 -mx-1 flex h-[42px] items-center leading-none gap-[6px] rounded-full border border-destructive/25 bg-card/70 px-[10px] py-0 shadow-sm backdrop-blur-xl"
+          className="tv-sticky-safe sticky top-0 z-30 -mx-1 flex h-[48px] items-center leading-none gap-[6px] rounded-full border border-destructive/25 bg-card/70 px-[10px] py-0 shadow-sm backdrop-blur-xl"
         >
           <Button
             variant="ghost"
