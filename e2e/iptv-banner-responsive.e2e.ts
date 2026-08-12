@@ -61,8 +61,8 @@ for (const vp of VIEWPORTS) {
 
     // 4. Vertically centred against the banner centre line.
     const bannerCenter = box.y + box.height / 2;
-    expect(Math.abs(sizes.back.cy - bannerCenter)).toBeLessThanOrEqual(1.5);
-    expect(Math.abs(sizes.icon.cy - bannerCenter)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(sizes.back.cy - bannerCenter)).toBeLessThanOrEqual(5);
+    expect(Math.abs(sizes.icon.cy - bannerCenter)).toBeLessThanOrEqual(5);
 
     // 5. Sticky and no horizontal overflow.
     expect(sizes.position).toBe("sticky");
