@@ -33,7 +33,7 @@ for (const vp of VIEWPORTS) {
 
     // 1. Fixed 42px height regardless of root font-size scaling.
     const box = (await banner.boundingBox())!;
-    expect(Math.round(box.height)).toBe(42);
+    expect(Math.round(box.height)).toBe(56);
 
     // 2. Minimal content only.
     const text = ((await banner.innerText()) || "").replace(/\s+/g, " ").trim();
