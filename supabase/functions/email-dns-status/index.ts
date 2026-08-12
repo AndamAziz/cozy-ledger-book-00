@@ -1,7 +1,9 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 
 const EMAIL_DOMAIN = 'notify.andam.uk'
-const LOVABLE_NS = ['ns5.lovable.cloud', 'ns6.lovable.cloud']
+// Any Lovable nameserver counts as delegated (the assigned pair varies:
+// ns1/ns2, ns3/ns4, ns5/ns6, ...).
+const LOVABLE_NS_SUFFIX = 'lovable.cloud'
 
 interface DohAnswer {
   name: string
@@ -49,15 +51,13 @@ Deno.serve(async (req) => {
     // MX answers look like "10 mxa.mailgun.org" -> keep the host part for display
     const mxHosts = mx.map((m) => m.split(/\s+/).pop() ?? m)
 
-    const nsDelegated = LOVABLE_NS.some((expected) =>
-      ns.some((found) => found.includes(expected)),
-    )
+    const nsDelegated = ns.some((found) => found.endsWith(LOVABLE_NS_SUFFIX))
     const mxPresent = mxHosts.length > 0
     const spfPresent = txt.some((t) => t.includes('v=spf1'))
 
     // The domain is only considered "active" once delegation is live AND
     // Lovable has provisioned the mail records inside the delegated zone.
-    const active = nsDelegated && mxPresent
+    const active = (nsDelegated && mxPresent) || (mxPresent && spfPresent)
 
     const body = {
       domain: EMAIL_DOMAIN,
