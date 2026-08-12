@@ -271,14 +271,14 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               <div className="animate-fade-in">
                 {resetSent ? (
                   <div className="text-center space-y-6">
-                    <div className="w-16 h-16 rounded-full bg-success/20 mx-auto flex items-center justify-center">
-                      <Mail className="w-8 h-8 text-success" />
+                    <div className="w-16 h-16 rounded-full bg-gold/15 mx-auto flex items-center justify-center">
+                      <Mail className="w-8 h-8 text-gold" />
                     </div>
-                    <p className="text-slate-300 text-sm">{t('resetLinkSentDesc')}</p>
+                    <p className="text-white/70 text-sm">{t('resetLinkSentDesc')}</p>
                     <Button
                       type="button"
                       onClick={() => switchTab(false)}
-                      className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success text-base font-bold rounded-xl"
+                      className="w-full py-4 h-auto bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground text-base font-bold rounded-xl"
                     >
                       {t('backToLogin')}
                     </Button>
@@ -287,10 +287,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   <form onSubmit={handleForgotPassword} className="space-y-6">
                     <div className="text-center mb-2">
                       <h2 className="text-lg font-bold text-white mb-1">{t('resetPasswordTitle')}</h2>
-                      <p className="text-slate-400 text-sm">{t('resetPasswordDesc')}</p>
+                      <p className="text-white/45 text-sm">{t('resetPasswordDesc')}</p>
                     </div>
                     <div className="relative group">
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 text-xl z-10">
                         <Mail className="w-5 h-5" />
                       </span>
                       <input
@@ -299,10 +299,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder=" "
                         disabled={isLoading}
-                        className="peer w-full py-4 pr-12 pl-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                        className="peer w-full py-4 pr-12 pl-4 bg-white/[0.04] border-2 border-white/10 rounded-xl text-white text-base outline-none transition-all focus:border-gold/60 focus:bg-white/[0.07] placeholder-transparent"
                       />
-                      <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
-                        peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                      <label className="absolute right-12 top-4 text-white/45 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-black/70 to-transparent px-1
+                        peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-gold
                         peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                         {t('email')}
                       </label>
@@ -310,7 +310,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                     <Button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success hover:shadow-lg hover:shadow-primary/40 text-base font-bold rounded-xl transition-all duration-300"
+                      className="w-full py-4 h-auto bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground hover:shadow-lg hover:shadow-gold/40 text-base font-bold rounded-xl transition-all duration-300"
                     >
                       {isLoading ? (
                         <div className="flex items-center gap-2">
@@ -325,7 +325,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                       <button
                         type="button"
                         onClick={() => switchTab(false)}
-                        className="text-sm text-primary hover:text-success font-semibold transition-colors"
+                        className="text-sm text-gold hover:text-gold/70 font-semibold transition-colors"
                         disabled={isLoading}
                       >
                         {t('backToLogin')}
@@ -337,14 +337,14 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
             ) : (
             <>
             {/* Tabs */}
-            <div className="flex gap-2 mb-8 bg-slate-800/50 p-1.5 rounded-xl">
+            <div className="flex gap-2 mb-8 bg-white/[0.04] p-1.5 rounded-xl">
               <button
                 type="button"
                 onClick={() => switchTab(false)}
                 className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
                   !isSignupMode 
-                    ? 'bg-gradient-to-r from-primary to-success text-white shadow-lg shadow-primary/30' 
-                    : 'text-slate-400 hover:text-slate-300'
+                    ? 'bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground text-white shadow-lg shadow-gold/30' 
+                    : 'text-white/45 hover:text-white/70'
                 }`}
               >
                 {t('login')}
@@ -354,8 +354,8 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                 onClick={() => switchTab(true)}
                 className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-300 ${
                   isSignupMode 
-                    ? 'bg-gradient-to-r from-primary to-success text-white shadow-lg shadow-primary/30' 
-                    : 'text-slate-400 hover:text-slate-300'
+                    ? 'bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground text-white shadow-lg shadow-gold/30' 
+                    : 'text-white/45 hover:text-white/70'
                 }`}
               >
                 {t('signup')}
@@ -366,7 +366,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               {/* Company Name - Only in signup mode */}
               {isSignupMode && (
                 <div className="relative group">
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 text-xl z-10">
                     <Building2 className="w-5 h-5" />
                   </span>
                   <input
@@ -375,10 +375,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder=" "
                     disabled={isLoading}
-                    className="peer w-full py-4 pr-12 pl-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                    className="peer w-full py-4 pr-12 pl-4 bg-white/[0.04] border-2 border-white/10 rounded-xl text-white text-base outline-none transition-all focus:border-gold/60 focus:bg-white/[0.07] placeholder-transparent"
                   />
-                  <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
-                    peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                  <label className="absolute right-12 top-4 text-white/45 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-black/70 to-transparent px-1
+                    peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-gold
                     peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                     {t('companyName')}
                   </label>
@@ -387,7 +387,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               
               {/* Email */}
               <div className="relative group">
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 text-xl z-10">
                   <Mail className="w-5 h-5" />
                 </span>
                 <input
@@ -396,10 +396,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder=" "
                   disabled={isLoading}
-                  className="peer w-full py-4 pr-12 pl-4 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                  className="peer w-full py-4 pr-12 pl-4 bg-white/[0.04] border-2 border-white/10 rounded-xl text-white text-base outline-none transition-all focus:border-gold/60 focus:bg-white/[0.07] placeholder-transparent"
                 />
-                <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
-                  peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                <label className="absolute right-12 top-4 text-white/45 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-black/70 to-transparent px-1
+                  peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-gold
                   peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                   {t('email')}
                 </label>
@@ -407,7 +407,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               
               {/* Password */}
               <div className="relative group">
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 text-xl z-10">
                   <Lock className="w-5 h-5" />
                 </span>
                 <input
@@ -416,17 +416,17 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder=" "
                   disabled={isLoading}
-                  className="peer w-full py-4 pr-12 pl-12 bg-slate-800/60 border-2 border-slate-700/50 rounded-xl text-white text-base outline-none transition-all focus:border-primary focus:bg-slate-800/80 placeholder-transparent"
+                  className="peer w-full py-4 pr-12 pl-12 bg-white/[0.04] border-2 border-white/10 rounded-xl text-white text-base outline-none transition-all focus:border-gold/60 focus:bg-white/[0.07] placeholder-transparent"
                 />
-                <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
-                  peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                <label className="absolute right-12 top-4 text-white/45 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-black/70 to-transparent px-1
+                  peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-gold
                   peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                   {t('password')}
                 </label>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-primary transition-colors p-1"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white/35 hover:text-gold transition-colors p-1"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -438,7 +438,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                   <button
                     type="button"
                     onClick={openForgotMode}
-                    className="text-sm text-primary hover:text-success font-medium transition-colors"
+                    className="text-sm text-gold hover:text-gold/70 font-medium transition-colors"
                     disabled={isLoading}
                   >
                     {t('forgotPassword')}
@@ -450,7 +450,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               {isSignupMode && (
                 <div>
                   <div className="relative group">
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl z-10">
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/35 text-xl z-10">
                       <Lock className="w-5 h-5" />
                     </span>
                     <input
@@ -459,21 +459,21 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder=" "
                       disabled={isLoading}
-                      className={`peer w-full py-4 pr-12 pl-12 bg-slate-800/60 border-2 rounded-xl text-white text-base outline-none transition-all focus:bg-slate-800/80 placeholder-transparent ${
+                      className={`peer w-full py-4 pr-12 pl-12 bg-white/[0.04] border-2 rounded-xl text-white text-base outline-none transition-all focus:bg-white/[0.07] placeholder-transparent ${
                         passwordsMismatch
                           ? 'border-destructive focus:border-destructive'
-                          : 'border-slate-700/50 focus:border-primary'
+                          : 'border-white/10 focus:border-gold/60'
                       }`}
                     />
-                    <label className="absolute right-12 top-4 text-slate-400 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-slate-900/80 to-transparent px-1
-                      peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-primary
+                    <label className="absolute right-12 top-4 text-white/45 text-base pointer-events-none transition-all duration-300 bg-gradient-to-b from-transparent via-black/70 to-transparent px-1
+                      peer-focus:-translate-y-7 peer-focus:text-sm peer-focus:text-gold
                       peer-[:not(:placeholder-shown)]:-translate-y-7 peer-[:not(:placeholder-shown)]:text-sm">
                       {t('confirmPassword')}
                     </label>
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-primary transition-colors p-1"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-white/35 hover:text-gold transition-colors p-1"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -490,7 +490,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               {/* Submit Button */}
               <Button 
                 type="submit" 
-                className="w-full py-4 h-auto bg-gradient-to-r from-primary to-success hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 text-base font-bold rounded-xl transition-all duration-300 mt-2"
+                className="w-full py-4 h-auto bg-gradient-to-r from-gold via-gold to-gold/80 text-gold-foreground hover:shadow-lg hover:shadow-gold/40 hover:-translate-y-0.5 active:translate-y-0 text-base font-bold rounded-xl transition-all duration-300 mt-2"
                 disabled={isLoading || passwordsMismatch}
               >
               {isLoading ? (
@@ -515,10 +515,10 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
             {/* Divider */}
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-700/50"></div>
+                <div className="w-full border-t border-white/10"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-slate-900/80 text-slate-500">—</span>
+                <span className="px-3 bg-black/60 text-white/35">—</span>
               </div>
             </div>
             
@@ -528,7 +528,7 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
               onClick={handleGoogleLogin}
               disabled={isLoading || isGoogleLoading}
               variant="outline"
-              className="w-full py-4 h-auto bg-slate-800/60 border-2 border-slate-700/50 hover:border-primary/50 hover:bg-slate-800/80 text-white text-base font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3"
+              className="w-full py-4 h-auto bg-white/[0.04] border-2 border-white/10 hover:border-gold/40 hover:bg-white/[0.07] text-white text-base font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3"
             >
               {isGoogleLoading ? (
                 <div className="flex items-center gap-2">
@@ -562,11 +562,11 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
             
             {/* Footer */}
             <div className="text-center mt-6">
-              <p className="text-slate-500 text-sm">
+              <p className="text-white/35 text-sm">
                 <button
                   type="button"
                   onClick={() => switchTab(!isSignupMode)}
-                  className="text-primary hover:text-success font-semibold transition-colors"
+                  className="text-gold hover:text-gold/70 font-semibold transition-colors"
                   disabled={isLoading}
                 >
                   {isSignupMode ? t('login') : t('signup')}
@@ -580,16 +580,16 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
         
         {/* Bottom decoration */}
         <div className="flex justify-center gap-2 mt-6">
-          <div className="w-2 h-2 rounded-full bg-primary/50" />
-          <div className="w-2 h-2 rounded-full bg-success/50" />
-          <div className="w-2 h-2 rounded-full bg-info/50" />
+          <div className="w-2 h-2 rounded-full bg-gold/60" />
+          <div className="w-2 h-2 rounded-full bg-gold/35" />
+          <div className="w-2 h-2 rounded-full bg-gold/20" />
         </div>
 
         {/* Trust & Security link */}
         <div className="flex justify-center mt-5">
           <Link
             to="/trust"
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-primary transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-white/35 hover:text-gold transition-colors"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Trust &amp; Security</span>
