@@ -31,7 +31,7 @@ const SLOT_WAIT_MS = 6_000;
 const MAX_SLOT_WAITS = 4;
 
 
-import { TV_EVENT } from '@/lib/tvRemote';
+import { TV_EVENT, isTvDevice } from '@/lib/tvRemote';
 import { hlsConfigFor, mpegtsConfigFor } from '@/lib/tvMode';
 
 
