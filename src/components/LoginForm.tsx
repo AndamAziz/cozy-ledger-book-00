@@ -222,40 +222,50 @@ export function LoginForm({ onLogin, onSignup }: LoginFormProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-[#08070a]">
       {/* Language Switcher - Top Right */}
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
         <LanguageSwitcher />
       </div>
-      
-      {/* Decorative background elements */}
+
+      {/* Cinematic golden light rays */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-1/4 -left-20 w-72 h-72 rounded-full bg-primary/20 blur-[120px]" />
-        <div className="absolute bottom-1/4 -right-20 w-80 h-80 rounded-full bg-success/15 blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-info/10 blur-[150px]" />
+        <div
+          className="absolute -top-[35%] left-1/2 -translate-x-1/2 w-[160vw] h-[110vh] opacity-[0.55]"
+          style={{
+            background:
+              'conic-gradient(from 200deg at 50% 0%, transparent 0deg, hsl(var(--gold)/0.35) 14deg, transparent 24deg, transparent 38deg, hsl(var(--gold)/0.22) 48deg, transparent 58deg, transparent 74deg, hsl(var(--gold)/0.30) 84deg, transparent 96deg, transparent 116deg, hsl(var(--gold)/0.18) 126deg, transparent 140deg)',
+            filter: 'blur(14px)',
+          }}
+        />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[70vw] h-[70vw] max-w-[620px] max-h-[620px] rounded-full bg-gold/20 blur-[120px]" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#08070a] via-[#08070a]/85 to-transparent" />
       </div>
-      
+
       <div className="w-full max-w-[440px] relative z-10 animate-scale-in">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl border border-gold/20 bg-black/45 backdrop-blur-2xl shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)]">
           {/* Top decoration line */}
-          <div className="h-1 bg-gradient-to-r from-primary via-info to-primary" />
-          
+          <div className="h-[2px] bg-gradient-to-r from-transparent via-gold to-transparent" />
+
           <div className="p-6 sm:p-10">
             {/* Logo & Title */}
             <div className="text-center mb-8">
-              <div className="relative inline-block mb-4">
-                <div className="w-20 h-20 rounded-[20px] bg-gradient-to-br from-primary to-success mx-auto flex items-center justify-center shadow-xl shadow-primary/30">
-                  <span className="text-4xl">💼</span>
-                </div>
-                <div className="absolute -top-1 -right-1 text-xl animate-pulse">✨</div>
-              </div>
-              <h1 className="text-2xl font-bold text-primary mb-2">
-                {t('financialManagement')}
+              <img
+                src="/logo-mark.png"
+                alt="ANDAM logo"
+                width={96}
+                height={96}
+                className="mx-auto mb-3 h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-[0_6px_20px_hsl(var(--gold)/0.45)]"
+              />
+              <h1 className="text-3xl sm:text-[2rem] font-extrabold tracking-[0.16em] bg-gradient-to-b from-gold via-gold to-gold/60 bg-clip-text text-transparent">
+                ALL IN ONE
               </h1>
-              <p className="text-slate-400 text-sm">
+              <div className="mx-auto mt-3 h-px w-24 bg-gradient-to-r from-transparent via-gold/60 to-transparent" />
+              <p className="text-white/45 text-xs sm:text-sm mt-3 tracking-wide">
                 {isSignupMode ? t('signup') : t('login')}
               </p>
             </div>
+
             
             {isForgotMode ? (
               <div className="animate-fade-in">
