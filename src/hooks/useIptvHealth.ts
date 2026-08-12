@@ -42,6 +42,13 @@ export interface ProviderHealth {
 
 /** Periodic provider health check (auth, reachability, slot usage). */
 export function useProviderHealth(intervalMs = 60_000) {
+  // A mounted player owns the provider slot: no provider or channel probing.
+  const playing = usePlayerMounted();
+  useEffect(() => {
+    setChannelProbingPaused(playing);
+    return () => setChannelProbingPaused(false);
+  }, [playing]);
+
   const query = useQuery({
     queryKey: ['iptv-health', getActiveSourceId()],
     queryFn: async (): Promise<ProviderHealth> => {
@@ -53,8 +60,9 @@ export function useProviderHealth(intervalMs = 60_000) {
       });
       return (await res.json()) as ProviderHealth;
     },
-    refetchInterval: intervalMs,
-    refetchOnWindowFocus: true,
+    enabled: !playing,
+    refetchInterval: playing ? false : intervalMs,
+    refetchOnWindowFocus: !playing,
     staleTime: 15_000,
     retry: 1,
   });
@@ -62,7 +70,7 @@ export function useProviderHealth(intervalMs = 60_000) {
   // A new provider verdict makes stale per-channel verdicts worthless.
   const checkedAt = query.data?.checkedAt;
   useEffect(() => {
-    if (checkedAt) invalidateChannelStatuses();
+    if (checkedAt && !isPlayerMounted()) invalidateChannelStatuses();
   }, [checkedAt]);
 
   return query;
@@ -77,16 +85,18 @@ export function useChannelHealth(
   enabled = true,
 ): ChannelStatus {
   const key = `${channel.kind ?? 'live'}:${channel.id}`;
+  const playing = usePlayerMounted();
   const [status, setStatus] = useState<ChannelStatus>(() => getChannelStatus(key));
 
   useEffect(() => {
     setStatus(getChannelStatus(key));
     const off = subscribeChannelStatus(key, setStatus);
-    if (enabled) {
+    if (enabled && !playing) {
       requestChannelStatus(key, toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext));
     }
     return off;
-  }, [key, enabled, channel.id, channel.kind, channel.ext]);
+  }, [key, enabled, playing, channel.id, channel.kind, channel.ext]);
+
 
   return status;
 }
