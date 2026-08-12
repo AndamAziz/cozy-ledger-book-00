@@ -11,6 +11,20 @@
 type Entry = { token: symbol; close: () => void };
 
 let current: Entry | null = null;
+const watchers = new Set<(mounted: boolean) => void>();
+
+function notify() {
+  const mounted = current !== null;
+  watchers.forEach((fn) => fn(mounted));
+}
+
+/** Subscribe to player mount/unmount transitions (health probing, background work). */
+export function subscribePlayerMount(fn: (mounted: boolean) => void): () => void {
+  watchers.add(fn);
+  return () => {
+    watchers.delete(fn);
+  };
+}
 
 /**
  * Register a freshly mounted player. Any previously mounted player is asked to
@@ -27,15 +41,20 @@ export function acquirePlayerMount(close: () => void): symbol {
       console.warn('previous player close failed', err);
     }
   }
+  notify();
   return token;
 }
 
 /** Drop the registration on unmount (no-op if a newer player already took over). */
 export function releasePlayerMount(token: symbol): void {
-  if (current?.token === token) current = null;
+  if (current?.token === token) {
+    current = null;
+    notify();
+  }
 }
 
 /** True while some player overlay is mounted — handy for guards/tests. */
 export function isPlayerMounted(): boolean {
   return current !== null;
 }
+

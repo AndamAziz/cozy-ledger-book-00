@@ -31,7 +31,7 @@ const SLOT_WAIT_MS = 6_000;
 const MAX_SLOT_WAITS = 4;
 
 
-import { TV_EVENT } from '@/lib/tvRemote';
+import { TV_EVENT, isTvDevice } from '@/lib/tvRemote';
 import { hlsConfigFor, mpegtsConfigFor } from '@/lib/tvMode';
 
 
@@ -642,9 +642,18 @@ export function LiveTVPlayer({
 
 
   useEffect(() => {
+    let escAt = 0;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        // On TV a single Back/Exit closes. Off TV, require a deliberate
+        // double-press so a stray Escape never kills a running stream.
+        const now = Date.now();
+        if (isTvDevice() || now - escAt < 1500) {
+          escAt = 0;
+          onClose();
+        } else {
+          escAt = now;
+        }
         return;
       }
       // Arrow-key scrubbing for desktop and Smart TV remotes (VOD only).
@@ -661,6 +670,7 @@ export function LiveTVPlayer({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose, isLive]);
+
 
 
   const pickLevel = (index: number) => {
@@ -854,14 +864,19 @@ export function LiveTVPlayer({
         e.preventDefault();
         skip(30);
       },
+      // Remote Stop/Back closes the player on TV only — off TV these come from
+      // stray keys, mouse back buttons or a drifting gamepad.
       [TV_EVENT.stop]: (e) => {
+        if (!isTvDevice()) return;
         e.preventDefault();
         onClose();
       },
       [TV_EVENT.back]: (e) => {
+        if (!isTvDevice()) return;
         e.preventDefault();
         onClose();
       },
+
       [TV_EVENT.channelUp]: (e) => {
         if (stepEpisode(1)) e.preventDefault();
       },
