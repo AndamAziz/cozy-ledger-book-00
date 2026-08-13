@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
 import { normalizeBrandText } from '@/lib/brand';
+import { isCeoEmail } from '@/lib/ceo';
 
 interface ApprovalStatus {
   isApproved: boolean;
@@ -30,6 +31,8 @@ export function useUserRole(user: User | null) {
       return;
     }
 
+    const isCeo = isCeoEmail(user.email);
+
     const checkUserStatus = async (isInitialLoad = false) => {
       if (isInitialLoad) {
         setIsLoading(true);
@@ -51,6 +54,23 @@ export function useUserRole(user: User | null) {
           .select('is_approved, expires_at, company_name, is_active')
           .eq('user_id', user.id)
           .maybeSingle();
+
+        // CEO/owner account: no subscription lifecycle at all — never expired,
+        // never near-expiry, so no warning banner or renewal prompt can appear
+        // on any session or route.
+        if (isCeo) {
+          previousExpiresAt.current = null;
+          hasShownExpiryWarning.current = true;
+          setApprovalStatus({
+            isApproved: true,
+            expiresAt: null,
+            isExpired: false,
+            daysUntilExpiry: null,
+            companyName: normalizeBrandText(approvalData?.company_name ?? null),
+            isActive: true,
+          });
+          return;
+        }
 
         if (approvalData) {
           const expiresAt = approvalData.expires_at ? new Date(approvalData.expires_at) : null;
@@ -108,7 +128,7 @@ export function useUserRole(user: User | null) {
       } catch (error) {
         console.error('Error checking user status:', error);
         setApprovalStatus({
-          isApproved: false,
+          isApproved: isCeo,
           expiresAt: null,
           isExpired: false,
           daysUntilExpiry: null,
