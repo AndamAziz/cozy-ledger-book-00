@@ -33,9 +33,9 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
     setProbing(false);
   };
 
-  const downloadReport = () => {
-    if (!diag) return;
-    const report = {
+  const buildReport = () => {
+    if (!diag) return null;
+    return {
       generatedAt: new Date().toISOString(),
       app: {
         url: window.location.href,
@@ -47,15 +47,32 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
         observedContentType: ctype ?? diag.contentType ?? null,
       },
     };
+  };
+
+  const downloadReport = () => {
+    const report = buildReport();
+    if (!report) return;
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `iptv-diag-${diag.channelName.replace(/[^a-z0-9]/gi, '_').slice(0, 30)}-${Date.now()}.json`;
+    a.download = `iptv-diag-${diag!.channelName.replace(/[^a-z0-9]/gi, '_').slice(0, 30)}-${Date.now()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const copyJson = async () => {
+    const report = buildReport();
+    if (!report) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* ignore unsupported contexts */
+    }
   };
 
   // First open (and every engine/channel change while open) refreshes the
