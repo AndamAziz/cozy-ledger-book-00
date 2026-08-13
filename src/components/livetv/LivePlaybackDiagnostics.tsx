@@ -113,20 +113,13 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
             </button>
             <button
               type="button"
-              onClick={copyJson}
-              className="flex items-center gap-1 rounded-md border border-white/20 px-2 py-0.5 font-bold text-white/80 transition hover:text-white"
-            >
-              {copied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
-              {copied ? 'Copied' : 'Copy JSON'}
-            </button>
-            <button
-              type="button"
               onClick={downloadReport}
               className="flex items-center gap-1 rounded-md border border-white/20 px-2 py-0.5 font-bold text-white/80 transition hover:text-white"
             >
               <Download className="h-3 w-3" /> Report
             </button>
           </div>
+
         </div>
       )}
     </div>
