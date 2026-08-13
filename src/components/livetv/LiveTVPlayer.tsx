@@ -116,7 +116,10 @@ export function LiveTVPlayer({
   closeRef.current = onClose;
   useEffect(() => {
     const token = acquirePlayerMount(() => closeRef.current());
-    return () => releasePlayerMount(token);
+    return () => {
+      releasePlayerMount(token);
+      clearLiveDiag();
+    };
   }, []);
 
   const [loading, setLoading] = useState(true);
@@ -989,6 +992,7 @@ export function LiveTVPlayer({
               {channel.name}
             </p>
           </div>
+          <LivePlaybackDiagnostics className="hidden shrink-0 sm:block" />
           {levels.length > 0 && (
             <div className="relative">
               <button
