@@ -29,6 +29,7 @@ import {
   invalidateLiveFormats,
   liveFormatOrder,
   liveFormats,
+  liveConnectionUsage,
   liveFormatsAge,
   refusalScope,
   type LiveFormats,
@@ -323,6 +324,9 @@ Deno.serve(async (req) => {
   let chosenFmt = candidateFormat(candidates[0] ?? '')
   let lastError = 'fetch failed'
   let deadlineHit = false
+  /** Provider answered 200 with a message instead of media (PPV / not entitled). */
+  let notMedia = false
+  let providerMessage = ''
   const trace: string[] = []
 
   const OVERALL_DEADLINE_MS = 12_000
@@ -527,7 +531,20 @@ Deno.serve(async (req) => {
 
   if (!upstream) {
     // One actionable sentence, the way IPTV Smarters / VLC report failures.
-    const error: StreamError = slotLimited
+    // A refusal on every candidate while the account still has free viewing
+    // slots is an entitlement problem (PPV / premium channel), not a slot
+    // problem — report it honestly instead of "all slots in use".
+    if (slotLimited && kind === 'live') {
+      const usage = await liveConnectionUsage(source).catch(() => null)
+      if (usage && usage.active < usage.max) {
+        slotLimited = false
+        notMedia = true
+        providerMessage ||= `provider refused this channel (${lastError}) with ${usage.active}/${usage.max} slots in use`
+      }
+    }
+    const error: StreamError = notMedia
+      ? streamError('CHANNEL_UNAVAILABLE', providerMessage || undefined)
+      : slotLimited
       ? streamError('MAX_CONNECTIONS')
       : rateLimited
         ? streamError('RATE_LIMITED')
