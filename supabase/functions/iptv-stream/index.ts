@@ -165,22 +165,36 @@ const json = (body: unknown, status: number) =>
  * first streamed chunk instead of trusting that header: real HTML error pages
  * are rejected, while binary media is put back in front of the untouched stream.
  */
-async function inspectHtmlLabel(res: Response): Promise<{ response: Response; html: boolean }> {
+async function inspectHtmlLabel(
+  res: Response,
+): Promise<{ response: Response; html: boolean; refusal: StreamError | null }> {
   const type = res.headers.get('content-type') ?? ''
-  if (!/text\/html/i.test(type) || !res.body) return { response: res, html: false }
+  if (!/text\/html/i.test(type) || !res.body) return { response: res, html: false, refusal: null }
 
   const reader = res.body.getReader()
   const first = await reader.read()
-  if (first.done || !first.value) return { response: res, html: true }
+  if (first.done || !first.value) return { response: res, html: true, refusal: null }
   const firstChunk = first.value
   const prefix = new TextDecoder().decode(firstChunk.subarray(0, 1024)).trimStart().toLowerCase()
+  // Several Xtream panels report a full account-slot refusal as HTTP 200 with
+  // a tiny text body (not JSON), most commonly `ip-limit-reach`. Treating those
+  // bytes as MP4 made the browser emit MEDIA_ERR_SRC_NOT_SUPPORTED forever.
+  const refusal = /ip[-_\s]?limit[-_\s]?(reach|reached)|max.{0,16}connection|too many connections|slot.{0,12}(limit|reach)/i.test(prefix)
+    ? streamError('MAX_CONNECTIONS')
+    : /rate[-_\s]?limit|too many requests/i.test(prefix)
+      ? streamError('RATE_LIMITED')
+      : null
+  if (refusal) {
+    await reader.cancel().catch(() => undefined)
+    return { response: res, html: false, refusal }
+  }
   const html = prefix.startsWith('<!doctype html') || prefix.startsWith('<html') ||
     prefix.startsWith('<head') || prefix.startsWith('<body') ||
     /<(title|script|meta)[\s>]/i.test(prefix.slice(0, 512))
 
   if (html) {
     await reader.cancel().catch(() => undefined)
-    return { response: res, html: true }
+    return { response: res, html: true, refusal: null }
   }
 
   let firstPending = true
@@ -200,6 +214,7 @@ async function inspectHtmlLabel(res: Response): Promise<{ response: Response; ht
   return {
     response: new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers }),
     html: false,
+    refusal: null,
   }
 }
 
@@ -346,14 +361,21 @@ Deno.serve(async (req) => {
     const target = candidates[0]
     if (!target) return json({ error: 'No candidate' }, 404)
     let url = target
-    try {
-      url = await resolveTokenizedUrl(
-        target,
-        { ...baseHeaders, 'User-Agent': uaList[0] },
-        AbortSignal.timeout(6_000),
-      )
-    } catch {
-      // Redirect probing failed: the un-resolved candidate is still worth a try.
+    // An HTTP target can never be played directly from our HTTPS app. Do not
+    // open it merely to resolve redirects: on one-slot accounts that probe is
+    // counted as the active viewer and the real proxy request gets
+    // `ip-limit-reach`. The relay follows the redirect inside the sole media
+    // request instead.
+    if (/^https:\/\//i.test(target)) {
+      try {
+        url = await resolveTokenizedUrl(
+          target,
+          { ...baseHeaders, 'User-Agent': uaList[0] },
+          AbortSignal.timeout(6_000),
+        )
+      } catch {
+        // Redirect probing failed: the un-resolved candidate is still worth a try.
+      }
     }
     /**
      * VOD only: a movie/episode is worthless without seeking. Some panels/CDNs
@@ -479,9 +501,11 @@ Deno.serve(async (req) => {
       // HTTP 458/MAX_CONNECTIONS. Let the relay follow the live redirect in the
       // same request instead. Keep the established token-resolution path for
       // Movies/Series, whose playback and Range handling already work.
-      const hopTarget = via === 'relay' && kind !== 'live'
-        ? await resolveTokenizedUrl(target, headers, signal)
-        : target
+      // The relay follows redirects while preserving one continuous upstream
+      // request. A separate VOD redirect probe briefly occupied the provider's
+      // only viewing slot, so the immediately following media request was
+      // refused with a misleading HTTP-200 `ip-limit-reach` body.
+      const hopTarget = target
       let res =
         via === 'direct'
           ? await fetch(target, { headers, redirect: 'follow', signal })
@@ -517,6 +541,15 @@ Deno.serve(async (req) => {
         }
         if (/text\/html/i.test(ctype)) {
           const inspected = await inspectHtmlLabel(res)
+          if (inspected.refusal) {
+            classified = inspected.refusal
+            slotLimited = inspected.refusal.code === 'MAX_CONNECTIONS'
+            rateLimited = inspected.refusal.code === 'RATE_LIMITED'
+            lastError = inspected.refusal.code
+            trace.push(`${via}:body:${inspected.refusal.code}:${fmt}`)
+            if (slotLimited) blockedRoutes.add(`${hostKey}|${via}`)
+            continue
+          }
           if (inspected.html) {
             lastError = 'provider returned a block page (HTML)'
             trace.push(`${via}:html:${fmt}`)
