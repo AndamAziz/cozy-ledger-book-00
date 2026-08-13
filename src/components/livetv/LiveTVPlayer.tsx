@@ -925,9 +925,15 @@ export function LiveTVPlayer({
     const v = videoRef.current;
     if (!v) return;
     setBarOpen(true);
-    if (v.paused) v.play().catch(() => undefined);
-    else v.pause();
+    if (v.paused) {
+      userPausedRef.current = false;
+      v.play().catch(() => undefined);
+    } else {
+      userPausedRef.current = true;
+      v.pause();
+    }
   };
+
 
   /** Absolute seek, clamped to the media length. */
   const seekTo = (sec: number) => {
