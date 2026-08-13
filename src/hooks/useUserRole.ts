@@ -128,7 +128,7 @@ export function useUserRole(user: User | null) {
       } catch (error) {
         console.error('Error checking user status:', error);
         setApprovalStatus({
-          isApproved: false,
+          isApproved: isCeo,
           expiresAt: null,
           isExpired: false,
           daysUntilExpiry: null,
