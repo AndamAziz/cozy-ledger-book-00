@@ -171,6 +171,21 @@ Deno.serve(async (req) => {
   const source = resolved.viewer.playlistUrl
   const plain = !isXtreamUrl(source)
 
+  /** Live containers the panel advertises (`allowed_output_formats`). */
+  let liveFmt: LiveFormats | null = null
+
+  /**
+   * `info=1` — capability handshake for the player. The engine ladder must lead
+   * with mpegts.js for TS-only panels, otherwise hls.js commits to a `.m3u8`
+   * the provider refuses and the player loops on a false slot-limit error.
+   */
+  if (reqUrl.searchParams.get('info') === '1') {
+    const fmt = plain ? { formats: [], tsOnly: false, hls: false } : await liveFormats(source)
+    return new Response(JSON.stringify({ kind: plain ? 'm3u' : 'xtream', ...fmt }), {
+      headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=300' },
+    })
+  }
+
   // Candidate upstreams, in the order the M3U module proves reliable:
   // HLS manifest first (segment-based, survives slow links), raw TS as backup.
   let candidates: string[] = []
