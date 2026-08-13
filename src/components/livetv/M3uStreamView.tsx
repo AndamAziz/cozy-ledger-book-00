@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   X, Loader2, AlertTriangle, SkipBack, SkipForward,
-  Maximize2, RefreshCw, Signal, Search, Volume2, VolumeX,
+  Maximize2, RefreshCw, Signal, Search,
   Play,
 } from 'lucide-react';
 import { ChannelLogo } from './ChannelLogo';
@@ -476,27 +476,14 @@ export default function M3uStreamView({
             )}
           </div>
 
-          {/* Controls */}
+          {/* Controls (zapping/volume/refresh live inside the player overlay) */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => step(-1)}>
-              <SkipBack className="me-1.5 h-3.5 w-3.5" />
-              {T.prev}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => step(1)}>
-              <SkipForward className="me-1.5 h-3.5 w-3.5" />
-              {T.next}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setMuted((m) => !m)} aria-label="mute">
-              {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-            </Button>
-            <Button size="sm" variant="outline" onClick={retry}>
-              <RefreshCw className="h-3.5 w-3.5" />
-            </Button>
             <Button size="sm" variant="secondary" className="ms-auto" onClick={goFullscreen}>
               <Maximize2 className="me-1.5 h-3.5 w-3.5" />
               HD
             </Button>
           </div>
+
         </div>
 
         {/* Channel stream list */}
@@ -547,11 +534,12 @@ export default function M3uStreamView({
                           handleSelect(c, index);
                         }}
                         style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
-                        className={`group relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg border p-2 text-start transition-all duration-300 ease-out focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                        className={`group relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg border px-2 py-2 text-start transition-colors duration-300 ease-out focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                           active
-                            ? 'z-10 scale-[1.02] border-primary/80 bg-gradient-to-r from-primary/30 via-primary/15 to-transparent shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45)] ring-2 ring-primary/70'
+                            ? 'border-primary/80 bg-gradient-to-r from-primary/30 via-primary/15 to-transparent shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45)]'
                             : 'border-border/50 bg-card hover:border-primary/40 hover:bg-primary/[0.06]'
                         }`}
+
                       >
                         {/* Active left accent bar */}
                         {active && (
