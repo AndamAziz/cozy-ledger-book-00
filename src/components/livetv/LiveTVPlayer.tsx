@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import {
-  toPlayableUrl, resolveDirectUrl, invalidateDirectUrl,
+  toPlayableUrl, resolveDirectUrl, invalidateDirectUrl, fetchLiveFormats,
   type IptvChannel, type IptvEpisode,
 } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
