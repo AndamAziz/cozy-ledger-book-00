@@ -27,8 +27,16 @@ import {
   Trash2,
   Crown,
   History,
-  Mail
+  Mail,
+  MoreVertical
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -1015,13 +1023,12 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                       </div>
                       
                       {isCEO ? (
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-2 pt-1 border-t border-border/30">
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
                           onClick={() => {
                             setSelectedUser(user);
-                            // Set current expiry date in the input
                             if (user.expires_at) {
                               const date = new Date(user.expires_at);
                               setCustomExpiryDate(date.toISOString().split('T')[0]);
@@ -1030,142 +1037,150 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                             }
                             setShowExpiryDialog(true);
                           }}
-                          className="rounded-lg text-xs border-primary/30 text-primary hover:text-primary"
+                          className="rounded-xl text-xs flex-1 md:flex-none gap-1.5"
                         >
-                          <Calendar className="h-3 w-3 ml-1" />
+                          <Calendar className="h-3.5 w-3.5" />
                           {t('changeExpiry')}
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setNewCompanyName(user.company_name || '');
-                            setShowCompanyDialog(true);
-                          }}
-                          className="rounded-lg text-xs"
-                        >
-                          <Pencil className="h-3 w-3 ml-1" />
-                          {t('companyName')}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setShowPasswordDialog(true);
-                          }}
-                          className="rounded-lg text-xs"
-                        >
-                          <Key className="h-3 w-3 ml-1" />
-                          {t('changePasswordTitle')}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleActive(user)}
-                          className={`rounded-lg text-xs ${user.is_active === false ? 'text-success hover:text-success border-success/30' : 'text-warning hover:text-warning border-warning/30'}`}
-                        >
-                          {user.is_active === false ? (
-                            <>
-                              <Power className="h-3 w-3 ml-1" />
-                              {t('activate')}
-                            </>
-                          ) : (
-                            <>
-                              <Ban className="h-3 w-3 ml-1" />
-                              {t('deactivate')}
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRevoke(user)}
-                          className="rounded-lg text-xs text-destructive hover:text-destructive"
-                        >
-                          <X className="h-3 w-3 ml-1" />
-                          {t('revoke')}
-                        </Button>
-                        {!user.isAdmin && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowMakeAdminDialog(true);
-                            }}
-                            className="rounded-lg text-xs text-primary hover:text-primary border-primary/30"
-                          >
-                            <Crown className="h-3 w-3 ml-1" />
-                            {t('makeAdmin')}
-                          </Button>
-                        )}
-                        {isCEO && user.isAdmin && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowRemoveAdminDialog(true);
-                            }}
-                            className="rounded-lg text-xs text-warning hover:text-warning border-warning/30"
-                          >
-                            <Crown className="h-3 w-3 ml-1" />
-                            {t('removeAdmin')}
-                          </Button>
-                        )}
-                        {(!user.isAdmin || isCEO) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowDeleteDialog(true);
-                            }}
-                            className="rounded-lg text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
-                          >
-                            <Trash2 className="h-3 w-3 ml-1" />
-                            {t('delete')}
-                          </Button>
-                        )}
-                      </div>
-                      ) : (
-                        <div className="flex flex-wrap gap-2 items-center">
-                          {!user.isAdmin && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
                             <Button
                               variant="outline"
                               size="sm"
+                              className="rounded-xl text-xs gap-1.5"
+                            >
+                              <MoreVertical className="h-3.5 w-3.5" />
+                              {t('adminActions')}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56 rounded-xl bg-popover/95 backdrop-blur-xl z-50">
+                            <DropdownMenuItem
                               onClick={() => {
                                 setSelectedUser(user);
-                                if (user.expires_at) {
-                                  const date = new Date(user.expires_at);
-                                  setCustomExpiryDate(date.toISOString().split('T')[0]);
-                                } else {
-                                  setCustomExpiryDate(new Date().toISOString().split('T')[0]);
-                                }
-                                setShowExpiryDialog(true);
+                                setNewCompanyName(user.company_name || '');
+                                setShowCompanyDialog(true);
                               }}
-                              className="rounded-lg text-xs border-primary/30 text-primary hover:text-primary"
+                              className="gap-2 text-xs cursor-pointer"
                             >
-                              <Calendar className="h-3 w-3 ml-1" />
-                              {t('renewExpiry')}
-                            </Button>
-                          )}
-                          {!user.isAdmin && (
-                            <Button
-                              variant="outline"
-                              size="sm"
+                              <Pencil className="h-3.5 w-3.5" />
+                              {t('companyName')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowPasswordDialog(true);
+                              }}
+                              className="gap-2 text-xs cursor-pointer"
+                            >
+                              <Key className="h-3.5 w-3.5" />
+                              {t('changePasswordTitle')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               onClick={() => handleSendResetEmail(user)}
-                              className="rounded-lg text-xs border-info/30 text-info hover:text-info hover:bg-info/10"
+                              className="gap-2 text-xs cursor-pointer"
                             >
-                              <Mail className="h-3 w-3 ml-1" />
+                              <Mail className="h-3.5 w-3.5" />
                               {t('sendResetEmail')}
-                            </Button>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleToggleActive(user)}
+                              className={`gap-2 text-xs cursor-pointer ${user.is_active === false ? 'text-success' : 'text-warning'}`}
+                            >
+                              {user.is_active === false ? (
+                                <>
+                                  <Power className="h-3.5 w-3.5" />
+                                  {t('activate')}
+                                </>
+                              ) : (
+                                <>
+                                  <Ban className="h-3.5 w-3.5" />
+                                  {t('deactivate')}
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            {!user.isAdmin && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setShowMakeAdminDialog(true);
+                                }}
+                                className="gap-2 text-xs cursor-pointer text-primary"
+                              >
+                                <Crown className="h-3.5 w-3.5" />
+                                {t('makeAdmin')}
+                              </DropdownMenuItem>
+                            )}
+                            {user.isAdmin && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setShowRemoveAdminDialog(true);
+                                }}
+                                className="gap-2 text-xs cursor-pointer text-warning"
+                              >
+                                <Crown className="h-3.5 w-3.5" />
+                                {t('removeAdmin')}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleRevoke(user)}
+                              className="gap-2 text-xs cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              {t('revoke')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowDeleteDialog(true);
+                              }}
+                              className="gap-2 text-xs cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              {t('delete')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      ) : (
+                        <div className="flex items-center gap-2 pt-1 border-t border-border/30">
+                          {!user.isAdmin ? (
+                            <>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  if (user.expires_at) {
+                                    const date = new Date(user.expires_at);
+                                    setCustomExpiryDate(date.toISOString().split('T')[0]);
+                                  } else {
+                                    setCustomExpiryDate(new Date().toISOString().split('T')[0]);
+                                  }
+                                  setShowExpiryDialog(true);
+                                }}
+                                className="rounded-xl text-xs flex-1 md:flex-none gap-1.5"
+                              >
+                                <Calendar className="h-3.5 w-3.5" />
+                                {t('renewExpiry')}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSendResetEmail(user)}
+                                className="rounded-xl text-xs gap-1.5 border-info/30 text-info hover:text-info hover:bg-info/10"
+                              >
+                                <Mail className="h-3.5 w-3.5" />
+                                {t('sendResetEmail')}
+                              </Button>
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">
+                              {t('adminRenewNote')}
+                            </p>
                           )}
-                          <p className="text-xs text-muted-foreground italic w-full">
-                            {t('adminRenewNote')}
-                          </p>
                         </div>
                       )}
                     </div>
