@@ -809,7 +809,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
 
         {/* Statistics Cards - Compact & Clickable */}
-        <div className="grid grid-cols-4 md:grid-cols-7 gap-2 md:gap-3 mb-6">
+        <div className={`grid grid-cols-4 md:grid-cols-7 gap-2 md:gap-3 mb-6 ${isSearching ? 'hidden' : ''}`}>
           <div 
             onClick={() => setActiveFilter(activeFilter === 'all' ? 'all' : 'all')}
             className={`rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border p-3 cursor-pointer transition-all hover:scale-105 ${activeFilter === 'all' ? 'border-primary ring-2 ring-primary/50' : 'border-primary/20'}`}
