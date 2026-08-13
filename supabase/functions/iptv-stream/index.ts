@@ -436,8 +436,7 @@ Deno.serve(async (req) => {
             blockedRoutes.add(`${hostKey}|relay`)
           }
         } else {
-          if (formatRefusal) geoBlocked = false
-          else geoBlocked = true
+          if (!formatRefusal) geoBlocked = true
           blockedRoutes.add(formatRefusal ? `${hostKey}|direct|${fmt}` : `${hostKey}|direct`)
         }
         lastError = `HTTP ${res.status}`
