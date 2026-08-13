@@ -17,7 +17,6 @@ import { IPTV_USER_AGENTS } from './iptvFetch.ts'
 
 import { type LiveFormats } from './iptvFormatRules.ts'
 export * from './iptvFormatRules.ts'
-export type { LiveFormats }
 
 const UNKNOWN: LiveFormats = { formats: [], tsOnly: false, hls: false }
 
