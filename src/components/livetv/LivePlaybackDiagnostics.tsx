@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Activity, Check, ChevronDown, Copy, Download, RefreshCw } from 'lucide-react';
+import { Activity, ChevronDown, Download, RefreshCw } from 'lucide-react';
 import {
   probeContentType,
   subscribeLiveDiag,
   getLiveDiag,
   type LiveDiag,
 } from '@/lib/livePlaybackDiag';
+
 
 const ENGINE_LABEL: Record<string, string> = {
   mpegts: 'mpegts.js (MPEG-TS)',
@@ -23,7 +24,7 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
   const [open, setOpen] = useState(false);
   const [ctype, setCtype] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
-  const [copied, setCopied] = useState(false);
+
 
   useEffect(() => subscribeLiveDiag(setDiag), []);
 
@@ -63,17 +64,6 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
     URL.revokeObjectURL(url);
   };
 
-  const copyJson = async () => {
-    const report = buildReport();
-    if (!report) return;
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* ignore unsupported contexts */
-    }
-  };
 
   // First open (and every engine/channel change while open) refreshes the
   // observed content-type.
@@ -123,20 +113,13 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
             </button>
             <button
               type="button"
-              onClick={copyJson}
-              className="flex items-center gap-1 rounded-md border border-white/20 px-2 py-0.5 font-bold text-white/80 transition hover:text-white"
-            >
-              {copied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
-              {copied ? 'Copied' : 'Copy JSON'}
-            </button>
-            <button
-              type="button"
               onClick={downloadReport}
               className="flex items-center gap-1 rounded-md border border-white/20 px-2 py-0.5 font-bold text-white/80 transition hover:text-white"
             >
               <Download className="h-3 w-3" /> Report
             </button>
           </div>
+
         </div>
       )}
     </div>
