@@ -20,7 +20,7 @@ import {
 } from '@/lib/resumePlayback';
 import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
 import { liveEngineOrder, candidateFormatFor } from '@/lib/liveLadder';
-import { clearLiveDiag, publishLiveDiag } from '@/lib/livePlaybackDiag';
+import { clearLiveDiag, publishLiveDiag, isLiveDiagDebug } from '@/lib/livePlaybackDiag';
 import { LivePlaybackDiagnostics } from './LivePlaybackDiagnostics';
 import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
 
@@ -992,7 +992,7 @@ export function LiveTVPlayer({
               {channel.name}
             </p>
           </div>
-          <LivePlaybackDiagnostics className="hidden shrink-0 sm:block" />
+          {diagDebug && <LivePlaybackDiagnostics className="hidden shrink-0 sm:block" />}
           {levels.length > 0 && (
             <div className="relative">
               <button
