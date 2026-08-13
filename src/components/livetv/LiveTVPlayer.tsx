@@ -21,7 +21,6 @@ import {
 import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
 import { liveEngineOrder, candidateFormatFor } from '@/lib/liveLadder';
 import { clearLiveDiag, publishLiveDiag } from '@/lib/livePlaybackDiag';
-import { LivePlaybackDiagnostics } from './LivePlaybackDiagnostics';
 import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
 
 import { claimStreamSlot, releaseActiveStream, unregisterStream } from '@/lib/streamSlot';
