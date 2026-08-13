@@ -175,6 +175,9 @@ export function LiveTVPlayer({
   const userPausedRef = useRef(false);
   /** Position (seconds) a VOD reload must continue from. */
   const vodResume = useRef<number | null>(null);
+  /** Always the latest seek handler — used by remote/keyboard scrubbing. */
+  const seekRef = useRef<(sec: number) => void>(() => undefined);
+
   useEffect(() => {
     directDead.current = false;
     startedRef.current = false;
