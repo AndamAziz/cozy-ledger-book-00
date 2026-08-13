@@ -24,7 +24,7 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
   const [open, setOpen] = useState(false);
   const [ctype, setCtype] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
-  const [copied, setCopied] = useState(false);
+
 
   useEffect(() => subscribeLiveDiag(setDiag), []);
 
