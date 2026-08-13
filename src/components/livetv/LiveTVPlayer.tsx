@@ -915,11 +915,18 @@ export function LiveTVPlayer({
       if (isPrematureEnd(playedTo, len)) {
         clearResume(key);
         vodResume.current = seekedForResume ? null : playedTo;
+        // The direct CDN URL cannot serve this file seekably — never use it again
+        // for this title; the proxy path slices ranges correctly.
+        if (!directDead.current) {
+          directDead.current = true;
+          invalidateDirectUrl(channel.id);
+        }
         setReload((r) => r + 1);
         return;
       }
       clearResume(key);
     };
+
 
     v.addEventListener('timeupdate', onTime);
     v.addEventListener('loadedmetadata', onMeta);
