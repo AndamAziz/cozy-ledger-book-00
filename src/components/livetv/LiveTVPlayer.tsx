@@ -19,6 +19,9 @@ import {
   resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
 } from '@/lib/resumePlayback';
 import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
+import { liveEngineOrder, candidateFormatFor } from '@/lib/liveLadder';
+import { clearLiveDiag, publishLiveDiag } from '@/lib/livePlaybackDiag';
+import { LivePlaybackDiagnostics } from './LivePlaybackDiagnostics';
 import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
 
 import { claimStreamSlot, releaseActiveStream, unregisterStream } from '@/lib/streamSlot';
@@ -212,11 +215,15 @@ export function LiveTVPlayer({
    * on a false error. Learned once per source and cached.
    */
   const [tsOnly, setTsOnly] = useState(false);
+  /** `allowed_output_formats` as advertised by the panel — shown in diagnostics. */
+  const [panelFormats, setPanelFormats] = useState<string[]>([]);
   useEffect(() => {
     if ((channel.kind ?? 'live') !== 'live') return;
     let alive = true;
     fetchLiveFormats().then((info) => {
-      if (alive) setTsOnly(info.tsOnly);
+      if (!alive) return;
+      setTsOnly(info.tsOnly);
+      setPanelFormats(info.formats);
     });
     return () => {
       alive = false;
@@ -240,15 +247,11 @@ export function LiveTVPlayer({
     }
     // TS-only panel: mpegts.js first (it asks the proxy for `raw=1`, the .ts
     // variant). hls.js stays last as a courtesy for mislabelled feeds.
-    if (tsOnly) {
-      return (['mpegts', 'native', 'hls'] as Engine[]).filter((e) =>
-        e === 'hls' ? Hls.isSupported() : true,
-      );
-    }
-    // Live: the stream proxy serves an HLS manifest when the provider has one
-    // and falls back to a raw transport stream, so both must be covered.
-    const chain: Engine[] = nativeHls ? ['native', 'hls', 'mpegts'] : ['hls', 'mpegts', 'native'];
-    return chain.filter((e) => (e === 'hls' ? Hls.isSupported() : true));
+    return liveEngineOrder({
+      tsOnly,
+      nativeHls,
+      hlsSupported: Hls.isSupported(),
+    }) as Engine[];
   }, [channel.kind, channel.ext, tsOnly]);
 
   useEffect(() => {
@@ -327,6 +330,22 @@ export function LiveTVPlayer({
     // closure below (recovery reloads included) sees the source actually in use.
     let src = proxySrc;
     let usingDirect = false;
+    /** Publish what this attempt committed to, for the diagnostics panel. */
+    const reportDiag = () =>
+      publishLiveDiag({
+        channelId: channel.id,
+        channelName: channel.name,
+        format: candidateFormatFor(engine, channel.kind ?? 'live'),
+        engine,
+        ladder: engines,
+        route: usingDirect ? 'direct' : 'proxy',
+        formats: panelFormats,
+        tsOnly,
+        stage,
+        attempt,
+        src,
+      });
+    reportDiag();
     let disposed = false;
     /** Stop everything and tell the viewer the codec — not the feed — is the problem. */
     const flagCodec = (label: string) => {
@@ -629,6 +648,7 @@ export function LiveTVPlayer({
             src = direct;
             usingDirect = true;
           }
+          reportDiag();
           begin();
         })
         .catch(() => begin());
