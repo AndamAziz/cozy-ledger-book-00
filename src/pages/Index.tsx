@@ -9,6 +9,7 @@ import { PendingApproval } from '@/components/PendingApproval';
 import { ExpiredSubscription } from '@/components/ExpiredSubscription';
 import { DeactivatedAccount } from '@/components/DeactivatedAccount';
 import { ExpiryWarningBanner } from '@/components/ExpiryWarningBanner';
+import { isCeoEmail } from '@/lib/ceo';
 import { AdminPanel } from '@/components/admin/AdminPanel';
 import { Header } from '@/components/Header';
 import { TabButton } from '@/components/TabButton';
@@ -100,7 +101,7 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           <PriceTickerBar />
 
           {/* Expiry Warning Banner — never shown to the CEO / owner account */}
-          {userEmail?.toLowerCase() !== 'andam@outlook.com' &&
+          {!isCeoEmail(userEmail) &&
             daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry <= 10 && userEmail && (
             <ExpiryWarningBanner daysUntilExpiry={daysUntilExpiry} email={userEmail} />
           )}
