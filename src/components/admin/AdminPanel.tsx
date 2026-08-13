@@ -27,16 +27,8 @@ import {
   Trash2,
   Crown,
   History,
-  Mail,
-  MoreVertical
+  Mail
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -647,6 +639,19 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   }).length;
   const totalAdmins = users.filter(u => u.isAdmin === true).length;
 
+  const isSearching = searchQuery.trim().length > 0;
+  const filterTabs: { key: typeof activeFilter; label: string; count: number }[] = [
+    { key: 'all', label: t('totalAll'), count: totalUsers },
+    { key: 'active', label: t('active'), count: totalActive },
+    { key: 'pending', label: t('waiting'), count: totalPending },
+    { key: 'inactive', label: t('inactive'), count: totalInactive },
+    { key: 'expired', label: t('expired'), count: totalExpired },
+    { key: 'expiring', label: t('expiring'), count: expiringIn7Days },
+    { key: 'admin', label: t('adminBadge'), count: totalAdmins },
+  ];
+
+
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('ku-Arab', {
@@ -719,29 +724,84 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           )}
 
+        {/* Search + Filters (sticky, always on top) */}
+        <div className="sticky top-0 z-30 -mx-1 px-1 py-3 mb-4 bg-background/85 backdrop-blur-xl border-b border-border/40">
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder={t('searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-10 rounded-xl py-6 bg-secondary/40 border-border/60"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchQuery('')}
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 h-8 w-8 p-0 rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {filterTabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveFilter(tab.key)}
+                className={`flex-shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
+                  activeFilter === tab.key
+                    ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20'
+                    : 'bg-secondary/40 text-muted-foreground border-border/50 hover:text-foreground'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`rounded-full px-1.5 text-[10px] ${activeFilter === tab.key ? 'bg-primary-foreground/20' : 'bg-background/60'}`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {isSearching && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t('filter')}: “{searchQuery}” — {filteredUsers.length}
+            </p>
+          )}
+        </div>
+
         {/* Audit log trigger */}
-        <div className="mb-6">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setShowActivityLogDialog(true);
-              fetchActivityLogs();
-            }}
-            className="rounded-lg flex items-center gap-1.5"
-          >
-            <History className="h-4 w-4" />
-            <span className="text-xs md:text-sm">{t('activityLog')}</span>
-          </Button>
-        </div>
+        {!isSearching && (
+          <div className="mb-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowActivityLogDialog(true);
+                fetchActivityLogs();
+              }}
+              className="rounded-lg flex items-center gap-1.5"
+            >
+              <History className="h-4 w-4" />
+              <span className="text-xs md:text-sm">{t('activityLog')}</span>
+            </Button>
+          </div>
+        )}
 
-        {/* Sport Live server management (CEO only) */}
-        <StreamServerManager isCEO={isCEO} />
+        {!isSearching && (
+          <>
+            {/* Sport Live server management (CEO only) */}
+            <StreamServerManager isCEO={isCEO} />
 
-        {/* IPTV playlist server configuration */}
-        <div className="mt-4">
-          <LiveTvUsersAdmin />
-        </div>
+            {/* IPTV playlist server configuration */}
+            <div className="mt-4">
+              <LiveTvUsersAdmin />
+            </div>
+          </>
+        )}
+
 
 
 
@@ -749,7 +809,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
 
         {/* Statistics Cards - Compact & Clickable */}
-        <div className="grid grid-cols-4 md:grid-cols-7 gap-2 md:gap-3 mb-6">
+        <div className={`grid grid-cols-4 md:grid-cols-7 gap-2 md:gap-3 mb-6 ${isSearching ? 'hidden' : ''}`}>
           <div 
             onClick={() => setActiveFilter(activeFilter === 'all' ? 'all' : 'all')}
             className={`rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border p-3 cursor-pointer transition-all hover:scale-105 ${activeFilter === 'all' ? 'border-primary ring-2 ring-primary/50' : 'border-primary/20'}`}
@@ -828,48 +888,18 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           </div>
         </div>
 
-        {/* Telegram Bot Health */}
-        <TelegramHealthCard />
+        {!isSearching && (
+          <>
+            {/* Telegram Bot Health */}
+            <TelegramHealthCard />
 
-        {/* Customer Reviews Moderation */}
-        <div className="mb-4">
-          <ReviewModeration />
-        </div>
-
-
-        {/* Active Filter Indicator */}
-        {activeFilter !== 'all' && (
-          <div className="mb-4 flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{t('filter')}:</span>
-            <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
-              {activeFilter === 'active' && t('active')}
-              {activeFilter === 'pending' && t('waiting')}
-              {activeFilter === 'inactive' && t('inactive')}
-              {activeFilter === 'expired' && t('expired')}
-              {activeFilter === 'expiring' && t('expiring')}
-              {activeFilter === 'admin' && t('adminBadge')}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setActiveFilter('all')}
-              className="h-7 px-2"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+            {/* Customer Reviews Moderation */}
+            <div className="mb-4">
+              <ReviewModeration />
+            </div>
+          </>
         )}
 
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            placeholder={t('searchPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-10 rounded-xl py-6 bg-secondary/30 border-border/50"
-          />
-        </div>
 
         {/* Pending Users - Only show when filter is 'all' or 'pending' */}
         {(activeFilter === 'all' || activeFilter === 'pending') && (
@@ -1023,7 +1053,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                       </div>
                       
                       {isCEO ? (
-                      <div className="flex items-center gap-2 pt-1 border-t border-border/30">
+                      <div className="pt-3 border-t border-border/30 grid grid-cols-2 md:grid-cols-4 gap-2">
                         <Button
                           variant="default"
                           size="sm"
@@ -1037,113 +1067,113 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                             }
                             setShowExpiryDialog(true);
                           }}
-                          className="rounded-xl text-xs flex-1 md:flex-none gap-1.5"
+                          className="rounded-xl text-xs gap-1.5 justify-center col-span-2 md:col-span-1"
                         >
                           <Calendar className="h-3.5 w-3.5" />
                           {t('changeExpiry')}
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="rounded-xl text-xs gap-1.5"
-                            >
-                              <MoreVertical className="h-3.5 w-3.5" />
-                              {t('adminActions')}
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 rounded-xl bg-popover/95 backdrop-blur-xl z-50">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setNewCompanyName(user.company_name || '');
-                                setShowCompanyDialog(true);
-                              }}
-                              className="gap-2 text-xs cursor-pointer"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              {t('companyName')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setShowPasswordDialog(true);
-                              }}
-                              className="gap-2 text-xs cursor-pointer"
-                            >
-                              <Key className="h-3.5 w-3.5" />
-                              {t('changePasswordTitle')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleSendResetEmail(user)}
-                              className="gap-2 text-xs cursor-pointer"
-                            >
-                              <Mail className="h-3.5 w-3.5" />
-                              {t('sendResetEmail')}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleToggleActive(user)}
-                              className={`gap-2 text-xs cursor-pointer ${user.is_active === false ? 'text-success' : 'text-warning'}`}
-                            >
-                              {user.is_active === false ? (
-                                <>
-                                  <Power className="h-3.5 w-3.5" />
-                                  {t('activate')}
-                                </>
-                              ) : (
-                                <>
-                                  <Ban className="h-3.5 w-3.5" />
-                                  {t('deactivate')}
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            {!user.isAdmin && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedUser(user);
-                                  setShowMakeAdminDialog(true);
-                                }}
-                                className="gap-2 text-xs cursor-pointer text-primary"
-                              >
-                                <Crown className="h-3.5 w-3.5" />
-                                {t('makeAdmin')}
-                              </DropdownMenuItem>
-                            )}
-                            {user.isAdmin && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedUser(user);
-                                  setShowRemoveAdminDialog(true);
-                                }}
-                                className="gap-2 text-xs cursor-pointer text-warning"
-                              >
-                                <Crown className="h-3.5 w-3.5" />
-                                {t('removeAdmin')}
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleRevoke(user)}
-                              className="gap-2 text-xs cursor-pointer text-destructive focus:text-destructive"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                              {t('revoke')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setShowDeleteDialog(true);
-                              }}
-                              className="gap-2 text-xs cursor-pointer text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              {t('delete')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setNewCompanyName(user.company_name || '');
+                            setShowCompanyDialog(true);
+                          }}
+                          className="rounded-xl text-xs gap-1.5 justify-center"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          {t('companyName')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowPasswordDialog(true);
+                          }}
+                          className="rounded-xl text-xs gap-1.5 justify-center"
+                        >
+                          <Key className="h-3.5 w-3.5" />
+                          {t('changePasswordTitle')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSendResetEmail(user)}
+                          className="rounded-xl text-xs gap-1.5 justify-center border-info/30 text-info hover:text-info hover:bg-info/10"
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                          {t('sendResetEmail')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleActive(user)}
+                          className={`rounded-xl text-xs gap-1.5 justify-center ${user.is_active === false ? 'text-success hover:text-success border-success/30' : 'text-warning hover:text-warning border-warning/30'}`}
+                        >
+                          {user.is_active === false ? (
+                            <>
+                              <Power className="h-3.5 w-3.5" />
+                              {t('activate')}
+                            </>
+                          ) : (
+                            <>
+                              <Ban className="h-3.5 w-3.5" />
+                              {t('deactivate')}
+                            </>
+                          )}
+                        </Button>
+                        {!user.isAdmin ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowMakeAdminDialog(true);
+                            }}
+                            className="rounded-xl text-xs gap-1.5 justify-center text-primary hover:text-primary border-primary/30"
+                          >
+                            <Crown className="h-3.5 w-3.5" />
+                            {t('makeAdmin')}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowRemoveAdminDialog(true);
+                            }}
+                            className="rounded-xl text-xs gap-1.5 justify-center text-warning hover:text-warning border-warning/30"
+                          >
+                            <Crown className="h-3.5 w-3.5" />
+                            {t('removeAdmin')}
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRevoke(user)}
+                          className="rounded-xl text-xs gap-1.5 justify-center text-destructive hover:text-destructive border-destructive/30"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          {t('revoke')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowDeleteDialog(true);
+                          }}
+                          className="rounded-xl text-xs gap-1.5 justify-center text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {t('delete')}
+                        </Button>
                       </div>
+
                       ) : (
                         <div className="flex items-center gap-2 pt-1 border-t border-border/30">
                           {!user.isAdmin ? (
