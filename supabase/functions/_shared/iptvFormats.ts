@@ -113,7 +113,7 @@ export function candidateFormat(url: string): string {
  */
 export function liveFormatOrder(fmt: LiveFormats | null, rawFirst = false): string[] {
   const known = fmt && fmt.formats.length > 0
-  if (!known) return rawFirst ? ['ts', 'm3u8'] : ['ts', 'm3u8']
+  if (!known) return ['ts', 'm3u8']
   if (fmt!.tsOnly) return ['ts']
   const hasTs = fmt!.formats.some((f) => f === 'ts' || f === 'mpegts')
   if (fmt!.hls && !hasTs) return ['m3u8']
