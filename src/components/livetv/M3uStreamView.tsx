@@ -476,27 +476,14 @@ export default function M3uStreamView({
             )}
           </div>
 
-          {/* Controls */}
+          {/* Controls (zapping/volume/refresh live inside the player overlay) */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => step(-1)}>
-              <SkipBack className="me-1.5 h-3.5 w-3.5" />
-              {T.prev}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => step(1)}>
-              <SkipForward className="me-1.5 h-3.5 w-3.5" />
-              {T.next}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setMuted((m) => !m)} aria-label="mute">
-              {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-            </Button>
-            <Button size="sm" variant="outline" onClick={retry}>
-              <RefreshCw className="h-3.5 w-3.5" />
-            </Button>
             <Button size="sm" variant="secondary" className="ms-auto" onClick={goFullscreen}>
               <Maximize2 className="me-1.5 h-3.5 w-3.5" />
               HD
             </Button>
           </div>
+
         </div>
 
         {/* Channel stream list */}
