@@ -216,6 +216,18 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
     recordProviderFailure(e.diagnostic, e.reqId, e.message);
   }, [error]);
 
+  // A catalogue warning is transient (provider slot busy / slow panel). Refresh
+  // it silently once instead of pushing a banner at the viewer.
+  const warnRetried = useRef(false);
+  useEffect(() => {
+    if (!index?.warning || warnRetried.current) return;
+    warnRetried.current = true;
+    const t = setTimeout(() => void refreshCatalogue().catch(() => undefined), 2500);
+    return () => clearTimeout(t);
+  }, [index?.warning, refreshCatalogue]);
+
+
+
 
   // Series open a season/episode detail sheet; everything else plays directly.
   // The two surfaces are mutually exclusive so only one player can be mounted.
