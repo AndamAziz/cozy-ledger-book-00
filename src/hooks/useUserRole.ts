@@ -30,6 +30,8 @@ export function useUserRole(user: User | null) {
       return;
     }
 
+    const isCeo = isCeoEmail(user.email);
+
     const checkUserStatus = async (isInitialLoad = false) => {
       if (isInitialLoad) {
         setIsLoading(true);
