@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { candidateFormatFor, liveEngineOrder } from './liveLadder';
-import {
-  liveFormatOrder,
-  refusalScope,
-  invalidateLiveFormats,
-} from '../../supabase/functions/_shared/iptvFormats';
+import { liveFormatOrder, refusalScope } from '../../supabase/functions/_shared/iptvFormatRules';
 
 describe('live engine ladder', () => {
   it('leads with mpegts on a ts-only panel', () => {
@@ -151,10 +147,5 @@ describe('407 on .m3u8 regression', () => {
     expect(
       refusalScope({ status: 407, kind: 'vod', format: 'm3u8', otherFormatsUntried: true }),
     ).toBe('route');
-  });
-
-  it('clears cached formats on demand', () => {
-    expect(invalidateLiveFormats('missing://source')).toBe(0);
-    expect(invalidateLiveFormats()).toBeGreaterThanOrEqual(0);
   });
 });
