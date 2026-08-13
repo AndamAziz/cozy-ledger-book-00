@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Activity, Check, ChevronDown, Copy, Download, RefreshCw } from 'lucide-react';
+import { Activity, ChevronDown, Download, RefreshCw } from 'lucide-react';
 import {
   probeContentType,
   subscribeLiveDiag,
   getLiveDiag,
   type LiveDiag,
 } from '@/lib/livePlaybackDiag';
+
 
 const ENGINE_LABEL: Record<string, string> = {
   mpegts: 'mpegts.js (MPEG-TS)',
