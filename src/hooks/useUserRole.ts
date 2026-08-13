@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
 import { normalizeBrandText } from '@/lib/brand';
+import { isCeoEmail } from '@/lib/ceo';
 
 interface ApprovalStatus {
   isApproved: boolean;
