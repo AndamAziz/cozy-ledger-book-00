@@ -749,10 +749,14 @@ export function LiveTVPlayer({
       clearWatchdog();
       clearTimeout(startTimer);
       if (retryTimer !== undefined) clearTimeout(retryTimer);
-      video.removeEventListener('playing', done);
+      if (stallTicker !== undefined) clearInterval(stallTicker);
+      video.removeEventListener('playing', onPlaying);
       video.removeEventListener('canplay', done);
       video.removeEventListener('loadeddata', done);
+      video.removeEventListener('loadeddata', seekResume);
+      video.removeEventListener('canplay', seekResume);
       video.removeEventListener('error', onMediaError);
+
       if ((channel.kind ?? 'live') === 'live') {
         // Count this as a real slot release. The next Live TV effect will wait
         // for the provider grace window before opening its upstream request.
