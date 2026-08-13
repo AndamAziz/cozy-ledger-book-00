@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, ChevronDown, RefreshCw } from 'lucide-react';
+import { Activity, ChevronDown, Download, RefreshCw } from 'lucide-react';
 import {
   probeContentType,
   subscribeLiveDiag,
