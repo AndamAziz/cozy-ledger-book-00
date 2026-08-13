@@ -476,13 +476,9 @@ export default function M3uStreamView({
             )}
           </div>
 
-          {/* Controls (zapping/volume/refresh live inside the player overlay) */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="secondary" className="ms-auto" onClick={goFullscreen}>
-              <Maximize2 className="me-1.5 h-3.5 w-3.5" />
-              HD
-            </Button>
-          </div>
+          {/* No persistent controls below the player — keep the surface clean. */}
+          <div className="sr-only" aria-hidden="true" />
+
 
         </div>
 
@@ -534,17 +530,14 @@ export default function M3uStreamView({
                           handleSelect(c, index);
                         }}
                         style={{ height: ROW_HEIGHT, marginBottom: ROW_GAP }}
-                        className={`group relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg border px-2 py-2 text-start transition-colors duration-300 ease-out focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                        className={`group flex w-full items-center gap-2.5 overflow-hidden rounded-lg border px-2 py-2 text-start transition-colors duration-300 ease-out focus:outline-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                           active
                             ? 'border-primary/80 bg-gradient-to-r from-primary/30 via-primary/15 to-transparent shadow-[0_0_24px_-6px_hsl(var(--primary)/0.45)]'
                             : 'border-border/50 bg-card hover:border-primary/40 hover:bg-primary/[0.06]'
                         }`}
 
                       >
-                        {/* Active left accent bar */}
-                        {active && (
-                          <span className="pointer-events-none absolute inset-y-2 left-0 w-1 rounded-full bg-gradient-to-b from-primary via-emerald-400 to-primary" />
-                        )}
+
 
                         <ChannelLogo
                           name={c.name}
