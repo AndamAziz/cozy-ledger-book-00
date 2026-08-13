@@ -325,7 +325,13 @@ Deno.serve(async (req) => {
   /** Provider answered 458/407 — the account's viewing slots are all in use. */
   let slotLimited = false
 
-  /** `host|via` pairs the provider geo-blocks — no UA rotation can fix those. */
+  /**
+   * `host|via|format` triples the provider refuses — no UA rotation can fix
+   * those. The FORMAT is part of the key on purpose: a panel that only serves
+   * transport streams answers `.m3u8` with 407/458, and blocking the whole host
+   * on that verdict meant the working `.ts` candidate was never tried. Genuine
+   * host-wide refusals (rate limits, geo blocks) still block every format below.
+   */
   const blockedRoutes = new Set<string>()
   let geoBlocked = false
 
@@ -339,8 +345,10 @@ Deno.serve(async (req) => {
     try {
       hostKey = new URL(target).host
     } catch { /* keep raw */ }
+    const fmt = candidateFormat(target)
     if (deadHosts.has(hostKey)) continue
     if (blockedRoutes.has(`${hostKey}|${via}`)) continue
+    if (blockedRoutes.has(`${hostKey}|${via}|${fmt}`)) continue
     // Never hammer a panel that just rate-limited us: that is how an egress IP
     // earns a ban. Park it and report a retryable error instead.
     if (cooldownLeft(target)) {
