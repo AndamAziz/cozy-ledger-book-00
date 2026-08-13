@@ -858,6 +858,10 @@ export function LiveTVPlayer({
     const key = resumeKey(channel.id, currentEpisodeId);
     let restored = false;
     let lastSaved = 0;
+    /** Furthest point playback actually reached (never a jump-to-end artefact). */
+    let playedTo = 0;
+    /** True once a resume seek was issued — a premature end then means "no Range". */
+    let seekedForResume = false;
 
     const restore = () => {
       if (restored) return;
@@ -871,9 +875,15 @@ export function LiveTVPlayer({
         restored = true;
         return;
       }
+      // Only seek when the element really can: a Range-less progressive stream
+      // reports a length it cannot seek inside, and forcing it there jumps the
+      // movie/episode straight to its end.
+      if (!canSeekTo(v.seekable, saved.time)) return;
       try {
         v.currentTime = saved.time;
         restored = true;
+        seekedForResume = true;
+        playedTo = saved.time;
         setCurrentTime(saved.time);
       } catch {
         /* metadata not ready yet — retry on the next event */
@@ -882,6 +892,7 @@ export function LiveTVPlayer({
 
     const onTime = () => {
       setCurrentTime(v.currentTime);
+      if (v.currentTime > playedTo) playedTo = v.currentTime;
       const now = Date.now();
       if (now - lastSaved < 5000) return;
       lastSaved = now;
@@ -891,13 +902,29 @@ export function LiveTVPlayer({
       setDuration(Number.isFinite(v.duration) ? v.duration : 0);
       restore();
     };
-    const flush = () => saveResume(key, v.currentTime, Number.isFinite(v.duration) ? v.duration : 0);
-    const onEnded = () => clearResume(key);
+    const flush = () => saveResume(key, playedTo, Number.isFinite(v.duration) ? v.duration : 0);
+    /**
+     * Real end → forget the position. A *premature* end (the timeline collapsed
+     * after a failed Range seek, or the provider dropped the connection) must
+     * never be shown as "finished": drop the stored position and reload in place
+     * from the last point that actually played.
+     */
+    const onEnded = () => {
+      const len = Number.isFinite(v.duration) ? v.duration : 0;
+      if (isPrematureEnd(playedTo, len)) {
+        clearResume(key);
+        vodResume.current = seekedForResume ? null : playedTo;
+        setReload((r) => r + 1);
+        return;
+      }
+      clearResume(key);
+    };
 
     v.addEventListener('timeupdate', onTime);
     v.addEventListener('loadedmetadata', onMeta);
     v.addEventListener('durationchange', onMeta);
     v.addEventListener('loadeddata', restore);
+    v.addEventListener('canplay', restore);
     v.addEventListener('pause', flush);
     v.addEventListener('ended', onEnded);
     window.addEventListener('pagehide', flush);
@@ -907,11 +934,13 @@ export function LiveTVPlayer({
       v.removeEventListener('loadedmetadata', onMeta);
       v.removeEventListener('durationchange', onMeta);
       v.removeEventListener('loadeddata', restore);
+      v.removeEventListener('canplay', restore);
       v.removeEventListener('pause', flush);
       v.removeEventListener('ended', onEnded);
       window.removeEventListener('pagehide', flush);
     };
   }, [channel.id, currentEpisodeId, isLive]);
+
 
 
   useEffect(() => {
