@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowLeft, ChevronDown, Clapperboard, Loader2, Play } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Clapperboard, Loader2, Play } from 'lucide-react';
 import {
   useIptvSeriesInfo,
   type IptvChannel,
@@ -34,7 +34,6 @@ export function SeriesDetail({ series, onClose }: Props) {
   const accent = accentFor(series.name);
   const [seasonNum, setSeasonNum] = useState<number | null>(null);
   const [currentEpisode, setCurrentEpisode] = useState<IptvEpisode | null>(null);
-  const [slotNotice, setSlotNotice] = useState<string | null>(null);
   // Episodes already refused by the provider's session limit during this visit.
   const exhaustedRef = useRef<Set<string>>(new Set());
 
@@ -50,7 +49,6 @@ export function SeriesDetail({ series, onClose }: Props) {
 
   const playEpisode = useCallback((ep: IptvEpisode) => {
     exhaustedRef.current.delete(ep.id);
-    setSlotNotice(null);
     setCurrentEpisode(ep);
   }, []);
 
@@ -61,12 +59,10 @@ export function SeriesDetail({ series, onClose }: Props) {
     if (current) exhaustedRef.current.add(current.id);
     const next = firstAvailableEpisode(episodes, exhaustedRef.current);
     if (next && next.id !== current?.id) {
-      setSlotNotice(`All slots were busy — switched to E${next.episode}.`);
       setCurrentEpisode(next);
       return;
     }
     exhaustedRef.current.clear();
-    setSlotNotice('All viewing slots are in use right now. Try again in a moment.');
     setCurrentEpisode(null);
   }, [currentEpisode, episodes]);
 
@@ -124,13 +120,7 @@ export function SeriesDetail({ series, onClose }: Props) {
           </div>
         )}
 
-        {error && (
-          <div className="flex flex-col items-center gap-2 py-20 text-center">
-            <AlertTriangle className="h-7 w-7 text-[#ff2d6f]" />
-            <p className="text-sm font-bold">Episodes could not be loaded</p>
-            <p className="text-xs text-white/45">{(error as Error).message}</p>
-          </div>
-        )}
+        {error && !isLoading && <div className="py-20" aria-hidden="true" />}
 
 
 

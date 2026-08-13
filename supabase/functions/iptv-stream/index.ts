@@ -715,7 +715,10 @@ Deno.serve(async (req) => {
     out.set('Content-Range', 'bytes */*')
     return new Response(null, { status: 416, headers: out })
   }
-  if (parsed && upstream.status === 200 && upstream.body) {
+  // Some panels return 206 but omit Content-Range. That response is invalid in
+  // browsers, so repair it through the same bounded slice path as an ignored
+  // Range (200) response.
+  if (parsed && (upstream.status === 200 || (upstream.status === 206 && !cr)) && upstream.body) {
     const total = clen ? Number(clen) : NaN
     const start = parsed[1] ? Number(parsed[1]) : suffixRange ? Math.max(0, total - Number(parsed[2])) : 0
     const endReq = parsed[1] && parsed[2] ? Number(parsed[2]) : suffixRange ? total - 1 : NaN
@@ -730,11 +733,12 @@ Deno.serve(async (req) => {
 
     // Cap an open-ended range so we never buffer an entire movie in memory.
     const OPEN_WINDOW = 4 * 1024 * 1024
+    const windowEnd = start + OPEN_WINDOW - 1
     const end = Number.isFinite(endReq)
       ? endReq
       : Number.isFinite(total)
-        ? total - 1
-        : start + OPEN_WINDOW - 1
+        ? Math.min(windowEnd, total - 1)
+        : windowEnd
     if (!Number.isFinite(start) || start < 0 || end < start) {
       await upstream.body.cancel().catch(() => undefined)
       return new Response(null, { status: 416, headers: out })
