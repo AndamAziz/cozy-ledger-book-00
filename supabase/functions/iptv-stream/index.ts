@@ -192,10 +192,18 @@ Deno.serve(async (req) => {
   } else if (streamId) {
     if (!/^\d+$/.test(streamId)) return json({ error: 'Invalid id' }, 400)
     const { username, password } = parseXtream(source)
+    // Which live containers the panel actually serves. TS-only providers refuse
+    // `.m3u8` with a private status that looks like a slot limit, so the
+    // impossible candidate is never built for them.
+    if (kind === 'live') liveFmt = await liveFormats(source)
     const build = (cred: string) => {
       if (kind === 'live') {
         const hls = `${cred}/live/${username}/${password}/${streamId}.m3u8`
         const ts = `${cred}/live/${username}/${password}/${streamId}.ts`
+        if (liveFmt?.tsOnly) return [ts]
+        if (liveFmt && liveFmt.hls && !liveFmt.formats.some((f) => f === 'ts' || f === 'mpegts')) {
+          return [hls]
+        }
         // `raw=1` (mpegts.js engine) wants the transport stream first; the default
         // order prefers the HLS manifest, which survives slow links better.
         return rawFirst ? [ts, hls] : [hls, ts]
