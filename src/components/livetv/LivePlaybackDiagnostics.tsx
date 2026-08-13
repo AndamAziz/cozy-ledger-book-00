@@ -64,17 +64,6 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
     URL.revokeObjectURL(url);
   };
 
-  const copyJson = async () => {
-    const report = buildReport();
-    if (!report) return;
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* ignore unsupported contexts */
-    }
-  };
 
   // First open (and every engine/channel change while open) refreshes the
   // observed content-type.
