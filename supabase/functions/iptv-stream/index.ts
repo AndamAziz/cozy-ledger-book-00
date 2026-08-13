@@ -160,6 +160,57 @@ const json = (body: unknown, status: number) =>
     headers: { ...cors, 'Content-Type': 'application/json' },
   })
 
+/**
+ * Providers commonly mislabel MP4/MKV episode bytes as `text/html`. Inspect the
+ * first streamed chunk instead of trusting that header: real HTML error pages
+ * are rejected, while binary media is put back in front of the untouched stream.
+ */
+async function inspectHtmlLabel(res: Response): Promise<{ response: Response; html: boolean }> {
+  const type = res.headers.get('content-type') ?? ''
+  if (!/text\/html/i.test(type) || !res.body) return { response: res, html: false }
+
+  const reader = res.body.getReader()
+  const first = await reader.read()
+  if (first.done || !first.value) return { response: res, html: true }
+  const prefix = new TextDecoder().decode(first.value.subarray(0, 1024)).trimStart().toLowerCase()
+  const html = prefix.startsWith('<!doctype html') || prefix.startsWith('<html') ||
+    prefix.startsWith('<head') || prefix.startsWith('<body') ||
+    /<(title|script|meta)[\s>]/i.test(prefix.slice(0, 512))
+
+  if (html) {
+    await reader.cancel().catch(() => undefined)
+    return { response: res, html: true }
+  }
+
+  let firstPending = true
+  const body = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (firstPending) {
+        firstPending = false
+        controller.enqueue(first.value)
+        return
+      }
+      const next = await reader.read()
+      if (next.done || !next.value) controller.close()
+      else controller.enqueue(next.value)
+    },
+    cancel: (reason) => reader.cancel(reason).catch(() => undefined),
+  })
+  return {
+    response: new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers }),
+    html: false,
+  }
+}
+
+function mediaTypeFor(ext: string, fallback: string): string {
+  if (!/text\/html/i.test(fallback)) return fallback || 'application/octet-stream'
+  if (ext === 'mp4' || ext === 'm4v' || ext === 'mov') return 'video/mp4'
+  if (ext === 'mkv' || ext === 'webm') return 'video/webm'
+  if (ext === 'avi') return 'video/x-msvideo'
+  if (ext === 'ts' || ext === 'mpegts') return 'video/mp2t'
+  return 'application/octet-stream'
+}
+
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -430,12 +481,12 @@ Deno.serve(async (req) => {
       const hopTarget = via === 'relay' && kind !== 'live'
         ? await resolveTokenizedUrl(target, headers, signal)
         : target
-      const res =
+      let res =
         via === 'direct'
           ? await fetch(target, { headers, redirect: 'follow', signal })
           : await egressFetch(hopTarget, { headers, redirect: 'follow', signal }, { stream: true })
       if (res.ok || res.status === 206) {
-        const ctype = res.headers.get('content-type') || ''
+        let ctype = res.headers.get('content-type') || ''
         const resolvedUrl = finalUrlOf(res, hopTarget)
 
         // Some providers answer 200 with a text error page for dead channels.
@@ -463,15 +514,15 @@ Deno.serve(async (req) => {
           upstreamBase = resolvedUrl
           break
         }
-        // Some Xtream panels incorrectly label valid MP4/MKV/episode byte
-        // streams as text/html. Header-only HTML detection therefore breaks all
-        // VOD while manifests still work. Only reject an HTML content type here
-        // when the request is not a ranged/progressive media response; genuine
-        // block pages on manifests are body-checked above.
-        if (isHtmlBlock(ctype) && !range && kind === 'live') {
-          await res.body?.cancel().catch(() => undefined)
-          lastError = 'provider returned a block page (HTML)'
-          continue
+        if (/text\/html/i.test(ctype)) {
+          const inspected = await inspectHtmlLabel(res)
+          if (inspected.html) {
+            lastError = 'provider returned a block page (HTML)'
+            trace.push(`${via}:html:${fmt}`)
+            continue
+          }
+          res = inspected.response
+          ctype = mediaTypeFor(extHint || fmt, ctype)
         }
         chosenFmt = fmt
         upstream = res
@@ -572,7 +623,7 @@ Deno.serve(async (req) => {
 
   const finalUrl = new URL(upstreamBase)
 
-  const ct = upstream.headers.get('content-type') || ''
+  const ct = mediaTypeFor(extHint || chosenFmt, upstream.headers.get('content-type') || '')
   const isPlaylist = ct.includes('mpegurl') || /\.m3u8?(\?|$)/i.test(finalUrl.pathname + finalUrl.search)
 
   if (isPlaylist) {
@@ -667,6 +718,14 @@ Deno.serve(async (req) => {
     const total = clen ? Number(clen) : NaN
     const start = parsed[1] ? Number(parsed[1]) : suffixRange ? Math.max(0, total - Number(parsed[2])) : 0
     const endReq = parsed[1] && parsed[2] ? Number(parsed[2]) : suffixRange ? total - 1 : NaN
+
+    // A relay that strips Content-Length gives us no valid total for a 206.
+    // For the browser's initial `bytes=0-` request, forwarding the progressive
+    // 200 body is valid and playable; fabricating `Content-Range: .../*` is not.
+    if (!Number.isFinite(total) && start === 0 && !parsed[2]) {
+      out.delete('Accept-Ranges')
+      return new Response(upstream.body, { status: 200, headers: out })
+    }
 
     // Cap an open-ended range so we never buffer an entire movie in memory.
     const OPEN_WINDOW = 4 * 1024 * 1024
