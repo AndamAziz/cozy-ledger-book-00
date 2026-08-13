@@ -446,12 +446,25 @@ Deno.serve(async (req) => {
           lastError = 'provider returned a block page (HTML)'
           continue
         }
+        // Some panels answer PPV / not-entitled channels with HTTP 200 and a
+        // JSON (or plain text) message instead of media. Committing that to the
+        // player made mpegts.js parse an error message as video and retry
+        // forever, so read it here and fail fast with the provider's own words.
+        if (kind === 'live' && /json|text\/plain/i.test(ctype)) {
+          const text = await res.text().catch(() => '')
+          providerMessage = text.replace(/\s+/g, ' ').trim().slice(0, 200) || 'provider returned a non-media response'
+          lastError = `non-media response (${ctype})`
+          trace.push(`${via}:notmedia:${fmt}`)
+          notMedia = true
+          continue
+        }
         chosenFmt = fmt
         upstream = res
         upstreamBase = resolvedUrl
         clearCooldown(target)
         break
       }
+
       // 458/407 from the relayed provider response usually means the Xtream
       // account is at its viewing limit. But panels that do not serve HLS answer
       // a `.m3u8` request with exactly those statuses, so when another container
