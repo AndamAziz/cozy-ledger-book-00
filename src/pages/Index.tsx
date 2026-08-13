@@ -99,8 +99,9 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
           {/* Live price ticker */}
           <PriceTickerBar />
 
-          {/* Expiry Warning Banner */}
-          {daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry <= 10 && userEmail && (
+          {/* Expiry Warning Banner — never shown to the CEO / owner account */}
+          {userEmail?.toLowerCase() !== 'andam@outlook.com' &&
+            daysUntilExpiry !== null && daysUntilExpiry !== undefined && daysUntilExpiry <= 10 && userEmail && (
             <ExpiryWarningBanner daysUntilExpiry={daysUntilExpiry} email={userEmail} />
           )}
 
