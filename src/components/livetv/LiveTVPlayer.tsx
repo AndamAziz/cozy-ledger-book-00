@@ -1014,6 +1014,8 @@ export function LiveTVPlayer({
       /* seek before metadata — ignored */
     }
   };
+  seekRef.current = seekTo;
+
 
 
   /** Relative skip: negative rewinds, positive fast-forwards. */
