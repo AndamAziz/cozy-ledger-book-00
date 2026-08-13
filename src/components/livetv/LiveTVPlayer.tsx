@@ -505,10 +505,70 @@ export function LiveTVPlayer({
 
     const onMediaError = () => nextEngine();
 
+    /** Frames are flowing — mid-playback faults may now recover in place. */
+    const onPlaying = () => {
+      startedRef.current = true;
+      done();
+    };
+    /** After a reload, continue the movie / episode where it stopped. */
+    const seekResume = () => {
+      const at = vodResume.current;
+      if (at == null || isLiveKind) return;
+      vodResume.current = null;
+      try {
+        if (at > 0) video.currentTime = at;
+      } catch {
+        /* metadata not ready — the next event retries */
+      }
+      if (!userPausedRef.current) video.play().catch(() => undefined);
+    };
 
-    video.addEventListener('playing', done);
+    video.addEventListener('playing', onPlaying);
     video.addEventListener('canplay', done);
     video.addEventListener('loadeddata', done);
+    video.addEventListener('loadeddata', seekResume);
+    video.addEventListener('canplay', seekResume);
+
+    /**
+     * VOD stall guard. Movies and episodes were "pausing for no reason": a
+     * segment/range request that never completes leaves the media element
+     * stalled with no error event, so nothing recovered it. Every 4s we check
+     * that the clock is still moving; two gentle nudges first, then a silent
+     * in-place reload from the same second.
+     */
+    let stallTicker: number | undefined;
+    if (!isLiveKind) {
+      let lastPos = -1;
+      let stallHits = 0;
+      stallTicker = window.setInterval(() => {
+        if (disposed || retrying) return;
+        if (video.paused || video.seeking || video.ended || userPausedRef.current || !startedRef.current) {
+          lastPos = video.currentTime;
+          stallHits = 0;
+          return;
+        }
+        if (video.currentTime > lastPos + 0.2) {
+          lastPos = video.currentTime;
+          stallHits = 0;
+          return;
+        }
+        stallHits += 1;
+        if (stallHits <= 2) {
+          try {
+            hlsRef.current?.startLoad();
+          } catch {
+            /* engine already gone */
+          }
+          video.play().catch(() => undefined);
+          return;
+        }
+        stallHits = 0;
+        vodResume.current = video.currentTime;
+        safeDestroy();
+        setReload((r) => r + 1);
+      }, 4_000);
+    }
+
 
     const attach = () => {
     if (engine === 'hls') {
