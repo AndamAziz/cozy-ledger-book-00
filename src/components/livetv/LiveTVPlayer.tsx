@@ -165,9 +165,19 @@ export function LiveTVPlayer({
    * trying it and stream through the proxy for the rest of the session.
    */
   const directDead = useRef(false);
+  /** True once real frames were shown — a stall after this is recoverable. */
+  const startedRef = useRef(false);
+  /** The viewer pressed pause themselves: never auto-resume in that case. */
+  const userPausedRef = useRef(false);
+  /** Position (seconds) a VOD reload must continue from. */
+  const vodResume = useRef<number | null>(null);
   useEffect(() => {
     directDead.current = false;
-  }, [channel.id]);
+    startedRef.current = false;
+    userPausedRef.current = false;
+    vodResume.current = null;
+  }, [channel.id, currentEpisodeId]);
+
 
 
 
