@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import {
-  toPlayableUrl, resolveDirectUrl, invalidateDirectUrl,
+  toPlayableUrl, resolveDirectUrl, invalidateDirectUrl, fetchLiveFormats,
   type IptvChannel, type IptvEpisode,
 } from '@/hooks/useIptvPlaylist';
 import { accentFor, initialsFor } from './ChannelCard';
@@ -206,6 +206,24 @@ export function LiveTVPlayer({
   }, [channel.id]);
 
   /**
+   * Provider serves transport streams only (`allowed_output_formats` has no
+   * m3u8). Those panels refuse a `.m3u8` request with a private status that
+   * reads like "all slots in use", so leading with hls.js made the player loop
+   * on a false error. Learned once per source and cached.
+   */
+  const [tsOnly, setTsOnly] = useState(false);
+  useEffect(() => {
+    if ((channel.kind ?? 'live') !== 'live') return;
+    let alive = true;
+    fetchLiveFormats().then((info) => {
+      if (alive) setTsOnly(info.tsOnly);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [channel.kind]);
+
+  /**
    * Engine ladder for this channel — identical in spirit to the IPTV M3U module
    * that plays flawlessly: HLS manifests go to hls.js (or native HLS on
    * Safari/iOS/Smart TVs), raw MPEG-TS live feeds go to mpegts.js (Chrome,
@@ -220,11 +238,18 @@ export function LiveTVPlayer({
       const chain = engineChain(container, { nativeHls });
       return chain.length ? chain : ['native'];
     }
+    // TS-only panel: mpegts.js first (it asks the proxy for `raw=1`, the .ts
+    // variant). hls.js stays last as a courtesy for mislabelled feeds.
+    if (tsOnly) {
+      return (['mpegts', 'native', 'hls'] as Engine[]).filter((e) =>
+        e === 'hls' ? Hls.isSupported() : true,
+      );
+    }
     // Live: the stream proxy serves an HLS manifest when the provider has one
     // and falls back to a raw transport stream, so both must be covered.
     const chain: Engine[] = nativeHls ? ['native', 'hls', 'mpegts'] : ['hls', 'mpegts', 'native'];
     return chain.filter((e) => (e === 'hls' ? Hls.isSupported() : true));
-  }, [channel.kind, channel.ext]);
+  }, [channel.kind, channel.ext, tsOnly]);
 
   useEffect(() => {
     const video = videoRef.current;

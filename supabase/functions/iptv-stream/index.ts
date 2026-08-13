@@ -24,6 +24,7 @@ const cors: Record<string, string> = {
 import { IPTV_USER_AGENTS, isHtmlBlock, describeFetchError } from '../_shared/iptvFetch.ts'
 import { clearCooldown, cooldownLeft, isRateLimited, markRateLimited } from '../_shared/iptvCooldown.ts'
 import { classifyStatus, classifyTransport, streamError, type StreamError } from '../_shared/iptvErrors.ts'
+import { candidateFormat, liveFormats, type LiveFormats } from '../_shared/iptvFormats.ts'
 
 const SELF = (req: Request) =>
   `${(Deno.env.get('SUPABASE_URL') || new URL(req.url).origin).replace(/\/$/, '')}/functions/v1/iptv-stream`
@@ -170,6 +171,21 @@ Deno.serve(async (req) => {
   const source = resolved.viewer.playlistUrl
   const plain = !isXtreamUrl(source)
 
+  /** Live containers the panel advertises (`allowed_output_formats`). */
+  let liveFmt: LiveFormats | null = null
+
+  /**
+   * `info=1` — capability handshake for the player. The engine ladder must lead
+   * with mpegts.js for TS-only panels, otherwise hls.js commits to a `.m3u8`
+   * the provider refuses and the player loops on a false slot-limit error.
+   */
+  if (reqUrl.searchParams.get('info') === '1') {
+    const fmt = plain ? { formats: [], tsOnly: false, hls: false } : await liveFormats(source)
+    return new Response(JSON.stringify({ kind: plain ? 'm3u' : 'xtream', ...fmt }), {
+      headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=300' },
+    })
+  }
+
   // Candidate upstreams, in the order the M3U module proves reliable:
   // HLS manifest first (segment-based, survives slow links), raw TS as backup.
   let candidates: string[] = []
@@ -192,10 +208,18 @@ Deno.serve(async (req) => {
   } else if (streamId) {
     if (!/^\d+$/.test(streamId)) return json({ error: 'Invalid id' }, 400)
     const { username, password } = parseXtream(source)
+    // Which live containers the panel actually serves. TS-only providers refuse
+    // `.m3u8` with a private status that looks like a slot limit, so the
+    // impossible candidate is never built for them.
+    if (kind === 'live') liveFmt = await liveFormats(source)
     const build = (cred: string) => {
       if (kind === 'live') {
         const hls = `${cred}/live/${username}/${password}/${streamId}.m3u8`
         const ts = `${cred}/live/${username}/${password}/${streamId}.ts`
+        if (liveFmt?.tsOnly) return [ts]
+        if (liveFmt && liveFmt.hls && !liveFmt.formats.some((f) => f === 'ts' || f === 'mpegts')) {
+          return [hls]
+        }
         // `raw=1` (mpegts.js engine) wants the transport stream first; the default
         // order prefers the HLS manifest, which survives slow links better.
         return rawFirst ? [ts, hls] : [hls, ts]
@@ -301,7 +325,13 @@ Deno.serve(async (req) => {
   /** Provider answered 458/407 — the account's viewing slots are all in use. */
   let slotLimited = false
 
-  /** `host|via` pairs the provider geo-blocks — no UA rotation can fix those. */
+  /**
+   * `host|via|format` triples the provider refuses — no UA rotation can fix
+   * those. The FORMAT is part of the key on purpose: a panel that only serves
+   * transport streams answers `.m3u8` with 407/458, and blocking the whole host
+   * on that verdict meant the working `.ts` candidate was never tried. Genuine
+   * host-wide refusals (rate limits, geo blocks) still block every format below.
+   */
   const blockedRoutes = new Set<string>()
   let geoBlocked = false
 
@@ -315,8 +345,10 @@ Deno.serve(async (req) => {
     try {
       hostKey = new URL(target).host
     } catch { /* keep raw */ }
+    const fmt = candidateFormat(target)
     if (deadHosts.has(hostKey)) continue
     if (blockedRoutes.has(`${hostKey}|${via}`)) continue
+    if (blockedRoutes.has(`${hostKey}|${via}|${fmt}`)) continue
     // Never hammer a panel that just rate-limited us: that is how an egress IP
     // earns a ban. Park it and report a retryable error instead.
     if (cooldownLeft(target)) {
@@ -387,20 +419,28 @@ Deno.serve(async (req) => {
         clearCooldown(target)
         break
       }
-      // 458/407 from the relayed provider response means the Xtream account is
-      // genuinely at its viewing limit. Drain it and stop this host. We do not
-      // classify a direct-route 458 as MAX_CONNECTIONS: several panels use that
-      // same private status for blocked datacentre IPs.
+      // 458/407 from the relayed provider response usually means the Xtream
+      // account is at its viewing limit. But panels that do not serve HLS answer
+      // a `.m3u8` request with exactly those statuses, so when another container
+      // is still untried this is a FORMAT refusal: rule out that one format for
+      // the host and keep going instead of reporting a false "slots in use".
       if (res.status === 458 || res.status === 407) {
+        const otherFormats = candidates.some((c) => candidateFormat(c) !== fmt)
+        const formatRefusal = kind === 'live' && fmt === 'm3u8' && otherFormats
         if (via === 'relay') {
-          slotLimited = true
-          classified = streamError('MAX_CONNECTIONS', `HTTP ${res.status}`)
-          blockedRoutes.add(`${hostKey}|relay`)
+          if (formatRefusal) {
+            blockedRoutes.add(`${hostKey}|relay|${fmt}`)
+          } else {
+            slotLimited = true
+            classified = streamError('MAX_CONNECTIONS', `HTTP ${res.status}`)
+            blockedRoutes.add(`${hostKey}|relay`)
+          }
         } else {
-          geoBlocked = true
-          blockedRoutes.add(`${hostKey}|direct`)
+          if (!formatRefusal) geoBlocked = true
+          blockedRoutes.add(formatRefusal ? `${hostKey}|direct|${fmt}` : `${hostKey}|direct`)
         }
         lastError = `HTTP ${res.status}`
+        trace.push(`${via}:${res.status}:${fmt}${formatRefusal ? ':fmt' : ''}`)
         await res.body?.cancel().catch(() => undefined)
         continue
       }

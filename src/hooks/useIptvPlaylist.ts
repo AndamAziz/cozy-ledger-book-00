@@ -169,6 +169,38 @@ export function toPlayableUrl(
 }
 
 /**
+ * Live container capabilities of the active provider (`allowed_output_formats`).
+ *
+ * TS-only panels refuse `.m3u8` with a private status that reads like a slot
+ * limit, so the player must lead its engine ladder with mpegts.js for them
+ * instead of letting hls.js commit to a manifest that will never exist. The
+ * handshake is memoised per source for the session (the server caches too).
+ */
+export type LiveFormatInfo = { formats: string[]; tsOnly: boolean; hls: boolean };
+const formatCache = new Map<string, Promise<LiveFormatInfo>>();
+
+export function fetchLiveFormats(): Promise<LiveFormatInfo> {
+  const key = activeSourceId ?? 'default';
+  const hit = formatCache.get(key);
+  if (hit) return hit;
+  const tokenPart = accessToken ? `&token=${encodeURIComponent(accessToken)}` : '';
+  const p = fetch(
+    `${FN_BASE}/iptv-stream?info=1${sourceParam()}&apikey=${ANON}${tokenPart}`,
+    { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined },
+  )
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => ({
+      formats: Array.isArray(j?.formats) ? (j.formats as string[]) : [],
+      tsOnly: Boolean(j?.tsOnly),
+      hls: Boolean(j?.hls),
+    }))
+    .catch(() => ({ formats: [], tsOnly: false, hls: false }));
+  formatCache.set(key, p);
+  return p;
+}
+
+
+/**
  * Direct-play resolution.
  *
  * Media bytes must NOT travel through the Edge Function: that hop is what made
