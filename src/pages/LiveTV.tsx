@@ -13,7 +13,7 @@ import {
   type IptvChannel,
   IptvRequestError,
 } from '@/hooks/useIptvPlaylist';
-import { IptvDiagnosticPanel } from '@/components/livetv/IptvDiagnosticPanel';
+
 import { SourcePicker } from '@/components/livetv/SourcePicker';
 
 
