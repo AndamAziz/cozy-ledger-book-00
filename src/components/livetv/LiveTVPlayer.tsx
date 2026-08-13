@@ -158,6 +158,12 @@ export function LiveTVPlayer({
   const [attempt, setAttempt] = useState(0);
   /** True while waiting out the backoff between whole-ladder retries. */
   const [retrying, setRetrying] = useState(false);
+  /**
+   * True when the ladder gave up on a provider refusal that looks like a slot
+   * limit. Some panels answer PPV / not-included channels with exactly the same
+   * status, so the message says so instead of blaming the connection.
+   */
+  const [slotHint, setSlotHint] = useState(false);
   /** Bumped by the manual Retry button to force a fresh ladder run. */
   const [reload, setReload] = useState(0);
   /**
@@ -450,7 +456,10 @@ export function LiveTVPlayer({
           if (retryTimer !== undefined) clearTimeout(retryTimer);
           setRetrying(false);
           setLoading(false);
-          if (diag.waitOnly) setError(true);
+          if (diag.waitOnly) {
+            setSlotHint(true);
+            setError(true);
+          }
           else setBlocked(diag);
           return;
         }
@@ -1257,6 +1266,7 @@ export function LiveTVPlayer({
                   onClick={() => {
                     setBlocked(null);
                     setRetrying(false);
+                    setSlotHint(false);
                     setError(false);
                     setStage(0);
                     setAttempt(0);
@@ -1321,11 +1331,12 @@ export function LiveTVPlayer({
                 <AlertTriangle className="h-6 w-6" style={{ color: '#ff2d6f' }} />
               </span>
               <p className="text-sm font-extrabold tracking-tight text-white">
-                This channel is not responding
+                {slotHint ? 'This channel would not start' : 'This channel is not responding'}
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                We tried {MAX_STREAM_RETRIES} times without luck. Please try again in a moment,
-                or pick another channel.
+                {slotHint
+                  ? 'Your provider kept refusing this channel. If other channels play fine, it is most likely a PPV / premium channel that is not included in your subscription.'
+                  : `We tried ${MAX_STREAM_RETRIES} times without luck. Please try again in a moment, or pick another channel.`}
               </p>
               <div className="mt-4 flex justify-center gap-2">
                 <button
