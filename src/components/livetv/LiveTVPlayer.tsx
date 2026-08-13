@@ -271,6 +271,8 @@ export function LiveTVPlayer({
     const video = videoRef.current;
     if (!video) return;
     let retryTimer: number | undefined;
+    const isLiveKind = (channel.kind ?? 'live') === 'live';
+
 
 
     // Destroying an engine is guarded: a throw here used to bubble up, hit the
