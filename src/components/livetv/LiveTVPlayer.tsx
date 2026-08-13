@@ -175,6 +175,9 @@ export function LiveTVPlayer({
   const [selectedLevel, setSelectedLevel] = useState(-1);
   const [autoLabel, setAutoLabel] = useState<string | null>(null);
   const [qualityOpen, setQualityOpen] = useState(false);
+  // Support-only surface: `?debug=1` turns the playback diagnostics chip on.
+  const diagDebug = useMemo(() => isLiveDiagDebug(), []);
+
   const [barOpen, setBarOpen] = useState(true);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
