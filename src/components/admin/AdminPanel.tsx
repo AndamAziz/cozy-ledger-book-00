@@ -888,48 +888,18 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           </div>
         </div>
 
-        {/* Telegram Bot Health */}
-        <TelegramHealthCard />
+        {!isSearching && (
+          <>
+            {/* Telegram Bot Health */}
+            <TelegramHealthCard />
 
-        {/* Customer Reviews Moderation */}
-        <div className="mb-4">
-          <ReviewModeration />
-        </div>
-
-
-        {/* Active Filter Indicator */}
-        {activeFilter !== 'all' && (
-          <div className="mb-4 flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{t('filter')}:</span>
-            <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">
-              {activeFilter === 'active' && t('active')}
-              {activeFilter === 'pending' && t('waiting')}
-              {activeFilter === 'inactive' && t('inactive')}
-              {activeFilter === 'expired' && t('expired')}
-              {activeFilter === 'expiring' && t('expiring')}
-              {activeFilter === 'admin' && t('adminBadge')}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setActiveFilter('all')}
-              className="h-7 px-2"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+            {/* Customer Reviews Moderation */}
+            <div className="mb-4">
+              <ReviewModeration />
+            </div>
+          </>
         )}
 
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            placeholder={t('searchPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-10 rounded-xl py-6 bg-secondary/30 border-border/50"
-          />
-        </div>
 
         {/* Pending Users - Only show when filter is 'all' or 'pending' */}
         {(activeFilter === 'all' || activeFilter === 'pending') && (
