@@ -172,7 +172,8 @@ async function inspectHtmlLabel(res: Response): Promise<{ response: Response; ht
   const reader = res.body.getReader()
   const first = await reader.read()
   if (first.done || !first.value) return { response: res, html: true }
-  const prefix = new TextDecoder().decode(first.value.subarray(0, 1024)).trimStart().toLowerCase()
+  const firstChunk = first.value
+  const prefix = new TextDecoder().decode(firstChunk.subarray(0, 1024)).trimStart().toLowerCase()
   const html = prefix.startsWith('<!doctype html') || prefix.startsWith('<html') ||
     prefix.startsWith('<head') || prefix.startsWith('<body') ||
     /<(title|script|meta)[\s>]/i.test(prefix.slice(0, 512))
@@ -187,7 +188,7 @@ async function inspectHtmlLabel(res: Response): Promise<{ response: Response; ht
     async pull(controller) {
       if (firstPending) {
         firstPending = false
-        controller.enqueue(first.value)
+        controller.enqueue(firstChunk)
         return
       }
       const next = await reader.read()

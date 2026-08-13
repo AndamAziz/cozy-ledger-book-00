@@ -135,23 +135,8 @@ export function LiveTVPlayer({
   const [codecIssue, setCodecIssue] = useState<string | null>(null);
   /** Provider-side refusal (slot limit, throttle, auth) reported by the proxy. */
   const [blocked, setBlocked] = useState<StreamDiagnosis | null>(null);
-  /**
-   * Seconds left before Retry is allowed again after a wait-only refusal
-   * (single-slot / rate limit). Retrying instantly just re-triggers HTTP 458.
-   */
-  const [cooldown, setCooldown] = useState(0);
   /** Silent auto-recovery from wait-only provider refusals (slot limit/throttle). */
   const slotWaits = useRef(0);
-
-  useEffect(() => {
-    if (!blocked?.waitOnly) {
-      setCooldown(0);
-      return;
-    }
-    setCooldown(25);
-    const t = setInterval(() => setCooldown((s) => (s <= 1 ? 0 : s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [blocked]);
 
 
 
