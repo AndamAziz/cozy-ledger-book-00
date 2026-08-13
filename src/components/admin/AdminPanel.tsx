@@ -639,6 +639,19 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   }).length;
   const totalAdmins = users.filter(u => u.isAdmin === true).length;
 
+  const isSearching = searchQuery.trim().length > 0;
+  const filterTabs: { key: typeof activeFilter; label: string; count: number }[] = [
+    { key: 'all', label: t('totalAll'), count: totalUsers },
+    { key: 'active', label: t('active'), count: totalActive },
+    { key: 'pending', label: t('waiting'), count: totalPending },
+    { key: 'inactive', label: t('inactive'), count: totalInactive },
+    { key: 'expired', label: t('expired'), count: totalExpired },
+    { key: 'expiring', label: t('expiring'), count: expiringIn7Days },
+    { key: 'admin', label: t('adminBadge'), count: totalAdmins },
+  ];
+
+
+
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('ku-Arab', {
