@@ -47,7 +47,9 @@ export const streamError = (code: StreamErrorCode, extra?: string): StreamError 
 export function classifyStatus(status: number, body?: string): StreamError {
   const text = (body ?? '').toLowerCase()
   if (/expired/.test(text)) return streamError('ACCOUNT_EXPIRED')
-  if (/max.{0,12}connection|too many connections|slot/.test(text)) return streamError('MAX_CONNECTIONS')
+  if (/ip[-_\s]?limit[-_\s]?(reach|reached)|max.{0,16}connection|too many connections|slot/.test(text)) {
+    return streamError('MAX_CONNECTIONS')
+  }
   if (/country[-\s]?not[-\s]?allow|geo[-\s]?block/.test(text)) return streamError('GEO_BLOCKED')
 
   if (status === 401) return streamError('AUTH_FAILED')

@@ -78,6 +78,7 @@ describe('iptv error classification', () => {
   it('prefers body evidence over the bare status', () => {
     expect(classifyStatus(403, 'Account expired').code).toBe('ACCOUNT_EXPIRED');
     expect(classifyStatus(403, 'MAX CONNECTIONS reached').code).toBe('MAX_CONNECTIONS');
+    expect(classifyStatus(200, 'ip-limit-reach').code).toBe('MAX_CONNECTIONS');
     expect(classifyStatus(200, 'country-not-allow').code).toBe('GEO_BLOCKED');
   });
 
