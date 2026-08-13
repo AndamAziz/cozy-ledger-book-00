@@ -113,13 +113,21 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
           />
           <Row label="TS-only panel" value={diag.tsOnly ? 'yes' : 'no'} />
           <Row label="Ladder stage" value={`${diag.stage + 1}/${diag.ladder.length} · try ${diag.attempt + 1}`} />
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-1 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => diag.src && void probe(diag.src)}
               className="flex items-center gap-1 rounded-md border border-white/20 px-2 py-0.5 font-bold text-white/80 transition hover:text-white"
             >
               <RefreshCw className={`h-3 w-3 ${probing ? 'animate-spin' : ''}`} /> Re-probe
+            </button>
+            <button
+              type="button"
+              onClick={copyJson}
+              className="flex items-center gap-1 rounded-md border border-white/20 px-2 py-0.5 font-bold text-white/80 transition hover:text-white"
+            >
+              {copied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+              {copied ? 'Copied' : 'Copy JSON'}
             </button>
             <button
               type="button"
