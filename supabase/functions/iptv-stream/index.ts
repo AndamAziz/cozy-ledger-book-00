@@ -24,6 +24,7 @@ const cors: Record<string, string> = {
 import { IPTV_USER_AGENTS, isHtmlBlock, describeFetchError } from '../_shared/iptvFetch.ts'
 import { clearCooldown, cooldownLeft, isRateLimited, markRateLimited } from '../_shared/iptvCooldown.ts'
 import { classifyStatus, classifyTransport, streamError, type StreamError } from '../_shared/iptvErrors.ts'
+import { candidateFormat, liveFormats, type LiveFormats } from '../_shared/iptvFormats.ts'
 
 const SELF = (req: Request) =>
   `${(Deno.env.get('SUPABASE_URL') || new URL(req.url).origin).replace(/\/$/, '')}/functions/v1/iptv-stream`
