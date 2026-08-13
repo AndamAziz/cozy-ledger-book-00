@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import {
-  X, Loader2, AlertTriangle, Maximize2, Minimize2, Settings2, RefreshCw,
+  X, Loader2, Maximize2, Minimize2, Settings2,
   Play, Pause, Volume2, VolumeX, RotateCcw, Rewind, FastForward, SkipBack, SkipForward,
 } from 'lucide-react';
 
@@ -135,23 +135,8 @@ export function LiveTVPlayer({
   const [codecIssue, setCodecIssue] = useState<string | null>(null);
   /** Provider-side refusal (slot limit, throttle, auth) reported by the proxy. */
   const [blocked, setBlocked] = useState<StreamDiagnosis | null>(null);
-  /**
-   * Seconds left before Retry is allowed again after a wait-only refusal
-   * (single-slot / rate limit). Retrying instantly just re-triggers HTTP 458.
-   */
-  const [cooldown, setCooldown] = useState(0);
   /** Silent auto-recovery from wait-only provider refusals (slot limit/throttle). */
   const slotWaits = useRef(0);
-
-  useEffect(() => {
-    if (!blocked?.waitOnly) {
-      setCooldown(0);
-      return;
-    }
-    setCooldown(25);
-    const t = setInterval(() => setCooldown((s) => (s <= 1 ? 0 : s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [blocked]);
 
 
 
@@ -477,11 +462,17 @@ export function LiveTVPlayer({
           }
           safeDestroy();
           clearWatchdog();
-          if (retryTimer !== undefined) clearTimeout(retryTimer);
-          setRetrying(false);
-          setLoading(false);
-          if (diag.waitOnly) setError(true);
-          else setBlocked(diag);
+          setRetrying(true);
+          setLoading(true);
+          retryTimer = window.setTimeout(() => {
+            if (disposed) return;
+            slotWaits.current = 0;
+            setBlocked(null);
+            setRetrying(false);
+            setStage(0);
+            setAttempt(0);
+            setReload((r) => r + 1);
+          }, diag.waitOnly ? SLOT_WAIT_MS : 8_000);
           return;
         }
         advanceLadder();
@@ -505,9 +496,18 @@ export function LiveTVPlayer({
         }, STREAM_RETRY_DELAY_MS);
         return;
       }
-      setRetrying(false);
-      setLoading(false);
-      setError(true);
+      // Never interrupt playback with a noisy terminal error card. Providers
+      // recover from expired redirects, slot drains and transient relay faults,
+      // so keep the player mounted and reconnect silently.
+      setRetrying(true);
+      setLoading(true);
+      retryTimer = window.setTimeout(() => {
+        if (disposed) return;
+        setRetrying(false);
+        setStage(0);
+        setAttempt(0);
+        setReload((r) => r + 1);
+      }, 8_000);
     };
 
     const onMediaError = () => nextEngine();
@@ -515,6 +515,7 @@ export function LiveTVPlayer({
     /** Frames are flowing — mid-playback faults may now recover in place. */
     const onPlaying = () => {
       startedRef.current = true;
+      slotWaits.current = 0;
       done();
     };
     /** After a reload, continue the movie / episode where it stopped. */
@@ -1402,118 +1403,6 @@ export function LiveTVPlayer({
           </div>
         )}
 
-        {blocked && !codecIssue && (
-          <div className="absolute inset-0 flex items-center justify-center px-6">
-            <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.06] px-6 py-7 text-center shadow-2xl backdrop-blur-2xl">
-              <span
-                className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
-                style={{ background: 'rgba(255,176,32,0.16)' }}
-              >
-                <AlertTriangle className="h-6 w-6" style={{ color: '#ffb020' }} />
-              </span>
-              <p className="text-sm font-extrabold tracking-tight text-white">{blocked.title}</p>
-              <p className="mt-1.5 text-xs leading-relaxed text-white/50">{blocked.detail}</p>
-              <div className="mt-4 flex justify-center gap-2">
-                <button
-                  disabled={cooldown > 0}
-                  onClick={() => {
-                    setBlocked(null);
-                    setRetrying(false);
-                    setError(false);
-                    setStage(0);
-                    setAttempt(0);
-                    setReload((r) => r + 1);
-                  }}
-                  className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{ background: '#ffb020' }}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  {cooldown > 0 ? `Retry in ${cooldown}s` : 'Retry'}
-                </button>
-
-                <button
-                  onClick={onClose}
-                  className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 transition hover:border-white/40 hover:text-white active:scale-95"
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-
-        {codecIssue && (
-          <div className="absolute inset-0 flex items-center justify-center px-6">
-            <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.06] px-6 py-7 text-center shadow-2xl backdrop-blur-2xl">
-              <span
-                className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
-                style={{ background: 'rgba(255,176,32,0.16)' }}
-              >
-                <AlertTriangle className="h-6 w-6" style={{ color: '#ffb020' }} />
-              </span>
-              <p className="text-sm font-extrabold tracking-tight text-white">
-                Unsupported codec
-              </p>
-              <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                This channel is broadcast in {codecIssue}, which this browser cannot decode.
-                It plays on Safari, iPhone/iPad, Apple TV and most Smart TVs — or pick the
-                SD/H.264 version of the same channel.
-              </p>
-              <div className="mt-4 flex justify-center">
-                <button
-                  onClick={onClose}
-                  className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 transition hover:border-white/40 hover:text-white active:scale-95"
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {error && !codecIssue && !blocked && (
-
-          <div className="absolute inset-0 flex items-center justify-center px-6">
-            <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.06] px-6 py-7 text-center shadow-2xl backdrop-blur-2xl">
-              <span
-                className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
-                style={{ background: 'rgba(255,45,111,0.14)' }}
-              >
-                <AlertTriangle className="h-6 w-6" style={{ color: '#ff2d6f' }} />
-              </span>
-              <p className="text-sm font-extrabold tracking-tight text-white">
-                This channel is not responding
-              </p>
-              <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                We tried {MAX_STREAM_RETRIES} times without luck. Please try again in a moment,
-                or pick another channel.
-              </p>
-              <div className="mt-4 flex justify-center gap-2">
-                <button
-                  onClick={() => {
-                    setRetrying(false);
-                    setError(false);
-                    setStage(0);
-                    setAttempt(0);
-                    setReload((r) => r + 1);
-                  }}
-
-                  className="flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white transition hover:brightness-110 active:scale-95"
-                  style={{ background: '#ff2d6f' }}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" /> Retry
-                </button>
-                <button
-                  onClick={onClose}
-                  className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold text-white/80 transition hover:border-white/40 hover:text-white active:scale-95"
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
         </div>
       </div>
       </div>
