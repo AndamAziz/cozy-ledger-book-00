@@ -29,7 +29,6 @@ import {
   invalidateLiveFormats,
   liveFormatOrder,
   liveFormats,
-  liveConnectionUsage,
   liveFormatsAge,
   refusalScope,
   type LiveFormats,
@@ -324,10 +323,6 @@ Deno.serve(async (req) => {
   let chosenFmt = candidateFormat(candidates[0] ?? '')
   let lastError = 'fetch failed'
   let deadlineHit = false
-  /** Provider answered 200 with a message instead of media (PPV / not entitled). */
-  let notMedia = false
-  let providerMessage = ''
-  let usageTrace = ''
   const trace: string[] = []
 
   const OVERALL_DEADLINE_MS = 12_000
@@ -451,25 +446,12 @@ Deno.serve(async (req) => {
           lastError = 'provider returned a block page (HTML)'
           continue
         }
-        // Some panels answer PPV / not-entitled channels with HTTP 200 and a
-        // JSON (or plain text) message instead of media. Committing that to the
-        // player made mpegts.js parse an error message as video and retry
-        // forever, so read it here and fail fast with the provider's own words.
-        if (kind === 'live' && /json|text\/plain/i.test(ctype)) {
-          const text = await res.text().catch(() => '')
-          providerMessage = text.replace(/\s+/g, ' ').trim().slice(0, 200) || 'provider returned a non-media response'
-          lastError = `non-media response (${ctype})`
-          trace.push(`${via}:notmedia:${fmt}`)
-          notMedia = true
-          continue
-        }
         chosenFmt = fmt
         upstream = res
         upstreamBase = resolvedUrl
         clearCooldown(target)
         break
       }
-
       // 458/407 from the relayed provider response usually means the Xtream
       // account is at its viewing limit. But panels that do not serve HLS answer
       // a `.m3u8` request with exactly those statuses, so when another container
@@ -532,21 +514,7 @@ Deno.serve(async (req) => {
 
   if (!upstream) {
     // One actionable sentence, the way IPTV Smarters / VLC report failures.
-    // A refusal on every candidate while the account still has free viewing
-    // slots is an entitlement problem (PPV / premium channel), not a slot
-    // problem — report it honestly instead of "all slots in use".
-    if (slotLimited && kind === 'live') {
-      const usage = await liveConnectionUsage(source).catch(() => null)
-      usageTrace = usage ? `${usage.active}/${usage.max}` : 'unknown'
-      if (usage && usage.active < usage.max) {
-        slotLimited = false
-        notMedia = true
-        providerMessage ||= `provider refused this channel (${lastError}) with ${usage.active}/${usage.max} slots in use`
-      }
-    }
-    const error: StreamError = notMedia
-      ? streamError('CHANNEL_UNAVAILABLE', providerMessage || undefined)
-      : slotLimited
+    const error: StreamError = slotLimited
       ? streamError('MAX_CONNECTIONS')
       : rateLimited
         ? streamError('RATE_LIMITED')
@@ -556,7 +524,7 @@ Deno.serve(async (req) => {
             ? streamError('TIMEOUT', `${OVERALL_DEADLINE_MS / 1000}s`)
             : (classified ?? classifyTransport(lastError))
     console.error(
-      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, slotLimited, usage: usageTrace, code: error.code, lastError, trace })}`,
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, slotLimited, code: error.code, lastError, trace })}`,
     )
     return json(
       {
@@ -570,7 +538,7 @@ Deno.serve(async (req) => {
         detail: lastError,
         candidates: candidates.length,
       },
-       softErrors && (rateLimited || slotLimited || notMedia) ? 200 : rateLimited || slotLimited ? 429 : 502,
+       softErrors && (rateLimited || slotLimited) ? 200 : rateLimited || slotLimited ? 429 : 502,
     )
 
   }

@@ -76,26 +76,3 @@ export async function probeContentType(src: string, timeoutMs = 8000): Promise<s
     clearTimeout(timer);
   }
 }
-
-const DEBUG_KEY = 'livetv:diag-debug';
-
-/**
- * The diagnostics panel is a support tool, not a viewer feature: it only renders
- * when explicitly requested with `?debug=1` (sticky until `?debug=0`).
- */
-export function isLiveDiagDebug(): boolean {
-  try {
-    const param = new URLSearchParams(window.location.search).get('debug');
-    if (param === '1') {
-      localStorage.setItem(DEBUG_KEY, '1');
-      return true;
-    }
-    if (param === '0') {
-      localStorage.removeItem(DEBUG_KEY);
-      return false;
-    }
-    return localStorage.getItem(DEBUG_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
