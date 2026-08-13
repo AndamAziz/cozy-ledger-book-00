@@ -568,7 +568,7 @@ Deno.serve(async (req) => {
         detail: lastError,
         candidates: candidates.length,
       },
-       softErrors && (rateLimited || slotLimited) ? 200 : rateLimited || slotLimited ? 429 : 502,
+       softErrors && (rateLimited || slotLimited || notMedia) ? 200 : rateLimited || slotLimited ? 429 : 502,
     )
 
   }
