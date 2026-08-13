@@ -419,20 +419,29 @@ Deno.serve(async (req) => {
         clearCooldown(target)
         break
       }
-      // 458/407 from the relayed provider response means the Xtream account is
-      // genuinely at its viewing limit. Drain it and stop this host. We do not
-      // classify a direct-route 458 as MAX_CONNECTIONS: several panels use that
-      // same private status for blocked datacentre IPs.
+      // 458/407 from the relayed provider response usually means the Xtream
+      // account is at its viewing limit. But panels that do not serve HLS answer
+      // a `.m3u8` request with exactly those statuses, so when another container
+      // is still untried this is a FORMAT refusal: rule out that one format for
+      // the host and keep going instead of reporting a false "slots in use".
       if (res.status === 458 || res.status === 407) {
+        const otherFormats = candidates.some((c) => candidateFormat(c) !== fmt)
+        const formatRefusal = kind === 'live' && fmt === 'm3u8' && otherFormats
         if (via === 'relay') {
-          slotLimited = true
-          classified = streamError('MAX_CONNECTIONS', `HTTP ${res.status}`)
-          blockedRoutes.add(`${hostKey}|relay`)
+          if (formatRefusal) {
+            blockedRoutes.add(`${hostKey}|relay|${fmt}`)
+          } else {
+            slotLimited = true
+            classified = streamError('MAX_CONNECTIONS', `HTTP ${res.status}`)
+            blockedRoutes.add(`${hostKey}|relay`)
+          }
         } else {
-          geoBlocked = true
-          blockedRoutes.add(`${hostKey}|direct`)
+          if (formatRefusal) geoBlocked = false
+          else geoBlocked = true
+          blockedRoutes.add(formatRefusal ? `${hostKey}|direct|${fmt}` : `${hostKey}|direct`)
         }
         lastError = `HTTP ${res.status}`
+        trace.push(`${via}:${res.status}:${fmt}${formatRefusal ? ':fmt' : ''}`)
         await res.body?.cancel().catch(() => undefined)
         continue
       }
