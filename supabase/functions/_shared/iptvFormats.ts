@@ -15,14 +15,8 @@ import { IPTV_USER_AGENTS } from './iptvFetch.ts'
  * skip impossible candidates entirely instead of learning from a false error.
  */
 
-export type LiveFormats = {
-  /** Normalised list, empty when the panel did not tell us. */
-  formats: string[]
-  /** Panel serves transport streams but no HLS manifests. */
-  tsOnly: boolean
-  /** Panel advertises HLS. */
-  hls: boolean
-}
+import { type LiveFormats } from './iptvFormatRules.ts'
+export * from './iptvFormatRules.ts'
 
 const UNKNOWN: LiveFormats = { formats: [], tsOnly: false, hls: false }
 
@@ -41,11 +35,34 @@ function shape(list: unknown): LiveFormats {
   return { formats, tsOnly: ts && !hls, hls }
 }
 
+/**
+ * Drop the cached formats for one source (or every source) so a format change
+ * at the provider is picked up immediately instead of after the 10 min TTL.
+ */
+export function invalidateLiveFormats(source?: string): number {
+  if (!source) {
+    const n = cache.size
+    cache.clear()
+    return n
+  }
+  return cache.delete(source) ? 1 : 0
+}
+
+/** Age of the cached entry in ms, or null when nothing is cached. */
+export function liveFormatsAge(source: string): number | null {
+  const hit = cache.get(source)
+  return hit ? Date.now() - hit.at : null
+}
+
 /** Cached `allowed_output_formats` for an Xtream source link. */
-export async function liveFormats(source: string, timeoutMs = 6_000): Promise<LiveFormats> {
+export async function liveFormats(
+  source: string,
+  timeoutMs = 6_000,
+  opts: { force?: boolean } = {},
+): Promise<LiveFormats> {
   const key = source
   const hit = cache.get(key)
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.value
+  if (!opts.force && hit && Date.now() - hit.at < TTL_MS) return hit.value
 
   let value = UNKNOWN
   for (const base of xtreamApiBases(source)) {
@@ -78,3 +95,4 @@ export function candidateFormat(url: string): string {
   const m = /\.([a-z0-9]{2,6})(\?|#|$)/i.exec(url)
   return (m?.[1] ?? 'raw').toLowerCase()
 }
+

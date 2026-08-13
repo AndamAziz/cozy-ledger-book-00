@@ -24,7 +24,15 @@ const cors: Record<string, string> = {
 import { IPTV_USER_AGENTS, isHtmlBlock, describeFetchError } from '../_shared/iptvFetch.ts'
 import { clearCooldown, cooldownLeft, isRateLimited, markRateLimited } from '../_shared/iptvCooldown.ts'
 import { classifyStatus, classifyTransport, streamError, type StreamError } from '../_shared/iptvErrors.ts'
-import { candidateFormat, liveFormats, type LiveFormats } from '../_shared/iptvFormats.ts'
+import {
+  candidateFormat,
+  invalidateLiveFormats,
+  liveFormatOrder,
+  liveFormats,
+  liveFormatsAge,
+  refusalScope,
+  type LiveFormats,
+} from '../_shared/iptvFormats.ts'
 
 const SELF = (req: Request) =>
   `${(Deno.env.get('SUPABASE_URL') || new URL(req.url).origin).replace(/\/$/, '')}/functions/v1/iptv-stream`
@@ -180,10 +188,29 @@ Deno.serve(async (req) => {
    * the provider refuses and the player loops on a false slot-limit error.
    */
   if (reqUrl.searchParams.get('info') === '1') {
-    const fmt = plain ? { formats: [], tsOnly: false, hls: false } : await liveFormats(source)
-    return new Response(JSON.stringify({ kind: plain ? 'm3u' : 'xtream', ...fmt }), {
-      headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=300' },
-    })
+    // `refresh=1` re-probes the panel now: an admin changing the provider's
+    // allowed output formats does not have to wait out the 10 min cache TTL.
+    const force = reqUrl.searchParams.get('refresh') === '1'
+    if (force && !plain) invalidateLiveFormats(source)
+    const fmt = plain
+      ? { formats: [], tsOnly: false, hls: false }
+      : await liveFormats(source, 6_000, { force })
+    return new Response(
+      JSON.stringify({
+        kind: plain ? 'm3u' : 'xtream',
+        ...fmt,
+        refreshed: force,
+        cacheAgeMs: plain ? null : liveFormatsAge(source),
+        candidateOrder: plain ? [] : liveFormatOrder(fmt as LiveFormats),
+      }),
+      {
+        headers: {
+          ...cors,
+          'Content-Type': 'application/json',
+          'Cache-Control': force ? 'no-store' : 'private, max-age=300',
+        },
+      },
+    )
   }
 
   // Candidate upstreams, in the order the M3U module proves reliable:
@@ -214,15 +241,11 @@ Deno.serve(async (req) => {
     if (kind === 'live') liveFmt = await liveFormats(source)
     const build = (cred: string) => {
       if (kind === 'live') {
-        const hls = `${cred}/live/${username}/${password}/${streamId}.m3u8`
-        const ts = `${cred}/live/${username}/${password}/${streamId}.ts`
-        if (liveFmt?.tsOnly) return [ts]
-        if (liveFmt && liveFmt.hls && !liveFmt.formats.some((f) => f === 'ts' || f === 'mpegts')) {
-          return [hls]
-        }
-        // `raw=1` (mpegts.js engine) wants the transport stream first; the default
-        // order prefers the HLS manifest, which survives slow links better.
-        return rawFirst ? [ts, hls] : [hls, ts]
+        // Order comes from the panel's advertised formats, with a minimal
+        // ts-then-m3u8 probe when it advertises nothing at all.
+        return liveFormatOrder(liveFmt, rawFirst).map(
+          (f) => `${cred}/live/${username}/${password}/${streamId}.${f}`,
+        )
       }
       // Provider's real container_extension (sent by the client as `ext`) is
       // tried FIRST and alone; the broad matrix is only a fallback when that
@@ -281,7 +304,13 @@ Deno.serve(async (req) => {
       // Redirect probing failed: the un-resolved candidate is still worth a try.
     }
     return new Response(
-      JSON.stringify({ url, direct: /^https:\/\//i.test(url), candidates: candidates.length }),
+      JSON.stringify({
+        url,
+        direct: /^https:\/\//i.test(url),
+        candidates: candidates.length,
+        format: candidateFormat(target),
+        tsOnly: Boolean(liveFmt?.tsOnly),
+      }),
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=20' } },
     )
   }
@@ -290,6 +319,8 @@ Deno.serve(async (req) => {
   let upstream: Response | null = null
   /** Provider URL the committed response really came from (relay-aware). */
   let upstreamBase = candidates[0] ?? ''
+  /** Container of the candidate the ladder committed to (diagnostics header). */
+  let chosenFmt = candidateFormat(candidates[0] ?? '')
   let lastError = 'fetch failed'
   let deadlineHit = false
   const trace: string[] = []
@@ -397,7 +428,8 @@ Deno.serve(async (req) => {
             lastError = 'invalid manifest'
             continue
           }
-          upstream = new Response(text, {
+          chosenFmt = fmt
+        upstream = new Response(text, {
             status: 200,
             headers: { 'Content-Type': 'application/vnd.apple.mpegurl' },
           })
@@ -414,6 +446,7 @@ Deno.serve(async (req) => {
           lastError = 'provider returned a block page (HTML)'
           continue
         }
+        chosenFmt = fmt
         upstream = res
         upstreamBase = resolvedUrl
         clearCooldown(target)
@@ -425,8 +458,11 @@ Deno.serve(async (req) => {
       // is still untried this is a FORMAT refusal: rule out that one format for
       // the host and keep going instead of reporting a false "slots in use".
       if (res.status === 458 || res.status === 407) {
-        const otherFormats = candidates.some((c) => candidateFormat(c) !== fmt)
-        const formatRefusal = kind === 'live' && fmt === 'm3u8' && otherFormats
+        const otherFormats = candidates.some(
+          (c) => candidateFormat(c) !== fmt && !blockedRoutes.has(`${hostKey}|${via}|${candidateFormat(c)}`),
+        )
+        const formatRefusal =
+          refusalScope({ status: res.status, kind, format: fmt, otherFormatsUntried: otherFormats }) === 'format'
         if (via === 'relay') {
           if (formatRefusal) {
             blockedRoutes.add(`${hostKey}|relay|${fmt}`)
@@ -528,6 +564,9 @@ Deno.serve(async (req) => {
         ...cors,
         'Content-Type': 'application/vnd.apple.mpegurl',
         'Cache-Control': 'no-store',
+        'Access-Control-Expose-Headers': 'Content-Type, X-Iptv-Format, X-Iptv-Upstream-Type',
+        'X-Iptv-Format': chosenFmt,
+        'X-Iptv-Upstream-Type': ct || 'unknown',
       },
     })
   }
@@ -538,7 +577,14 @@ Deno.serve(async (req) => {
   out.set('Cache-Control', 'no-store')
   // Media stacks and debug fetches must be able to READ the range headers on a
   // cross-origin response, otherwise CORS hides them and seeking breaks.
-  out.set('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, Content-Type')
+  out.set(
+    'Access-Control-Expose-Headers',
+    'Content-Range, Content-Length, Accept-Ranges, Content-Type, X-Iptv-Format, X-Iptv-Upstream-Type',
+  )
+  // Live diagnostics: which container the ladder committed to, and what the
+  // provider actually answered with.
+  out.set('X-Iptv-Format', chosenFmt)
+  out.set('X-Iptv-Upstream-Type', ct || 'unknown')
   const cr = upstream.headers.get('content-range')
   const clen = upstream.headers.get('content-length')
   console.log(

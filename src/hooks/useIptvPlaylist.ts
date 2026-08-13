@@ -176,16 +176,32 @@ export function toPlayableUrl(
  * instead of letting hls.js commit to a manifest that will never exist. The
  * handshake is memoised per source for the session (the server caches too).
  */
-export type LiveFormatInfo = { formats: string[]; tsOnly: boolean; hls: boolean };
+export type LiveFormatInfo = {
+  formats: string[];
+  tsOnly: boolean;
+  hls: boolean;
+  /** How old the server-side cached probe is, when reported. */
+  cacheAgeMs?: number | null;
+  /** Container order the stream function will try. */
+  candidateOrder?: string[];
+};
 const formatCache = new Map<string, Promise<LiveFormatInfo>>();
 
-export function fetchLiveFormats(): Promise<LiveFormatInfo> {
+/**
+ * Panel capabilities (`allowed_output_formats`).
+ *
+ * `force` re-probes the provider immediately and drops both the client memo and
+ * the server-side 10-minute cache, so a format change at the provider is picked
+ * up without waiting out the TTL.
+ */
+export function fetchLiveFormats(force = false): Promise<LiveFormatInfo> {
   const key = activeSourceId ?? 'default';
   const hit = formatCache.get(key);
-  if (hit) return hit;
+  if (hit && !force) return hit;
+  if (force) formatCache.delete(key);
   const tokenPart = accessToken ? `&token=${encodeURIComponent(accessToken)}` : '';
   const p = fetch(
-    `${FN_BASE}/iptv-stream?info=1${sourceParam()}&apikey=${ANON}${tokenPart}`,
+    `${FN_BASE}/iptv-stream?info=1${force ? '&refresh=1' : ''}${sourceParam()}&apikey=${ANON}${tokenPart}`,
     { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined },
   )
     .then((r) => (r.ok ? r.json() : null))
@@ -193,10 +209,18 @@ export function fetchLiveFormats(): Promise<LiveFormatInfo> {
       formats: Array.isArray(j?.formats) ? (j.formats as string[]) : [],
       tsOnly: Boolean(j?.tsOnly),
       hls: Boolean(j?.hls),
+      cacheAgeMs: typeof j?.cacheAgeMs === 'number' ? (j.cacheAgeMs as number) : null,
+      candidateOrder: Array.isArray(j?.candidateOrder) ? (j.candidateOrder as string[]) : [],
     }))
-    .catch(() => ({ formats: [], tsOnly: false, hls: false }));
+    .catch(() => ({ formats: [], tsOnly: false, hls: false, cacheAgeMs: null, candidateOrder: [] }));
   formatCache.set(key, p);
   return p;
+}
+
+/** Forget the memoised capabilities for one source (or all of them). */
+export function invalidateLiveFormats(sourceId?: string) {
+  if (sourceId) formatCache.delete(sourceId);
+  else formatCache.clear();
 }
 
 
