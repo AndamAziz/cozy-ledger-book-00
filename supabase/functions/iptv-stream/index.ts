@@ -303,10 +303,36 @@ Deno.serve(async (req) => {
     } catch {
       // Redirect probing failed: the un-resolved candidate is still worth a try.
     }
+    /**
+     * VOD only: a movie/episode is worthless without seeking. Some panels/CDNs
+     * answer a ranged request with a full-body 200, and the media element then
+     * reports a length it cannot seek inside — the exact reason playback jumped
+     * to the end after a few seconds. Probe one tiny range: when the provider
+     * does NOT honour it, direct play is refused and the proxy path (which
+     * fabricates proper 206 slices) is used instead.
+     */
+    let ranges: boolean | null = null
+    if (kind !== 'live' && /^https:\/\//i.test(url)) {
+      try {
+        const probe = await fetch(url, {
+          headers: { ...baseHeaders, Range: 'bytes=0-1', 'User-Agent': uaList[0] },
+          redirect: 'follow',
+          signal: AbortSignal.timeout(6_000),
+        })
+        ranges =
+          probe.status === 206 &&
+          /bytes/i.test(probe.headers.get('content-range') ?? '')
+        await probe.body?.cancel().catch(() => undefined)
+      } catch {
+        ranges = null
+      }
+    }
+    const direct = /^https:\/\//i.test(url) && (kind === 'live' || ranges === true)
     return new Response(
       JSON.stringify({
         url,
-        direct: /^https:\/\//i.test(url),
+        direct,
+        ranges,
         candidates: candidates.length,
         format: candidateFormat(target),
         tsOnly: Boolean(liveFmt?.tsOnly),
@@ -314,6 +340,7 @@ Deno.serve(async (req) => {
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=20' } },
     )
   }
+
 
 
   let upstream: Response | null = null
