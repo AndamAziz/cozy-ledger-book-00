@@ -1091,7 +1091,7 @@ export function LiveTVPlayer({
               {channel.name}
             </p>
           </div>
-          <LivePlaybackDiagnostics className="hidden shrink-0 sm:block" />
+          
           {levels.length > 0 && (
             <div className="relative">
               <button
