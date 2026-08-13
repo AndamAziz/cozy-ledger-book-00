@@ -807,10 +807,10 @@ export function LiveTVPlayer({
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         e.preventDefault();
         const delta = e.key === 'ArrowRight' ? 30 : -10;
-        v.currentTime = Math.min(Math.max(v.currentTime + delta, 0), v.duration);
-        setCurrentTime(v.currentTime);
+        seekRef.current(v.currentTime + delta);
         setBarOpen(true);
       }
+
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
