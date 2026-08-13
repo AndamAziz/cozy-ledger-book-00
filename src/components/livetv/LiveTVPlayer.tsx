@@ -29,9 +29,13 @@ import { acquirePlayerMount, releasePlayerMount } from '@/lib/playerMount';
 import { diagnoseStream, type StreamDiagnosis } from '@/lib/streamDiagnose';
 import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
 
-/** Silent wait-out for the provider's single-slot / throttle refusals. */
-const SLOT_WAIT_MS = 6_000;
-const MAX_SLOT_WAITS = 4;
+/**
+ * Silent wait-out for the provider's single-slot / throttle refusals. The
+ * viewer must never see a popup for those: they clear by themselves, so we keep
+ * reconnecting behind the normal spinner for a generous number of rounds.
+ */
+const SLOT_WAIT_MS = 5_000;
+const MAX_SLOT_WAITS = 8;
 
 
 import { TV_EVENT, isTvDevice } from '@/lib/tvRemote';
