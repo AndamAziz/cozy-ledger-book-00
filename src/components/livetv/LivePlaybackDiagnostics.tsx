@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, ChevronDown, Download, RefreshCw } from 'lucide-react';
+import { Activity, Check, ChevronDown, Copy, Download, RefreshCw } from 'lucide-react';
 import {
   probeContentType,
   subscribeLiveDiag,
@@ -23,6 +23,7 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
   const [open, setOpen] = useState(false);
   const [ctype, setCtype] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => subscribeLiveDiag(setDiag), []);
 
@@ -32,9 +33,9 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
     setProbing(false);
   };
 
-  const downloadReport = () => {
-    if (!diag) return;
-    const report = {
+  const buildReport = () => {
+    if (!diag) return null;
+    return {
       generatedAt: new Date().toISOString(),
       app: {
         url: window.location.href,
@@ -46,15 +47,32 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
         observedContentType: ctype ?? diag.contentType ?? null,
       },
     };
+  };
+
+  const downloadReport = () => {
+    const report = buildReport();
+    if (!report) return;
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `iptv-diag-${diag.channelName.replace(/[^a-z0-9]/gi, '_').slice(0, 30)}-${Date.now()}.json`;
+    a.download = `iptv-diag-${diag!.channelName.replace(/[^a-z0-9]/gi, '_').slice(0, 30)}-${Date.now()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const copyJson = async () => {
+    const report = buildReport();
+    if (!report) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* ignore unsupported contexts */
+    }
   };
 
   // First open (and every engine/channel change while open) refreshes the
@@ -95,13 +113,21 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
           />
           <Row label="TS-only panel" value={diag.tsOnly ? 'yes' : 'no'} />
           <Row label="Ladder stage" value={`${diag.stage + 1}/${diag.ladder.length} · try ${diag.attempt + 1}`} />
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-1 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => diag.src && void probe(diag.src)}
               className="flex items-center gap-1 rounded-md border border-white/20 px-2 py-0.5 font-bold text-white/80 transition hover:text-white"
             >
               <RefreshCw className={`h-3 w-3 ${probing ? 'animate-spin' : ''}`} /> Re-probe
+            </button>
+            <button
+              type="button"
+              onClick={copyJson}
+              className="flex items-center gap-1 rounded-md border border-white/20 px-2 py-0.5 font-bold text-white/80 transition hover:text-white"
+            >
+              {copied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+              {copied ? 'Copied' : 'Copy JSON'}
             </button>
             <button
               type="button"
