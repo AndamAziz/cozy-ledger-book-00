@@ -1050,7 +1050,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                               className="rounded-xl text-xs gap-1.5"
                             >
                               <MoreVertical className="h-3.5 w-3.5" />
-                              {t('manage') !== 'manage' ? t('manage') : 'Manage'}
+                              {t('actions')}
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-56 rounded-xl bg-popover/95 backdrop-blur-xl z-50">
