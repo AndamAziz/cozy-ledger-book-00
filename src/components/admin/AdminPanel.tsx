@@ -711,29 +711,84 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             </div>
           )}
 
+        {/* Search + Filters (sticky, always on top) */}
+        <div className="sticky top-0 z-30 -mx-1 px-1 py-3 mb-4 bg-background/85 backdrop-blur-xl border-b border-border/40">
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder={t('searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-10 rounded-xl py-6 bg-secondary/40 border-border/60"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchQuery('')}
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 h-8 w-8 p-0 rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {filterTabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveFilter(tab.key)}
+                className={`flex-shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
+                  activeFilter === tab.key
+                    ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20'
+                    : 'bg-secondary/40 text-muted-foreground border-border/50 hover:text-foreground'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`rounded-full px-1.5 text-[10px] ${activeFilter === tab.key ? 'bg-primary-foreground/20' : 'bg-background/60'}`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {isSearching && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t('filter')}: “{searchQuery}” — {filteredUsers.length}
+            </p>
+          )}
+        </div>
+
         {/* Audit log trigger */}
-        <div className="mb-6">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setShowActivityLogDialog(true);
-              fetchActivityLogs();
-            }}
-            className="rounded-lg flex items-center gap-1.5"
-          >
-            <History className="h-4 w-4" />
-            <span className="text-xs md:text-sm">{t('activityLog')}</span>
-          </Button>
-        </div>
+        {!isSearching && (
+          <div className="mb-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowActivityLogDialog(true);
+                fetchActivityLogs();
+              }}
+              className="rounded-lg flex items-center gap-1.5"
+            >
+              <History className="h-4 w-4" />
+              <span className="text-xs md:text-sm">{t('activityLog')}</span>
+            </Button>
+          </div>
+        )}
 
-        {/* Sport Live server management (CEO only) */}
-        <StreamServerManager isCEO={isCEO} />
+        {!isSearching && (
+          <>
+            {/* Sport Live server management (CEO only) */}
+            <StreamServerManager isCEO={isCEO} />
 
-        {/* IPTV playlist server configuration */}
-        <div className="mt-4">
-          <LiveTvUsersAdmin />
-        </div>
+            {/* IPTV playlist server configuration */}
+            <div className="mt-4">
+              <LiveTvUsersAdmin />
+            </div>
+          </>
+        )}
+
 
 
 
