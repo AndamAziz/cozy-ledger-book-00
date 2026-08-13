@@ -391,6 +391,8 @@ export function LiveTVPlayer({
      * user to try again rather than looping forever.
      */
     let diagnosing = false;
+    /** In-place mid-playback recoveries used so far (VOD only). */
+    let midRecover = 0;
     const nextEngine = () => {
       if (disposed || diagnosing) return;
       clearWatchdog();
@@ -401,10 +403,22 @@ export function LiveTVPlayer({
         usingDirect = false;
         directDead.current = true;
         invalidateDirectUrl(channel.id);
+        if (!isLiveKind) vodResume.current = video.currentTime;
         safeDestroy();
         setReload((r) => r + 1);
         return;
       }
+      // A movie / episode that was already playing must never restart from zero
+      // or be left frozen on a paused frame: reload the same source in place and
+      // continue from the exact second the viewer was at.
+      if (!isLiveKind && startedRef.current && midRecover < 3) {
+        midRecover += 1;
+        vodResume.current = video.currentTime;
+        safeDestroy();
+        setReload((r) => r + 1);
+        return;
+      }
+
       // Before burning more attempts, ask the proxy what actually went wrong.
       // A single-slot provider (HTTP 458/429 MAX_CONNECTIONS) must be reported
       // honestly, and the ladder MUST stay paused while we ask — otherwise the
