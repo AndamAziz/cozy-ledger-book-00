@@ -32,6 +32,31 @@ export function LivePlaybackDiagnostics({ className = '' }: { className?: string
     setProbing(false);
   };
 
+  const downloadReport = () => {
+    if (!diag) return;
+    const report = {
+      generatedAt: new Date().toISOString(),
+      app: {
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+      },
+      playback: {
+        ...diag,
+        observedContentType: ctype ?? diag.contentType ?? null,
+      },
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `iptv-diag-${diag.channelName.replace(/[^a-z0-9]/gi, '_').slice(0, 30)}-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   // First open (and every engine/channel change while open) refreshes the
   // observed content-type.
   useEffect(() => {
