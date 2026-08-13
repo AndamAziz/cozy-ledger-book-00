@@ -165,9 +165,19 @@ export function LiveTVPlayer({
    * trying it and stream through the proxy for the rest of the session.
    */
   const directDead = useRef(false);
+  /** True once real frames were shown — a stall after this is recoverable. */
+  const startedRef = useRef(false);
+  /** The viewer pressed pause themselves: never auto-resume in that case. */
+  const userPausedRef = useRef(false);
+  /** Position (seconds) a VOD reload must continue from. */
+  const vodResume = useRef<number | null>(null);
   useEffect(() => {
     directDead.current = false;
-  }, [channel.id]);
+    startedRef.current = false;
+    userPausedRef.current = false;
+    vodResume.current = null;
+  }, [channel.id, currentEpisodeId]);
+
 
 
 
@@ -261,6 +271,8 @@ export function LiveTVPlayer({
     const video = videoRef.current;
     if (!video) return;
     let retryTimer: number | undefined;
+    const isLiveKind = (channel.kind ?? 'live') === 'live';
+
 
 
     // Destroying an engine is guarded: a throw here used to bubble up, hit the
@@ -391,6 +403,8 @@ export function LiveTVPlayer({
      * user to try again rather than looping forever.
      */
     let diagnosing = false;
+    /** In-place mid-playback recoveries used so far (VOD only). */
+    let midRecover = 0;
     const nextEngine = () => {
       if (disposed || diagnosing) return;
       clearWatchdog();
@@ -401,10 +415,22 @@ export function LiveTVPlayer({
         usingDirect = false;
         directDead.current = true;
         invalidateDirectUrl(channel.id);
+        if (!isLiveKind) vodResume.current = video.currentTime;
         safeDestroy();
         setReload((r) => r + 1);
         return;
       }
+      // A movie / episode that was already playing must never restart from zero
+      // or be left frozen on a paused frame: reload the same source in place and
+      // continue from the exact second the viewer was at.
+      if (!isLiveKind && startedRef.current && midRecover < 3) {
+        midRecover += 1;
+        vodResume.current = video.currentTime;
+        safeDestroy();
+        setReload((r) => r + 1);
+        return;
+      }
+
       // Before burning more attempts, ask the proxy what actually went wrong.
       // A single-slot provider (HTTP 458/429 MAX_CONNECTIONS) must be reported
       // honestly, and the ladder MUST stay paused while we ask — otherwise the
@@ -479,10 +505,70 @@ export function LiveTVPlayer({
 
     const onMediaError = () => nextEngine();
 
+    /** Frames are flowing — mid-playback faults may now recover in place. */
+    const onPlaying = () => {
+      startedRef.current = true;
+      done();
+    };
+    /** After a reload, continue the movie / episode where it stopped. */
+    const seekResume = () => {
+      const at = vodResume.current;
+      if (at == null || isLiveKind) return;
+      vodResume.current = null;
+      try {
+        if (at > 0) video.currentTime = at;
+      } catch {
+        /* metadata not ready — the next event retries */
+      }
+      if (!userPausedRef.current) video.play().catch(() => undefined);
+    };
 
-    video.addEventListener('playing', done);
+    video.addEventListener('playing', onPlaying);
     video.addEventListener('canplay', done);
     video.addEventListener('loadeddata', done);
+    video.addEventListener('loadeddata', seekResume);
+    video.addEventListener('canplay', seekResume);
+
+    /**
+     * VOD stall guard. Movies and episodes were "pausing for no reason": a
+     * segment/range request that never completes leaves the media element
+     * stalled with no error event, so nothing recovered it. Every 4s we check
+     * that the clock is still moving; two gentle nudges first, then a silent
+     * in-place reload from the same second.
+     */
+    let stallTicker: number | undefined;
+    if (!isLiveKind) {
+      let lastPos = -1;
+      let stallHits = 0;
+      stallTicker = window.setInterval(() => {
+        if (disposed || retrying) return;
+        if (video.paused || video.seeking || video.ended || userPausedRef.current || !startedRef.current) {
+          lastPos = video.currentTime;
+          stallHits = 0;
+          return;
+        }
+        if (video.currentTime > lastPos + 0.2) {
+          lastPos = video.currentTime;
+          stallHits = 0;
+          return;
+        }
+        stallHits += 1;
+        if (stallHits <= 2) {
+          try {
+            hlsRef.current?.startLoad();
+          } catch {
+            /* engine already gone */
+          }
+          video.play().catch(() => undefined);
+          return;
+        }
+        stallHits = 0;
+        vodResume.current = video.currentTime;
+        safeDestroy();
+        setReload((r) => r + 1);
+      }, 4_000);
+    }
+
 
     const attach = () => {
     if (engine === 'hls') {
@@ -663,10 +749,14 @@ export function LiveTVPlayer({
       clearWatchdog();
       clearTimeout(startTimer);
       if (retryTimer !== undefined) clearTimeout(retryTimer);
-      video.removeEventListener('playing', done);
+      if (stallTicker !== undefined) clearInterval(stallTicker);
+      video.removeEventListener('playing', onPlaying);
       video.removeEventListener('canplay', done);
       video.removeEventListener('loadeddata', done);
+      video.removeEventListener('loadeddata', seekResume);
+      video.removeEventListener('canplay', seekResume);
       video.removeEventListener('error', onMediaError);
+
       if ((channel.kind ?? 'live') === 'live') {
         // Count this as a real slot release. The next Live TV effect will wait
         // for the provider grace window before opening its upstream request.
@@ -835,9 +925,15 @@ export function LiveTVPlayer({
     const v = videoRef.current;
     if (!v) return;
     setBarOpen(true);
-    if (v.paused) v.play().catch(() => undefined);
-    else v.pause();
+    if (v.paused) {
+      userPausedRef.current = false;
+      v.play().catch(() => undefined);
+    } else {
+      userPausedRef.current = true;
+      v.pause();
+    }
   };
+
 
   /** Absolute seek, clamped to the media length. */
   const seekTo = (sec: number) => {
