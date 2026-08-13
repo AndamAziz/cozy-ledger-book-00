@@ -319,6 +319,8 @@ Deno.serve(async (req) => {
   let upstream: Response | null = null
   /** Provider URL the committed response really came from (relay-aware). */
   let upstreamBase = candidates[0] ?? ''
+  /** Container of the candidate the ladder committed to (diagnostics header). */
+  let chosenFmt = candidateFormat(candidates[0] ?? '')
   let lastError = 'fetch failed'
   let deadlineHit = false
   const trace: string[] = []
@@ -426,7 +428,8 @@ Deno.serve(async (req) => {
             lastError = 'invalid manifest'
             continue
           }
-          upstream = new Response(text, {
+          chosenFmt = fmt
+        upstream = new Response(text, {
             status: 200,
             headers: { 'Content-Type': 'application/vnd.apple.mpegurl' },
           })
@@ -443,6 +446,7 @@ Deno.serve(async (req) => {
           lastError = 'provider returned a block page (HTML)'
           continue
         }
+        chosenFmt = fmt
         upstream = res
         upstreamBase = resolvedUrl
         clearCooldown(target)
@@ -561,7 +565,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/vnd.apple.mpegurl',
         'Cache-Control': 'no-store',
         'Access-Control-Expose-Headers': 'Content-Type, X-Iptv-Format, X-Iptv-Upstream-Type',
-        'X-Iptv-Format': candidateFormat(upstreamBase),
+        'X-Iptv-Format': chosenFmt,
         'X-Iptv-Upstream-Type': ct || 'unknown',
       },
     })
@@ -579,7 +583,7 @@ Deno.serve(async (req) => {
   )
   // Live diagnostics: which container the ladder committed to, and what the
   // provider actually answered with.
-  out.set('X-Iptv-Format', candidateFormat(upstreamBase))
+  out.set('X-Iptv-Format', chosenFmt)
   out.set('X-Iptv-Upstream-Type', ct || 'unknown')
   const cr = upstream.headers.get('content-range')
   const clen = upstream.headers.get('content-length')
