@@ -18,6 +18,7 @@ import {
 import {
   resumeKey, getResume, saveResume, clearResume, RESUME_END_MARGIN,
 } from '@/lib/resumePlayback';
+import { canSeekTo, isPrematureEnd } from '@/lib/vodSeek';
 import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
 import { liveEngineOrder, candidateFormatFor } from '@/lib/liveLadder';
 import { clearLiveDiag, publishLiveDiag } from '@/lib/livePlaybackDiag';
