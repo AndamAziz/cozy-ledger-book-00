@@ -968,19 +968,43 @@ export function LiveTVPlayer({
   };
 
 
+  /**
+   * Re-open the movie / episode at `sec` through the proxy.
+   *
+   * Native IPTV players re-request the file at a byte offset when the provider
+   * refuses HTTP Range on the direct CDN URL. Our proxy synthesizes proper 206
+   * slices, so switching to it makes mid-file seeking work everywhere.
+   */
+  const reloadFrom = (sec: number) => {
+    vodResume.current = Math.max(0, sec);
+    if (!directDead.current) {
+      directDead.current = true;
+      invalidateDirectUrl(channel.id);
+    }
+    setLoading(true);
+    setReload((r) => r + 1);
+  };
+
   /** Absolute seek, clamped to the media length. */
   const seekTo = (sec: number) => {
     const v = videoRef.current;
     if (!v || !seekable) return;
     const next = Math.min(Math.max(sec, 0), duration);
+    setCurrentTime(next);
+    setBarOpen(true);
+    // The element cannot seek there (Range-less progressive stream): reload in
+    // place from that offset instead of letting the browser jump to the end.
+    if (next > 1 && !canSeekTo(v.seekable, next)) {
+      reloadFrom(next);
+      return;
+    }
     try {
       v.currentTime = next;
     } catch {
       /* seek before metadata — ignored */
     }
-    setCurrentTime(next);
-    setBarOpen(true);
   };
+
 
   /** Relative skip: negative rewinds, positive fast-forwards. */
   const skip = (delta: number) => seekTo((videoRef.current?.currentTime ?? 0) + delta);
