@@ -1191,15 +1191,6 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           )}
           </div>
         )}
-
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          </div>
-        )}
       </div>
 
       {/* Approve Dialog */}
