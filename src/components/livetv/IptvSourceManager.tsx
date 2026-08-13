@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import { supabase } from '@/integrations/supabase/client';
+import { fetchLiveFormats, invalidateLiveFormats } from '@/hooks/useIptvPlaylist';
 import { toast } from 'sonner';
 
 /**
@@ -176,6 +177,8 @@ export function IptvSourceManager({
 
   // Per-row stream-resolver probe (does not block the row UI).
   const [rowTesting, setRowTesting] = useState<string | null>(null);
+  const [fmtBusy, setFmtBusy] = useState(false);
+  const [fmtInfo, setFmtInfo] = useState<Awaited<ReturnType<typeof fetchLiveFormats>> | null>(null);
   const [rowTest, setRowTest] = useState<Record<string, RowTestResult>>({});
   // Per-row provider health probe (moved here from the Live TV page).
   const [healthBusy, setHealthBusy] = useState<string | null>(null);
@@ -526,8 +529,55 @@ export function IptvSourceManager({
     }
   };
 
+  /**
+   * Re-probe `allowed_output_formats` for the ACTIVE source right now. Providers
+   * change which containers they serve without notice; this drops the 10-minute
+   * server cache so the player's engine ladder follows the change immediately.
+   */
+  const refreshFormats = async () => {
+    setFmtBusy(true);
+    try {
+      invalidateLiveFormats();
+      const info = await fetchLiveFormats(true);
+      setFmtInfo(info);
+      toast.success(
+        info.formats.length
+          ? `Formats: ${info.formats.join(', ')}${info.tsOnly ? ' · TS-only' : ''}`
+          : 'Provider does not advertise formats — probing .ts then .m3u8',
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not refresh formats');
+    } finally {
+      setFmtBusy(false);
+    }
+  };
+
   return (
     <div className={`w-full space-y-3 text-left ${compact ? '' : 'max-w-md'}`}>
+      {canManage && !userId && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-extrabold uppercase tracking-wide">Stream formats</p>
+            <p dir="ltr" className="text-[10px] opacity-60">
+              {fmtInfo
+                ? `${fmtInfo.formats.length ? fmtInfo.formats.join(', ') : 'not advertised'}${
+                    fmtInfo.tsOnly ? ' · TS-only' : ''
+                  }${
+                    fmtInfo.candidateOrder?.length ? ` · try ${fmtInfo.candidateOrder.join(' → ')}` : ''
+                  }`
+                : 'Active source · refresh to re-probe the provider now'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshFormats()}
+            disabled={fmtBusy}
+            className="flex items-center gap-1 rounded-full border border-white/15 px-2.5 py-1 text-[10px] font-bold transition hover:border-white/40 disabled:opacity-40"
+          >
+            <RefreshCw className={`h-3 w-3 ${fmtBusy ? 'animate-spin' : ''}`} /> Refresh formats
+          </button>
+        </div>
+      )}
       {canManage && !userId && (
         <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
           <div className="flex items-center gap-2">
