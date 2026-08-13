@@ -13,6 +13,7 @@ export type StreamErrorCode =
   | 'GEO_BLOCKED'
   | 'WAF_BLOCK'
   | 'CHANNEL_OFFLINE'
+  | 'CHANNEL_UNAVAILABLE'
   | 'PROVIDER_DOWN'
   | 'TIMEOUT'
   | 'UNKNOWN'
@@ -31,6 +32,8 @@ const M: Record<StreamErrorCode, string> = {
   RATE_LIMITED: 'Your IPTV provider is limiting requests right now. Retrying automatically in a moment.',
   GEO_BLOCKED: 'Your IPTV provider is blocking this connection by region. Trying an alternative route.',
   WAF_BLOCK: 'Your IPTV provider answered with a block page instead of the stream. Please try again shortly.',
+  CHANNEL_UNAVAILABLE:
+    'Your provider refused this channel while the account still has free viewing slots. PPV / premium channels usually need an extra purchase on your IPTV subscription.',
   CHANNEL_OFFLINE: 'This channel is offline on your provider right now. Try another channel.',
   PROVIDER_DOWN: 'Your IPTV provider is unreachable at the moment. Please try again in a few minutes.',
   TIMEOUT: 'The stream did not start in time. Your provider or connection is too slow right now.',
@@ -40,7 +43,7 @@ const M: Record<StreamErrorCode, string> = {
 export const streamError = (code: StreamErrorCode, extra?: string): StreamError => ({
   code,
   message: extra ? `${M[code]} (${extra})` : M[code],
-  retryable: code !== 'AUTH_FAILED' && code !== 'ACCOUNT_EXPIRED',
+  retryable: code !== 'AUTH_FAILED' && code !== 'ACCOUNT_EXPIRED' && code !== 'CHANNEL_UNAVAILABLE',
 })
 
 /** Map an upstream HTTP status (+ optional body) to a classified error. */

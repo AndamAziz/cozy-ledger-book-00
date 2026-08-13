@@ -96,3 +96,36 @@ export function candidateFormat(url: string): string {
   return (m?.[1] ?? 'raw').toLowerCase()
 }
 
+
+/**
+ * Live connection usage for an Xtream account (`active_cons` / `max_connections`).
+ *
+ * A PPV / premium channel the subscription does not include is refused with the
+ * same 407/458 status a full account gets. Reading the real slot usage tells the
+ * two apart: slots free + refusal = entitlement problem, not a slot problem.
+ */
+export async function liveConnectionUsage(
+  source: string,
+  timeoutMs = 5_000,
+): Promise<{ active: number; max: number } | null> {
+  for (const base of xtreamApiBases(source)) {
+    try {
+      const res = await egressFetch(base, {
+        headers: { Accept: 'application/json', 'User-Agent': IPTV_USER_AGENTS[0] },
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+      if (!res.ok) {
+        await res.body?.cancel().catch(() => undefined)
+        continue
+      }
+      const body = await res.json().catch(() => null)
+      const info = body?.user_info
+      const active = Number(info?.active_cons)
+      const max = Number(info?.max_connections)
+      if (Number.isFinite(active) && Number.isFinite(max) && max > 0) return { active, max }
+    } catch {
+      // try the next origin
+    }
+  }
+  return null
+}

@@ -20,7 +20,7 @@ import {
 } from '@/lib/resumePlayback';
 import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff';
 import { liveEngineOrder, candidateFormatFor } from '@/lib/liveLadder';
-import { clearLiveDiag, publishLiveDiag } from '@/lib/livePlaybackDiag';
+import { clearLiveDiag, publishLiveDiag, isLiveDiagDebug } from '@/lib/livePlaybackDiag';
 import { LivePlaybackDiagnostics } from './LivePlaybackDiagnostics';
 import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
 
@@ -158,6 +158,12 @@ export function LiveTVPlayer({
   const [attempt, setAttempt] = useState(0);
   /** True while waiting out the backoff between whole-ladder retries. */
   const [retrying, setRetrying] = useState(false);
+  /**
+   * True when the ladder gave up on a provider refusal that looks like a slot
+   * limit. Some panels answer PPV / not-included channels with exactly the same
+   * status, so the message says so instead of blaming the connection.
+   */
+  const [slotHint, setSlotHint] = useState(false);
   /** Bumped by the manual Retry button to force a fresh ladder run. */
   const [reload, setReload] = useState(0);
   /**
@@ -175,6 +181,9 @@ export function LiveTVPlayer({
   const [selectedLevel, setSelectedLevel] = useState(-1);
   const [autoLabel, setAutoLabel] = useState<string | null>(null);
   const [qualityOpen, setQualityOpen] = useState(false);
+  // Support-only surface: `?debug=1` turns the playback diagnostics chip on.
+  const diagDebug = useMemo(() => isLiveDiagDebug(), []);
+
   const [barOpen, setBarOpen] = useState(true);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -447,7 +456,10 @@ export function LiveTVPlayer({
           if (retryTimer !== undefined) clearTimeout(retryTimer);
           setRetrying(false);
           setLoading(false);
-          if (diag.waitOnly) setError(true);
+          if (diag.waitOnly) {
+            setSlotHint(true);
+            setError(true);
+          }
           else setBlocked(diag);
           return;
         }
@@ -992,7 +1004,7 @@ export function LiveTVPlayer({
               {channel.name}
             </p>
           </div>
-          <LivePlaybackDiagnostics className="hidden shrink-0 sm:block" />
+          {diagDebug && <LivePlaybackDiagnostics className="hidden shrink-0 sm:block" />}
           {levels.length > 0 && (
             <div className="relative">
               <button
@@ -1254,6 +1266,7 @@ export function LiveTVPlayer({
                   onClick={() => {
                     setBlocked(null);
                     setRetrying(false);
+                    setSlotHint(false);
                     setError(false);
                     setStage(0);
                     setAttempt(0);
@@ -1318,11 +1331,12 @@ export function LiveTVPlayer({
                 <AlertTriangle className="h-6 w-6" style={{ color: '#ff2d6f' }} />
               </span>
               <p className="text-sm font-extrabold tracking-tight text-white">
-                This channel is not responding
+                {slotHint ? 'This channel would not start' : 'This channel is not responding'}
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-white/50">
-                We tried {MAX_STREAM_RETRIES} times without luck. Please try again in a moment,
-                or pick another channel.
+                {slotHint
+                  ? 'Your provider kept refusing this channel. If other channels play fine, it is most likely a PPV / premium channel that is not included in your subscription.'
+                  : `We tried ${MAX_STREAM_RETRIES} times without luck. Please try again in a moment, or pick another channel.`}
               </p>
               <div className="mt-4 flex justify-center gap-2">
                 <button

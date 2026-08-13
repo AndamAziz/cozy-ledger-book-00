@@ -23,12 +23,19 @@ const TITLES: Record<string, string> = {
   AUTH_FAILED: 'Provider rejected the account',
   SUBSCRIPTION_EXPIRED: 'Subscription expired',
   NOT_FOUND: 'This channel is no longer on the provider',
+  CHANNEL_UNAVAILABLE: 'This channel is not available on your subscription',
+  CHANNEL_OFFLINE: 'This channel is offline right now',
+  NOT_MEDIA: 'The provider sent a message instead of video',
 };
 
 const DETAILS: Record<string, string> = {
   MAX_CONNECTIONS:
     'Your IPTV account allows one stream at a time and another device (or a stream you just closed) is still holding it. Wait ~30 seconds and press Retry.',
   RATE_LIMITED: 'The provider asked us to slow down. Wait a moment and press Retry.',
+  CHANNEL_UNAVAILABLE:
+    'Your provider refused this channel while your account still had a free viewing slot. PPV and premium channels usually need an extra purchase on your IPTV subscription. Try another channel.',
+  NOT_MEDIA:
+    'The provider answered this channel with text instead of a video stream, so there is nothing to play. Try another channel.',
 };
 
 /**
@@ -59,7 +66,16 @@ export async function diagnoseStream(src: string, timeoutMs = 12_000): Promise<S
       } catch {
         return null;
       }
-      if (!TITLES[code]) return null;
+      if (!TITLES[code]) {
+        // An unrecognised JSON payload is still NOT media: stop the ladder here
+        // instead of letting the engines parse a message as video forever.
+        return {
+          code: 'NOT_MEDIA',
+          title: TITLES.NOT_MEDIA,
+          detail: message ? `${DETAILS.NOT_MEDIA} (${message})` : DETAILS.NOT_MEDIA,
+          waitOnly: false,
+        };
+      }
       return {
         code,
         title: TITLES[code],
