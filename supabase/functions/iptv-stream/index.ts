@@ -327,6 +327,7 @@ Deno.serve(async (req) => {
   /** Provider answered 200 with a message instead of media (PPV / not entitled). */
   let notMedia = false
   let providerMessage = ''
+  let usageTrace = ''
   const trace: string[] = []
 
   const OVERALL_DEADLINE_MS = 12_000
@@ -536,6 +537,7 @@ Deno.serve(async (req) => {
     // problem — report it honestly instead of "all slots in use".
     if (slotLimited && kind === 'live') {
       const usage = await liveConnectionUsage(source).catch(() => null)
+      usageTrace = usage ? `${usage.active}/${usage.max}` : 'unknown'
       if (usage && usage.active < usage.max) {
         slotLimited = false
         notMedia = true
@@ -554,7 +556,7 @@ Deno.serve(async (req) => {
             ? streamError('TIMEOUT', `${OVERALL_DEADLINE_MS / 1000}s`)
             : (classified ?? classifyTransport(lastError))
     console.error(
-      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, slotLimited, code: error.code, lastError, trace })}`,
+      `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, slotLimited, usage: usageTrace, code: error.code, lastError, trace })}`,
     )
     return json(
       {
