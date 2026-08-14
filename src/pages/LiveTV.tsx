@@ -443,22 +443,14 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
             )}
           </section>
         ) : fullCategory ? (
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={() => setFullCategory(null)}
-              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-[11px] font-bold text-white/80 transition hover:border-[#b026ff]/60 hover:text-white"
-            >
-              <ArrowLeft className="h-3 w-3" /> Categories
-            </button>
-            <CategorySection
-              category={fullCategory}
-              onPlay={openItem}
-              eager
-              kind={playbackKind}
-              poster={usePoster}
-            />
-          </div>
+          <CategoryFullView
+            category={fullCategory}
+            onPlay={openItem}
+            onBack={() => setFullCategory(null)}
+            kind={playbackKind}
+            poster={usePoster}
+            gridClass={usePoster ? GRID_POSTER : GRID_LIVE}
+          />
         ) : (
           <div className="space-y-3">
             {categories.slice(0, catWindow.limit).map((category) => (
