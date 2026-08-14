@@ -373,7 +373,9 @@ Deno.serve(async (req) => {
       const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
       const url = (d: string, ext: string) => `${cred}/${d}/${username}/${password}/${streamId}.${ext}`
       const primary = extHint ? [url(dirs[0], extHint), url(dirs[1], extHint)] : []
-      const fallbackExts = ['mp4', 'mkv', 'avi'].filter((e) => e !== extHint)
+      // `ts` belongs here: many panels serve VOD as MPEG-TS, and omitting it
+      // used to leave the whole ladder guessing mp4/mkv/avi and failing 422.
+      const fallbackExts = ['mp4', 'mkv', 'ts', 'avi'].filter((e) => e !== extHint)
       const fallback = fallbackExts.flatMap((ext) => dirs.map((d) => url(d, ext)))
       return [...primary, ...fallback]
     }
