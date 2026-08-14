@@ -394,21 +394,44 @@ export function AndroidStudioCode() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {/* Mobile: native dropdown (easy to pick with a thumb) */}
+          <div className="sm:hidden">
+            <label className="mb-1 block text-[11px] font-medium text-muted-foreground">
+              File
+            </label>
+            <select
+              dir="ltr"
+              value={active}
+              onChange={(e) => setActive(Number(e.target.value))}
+              className="h-11 w-full rounded-xl border border-border/60 bg-secondary/40 px-3 text-sm font-medium text-foreground outline-none focus:border-primary"
+            >
+              {FILES.map((f, i) => (
+                <option key={f.path} value={i}>
+                  {f.path.split('/').pop()}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Desktop / laptop: wrapped chips with comfortable hit areas */}
+          <div className="hidden flex-wrap gap-2 sm:flex">
             {FILES.map((f, i) => (
               <button
                 key={f.path}
                 onClick={() => setActive(i)}
-                className={`flex-shrink-0 rounded-full px-3 py-1.5 text-[11px] font-medium border transition-all ${
+                aria-pressed={active === i}
+                dir="ltr"
+                className={`min-h-9 flex-shrink-0 rounded-xl px-3.5 py-2 text-xs font-semibold border transition-all ${
                   active === i
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-secondary/40 text-muted-foreground border-border/50 hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/25'
+                    : 'bg-secondary/40 text-muted-foreground border-border/50 hover:text-foreground hover:border-primary/40'
                 }`}
               >
                 {f.path.split('/').pop()}
               </button>
             ))}
           </div>
+
 
           <div className="flex items-center justify-between gap-2 mt-2">
             <p className="text-[11px] text-muted-foreground truncate" dir="ltr">
