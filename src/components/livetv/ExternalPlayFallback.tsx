@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { ExternalLink, Copy, Check } from 'lucide-react';
-import { copyStreamUrl, externalPlayerTargets } from '@/lib/externalPlayer';
+import { ExternalLink } from 'lucide-react';
+import { externalPlayerTargets } from '@/lib/externalPlayer';
 
 /**
  * Shown when the browser has no decoder for the file (HEVC video, Dolby/DTS
@@ -8,7 +7,6 @@ import { copyStreamUrl, externalPlayerTargets } from '@/lib/externalPlayer';
  * player that carries its own decoders instead of pretending it is broken.
  */
 export function ExternalPlayFallback({ src, compact = false }: { src: string; compact?: boolean }) {
-  const [copied, setCopied] = useState(false);
   const targets = externalPlayerTargets(src);
 
   return (
@@ -17,23 +15,14 @@ export function ExternalPlayFallback({ src, compact = false }: { src: string; co
         <a
           key={t.id}
           href={t.href}
+          title={`Open in ${t.label}`}
           className="flex items-center gap-1 rounded-full border border-white/20 bg-white/[0.08] px-2.5 py-1 text-[10px] font-bold text-white/85 transition hover:border-white/40 hover:text-white active:scale-95"
         >
           <ExternalLink className="h-3 w-3" />
           {t.label}
         </a>
       ))}
-      <button
-        type="button"
-        onClick={async () => {
-          setCopied(await copyStreamUrl(src));
-          setTimeout(() => setCopied(false), 2000);
-        }}
-        className="flex items-center gap-1 rounded-full border border-white/20 bg-white/[0.08] px-2.5 py-1 text-[10px] font-bold text-white/85 transition hover:border-white/40 hover:text-white active:scale-95"
-      >
-        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-        {copied ? 'Copied' : 'Copy link'}
-      </button>
     </div>
   );
 }
+

@@ -44,13 +44,3 @@ export function externalPlayerTargets(src: string): ExternalPlayerTarget[] {
   return targets;
 }
 
-/** Copy the stream URL so it can be pasted into any player. */
-export async function copyStreamUrl(src: string): Promise<boolean> {
-  const url = absoluteStreamUrl(src);
-  try {
-    await navigator.clipboard.writeText(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
