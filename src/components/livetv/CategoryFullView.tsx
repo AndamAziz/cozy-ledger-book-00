@@ -4,6 +4,7 @@ import { useIptvChannels, type IptvCategory, type IptvChannel } from '@/hooks/us
 import { ChannelCard } from './ChannelCard';
 import { PosterCard } from './PosterCard';
 import { setZapList } from '@/lib/zapList';
+import { getSeeAllState, seeAllKey, setSeeAllState } from '@/lib/seeAllCache';
 
 interface Props {
   category: IptvCategory;
@@ -24,21 +25,49 @@ const PAGE = 60;
  * the category is reachable instead of stopping at the preview strip.
  */
 export function CategoryFullView({ category, kind, poster, gridClass, onPlay, onBack }: Props) {
-  const [limit, setLimit] = useState(PAGE);
-  const [q, setQ] = useState('');
+  const cacheKey = seeAllKey(kind, category.id);
+  const cached = getSeeAllState(cacheKey);
+  const [limit, setLimit] = useState(cached?.limit || PAGE);
+  const [q, setQ] = useState(cached?.q ?? '');
   const sentinel = useRef<HTMLDivElement | null>(null);
+  const restored = useRef(false);
 
-  // A new category always restarts paging.
+  // Switching category resumes from that category's remembered depth (or page 1).
   useEffect(() => {
-    setLimit(PAGE);
-    setQ('');
-  }, [category.id]);
+    const prev = getSeeAllState(seeAllKey(kind, category.id));
+    setLimit(prev?.limit || PAGE);
+    setQ(prev?.q ?? '');
+    restored.current = false;
+  }, [category.id, kind]);
+
+  // Persist paging depth + filter so returning here hits the React Query cache.
+  useEffect(() => {
+    setSeeAllState(cacheKey, { limit, q });
+  }, [cacheKey, limit, q]);
 
   const { data, isFetching, isError, error, refetch } = useIptvChannels(category.id, true, limit);
   const channels = data?.channels ?? category.preview ?? null;
   const total = data?.total ?? category.count;
   const shown = channels?.length ?? 0;
   const hasMore = shown > 0 && shown < total;
+
+  // Restore scroll position once the cached grid is painted.
+  useEffect(() => {
+    if (restored.current || shown === 0) return;
+    restored.current = true;
+    const y = getSeeAllState(cacheKey)?.scrollY ?? 0;
+    if (y > 0) requestAnimationFrame(() => window.scrollTo({ top: y }));
+  }, [cacheKey, shown]);
+
+  // Remember where the user was reading.
+  useEffect(() => {
+    const onScroll = () => setSeeAllState(cacheKey, { scrollY: window.scrollY });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      setSeeAllState(cacheKey, { scrollY: window.scrollY });
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [cacheKey]);
 
   const visible = useMemo(() => {
     if (!channels) return null;
