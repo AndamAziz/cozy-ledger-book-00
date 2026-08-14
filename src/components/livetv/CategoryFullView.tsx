@@ -4,6 +4,7 @@ import { useIptvChannels, type IptvCategory, type IptvChannel } from '@/hooks/us
 import { ChannelCard } from './ChannelCard';
 import { PosterCard } from './PosterCard';
 import { setZapList } from '@/lib/zapList';
+import { getSeeAllState, seeAllKey, setSeeAllState } from '@/lib/seeAllCache';
 
 interface Props {
   category: IptvCategory;
