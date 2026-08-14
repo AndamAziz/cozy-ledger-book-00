@@ -28,6 +28,7 @@ import { audioCodecLabel, isMpegtsSilentAudio } from '@/lib/audioCodecSupport';
 import { claimStreamSlot, releaseActiveStream, unregisterStream } from '@/lib/streamSlot';
 import { acquirePlayerMount, releasePlayerMount } from '@/lib/playerMount';
 import { diagnoseStream, type StreamDiagnosis } from '@/lib/streamDiagnose';
+import { ExternalPlayFallback } from './ExternalPlayFallback';
 import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
 
 /**
