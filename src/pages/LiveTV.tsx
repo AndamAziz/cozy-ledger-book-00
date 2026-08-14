@@ -22,6 +22,7 @@ import { ChannelCard } from '@/components/livetv/ChannelCard';
 
 import { PosterCard } from '@/components/livetv/PosterCard';
 import { CategoryAccordion } from '@/components/livetv/CategoryAccordion';
+import { CategoryFullView } from '@/components/livetv/CategoryFullView';
 import { LiveTVPlayer } from '@/components/livetv/LiveTVPlayer';
 import { LiveBottomNav, type LiveTab } from '@/components/livetv/LiveBottomNav';
 import { SeriesDetail } from '@/components/livetv/SeriesDetail';
@@ -44,111 +45,6 @@ function tabOf(category: IptvCategory): LiveTab {
 const GRID_LIVE = 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 2xl:grid-cols-9 sm:gap-3 lg:gap-4';
 const GRID_POSTER = 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 2xl:grid-cols-8 sm:gap-3 lg:gap-4';
 
-function CategorySection({
-  category,
-  onPlay,
-  eager,
-  kind,
-  poster,
-}: {
-  category: IptvCategory;
-  onPlay: (c: IptvChannel) => void;
-  eager: boolean;
-  kind: 'live' | 'vod' | 'series';
-  poster: boolean;
-}) {
-  const gridClass = poster ? GRID_POSTER : GRID_LIVE;
-  const ref = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(eager);
-  // Paginate inside a category so huge groups never render thousands of nodes.
-  const [limit, setLimit] = useState(24);
-
-  useEffect(() => {
-    if (visible || !ref.current) return;
-    const io = new IntersectionObserver(
-      (entries) => entries.some((e) => e.isIntersecting) && setVisible(true),
-      { rootMargin: '300px' },
-    );
-    io.observe(ref.current);
-    return () => io.disconnect();
-  }, [visible]);
-
-  // A category whose preview already covers the requested page needs no request
-  // at all — the provider only allows one connection at a time.
-  const coveredByPreview = (category.preview?.length ?? 0) >= Math.min(limit, category.count);
-  const { data, isFetching } = useIptvChannels(category.id, visible && !coveredByPreview, limit);
-  // The index already carries the first page: show it while the full category
-  // request waits its turn on the provider's single connection slot.
-  const channels = data?.channels ?? category.preview ?? null;
-  const total = data?.total ?? category.count;
-  const shown = channels?.length ?? 0;
-  const hasMore = total > shown;
-
-
-  return (
-    <section ref={ref}>
-      <div className="mb-3 flex items-center gap-3">
-        <span className="h-4 w-1 shrink-0 rounded-full" style={{ background: 'linear-gradient(#ff2d6f,#b026ff)' }} />
-        <h2 className="truncate text-sm font-bold tracking-tight">{category.name}</h2>
-        {total > 0 && (
-          <span className="shrink-0 rounded-full bg-white/[0.07] px-2 py-0.5 text-[10px] font-bold text-white/50">
-            {total}
-          </span>
-        )}
-        <span className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
-      </div>
-
-      {!channels ? (
-        <div className={gridClass}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className={`animate-pulse rounded-2xl border border-white/5 bg-white/[0.03] ${poster ? 'h-[190px]' : 'h-[124px]'}`}
-            />
-          ))}
-        </div>
-      ) : (
-        <>
-          <div className={gridClass}>
-            {channels.map((channel) =>
-              poster ? (
-                <PosterCard
-                  key={channel.id}
-                  channel={{ ...channel, kind }}
-                  onPlay={(c) => {
-                    setZapList(channels);
-                    onPlay(c);
-                  }}
-                />
-              ) : (
-                <ChannelCard
-                  key={channel.id}
-                  channel={{ ...channel, kind }}
-                  onPlay={(c) => {
-                    setZapList(channels);
-                    onPlay(c);
-                  }}
-                />
-              ),
-            )}
-          </div>
-
-          {hasMore && (
-            <button
-              type="button"
-              onClick={() => setLimit((l) => l + 36)}
-              disabled={isFetching}
-              className="mx-auto mt-3 flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-1.5 text-[11px] font-bold text-white/70 transition hover:border-white/25 hover:text-white disabled:opacity-50"
-            >
-              {isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
-              Load more ({shown}/{total})
-            </button>
-          )}
-        </>
-      )}
-    </section>
-  );
-}
 
 
 const TAB_META: Record<LiveTab, { path: string; title: string; heading: string; description: string }> = {
@@ -443,22 +339,14 @@ export default function LiveTV({ tab = 'direct' }: { tab?: LiveTab }) {
             )}
           </section>
         ) : fullCategory ? (
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={() => setFullCategory(null)}
-              className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-[11px] font-bold text-white/80 transition hover:border-[#b026ff]/60 hover:text-white"
-            >
-              <ArrowLeft className="h-3 w-3" /> Categories
-            </button>
-            <CategorySection
-              category={fullCategory}
-              onPlay={openItem}
-              eager
-              kind={playbackKind}
-              poster={usePoster}
-            />
-          </div>
+          <CategoryFullView
+            category={fullCategory}
+            onPlay={openItem}
+            onBack={() => setFullCategory(null)}
+            kind={playbackKind}
+            poster={usePoster}
+            gridClass={usePoster ? GRID_POSTER : GRID_LIVE}
+          />
         ) : (
           <div className="space-y-3">
             {categories.slice(0, catWindow.limit).map((category) => (
