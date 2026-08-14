@@ -774,7 +774,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
         {/* Audit log trigger */}
         {!isSearching && (
-          <div className="mb-6">
+          <div className="mb-6 flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -787,6 +787,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               <History className="h-4 w-4" />
               <span className="text-xs md:text-sm">{t('activityLog')}</span>
             </Button>
+            {isCEO && <AndroidStudioCode />}
           </div>
         )}
 
