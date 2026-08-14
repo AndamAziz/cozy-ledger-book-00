@@ -1,5 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { parseXtream, isXtreamUrl, getM3U, xtreamOrigins } from '../_shared/iptvConfig.ts'
+import { parseXtream, isXtreamUrl, getM3U, xtreamOrigins, xtreamApiBases } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
 import { egressFetch, finalUrlOf, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
@@ -218,6 +218,51 @@ async function inspectHtmlLabel(
   }
 }
 
+/**
+ * Real `container_extension` for a VOD / episode id, straight from the panel.
+ *
+ * When the client sends no `ext` hint we used to guess mp4/mkv/avi across both
+ * `/movie/` and `/series/` — a panel answers every wrong guess with an HTML
+ * error page, so all candidates "failed" with `provider returned a block page`
+ * (HTTP 422). One cheap `get_vod_info` / `get_series_info` call removes the
+ * guessing entirely.
+ */
+const extCache = new Map<string, { ext: string; at: number }>()
+const EXT_TTL_MS = 6 * 60 * 60 * 1000
+
+async function lookupContainerExt(
+  source: string,
+  streamId: string,
+  kind: string,
+  signalMs = 4_000,
+): Promise<string> {
+  const key = `${source}|${kind}|${streamId}`
+  const hit = extCache.get(key)
+  if (hit && Date.now() - hit.at < EXT_TTL_MS) return hit.ext
+
+  const action = kind === 'series' ? 'get_series_info&series_id=' : 'get_vod_info&vod_id='
+  for (const base of xtreamApiBases(source)) {
+    try {
+      const res = await egressFetch(
+        `${base}&action=${action}${encodeURIComponent(streamId)}`,
+        { headers: { Accept: 'application/json', 'User-Agent': IPTV_USER_AGENTS[0] } },
+        {},
+      )
+      if (!res.ok) continue
+      const text = await res.text()
+      // Works for get_vod_info (movie_data) and get_series_info (episodes.*.container_extension).
+      const m = /"container_extension"\s*:\s*"([a-z0-9]{2,5})"/i.exec(text)
+      if (m) {
+        const ext = m[1].toLowerCase()
+        extCache.set(key, { ext, at: Date.now() })
+        return ext
+      }
+    } catch { /* try next origin */ }
+    if (signalMs <= 0) break
+  }
+  return ''
+}
+
 function mediaTypeFor(ext: string, fallback: string): string {
   if (!/text\/html/i.test(fallback)) return fallback || 'application/octet-stream'
   if (ext === 'mp4' || ext === 'm4v' || ext === 'mov') return 'video/mp4'
@@ -236,7 +281,7 @@ Deno.serve(async (req) => {
   const streamId = reqUrl.searchParams.get('id')
   const kindParam = reqUrl.searchParams.get('kind')
   const kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
-  const extHint = (reqUrl.searchParams.get('ext') ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase()
+  let extHint = (reqUrl.searchParams.get('ext') ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase()
   const rawFirst = reqUrl.searchParams.get('raw') === '1'
   const softErrors = reqUrl.searchParams.get('soft') === '1'
 
@@ -306,6 +351,9 @@ Deno.serve(async (req) => {
     // `.m3u8` with a private status that looks like a slot limit, so the
     // impossible candidate is never built for them.
     if (kind === 'live') liveFmt = await liveFormats(source)
+    // VOD/series with no client hint: ask the panel for the real container so we
+    // never build wrong-extension URLs (answered with an HTML error page).
+    if (kind !== 'live' && !extHint) extHint = await lookupContainerExt(source, streamId, kind)
     const build = (cred: string) => {
       if (kind === 'live') {
         // Order comes from the panel's advertised formats, with a minimal
