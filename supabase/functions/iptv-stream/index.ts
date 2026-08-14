@@ -522,6 +522,12 @@ Deno.serve(async (req) => {
    */
   const blockedRoutes = new Set<string>()
   let geoBlocked = false
+  /**
+   * Candidates the provider answered with a generic HTML page. When EVERY
+   * container/path is answered that way the title simply is not on the account
+   * (stale catalogue entry) — that is CHANNEL_OFFLINE, not an unknown 422.
+   */
+  let htmlBlocks = 0
 
 
   for (const { target, via, ua } of plan) {
@@ -608,6 +614,7 @@ Deno.serve(async (req) => {
           }
           if (inspected.html) {
             lastError = 'provider returned a block page (HTML)'
+            htmlBlocks += 1
             trace.push(`${via}:html:${fmt}`)
             continue
           }
@@ -721,7 +728,9 @@ Deno.serve(async (req) => {
           ? { code: 'GEO_BLOCKED', message: GEO_BLOCK_MESSAGE, retryable: true }
           : deadlineHit
             ? streamError('TIMEOUT', `${OVERALL_DEADLINE_MS / 1000}s`)
-            : (classified ?? classifyTransport(lastError))
+            : htmlBlocks > 0 && (!classified || classified.code === 'UNKNOWN')
+              ? streamError('CHANNEL_OFFLINE')
+              : (classified ?? classifyTransport(lastError))
     console.error(
       `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, slotLimited, code: error.code, lastError, trace })}`,
     )
@@ -737,7 +746,9 @@ Deno.serve(async (req) => {
         detail: lastError,
         candidates: candidates.length,
       },
-       softErrors && (rateLimited || slotLimited) ? 200 : rateLimited || slotLimited ? 429 : 502,
+       // With `soft=1` the client decodes the JSON itself; answering 200 keeps a
+       // provider-side refusal out of the browser's unhandled-error overlay.
+       softErrors ? 200 : rateLimited || slotLimited ? 429 : 502,
     )
 
   }
