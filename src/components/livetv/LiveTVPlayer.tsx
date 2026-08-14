@@ -1491,6 +1491,17 @@ export function LiveTVPlayer({
       </div>
       </div>
 
+      {(noAudio || codecIssue) && !loading && !error && (
+        <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t border-white/10 bg-black/70 px-3 py-2 text-center">
+          <span className="text-[10px] font-bold text-white/80">
+            {codecIssue
+              ? `${codecIssue} not supported on this device`
+              : `No sound${silentAudio ? ` · ${silentAudio} not supported on this device` : ' · audio track unsupported'}`}
+          </span>
+          <ExternalPlayFallback src={externalSrc} compact />
+        </div>
+      )}
+
 
       {episodes && episodes.length > 0 && (
         <aside className="shrink-0 border-t border-white/10 bg-black/60 px-3 py-2.5 pb-[calc(env(safe-area-inset-bottom)+0.625rem)] lg:w-72 lg:overflow-y-auto lg:border-l lg:border-t-0 lg:px-4 lg:py-5">
