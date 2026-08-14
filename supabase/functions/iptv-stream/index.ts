@@ -561,6 +561,37 @@ Deno.serve(async (req) => {
         chosenFmt = fmt
         upstream = res
         upstreamBase = resolvedUrl
+        /**
+         * VOD Range rescue.
+         *
+         * The egress relay currently drops `Range` / `Content-Range` /
+         * `Content-Length`, so a ranged request comes back as a full-body 200.
+         * A non-faststart MP4 (`mdat` before `moov` — very common for movies)
+         * is then unplayable: the browser has to read the trailing `moov` atom
+         * with a suffix range and we have no total size to answer it with.
+         * Retry that one request WITHOUT the relay: when the CDN is reachable
+         * from the edge it answers a proper 206 and both playback and seeking
+         * work. If it is not reachable, the relayed body already in hand stays.
+         */
+        if (range && kind !== 'live' && !res.headers.get('content-range') && via === 'relay') {
+          try {
+            const bypass = await fetch(resolvedUrl, {
+              headers,
+              redirect: 'follow',
+              signal: AbortSignal.timeout(Math.max(1_500, Math.min(6_000, remaining() - 300))),
+            })
+            if (bypass.status === 206 && /bytes/i.test(bypass.headers.get('content-range') ?? '')) {
+              await res.body?.cancel().catch(() => undefined)
+              upstream = bypass
+              trace.push('direct:range:206')
+            } else {
+              await bypass.body?.cancel().catch(() => undefined)
+              trace.push(`direct:range:${bypass.status}`)
+            }
+          } catch {
+            trace.push('direct:range:err')
+          }
+        }
         clearCooldown(target)
         break
       }

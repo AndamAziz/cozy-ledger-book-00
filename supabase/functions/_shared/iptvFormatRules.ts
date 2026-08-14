@@ -23,14 +23,21 @@ export type LiveFormats = {
  * first because every Xtream panel serves transport streams while HLS is
  * optional.
  */
-export function liveFormatOrder(fmt: LiveFormats | null, rawFirst = false): string[] {
+export function liveFormatOrder(fmt: LiveFormats | null, _rawFirst = false): string[] {
   const known = fmt && fmt.formats.length > 0
   if (!known) return ['ts', 'm3u8']
   if (fmt!.tsOnly) return ['ts']
   const hasTs = fmt!.formats.some((f) => f === 'ts' || f === 'mpegts')
   if (fmt!.hls && !hasTs) return ['m3u8']
-  return rawFirst ? ['ts', 'm3u8'] : ['m3u8', 'ts']
+  // Transport streams FIRST for every panel that serves them — exactly what
+  // IPTV Smarters / VLC do. A panel's `hlsr` manifest hands out per-segment
+  // tokens bound to the session that fetched it; each proxied segment is a new
+  // upstream connection, so the provider answered them with HTTP 403 and Direct
+  // channels died a few seconds in. One continuous `.ts` connection has no such
+  // token and streams indefinitely.
+  return ['ts', 'm3u8']
 }
+
 
 export type RefusalScope =
   /** Only this container is impossible on this host/route — keep trying others. */
