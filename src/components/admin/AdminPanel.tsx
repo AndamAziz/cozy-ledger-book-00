@@ -48,6 +48,7 @@ import { TelegramHealthCard } from './TelegramHealthCard';
 import { ReviewModeration } from './ReviewModeration';
 import { StreamServerManager } from './StreamServerManager';
 import { LiveTvUsersAdmin } from './LiveTvUsersAdmin';
+import { AndroidStudioCode } from './AndroidStudioCode';
 import { normalizeBrandText } from '@/lib/brand';
 
 interface UserApproval {
