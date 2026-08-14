@@ -23,7 +23,9 @@ const TITLES: Record<string, string> = {
   AUTH_FAILED: 'Provider rejected the account',
   SUBSCRIPTION_EXPIRED: 'Subscription expired',
   NOT_FOUND: 'This channel is no longer on the provider',
+  CHANNEL_OFFLINE: 'This title is not available on your provider',
 };
+
 
 const DETAILS: Record<string, string> = {
   MAX_CONNECTIONS:
