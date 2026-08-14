@@ -1210,11 +1210,12 @@ export function LiveTVPlayer({
       <div
         onPointerDown={revealBar}
         onMouseMove={revealBar}
-        className="flex min-h-0 flex-1 items-stretch justify-center bg-black md:items-center md:bg-transparent md:p-5 lg:p-7"
+        className="flex min-h-0 flex-1 items-start justify-center bg-black md:items-center md:bg-transparent md:p-5 lg:p-7"
       >
         <div
           ref={shellRef}
-          className="relative flex h-full w-full flex-1 items-center justify-center overflow-hidden bg-black md:h-auto md:max-h-full md:flex-none md:aspect-video md:max-w-[1400px] md:rounded-2xl md:border md:border-white/10 md:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
+          className="relative flex aspect-video max-h-full w-full items-center justify-center overflow-hidden bg-black md:h-auto md:max-h-full md:flex-none md:aspect-video md:max-w-[1400px] md:rounded-2xl md:border md:border-white/10 md:shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]"
+
         >
         <video
           ref={videoRef}
