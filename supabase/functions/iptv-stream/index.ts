@@ -218,6 +218,51 @@ async function inspectHtmlLabel(
   }
 }
 
+/**
+ * Real `container_extension` for a VOD / episode id, straight from the panel.
+ *
+ * When the client sends no `ext` hint we used to guess mp4/mkv/avi across both
+ * `/movie/` and `/series/` — a panel answers every wrong guess with an HTML
+ * error page, so all candidates "failed" with `provider returned a block page`
+ * (HTTP 422). One cheap `get_vod_info` / `get_series_info` call removes the
+ * guessing entirely.
+ */
+const extCache = new Map<string, { ext: string; at: number }>()
+const EXT_TTL_MS = 6 * 60 * 60 * 1000
+
+async function lookupContainerExt(
+  source: string,
+  streamId: string,
+  kind: string,
+  signalMs = 4_000,
+): Promise<string> {
+  const key = `${source}|${kind}|${streamId}`
+  const hit = extCache.get(key)
+  if (hit && Date.now() - hit.at < EXT_TTL_MS) return hit.ext
+
+  const action = kind === 'series' ? 'get_series_info&series_id=' : 'get_vod_info&vod_id='
+  for (const base of xtreamApiBases(source)) {
+    try {
+      const res = await egressFetch(
+        `${base}&action=${action}${encodeURIComponent(streamId)}`,
+        { headers: { Accept: 'application/json', 'User-Agent': IPTV_USER_AGENTS[0] } },
+        {},
+      )
+      if (!res.ok) continue
+      const text = await res.text()
+      // Works for get_vod_info (movie_data) and get_series_info (episodes.*.container_extension).
+      const m = /"container_extension"\s*:\s*"([a-z0-9]{2,5})"/i.exec(text)
+      if (m) {
+        const ext = m[1].toLowerCase()
+        extCache.set(key, { ext, at: Date.now() })
+        return ext
+      }
+    } catch { /* try next origin */ }
+    if (signalMs <= 0) break
+  }
+  return ''
+}
+
 function mediaTypeFor(ext: string, fallback: string): string {
   if (!/text\/html/i.test(fallback)) return fallback || 'application/octet-stream'
   if (ext === 'mp4' || ext === 'm4v' || ext === 'mov') return 'video/mp4'
