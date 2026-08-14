@@ -144,6 +144,14 @@ export function LiveTVPlayer({
   const [silentAudio, setSilentAudio] = useState<string | null>(null);
   /** True once the media element proved it decoded zero audio bytes. */
   const [noAudio, setNoAudio] = useState(false);
+  /**
+   * URL handed to an external player when this device lacks a decoder. The proxy
+   * route is used because it is a plain HTTP URL any player can open.
+   */
+  const externalSrc = useMemo(
+    () => toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext),
+    [channel.id, channel.kind, channel.ext],
+  );
   /** Silent auto-recovery from wait-only provider refusals (slot limit/throttle). */
   const slotWaits = useRef(0);
 
