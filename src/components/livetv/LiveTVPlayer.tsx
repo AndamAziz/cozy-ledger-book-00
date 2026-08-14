@@ -683,12 +683,35 @@ export function LiveTVPlayer({
           tsRef.current = player;
           let codecBlocked = false;
           // Raw MPEG-TS carrying HEVC video: report the codec, don't retry.
-          player.on(mpegts.Events.MEDIA_INFO, (info: { videoCodec?: string; mimeType?: string }) => {
-            const codec = info?.videoCodec || info?.mimeType || '';
-            if (!isUnsupportedHevc(codec)) return;
-            codecBlocked = true;
-            flagCodec(isHevcCodec(codec) ? 'HEVC / H.265' : codec);
-          });
+          player.on(
+            mpegts.Events.MEDIA_INFO,
+            (info: { videoCodec?: string; audioCodec?: string; mimeType?: string; hasAudio?: boolean }) => {
+              // mpegts.js only demuxes AAC/MP3. A Dolby (AC-3/E-AC-3) or DTS
+              // track is dropped without any error, which is exactly the
+              // "movie plays but has no sound" case. Hop to the native media
+              // element, which may have a platform decoder (Safari, TVs).
+              const audio = info?.audioCodec || '';
+              if (
+                !codecBlocked &&
+                (isMpegtsSilentAudio(audio) || info?.hasAudio === false) &&
+                engines.includes('native') &&
+                engine !== 'native'
+              ) {
+                setSilentAudio(audio ? audioCodecLabel(audio) : null);
+                setTimeout(() => {
+                  if (disposed) return;
+                  safeDestroy();
+                  setStage(engines.indexOf('native'));
+                }, 0);
+                return;
+              }
+              const codec = info?.videoCodec || info?.mimeType || '';
+              if (!isUnsupportedHevc(codec)) return;
+              codecBlocked = true;
+              flagCodec(isHevcCodec(codec) ? 'HEVC / H.265' : codec);
+            },
+          );
+
 
           player.on(mpegts.Events.ERROR, () => {
             if (codecBlocked) return;
