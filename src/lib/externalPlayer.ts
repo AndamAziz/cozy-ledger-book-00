@@ -26,21 +26,36 @@ export function absoluteStreamUrl(src: string): string {
   }
 }
 
-/** Deep links to players that ship their own HEVC / Dolby decoders. */
+/** Which player app the current device actually has a chance of opening. */
 export function externalPlayerTargets(src: string): ExternalPlayerTarget[] {
   const url = absoluteStreamUrl(src);
-  const targets: ExternalPlayerTarget[] = [];
   if (isAndroid()) {
-    targets.push({
+    return [{
       id: 'mx',
       label: 'MX Player',
       href: `intent:${url}#Intent;type=video/*;action=android.intent.action.VIEW;end`,
-    });
+    }];
   }
   if (isApple()) {
-    targets.push({ id: 'infuse', label: 'Infuse', href: `infuse://x-callback-url/play?url=${encodeURIComponent(url)}` });
+    return [{ id: 'infuse', label: 'Infuse', href: `infuse://x-callback-url/play?url=${encodeURIComponent(url)}` }];
   }
-  targets.push({ id: 'vlc', label: 'VLC', href: isApple() ? `vlc-x-callback://x-callback-url/stream?url=${encodeURIComponent(url)}` : `vlc://${url}` });
-  return targets;
+  return [{ id: 'vlc', label: 'VLC', href: `vlc://${url}` }];
 }
 
+/** The single deep link to surface, picked from the device itself. */
+export function primaryExternalPlayer(src: string): ExternalPlayerTarget {
+  return externalPlayerTargets(src)[0];
+}
+
+/**
+ * Navigate straight into the player app. Called from a button (not a link) so
+ * there is no context menu, no "copy link address" and nothing to share.
+ */
+export function openInExternalPlayer(src: string): void {
+  const target = primaryExternalPlayer(src);
+  try {
+    window.location.href = target.href;
+  } catch {
+    /* scheme not registered — nothing else we can do from the browser */
+  }
+}
