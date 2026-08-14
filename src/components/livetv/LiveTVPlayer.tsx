@@ -1444,6 +1444,16 @@ export function LiveTVPlayer({
 
         )}
 
+        {muted && !loading && !error && !noAudio && (
+          <button
+            type="button"
+            onClick={toggleMute}
+            className="absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/15 bg-black/70 px-3 py-1.5 text-[10px] font-bold text-white/85 backdrop-blur-sm transition hover:border-white/35 active:scale-95"
+          >
+            Tap for sound
+          </button>
+        )}
+
         {noAudio && !loading && !error && (
           <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/15 bg-black/70 px-3 py-1.5 text-[10px] font-bold text-white/85 backdrop-blur-sm">
             No sound{silentAudio ? ` · ${silentAudio} not supported on this device` : ' · audio track unsupported'}
