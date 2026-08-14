@@ -141,6 +141,8 @@ export function LiveTVPlayer({
    * picture, so only a small chip is shown instead of interrupting the viewer.
    */
   const [silentAudio, setSilentAudio] = useState<string | null>(null);
+  /** True once the media element proved it decoded zero audio bytes. */
+  const [noAudio, setNoAudio] = useState(false);
   /** Silent auto-recovery from wait-only provider refusals (slot limit/throttle). */
   const slotWaits = useRef(0);
 
@@ -211,6 +213,7 @@ export function LiveTVPlayer({
     setCodecIssue(null);
     setBlocked(null);
     setSilentAudio(null);
+    setNoAudio(false);
 
 
     setLevels([]);
@@ -882,6 +885,24 @@ export function LiveTVPlayer({
     };
   }, [channel.id]);
 
+  /**
+   * Silent-playback check. A Dolby/DTS track that the platform cannot decode
+   * plays picture with zero audio bytes and raises no error, so the only honest
+   * signal is `webkitAudioDecodedByteCount` staying at 0 while time advances.
+   */
+  useEffect(() => {
+    setNoAudio(false);
+    const v = videoRef.current;
+    if (!v) return;
+    const timer = window.setTimeout(() => {
+      const decoded = (v as HTMLVideoElement & { webkitAudioDecodedByteCount?: number })
+        .webkitAudioDecodedByteCount;
+      if (decoded === undefined) return;
+      if (v.currentTime > 1 && decoded === 0) setNoAudio(true);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [channel.id, currentEpisodeId, stage, attempt, reload]);
+
   // Track position / length for movies and episodes so they can be scrubbed,
   // and remember where the user stopped so playback resumes next time.
   useEffect(() => {
@@ -1421,6 +1442,12 @@ export function LiveTVPlayer({
             </div>
           </div>
 
+        )}
+
+        {noAudio && !loading && !error && (
+          <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/15 bg-black/70 px-3 py-1.5 text-[10px] font-bold text-white/85 backdrop-blur-sm">
+            No sound{silentAudio ? ` · ${silentAudio} not supported on this device` : ' · audio track unsupported'}
+          </div>
         )}
 
         {loading && !error && !codecIssue && !blocked && (
