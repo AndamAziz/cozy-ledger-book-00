@@ -351,9 +351,14 @@ Deno.serve(async (req) => {
     // `.m3u8` with a private status that looks like a slot limit, so the
     // impossible candidate is never built for them.
     if (kind === 'live') liveFmt = await liveFormats(source)
-    // VOD/series with no client hint: ask the panel for the real container so we
-    // never build wrong-extension URLs (answered with an HTML error page).
-    if (kind !== 'live' && !extHint) extHint = await lookupContainerExt(source, streamId, kind)
+    // VOD/series: the panel is the only authority on the container. A client
+    // hint is a catalogue guess (often `mp4`) and a wrong extension is answered
+    // with an HTML error page (HTTP 422), so the panel value always wins.
+    if (kind !== 'live') {
+      const real = await lookupContainerExt(source, streamId, kind)
+      if (real) extHint = real
+    }
+
     const build = (cred: string) => {
       if (kind === 'live') {
         // Order comes from the panel's advertised formats, with a minimal
