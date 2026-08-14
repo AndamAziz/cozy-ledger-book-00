@@ -504,14 +504,6 @@ Deno.serve(async (req) => {
   for (const ua of uaList.slice(1)) {
     plan.push({ target: candidates[0], via: 'relay', ua })
   }
-  // Last resort for movies/episodes: some panels answer the relay's IP with an
-  // HTML block page on the /movie|/series paths while serving the Edge region
-  // fine. Live is excluded — a direct probe there would occupy the single slot.
-  if (kind !== 'live') {
-    for (const target of candidates.slice(0, 4)) {
-      plan.push({ target, via: 'direct', ua: uaList[0] })
-    }
-  }
 
 
   const deadHosts = new Set<string>()
