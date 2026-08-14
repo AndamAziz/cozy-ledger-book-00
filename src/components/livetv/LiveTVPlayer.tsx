@@ -23,6 +23,7 @@ import { containerFromExt, engineChain, type Engine } from '@/lib/containerSniff
 import { liveEngineOrder, candidateFormatFor } from '@/lib/liveLadder';
 import { clearLiveDiag, publishLiveDiag } from '@/lib/livePlaybackDiag';
 import { isHevcCodec, isUnsupportedHevc } from '@/lib/codecSupport';
+import { audioCodecLabel, isMpegtsSilentAudio } from '@/lib/audioCodecSupport';
 
 import { claimStreamSlot, releaseActiveStream, unregisterStream } from '@/lib/streamSlot';
 import { acquirePlayerMount, releasePlayerMount } from '@/lib/playerMount';
@@ -135,6 +136,11 @@ export function LiveTVPlayer({
   const [codecIssue, setCodecIssue] = useState<string | null>(null);
   /** Provider-side refusal (slot limit, throttle, auth) reported by the proxy. */
   const [blocked, setBlocked] = useState<StreamDiagnosis | null>(null);
+  /**
+   * Audio track this engine cannot decode (Dolby/DTS): playback keeps its
+   * picture, so only a small chip is shown instead of interrupting the viewer.
+   */
+  const [silentAudio, setSilentAudio] = useState<string | null>(null);
   /** Silent auto-recovery from wait-only provider refusals (slot limit/throttle). */
   const slotWaits = useRef(0);
 
@@ -204,6 +210,7 @@ export function LiveTVPlayer({
     setRetrying(false);
     setCodecIssue(null);
     setBlocked(null);
+    setSilentAudio(null);
 
 
     setLevels([]);
@@ -694,8 +701,7 @@ export function LiveTVPlayer({
               if (
                 !codecBlocked &&
                 (isMpegtsSilentAudio(audio) || info?.hasAudio === false) &&
-                engines.includes('native') &&
-                engine !== 'native'
+                engines.includes('native')
               ) {
                 setSilentAudio(audio ? audioCodecLabel(audio) : null);
                 setTimeout(() => {
