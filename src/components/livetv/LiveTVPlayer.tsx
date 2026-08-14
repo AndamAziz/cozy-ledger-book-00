@@ -250,14 +250,16 @@ export function LiveTVPlayer({
       const chain = engineChain(container, { nativeHls });
       return chain.length ? chain : ['native'];
     }
-    // TS-only panel: mpegts.js first (it asks the proxy for `raw=1`, the .ts
-    // variant). hls.js stays last as a courtesy for mislabelled feeds.
+    // Live: mpegts.js first (it asks the proxy for `raw=1`, the continuous .ts
+    // variant). Only a panel that serves HLS exclusively leads with hls.js.
+    const hlsOnly = panelFormats.length > 0 && !panelFormats.some((f) => f === 'ts' || f === 'mpegts');
     return liveEngineOrder({
       tsOnly,
       nativeHls,
       hlsSupported: Hls.isSupported(),
+      hlsOnly,
     }) as Engine[];
-  }, [channel.kind, channel.ext, tsOnly]);
+  }, [channel.kind, channel.ext, tsOnly, panelFormats]);
 
   useEffect(() => {
     const video = videoRef.current;
