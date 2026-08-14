@@ -22,6 +22,7 @@ import { ChannelCard } from '@/components/livetv/ChannelCard';
 
 import { PosterCard } from '@/components/livetv/PosterCard';
 import { CategoryAccordion } from '@/components/livetv/CategoryAccordion';
+import { CategoryFullView } from '@/components/livetv/CategoryFullView';
 import { LiveTVPlayer } from '@/components/livetv/LiveTVPlayer';
 import { LiveBottomNav, type LiveTab } from '@/components/livetv/LiveBottomNav';
 import { SeriesDetail } from '@/components/livetv/SeriesDetail';
