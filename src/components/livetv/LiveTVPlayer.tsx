@@ -1489,7 +1489,6 @@ export function LiveTVPlayer({
 
         </div>
       </div>
-      </div>
 
       {(noAudio || codecIssue) && !loading && !error && (
         <div className="shrink-0 border-t border-white/10 bg-[#0b0b10]/90 px-4 py-3 sm:py-4">
@@ -1505,6 +1504,8 @@ export function LiveTVPlayer({
           </div>
         </div>
       )}
+      </div>
+
 
 
       {episodes && episodes.length > 0 && (
