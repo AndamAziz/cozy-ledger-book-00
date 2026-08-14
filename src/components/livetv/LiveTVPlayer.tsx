@@ -1463,26 +1463,16 @@ export function LiveTVPlayer({
           </button>
         )}
 
-        {noAudio && !loading && !error && (
-          <div className="absolute left-1/2 top-3 z-20 flex max-w-[92%] -translate-x-1/2 flex-col items-center gap-1.5 rounded-2xl border border-white/15 bg-black/75 px-3 py-2 text-center backdrop-blur-sm">
-            <span className="text-[10px] font-bold text-white/85">
-              No sound{silentAudio ? ` · ${silentAudio} not supported on this device` : ' · audio track unsupported'}
-            </span>
-            <span className="text-[9px] text-white/45">Open it in a player with its own decoder:</span>
-            <ExternalPlayFallback src={externalSrc} compact />
-          </div>
-        )}
-
         {codecIssue && !loading && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/80 px-6 text-center">
             <p className="text-sm font-bold text-white">This device cannot decode {codecIssue}</p>
             <p className="max-w-sm text-[11px] leading-relaxed text-white/55">
-              The file is fine — Chrome, Edge and Firefox ship no decoder for it. Open the same stream in a
-              player that has one, or watch on a phone / Smart TV app.
+              The file is fine — Chrome, Edge and Firefox ship no decoder for it. Use the button below the
+              player to open the same stream in a player that has one.
             </p>
-            <ExternalPlayFallback src={externalSrc} />
           </div>
         )}
+
 
 
         {loading && !error && !codecIssue && !blocked && (
