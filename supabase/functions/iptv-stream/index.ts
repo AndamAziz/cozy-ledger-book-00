@@ -351,9 +351,14 @@ Deno.serve(async (req) => {
     // `.m3u8` with a private status that looks like a slot limit, so the
     // impossible candidate is never built for them.
     if (kind === 'live') liveFmt = await liveFormats(source)
-    // VOD/series with no client hint: ask the panel for the real container so we
-    // never build wrong-extension URLs (answered with an HTML error page).
-    if (kind !== 'live' && !extHint) extHint = await lookupContainerExt(source, streamId, kind)
+    // VOD/series: the panel is the only authority on the container. A client
+    // hint is a catalogue guess (often `mp4`) and a wrong extension is answered
+    // with an HTML error page (HTTP 422), so the panel value always wins.
+    if (kind !== 'live') {
+      const real = await lookupContainerExt(source, streamId, kind)
+      if (real) extHint = real
+    }
+
     const build = (cred: string) => {
       if (kind === 'live') {
         // Order comes from the panel's advertised formats, with a minimal
@@ -368,7 +373,9 @@ Deno.serve(async (req) => {
       const dirs = kind === 'series' ? ['series', 'movie'] : ['movie', 'series']
       const url = (d: string, ext: string) => `${cred}/${d}/${username}/${password}/${streamId}.${ext}`
       const primary = extHint ? [url(dirs[0], extHint), url(dirs[1], extHint)] : []
-      const fallbackExts = ['mp4', 'mkv', 'avi'].filter((e) => e !== extHint)
+      // `ts` belongs here: many panels serve VOD as MPEG-TS, and omitting it
+      // used to leave the whole ladder guessing mp4/mkv/avi and failing 422.
+      const fallbackExts = ['mp4', 'mkv', 'ts', 'avi'].filter((e) => e !== extHint)
       const fallback = fallbackExts.flatMap((ext) => dirs.map((d) => url(d, ext)))
       return [...primary, ...fallback]
     }
@@ -498,6 +505,7 @@ Deno.serve(async (req) => {
     plan.push({ target: candidates[0], via: 'relay', ua })
   }
 
+
   const deadHosts = new Set<string>()
   /** Best classified reason so far — shown to the user if nothing plays. */
   let classified: StreamError | null = null
@@ -514,6 +522,12 @@ Deno.serve(async (req) => {
    */
   const blockedRoutes = new Set<string>()
   let geoBlocked = false
+  /**
+   * Candidates the provider answered with a generic HTML page. When EVERY
+   * container/path is answered that way the title simply is not on the account
+   * (stale catalogue entry) — that is CHANNEL_OFFLINE, not an unknown 422.
+   */
+  let htmlBlocks = 0
 
 
   for (const { target, via, ua } of plan) {
@@ -600,6 +614,7 @@ Deno.serve(async (req) => {
           }
           if (inspected.html) {
             lastError = 'provider returned a block page (HTML)'
+            htmlBlocks += 1
             trace.push(`${via}:html:${fmt}`)
             continue
           }
@@ -713,7 +728,9 @@ Deno.serve(async (req) => {
           ? { code: 'GEO_BLOCKED', message: GEO_BLOCK_MESSAGE, retryable: true }
           : deadlineHit
             ? streamError('TIMEOUT', `${OVERALL_DEADLINE_MS / 1000}s`)
-            : (classified ?? classifyTransport(lastError))
+            : htmlBlocks > 0 && (!classified || classified.code === 'UNKNOWN')
+              ? streamError('CHANNEL_OFFLINE')
+              : (classified ?? classifyTransport(lastError))
     console.error(
       `[iptv-stream] ${JSON.stringify({ kind, streamId, candidates: candidates.length, deadlineHit, geoBlocked, rateLimited, slotLimited, code: error.code, lastError, trace })}`,
     )
@@ -729,7 +746,9 @@ Deno.serve(async (req) => {
         detail: lastError,
         candidates: candidates.length,
       },
-       softErrors && (rateLimited || slotLimited) ? 200 : rateLimited || slotLimited ? 429 : 502,
+       // With `soft=1` the client decodes the JSON itself; answering 200 keeps a
+       // provider-side refusal out of the browser's unhandled-error overlay.
+       softErrors ? 200 : rateLimited || slotLimited ? 429 : 502,
     )
 
   }
