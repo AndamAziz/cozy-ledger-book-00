@@ -19,13 +19,27 @@ describe('live engine ladder', () => {
     expect(order[0]).toBe('mpegts');
   });
 
-  it('keeps native HLS first on Safari-style browsers for manifests', () => {
+  it('leads with mpegts for a normal panel, on every MSE browser', () => {
     expect(
       liveEngineOrder({ tsOnly: false, nativeHls: true, hlsSupported: true })[0],
-    ).toBe('native');
+    ).toBe('mpegts');
     expect(
       liveEngineOrder({ tsOnly: false, nativeHls: false, hlsSupported: true })[0],
+    ).toBe('mpegts');
+  });
+
+  it('keeps native HLS first for an HLS-only panel on Safari-style browsers', () => {
+    expect(
+      liveEngineOrder({ tsOnly: false, nativeHls: true, hlsSupported: true, hlsOnly: true })[0],
+    ).toBe('native');
+    expect(
+      liveEngineOrder({ tsOnly: false, nativeHls: false, hlsSupported: true, hlsOnly: true })[0],
     ).toBe('hls');
+  });
+
+  it('falls back to native HLS when MSE (mpegts.js/hls.js) is unavailable', () => {
+    const order = liveEngineOrder({ tsOnly: false, nativeHls: true, hlsSupported: false });
+    expect(order[0]).toBe('native');
   });
 
   it('drops hls.js when MSE is unavailable and never returns an empty ladder', () => {
@@ -55,9 +69,9 @@ describe('candidate order heuristics', () => {
     expect(liveFormatOrder({ formats: [], tsOnly: false, hls: false })).toEqual(['ts', 'm3u8']);
   });
 
-  it('prefers the manifest for both-format panels, ts first for the mpegts engine', () => {
+  it('prefers the continuous transport stream for both-format panels', () => {
     const both = { formats: ['m3u8', 'ts'], tsOnly: false, hls: true };
-    expect(liveFormatOrder(both)).toEqual(['m3u8', 'ts']);
+    expect(liveFormatOrder(both)).toEqual(['ts', 'm3u8']);
     expect(liveFormatOrder(both, true)).toEqual(['ts', 'm3u8']);
   });
 });
@@ -118,6 +132,9 @@ describe('407 on .m3u8 regression', () => {
     expect(out.slotLimited).toBe(false);
     expect(out.trace).toEqual(['m3u8:407', 'ts:200']);
     expect(out.blocked).toEqual(['panel.example.com|m3u8']);
+    // Same panel, ts-first order (the shipped default): plays on attempt #1.
+    const tsFirst = runLadder([candidates[1], candidates[0]], (u) => (u.endsWith('.m3u8') ? 407 : 200));
+    expect(tsFirst.trace).toEqual(['ts:200']);
   });
 
   it('reports a real slot limit when the last remaining format is refused too', () => {
