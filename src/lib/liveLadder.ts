@@ -16,19 +16,28 @@ export function liveEngineOrder(opts: {
   nativeHls: boolean;
   /** hls.js is usable here (needs MSE). */
   hlsSupported: boolean;
+  /** Panel advertises HLS and nothing else — `.ts` is not available. */
+  hlsOnly?: boolean;
   /** Content-Type already observed for this channel, when known. */
   contentType?: string | null;
 }): LiveEngine[] {
   const mime = (opts.contentType ?? '').toLowerCase();
-  const chain: LiveEngine[] = mime.includes('mp2t') || opts.tsOnly
-    ? ['mpegts', 'native', 'hls']
-    : mime.includes('mpegurl')
-      ? opts.nativeHls
-        ? ['native', 'hls', 'mpegts']
-        : ['hls', 'mpegts', 'native']
+  // A panel that only speaks HLS leaves no choice.
+  const hlsFirst = opts.hlsOnly || mime.includes('mpegurl');
+  const chain: LiveEngine[] = hlsFirst
+    ? opts.nativeHls
+      ? ['native', 'hls', 'mpegts']
+      : ['hls', 'mpegts', 'native']
+    : // Everything else leads with the continuous transport stream (mpegts.js).
+      // The panel's HLS manifest hands out short-lived per-segment tokens that
+      // die behind our proxy, so `.ts` is both the fastest and the only route
+      // that keeps Direct channels alive. Browsers without MSE (iOS Safari)
+      // cannot run mpegts.js, so those fall back to native HLS.
+      opts.hlsSupported
+      ? ['mpegts', 'hls', 'native']
       : opts.nativeHls
-        ? ['native', 'hls', 'mpegts']
-        : ['hls', 'mpegts', 'native'];
+        ? ['native', 'mpegts']
+        : ['mpegts', 'native'];
   const filtered = chain.filter((e) => (e === 'hls' ? opts.hlsSupported : true));
   return filtered.length ? filtered : ['native'];
 }
