@@ -28,6 +28,7 @@ import { audioCodecLabel, isMpegtsSilentAudio } from '@/lib/audioCodecSupport';
 import { claimStreamSlot, releaseActiveStream, unregisterStream } from '@/lib/streamSlot';
 import { acquirePlayerMount, releasePlayerMount } from '@/lib/playerMount';
 import { diagnoseStream, type StreamDiagnosis } from '@/lib/streamDiagnose';
+import { ExternalPlayFallback } from './ExternalPlayFallback';
 import { MAX_RETRIES as MAX_STREAM_RETRIES, RETRY_DELAY_MS as STREAM_RETRY_DELAY_MS } from '@/lib/iptvCatalog';
 
 /**
@@ -143,6 +144,14 @@ export function LiveTVPlayer({
   const [silentAudio, setSilentAudio] = useState<string | null>(null);
   /** True once the media element proved it decoded zero audio bytes. */
   const [noAudio, setNoAudio] = useState(false);
+  /**
+   * URL handed to an external player when this device lacks a decoder. The proxy
+   * route is used because it is a plain HTTP URL any player can open.
+   */
+  const externalSrc = useMemo(
+    () => toPlayableUrl(channel.id, channel.kind ?? 'live', channel.ext),
+    [channel.id, channel.kind, channel.ext],
+  );
   /** Silent auto-recovery from wait-only provider refusals (slot limit/throttle). */
   const slotWaits = useRef(0);
 
@@ -1455,10 +1464,26 @@ export function LiveTVPlayer({
         )}
 
         {noAudio && !loading && !error && (
-          <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/15 bg-black/70 px-3 py-1.5 text-[10px] font-bold text-white/85 backdrop-blur-sm">
-            No sound{silentAudio ? ` · ${silentAudio} not supported on this device` : ' · audio track unsupported'}
+          <div className="absolute left-1/2 top-3 z-20 flex max-w-[92%] -translate-x-1/2 flex-col items-center gap-1.5 rounded-2xl border border-white/15 bg-black/75 px-3 py-2 text-center backdrop-blur-sm">
+            <span className="text-[10px] font-bold text-white/85">
+              No sound{silentAudio ? ` · ${silentAudio} not supported on this device` : ' · audio track unsupported'}
+            </span>
+            <span className="text-[9px] text-white/45">Open it in a player with its own decoder:</span>
+            <ExternalPlayFallback src={externalSrc} compact />
           </div>
         )}
+
+        {codecIssue && !loading && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/80 px-6 text-center">
+            <p className="text-sm font-bold text-white">This device cannot decode {codecIssue}</p>
+            <p className="max-w-sm text-[11px] leading-relaxed text-white/55">
+              The file is fine — Chrome, Edge and Firefox ship no decoder for it. Open the same stream in a
+              player that has one, or watch on a phone / Smart TV app.
+            </p>
+            <ExternalPlayFallback src={externalSrc} />
+          </div>
+        )}
+
 
         {loading && !error && !codecIssue && !blocked && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/55">
