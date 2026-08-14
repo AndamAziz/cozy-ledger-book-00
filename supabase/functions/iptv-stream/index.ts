@@ -1,5 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
-import { parseXtream, isXtreamUrl, getM3U, xtreamOrigins } from '../_shared/iptvConfig.ts'
+import { parseXtream, isXtreamUrl, getM3U, xtreamOrigins, xtreamApiBases } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
 import { egressFetch, finalUrlOf, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
@@ -281,7 +281,7 @@ Deno.serve(async (req) => {
   const streamId = reqUrl.searchParams.get('id')
   const kindParam = reqUrl.searchParams.get('kind')
   const kind = kindParam === 'vod' || kindParam === 'series' ? kindParam : 'live'
-  const extHint = (reqUrl.searchParams.get('ext') ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase()
+  let extHint = (reqUrl.searchParams.get('ext') ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase()
   const rawFirst = reqUrl.searchParams.get('raw') === '1'
   const softErrors = reqUrl.searchParams.get('soft') === '1'
 
