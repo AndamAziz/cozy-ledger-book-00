@@ -83,3 +83,25 @@ app/build/outputs/apk/release/app-release.apk
 | Package mismatch error | بزانە سەرجەم فایلی Kotlin ناوی پەکەیج `com.andam.allinone` بێت |
 | ئەپ بەرز نابێتەوە | `Build → Clean Project`، پاشان `Rebuild Project` |
 | Android TV نیشان نادات | دڵنیابەرەوە لە `<category android:name="android.intent.category.LEANBACK_LAUNCHER" />` لە Manifest |
+
+## هەنگاو ٦: دروستکردنی خۆکاری APK بە CI (GitHub Actions)
+
+فایلی `.github/workflows/build-apk.yml` زیادکراوە. کارکردی:
+
+- لە هەر push/PR (یان بە دەست: **Actions → Build APK → Run workflow**) کاردەکات.
+- JDK 17 + Android SDK (API 35) دادەمەزرێنێت، پاشان `assembleDebug` و `assembleRelease` دەکات.
+- دوو Artifact دەدات: `app-debug` و `app-release` (لە پەڕەی Actions داگرتنیان بکە).
+
+پێویستە پڕۆژەی Android Studio لە فۆڵدەری `android/` ی هەمان ڕیپۆ دابنێت (بەم شێوەیە `android/gradlew` هەبێت). ئەگەر نەبوو، workflow بێ هەڵە تێدەپەڕێت.
+
+### مۆرکردن (Signed Release)
+لە **Settings → Secrets and variables → Actions** ئەم چوار Secret زیاد بکە:
+
+| Secret | ناوەڕۆک |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | ئەنجامی `base64 -w0 release.jks` |
+| `ANDROID_KEYSTORE_PASSWORD` | تێپەڕەوشەی keystore |
+| `ANDROID_KEY_ALIAS` | alias ی کلیل |
+| `ANDROID_KEY_PASSWORD` | تێپەڕەوشەی کلیل |
+
+ئەگەر ئەمانە دانەنرێن، release APK دروست دەبێت بەڵام **بێ مۆر** (unsigned).
