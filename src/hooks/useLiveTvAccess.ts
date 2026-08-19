@@ -37,21 +37,25 @@ export function useLiveTvAccess() {
   const [isLoading, setIsLoading] = useState(true);
   const [now, setNow] = useState(() => Date.now());
 
+  // Owner/CEO account is never asked to pay: Live TV is permanently activated.
+  const isCeo = isCeoEmail(user?.email);
+
   const applyAccessRow = useCallback(
     (row: { trial_ends_at?: string | null; is_activated?: boolean | null } | null) => {
       const trialEndsAt = row?.trial_ends_at ?? null;
-      const isActivated = !!row?.is_activated;
+      const isActivated = isCeo || !!row?.is_activated;
       const trialLive = !!trialEndsAt && new Date(trialEndsAt).getTime() > Date.now();
       setAccess({
-        trialEndsAt,
+        trialEndsAt: isCeo ? null : trialEndsAt,
         isActivated,
         hasAccess: isActivated || trialLive,
         trialExpired: !isActivated && !trialLive,
-        msLeft: trialEndsAt ? Math.max(0, new Date(trialEndsAt).getTime() - Date.now()) : 0,
+        msLeft: !isCeo && trialEndsAt ? Math.max(0, new Date(trialEndsAt).getTime() - Date.now()) : 0,
       });
     },
-    [],
+    [isCeo],
   );
+
 
   const load = useCallback(async () => {
     if (!user) {
