@@ -15,7 +15,7 @@ export const translations = {
     addCurrency: 'زیادکردنی دراو',
     selectLocation: 'شوێن هەڵبژێرە',
     // Header
-    financialManagement: 'بەڕێوەبردنی داراییی',
+    financialManagement: 'ANDAM Hub',
     logout: 'خروج',
     
     // Tabs
@@ -471,7 +471,7 @@ export const translations = {
     addCurrency: 'Add currency',
     selectLocation: 'Select location',
     // Header
-    financialManagement: 'Financial Management',
+    financialManagement: 'ANDAM Hub',
     logout: 'Logout',
     
     // Tabs
@@ -927,7 +927,7 @@ export const translations = {
     addCurrency: 'إضافة عملة',
     selectLocation: 'اختر الموقع',
     // Header
-    financialManagement: 'الإدارة المالية',
+    financialManagement: 'ANDAM Hub',
     logout: 'تسجيل الخروج',
     
     // Tabs
@@ -1383,7 +1383,7 @@ export const translations = {
     addCurrency: 'افزودن ارز',
     selectLocation: 'انتخاب مکان',
     // Header
-    financialManagement: 'مدیریت مالی',
+    financialManagement: 'ANDAM Hub',
     logout: 'خروج',
     
     // Tabs
@@ -1839,7 +1839,7 @@ export const translations = {
     addCurrency: 'Para birimi ekle',
     selectLocation: 'Konum seç',
     // Header
-    financialManagement: 'Finansal Yönetim',
+    financialManagement: 'ANDAM Hub',
     logout: 'Çıkış',
 
     // Tabs
