@@ -175,16 +175,6 @@ export function LiveTVPlayer({
   const startedRef = useRef(false);
   /** The viewer pressed pause themselves: never auto-resume in that case. */
   const userPausedRef = useRef(false);
-  /**
-   * Mirrors `retrying` but updates synchronously and is safe to read from a
-   * setInterval closure. The stall watchdog is set up once per engine attach
-   * and closes over whatever `retrying` was AT THAT MOMENT -- a plain read of
-   * the state variable never sees later setRetrying() calls, so the watchdog
-   * kept firing nextEngine() every 4s straight through the slot-limit backoff
-   * and hammered a single-connection provider into a permanent HTTP 458 loop.
-   * Reading this ref instead always sees the current value.
-   */
-  const retryingRef = useRef(false);
   /** Position (seconds) a VOD reload must continue from. */
   const vodResume = useRef<number | null>(null);
   /** Always the latest seek handler — used by remote/keyboard scrubbing. */
@@ -229,7 +219,6 @@ export function LiveTVPlayer({
     setStage(0);
     setAttempt(0);
     setRetrying(false);
-    retryingRef.current = false;
     setCodecIssue(null);
     setBlocked(null);
     setSilentAudio(null);
@@ -429,15 +418,6 @@ export function LiveTVPlayer({
     let diagnosing = false;
     /** In-place mid-playback recoveries used so far (VOD only). */
     let midRecover = 0;
-    /**
-     * Updates BOTH the React state (for the retrying-spinner UI) and the
-     * ref (for the stall watchdog's live read) in one call, so the two never
-     * drift apart the way `retrying` alone did.
-     */
-    const markRetrying = (v: boolean) => {
-      retryingRef.current = v;
-      setRetrying(v);
-    };
     const nextEngine = () => {
       if (disposed || diagnosing) return;
       clearWatchdog();
@@ -492,10 +472,10 @@ export function LiveTVPlayer({
             slotWaits.current += 1;
             safeDestroy();
             releaseActiveStream();
-            markRetrying(true);
+            setRetrying(true);
             retryTimer = window.setTimeout(() => {
               if (disposed) return;
-              markRetrying(false);
+              setRetrying(false);
               setStage(0);
               setReload((r) => r + 1);
             }, SLOT_WAIT_MS);
@@ -503,13 +483,13 @@ export function LiveTVPlayer({
           }
           safeDestroy();
           clearWatchdog();
-          markRetrying(true);
+          setRetrying(true);
           setLoading(true);
           retryTimer = window.setTimeout(() => {
             if (disposed) return;
             slotWaits.current = 0;
             setBlocked(null);
-            markRetrying(false);
+            setRetrying(false);
             setStage(0);
             setAttempt(0);
             setReload((r) => r + 1);
@@ -527,11 +507,11 @@ export function LiveTVPlayer({
         return;
       }
       if (attempt + 1 < MAX_STREAM_RETRIES) {
-        markRetrying(true);
+        setRetrying(true);
         safeDestroy();
         retryTimer = window.setTimeout(() => {
           if (disposed) return;
-          markRetrying(false);
+          setRetrying(false);
           setStage(0);
           setAttempt((a) => a + 1);
         }, STREAM_RETRY_DELAY_MS);
@@ -540,11 +520,11 @@ export function LiveTVPlayer({
       // Never interrupt playback with a noisy terminal error card. Providers
       // recover from expired redirects, slot drains and transient relay faults,
       // so keep the player mounted and reconnect silently.
-      markRetrying(true);
+      setRetrying(true);
       setLoading(true);
       retryTimer = window.setTimeout(() => {
         if (disposed) return;
-        markRetrying(false);
+        setRetrying(false);
         setStage(0);
         setAttempt(0);
         setReload((r) => r + 1);
@@ -579,20 +559,6 @@ export function LiveTVPlayer({
     video.addEventListener('canplay', seekResume);
 
     /**
-     * LIVE auto-resume. The browser (or hls.js internally) sometimes pauses
-     * the <video> element on its own during a live feed -- e.g. after a buffer
-     * gap it can't bridge -- leaving the native "paused" UI on screen with
-     * playback never resuming until the viewer taps play by hand. Any pause
-     * the user did NOT trigger (userPausedRef stays false for those) is
-     * treated as unintentional and resumed immediately.
-     */
-    const onUnexpectedPause = () => {
-      if (disposed || !isLiveKind || userPausedRef.current || video.ended) return;
-      playWithAutoplayFallback(video, () => setMuted(true)).catch(() => undefined);
-    };
-    if (isLiveKind) video.addEventListener('pause', onUnexpectedPause);
-
-    /**
      * VOD stall guard. Movies and episodes were "pausing for no reason": a
      * segment/range request that never completes leaves the media element
      * stalled with no error event, so nothing recovered it. Every 4s we check
@@ -604,7 +570,7 @@ export function LiveTVPlayer({
       let lastPos = -1;
       let stallHits = 0;
       stallTicker = window.setInterval(() => {
-        if (disposed || retryingRef.current) return;
+        if (disposed || retrying) return;
         if (video.paused || video.seeking || video.ended || userPausedRef.current || !startedRef.current) {
           lastPos = video.currentTime;
           stallHits = 0;
@@ -630,58 +596,6 @@ export function LiveTVPlayer({
         safeDestroy();
         setReload((r) => r + 1);
       }, 4_000);
-    } else {
-      // LIVE stall guard. A live feed can freeze silently: hls.js/mpegts.js see
-      // no fatal error while the socket is technically still open, so the ERROR
-      // handlers above never fire and the viewer is left on a frozen frame.
-      // Every 2s we check the clock is still advancing. When hls.js is the
-      // active engine, the first response is an in-place reload on the same
-      // engine; only a stall that survives it escalates to the full ladder.
-      let lastPos = -1;
-      let stallHits = 0;
-      let inPlaceRetried = false;
-      let graceTicks = 0;
-      stallTicker = window.setInterval(() => {
-        if (disposed || retryingRef.current) return;
-        if (video.paused || video.seeking || video.ended || userPausedRef.current || !startedRef.current) {
-          lastPos = video.currentTime;
-          stallHits = 0;
-          inPlaceRetried = false;
-          graceTicks = 0;
-          return;
-        }
-        if (video.currentTime > lastPos + 0.2) {
-          lastPos = video.currentTime;
-          stallHits = 0;
-          inPlaceRetried = false;
-          graceTicks = 0;
-          return;
-        }
-        if (graceTicks > 0) {
-          graceTicks -= 1;
-          return;
-        }
-        stallHits += 1;
-        if (engine === 'hls' && !inPlaceRetried) {
-          inPlaceRetried = true;
-          try {
-            const hls = hlsRef.current;
-            if (hls) {
-              hls.stopLoad();
-              hls.loadSource(proxySrc);
-              hls.startLoad();
-              video.play().catch(() => undefined);
-              graceTicks = 3;
-              return;
-            }
-          } catch {
-            /* engine already gone -- fall through to full escalation */
-          }
-        }
-        stallHits = 0;
-        inPlaceRetried = false;
-        nextEngine();
-      }, 2_000);
     }
 
 
@@ -892,7 +806,6 @@ export function LiveTVPlayer({
       video.removeEventListener('loadeddata', done);
       video.removeEventListener('loadeddata', seekResume);
       video.removeEventListener('canplay', seekResume);
-      video.removeEventListener('pause', onUnexpectedPause);
       video.removeEventListener('error', onMediaError);
 
       if ((channel.kind ?? 'live') === 'live') {
@@ -915,26 +828,7 @@ export function LiveTVPlayer({
 
   }, [channel.id, channel.kind, channel.ext, engines, stage, attempt, reload]);
 
-  /**
-   * Leaving the platform entirely (closing the tab, navigating to another
-   * site, switching apps) must release the Xtream viewing slot just as
-   * reliably as an in-app channel switch does. The main effect's own cleanup
-   * calls releaseActiveStream() on unmount, but React's synchronous unmount
-   * is not guaranteed to run before the browser tears the page context down --
-   * the account's single connection then stays claimed on the provider's side
-   * even though the viewer has genuinely left, and the very next attempt to
-   * open Live TV here (even after reopening in a fresh tab) is refused with
-   * "all viewing slots in use" until that stale session times out on its own.
-   * pagehide is the reliable signal for every one of those exits, and calling
-   * the already-idempotent releaseActiveStream() here is safe to run
-   * alongside the normal unmount path.
-   */
-  useEffect(() => {
-    if ((channel.kind ?? 'live') !== 'live') return;
-    const onPageHide = () => releaseActiveStream();
-    window.addEventListener('pagehide', onPageHide);
-    return () => window.removeEventListener('pagehide', onPageHide);
-  }, [channel.kind]);
+
 
   useEffect(() => {
     let escAt = 0;
