@@ -1,15 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
-
-const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-3.6-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-
 async function callGemini(
   apiKey: string,
   messages: Array<{ role: string; content: string }>,
@@ -17,7 +13,6 @@ async function callGemini(
 ): Promise<string> {
   const systemMsg = messages.find((m) => m.role === "system")?.content ?? "";
   const userMsgs = messages.filter((m) => m.role !== "system");
-
   const body = {
     contents: userMsgs.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
@@ -29,16 +24,13 @@ async function callGemini(
     generationConfig: {
       maxOutputTokens: Math.max(maxTokens, 2048),
       temperature: 0.7,
-      thinkingConfig: { thinkingBudget: 0 },
     },
   };
-
   const resp = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-
   if (resp.status === 429) throw new Error("RATE_LIMIT");
   if (!resp.ok) {
     const t = await resp.text();
@@ -49,64 +41,21 @@ async function callGemini(
     data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
   return text.trim();
 }
-
-async function callLovable(
-  messages: unknown[],
-  maxTokens: number,
-): Promise<string> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
-  const resp = await fetch(LOVABLE_AI_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages,
-      max_tokens: maxTokens,
-    }),
-  });
-
-  if (resp.status === 429) throw new Error("RATE_LIMIT");
-  if (resp.status === 402) throw new Error("CREDITS");
-  if (!resp.ok) {
-    const t = await resp.text();
-    throw new Error(`AI error ${resp.status}: ${t.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  return data?.choices?.[0]?.message?.content?.trim() ?? "";
-}
-
 async function callAI(
   messages: Array<{ role: string; content: string }>,
   maxTokens = 900,
 ): Promise<string> {
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
-  // Prefer user's own Gemini key (free tier) to avoid workspace credits.
-  if (geminiKey) {
-    try {
-      return await callGemini(geminiKey, messages, maxTokens);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.error("Gemini failed, falling back to Lovable AI:", msg);
-      // fall through to Lovable
-    }
-  }
-  return await callLovable(messages, maxTokens);
+  if (!geminiKey) throw new Error("GEMINI_API_KEY is not configured");
+  return await callGemini(geminiKey, messages, maxTokens);
 }
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
-
   try {
     const body = await req.json();
     const action = body?.action as string;
-
     if (action === "resolve-title") {
       const query = (body?.query as string)?.slice(0, 300) ?? "";
       if (!query.trim()) {
@@ -135,23 +84,19 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     if (action === "info") {
       const title = (body?.title as string) ?? "";
       const year = (body?.year as string) ?? "";
       const genre = (body?.genre as string) ?? "";
       const lang = (body?.lang as string) === "en" ? "en" : "ku";
-
       const system =
         lang === "en"
           ? "You are a cinema expert. Write all answers in clear, fluent English. STRICT NO-SPOILER RULE: never reveal the ending, twists, deaths, betrayals, secret identities, or any late-plot events. Only describe the setup and premise (roughly the first act). Structure: (1) a short spoiler-free premise, (2) genre and tone, (3) director and main cast, (4) why it is worth watching. 3 to 5 short paragraphs. If you are unsure about a fact, omit it rather than invent."
-          : "تۆ شارەزایەکی سینەماییت. هەموو وەڵامەکە تەنها بە زمانی کوردیی سۆرانی ڕەسەن بنووسە، بە ڕستەی ڕوون و ڕەوان. هیچ وشەیەکی ئینگلیزی مەخە ناو دەقەکەوە، تەنیا ناوی فیلم و کەسایەتییە ڕاستەقینەکان (دەرهێنەر و ئەکتەر) بە ئینگلیزی بهێڵەرەوە. یاسای گرنگ: هەرگیز سپۆیلەر مەکە — کۆتایی فیلم، سووڕدانەوەکان، مردنی کەسایەتی، خیانەت، ناسنامەی نهێنی، یان هیچ ڕووداوێکی نیوەی دواتری فیلم ئاشکرا مەکە. تەنها دەستپێک و کێشەی سەرەکی باس بکە. ڕێکخستن: (١) کورتەیەکی بێ سپۆیلەر لە چیرۆک، (٢) جۆر و کەشوهەوا، (٣) دەرهێنەر و ئەکتەرە سەرەکییەکان، (٤) بۆچی شایانی سەیرکردنە. ٣ تا ٥ پەرەگرافی کورت. ئەگەر لە زانیارییەک دڵنیا نیت، بەجێی هەڵبەستن، بەجێی بهێڵە.";
-
+          : "تۆ شارەزایەکی سینەماییت. هەموو وەڵامەکە تەنها بە زمانی کوردیی سۆرانی ڕەسەن بنووسە، بە ڕستەی ڕوون و ڕەوان. هیچ وشەیەکی ئینگلیزی مەخە ناو دەقەکەوە، تەنیا ناوی فیلم و کەسایەتییە ڕاستەقینەکان (دەرهێنەر و ئەکتەر) بە ئینگلیزی بهێڵەرەوە.\nیاسای گرنگ: هەرگیز سپۆیلەر مەکە — کۆتایی فیلم، سووڕدانەوەکان، مردنی کەسایەتی، خیانەت، ناسنامەی نهێنی، یان هیچ ڕووداوێکی نیوەی دواتری فیلم ئاشکرا مەکە. تەنها دەستپێک و کێشەی سەرەکی باس بکە. ڕێکخستن: (١) کورتەیەکی بێ سپۆیلەر لە چیرۆک، (٢) جۆر و کەشوهەوا، (٣) دەرهێنەر و ئەکتەرە سەرەکییەکان، (٤) بۆچی شایانی سەیرکردنە. ٣ تا ٥ پەرەگرافی کورت. ئەگەر لە زانیارییەک دڵنیا نیت، بەجێی هەڵبەستن، بەجێی بهێڵە.";
       const user =
         lang === "en"
           ? `Give me spoiler-free information about this movie in English: "${title}"${year ? ` (${year})` : ""}${genre ? ` — genre: ${genre}` : ""}. Do NOT reveal the ending or any twists.`
           : `زانیاری بێ سپۆیلەرم دەربارەی ئەم فیلمە بدەرێ، تەنها بە کوردیی سۆرانی: "${title}"${year ? ` (${year})` : ""}${genre ? ` — جۆر: ${genre}` : ""}. کۆتایی فیلم یان هیچ سووڕدانەوەیەک ئاشکرا مەکە. هەموو دەقەکە دەبێت بە کوردیی سۆرانی بێت، نەک ئینگلیزی.`;
-
       const content = await callAI(
         [
           { role: "system", content: system },
@@ -163,7 +108,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

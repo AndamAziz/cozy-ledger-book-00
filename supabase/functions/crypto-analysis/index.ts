@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
 // Lean structured trade plan tool used to auto-detect buy/sell targets from chart images.
 const IMAGE_TRADE_TOOL = {
@@ -162,8 +162,8 @@ serve(async (req) => {
     const { symbol, price, change24h, indicators, summary, timeframe, mode, imageBase64, images, chartTimeframe, dayHigh, dayLow, lang } =
       await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     // Language selection: 'ku' (Kurdish only), 'en' (English only), 'both' (default)
     const langMode: "ku" | "en" | "both" = lang === "ku" || lang === "en" ? lang : "both";
@@ -276,11 +276,11 @@ If an image is not a chart, mention it politely and skip it.`;
       const visionResp = await fetch(AI_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "gemini-3.6-flash",
           messages: [
             { role: "system", content: multi ? multiSystem : singleSystem },
             { role: "user", content: userParts },
@@ -348,11 +348,11 @@ This is educational, not financial advice.`;
       const resp = await fetch(AI_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "gemini-3.6-flash",
           messages: [
             { role: "system", content: sys },
             { role: "user", content: userParts },
@@ -422,11 +422,11 @@ Never guarantee outcomes; this is educational, not financial advice.`;
       const resp = await fetch(AI_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "gemini-3.6-flash",
           messages: [
             { role: "system", content: sysPrompt },
             {
@@ -704,11 +704,11 @@ Never give financial guarantees. Always note this is not financial advice (ئە�
     const response = await fetch(AI_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "gemini-3.6-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },

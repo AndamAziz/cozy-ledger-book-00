@@ -60,7 +60,19 @@ export function hlsConfigFor(tv = isTvMode()) {
     : { enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 };
 }
 
-/** mpegts.js config: smaller stash + no back buffer on TV. */
+/**
+ * mpegts.js config: smaller stash + no back buffer on TV.
+ *
+ * autoCleanupSourceBuffer matters just as much off TV: a continuous live TS
+ * feed left running for many minutes keeps appending to the SourceBuffer with
+ * nothing trimming the back of it. Once the browser's MSE quota is hit,
+ * mpegts.js is forced to tear down and recreate the MediaSource -- visible in
+ * devtools as a MediaSource onSourceEnded/onSourceClose/onSourceOpen cycle --
+ * which is exactly what showed up to the viewer as the picture pausing for a
+ * moment and resuming on its own every so often. Desktop RAM being larger
+ * than a TV's just means it takes longer to hit the ceiling, not that it
+ * never does, so both paths now trim the backward buffer the same way.
+ */
 export function mpegtsConfigFor(tv = isTvMode()) {
   return tv
     ? {
@@ -72,5 +84,12 @@ export function mpegtsConfigFor(tv = isTvMode()) {
         autoCleanupMaxBackwardDuration: 8,
         autoCleanupMinBackwardDuration: 4,
       }
-    : { enableWorker: true, liveBufferLatencyChasing: true, lazyLoad: false };
+    : {
+        enableWorker: true,
+        liveBufferLatencyChasing: true,
+        lazyLoad: false,
+        autoCleanupSourceBuffer: true,
+        autoCleanupMaxBackwardDuration: 30,
+        autoCleanupMinBackwardDuration: 15,
+      };
 }

@@ -16,28 +16,29 @@ export function liveEngineOrder(opts: {
   nativeHls: boolean;
   /** hls.js is usable here (needs MSE). */
   hlsSupported: boolean;
-  /** Panel advertises HLS and nothing else — `.ts` is not available. */
+  /** Panel advertises HLS and nothing else -- `.ts` is not available. */
   hlsOnly?: boolean;
   /** Content-Type already observed for this channel, when known. */
   contentType?: string | null;
 }): LiveEngine[] {
-  const mime = (opts.contentType ?? '').toLowerCase();
-  // A panel that only speaks HLS leaves no choice.
-  const hlsFirst = opts.hlsOnly || mime.includes('mpegurl');
-  const chain: LiveEngine[] = hlsFirst
+  // A panel the server has confirmed serves ONLY transport streams (no HLS at
+  // all) has no other option -- mpegts.js must lead, hls.js would just fail.
+  if (opts.tsOnly) {
+    return ['mpegts', 'native'];
+  }
+  // FLIPPED BACK to hls.js-first, matching the server's candidate order: a
+  // live screenshot of the proven-working reference implementation showed it
+  // holding one stable HLS/XHR segment stream continuously for minutes with
+  // zero switching between request types on this exact single-slot account.
+  // The client and server must always agree on which container they are
+  // asking for, so this stays in lockstep with liveFormatOrder() server-side.
+  const chain: LiveEngine[] = opts.hlsSupported
     ? opts.nativeHls
       ? ['native', 'hls', 'mpegts']
       : ['hls', 'mpegts', 'native']
-    : // Everything else leads with the continuous transport stream (mpegts.js).
-      // The panel's HLS manifest hands out short-lived per-segment tokens that
-      // die behind our proxy, so `.ts` is both the fastest and the only route
-      // that keeps Direct channels alive. Browsers without MSE (iOS Safari)
-      // cannot run mpegts.js, so those fall back to native HLS.
-      opts.hlsSupported
-      ? ['mpegts', 'hls', 'native']
-      : opts.nativeHls
-        ? ['native', 'mpegts']
-        : ['mpegts', 'native'];
+    : opts.nativeHls
+      ? ['native', 'mpegts']
+      : ['mpegts', 'native'];
   const filtered = chain.filter((e) => (e === 'hls' ? opts.hlsSupported : true));
   return filtered.length ? filtered : ['native'];
 }
