@@ -56,6 +56,8 @@ interface QualityLevel {
 
 /** Xtream panels can keep a closed live socket counted briefly while draining. */
 const LIVE_RELEASE_GRACE_MS = 1_500;
+/** Wait for the provider to free the single slot after a severed live feed. */
+const LIVE_SLOT_RELEASE_MS = 6_000;
 
 /** Bucket a level height into a friendly label. */
 function labelForLevel(height?: number, bitrate?: number): string {
@@ -753,7 +755,12 @@ export function LiveTVPlayer({
                 return;
               }
               setReload((r) => r + 1);
-            }, 0);
+              // The provider holds the account's only slot for a few seconds
+              // after the feed is severed, so reconnecting straight away is
+              // refused with 458 and the retry storms -- six attempts in 30 s
+              // in the relay log, which is the freeze the viewer sees. Wait
+              // out the release window first.
+            }, LIVE_SLOT_RELEASE_MS);
           });
 
           player.on(mpegts.Events.ERROR, () => {
