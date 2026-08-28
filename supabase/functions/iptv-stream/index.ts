@@ -505,6 +505,9 @@ Deno.serve(async (req) => {
   /** Container of the candidate the ladder committed to (diagnostics header). */
   let chosenFmt = candidateFormat(candidates[0] ?? '')
   let lastError = 'fetch failed'
+  // Cancels the accepted attempt's connect timeout -- see the AbortController
+  // below. Reassigned on every candidate; only the winning one matters.
+  let cancelHopTimeout: () => void = () => {}
   let deadlineHit = false
   const trace: string[] = []
 
@@ -582,7 +585,21 @@ Deno.serve(async (req) => {
     const headers = { ...baseHeaders, 'User-Agent': ua }
     // A FRESH signal per attempt — a signal that already fired would abort the
     // next request instantly.
-    const signal = AbortSignal.timeout(Math.max(1_500, Math.min(8_000, remaining() - 300)))
+    // The budget must guard CONNECT + response headers ONLY. An
+    // AbortSignal.timeout() stays attached to the RESPONSE BODY too, so once
+    // EdgeRuntime.waitUntil() started keeping the isolate alive for the pipe,
+    // the timer survived long enough to fire and every live feed was aborted
+    // at ~8 s ("TimeoutError: Signal timed out" right after each
+    // [iptv-stream:media] line). Drive it from a controller instead and cancel
+    // it as soon as the candidate we commit to has been chosen.
+    const hopCtl = new AbortController()
+    const hopBudget = Math.max(1_500, Math.min(8_000, remaining() - 300))
+    const hopTimer = setTimeout(
+      () => hopCtl.abort(new DOMException('Signal timed out.', 'TimeoutError')),
+      hopBudget,
+    )
+    cancelHopTimeout = () => clearTimeout(hopTimer)
+    const signal = hopCtl.signal
     try {
       // Live streams must use exactly ONE upstream connection. Resolving a 302
       // directly before opening the relayed media request briefly occupies the
@@ -779,6 +796,10 @@ Deno.serve(async (req) => {
     )
 
   }
+
+  // Committed to a candidate: the connect budget has done its job, and leaving
+  // it armed would abort the body mid-playback.
+  cancelHopTimeout()
 
   const finalUrl = new URL(upstreamBase)
 
