@@ -10,10 +10,11 @@ describe('Smart TV playback tuning', () => {
     expect(tv.capLevelToPlayerSize).toBe(true);
   });
 
-  it('keeps the low-latency desktop profile off TV', () => {
+  it('starts closer to the live edge off TV without low-latency mode', () => {
     const desktop = hlsConfigFor(false);
-    expect(desktop.lowLatencyMode).toBe(true);
+    expect(desktop.lowLatencyMode).toBe(false);
     expect(desktop.maxBufferLength).toBe(20);
+    expect(desktop.liveSyncDurationCount).toBe(2);
   });
 
   it('enables source-buffer cleanup for mpegts on TV only', () => {

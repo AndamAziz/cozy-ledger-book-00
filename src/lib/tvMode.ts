@@ -57,7 +57,19 @@ export function hlsConfigFor(tv = isTvMode()) {
         fragLoadingMaxRetry: 2,
         capLevelToPlayerSize: true,
       }
-    : { enableWorker: true, lowLatencyMode: false, maxBufferLength: 20 };
+    : {
+        enableWorker: true,
+        lowLatencyMode: false,
+        maxBufferLength: 20,
+        backBufferLength: 30,
+        // Measured on this panel: a 10 s segment is 2.2-3.1 MB and takes 6-8 s
+        // over browser -> edge -> relay -> provider. hls.js defaults
+        // liveSyncDurationCount to 3, so a channel change had to land three of
+        // them (~20 s) before the first frame. Two halves that and still keeps
+        // about one segment of slack against a late fetch.
+        liveSyncDurationCount: 2,
+        startFragPrefetch: true,
+      };
 }
 
 /**
