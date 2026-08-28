@@ -55,7 +55,11 @@ export function egressUrl(target: string): string {
   if (!t) return target
   const encoded = encodeURIComponent(target)
   if (t.includes('{url}')) return t.replace('{url}', encoded)
-  let base = t.replace(/\/+$/, '')
+  // A config value that already ends in `?url=` (or carries an empty `url`
+  // param) produced `?url=&url=<target>`. Express reads the duplicate key as an
+  // array, fetch rejects it, and the relay answered 502 for every request --
+  // which tripped the breaker and sent all traffic direct into a provider 458.
+  let base = t.replace(/[?&]url=$/i, '').replace(/\/+$/, '')
   // Accept a bare origin in config and normalise it onto the /proxy path.
   if (!/\/proxy(\?|$)/i.test(base) && !base.includes('?')) base = `${base}/proxy`
   return `${base}${base.includes('?') ? '&' : '?'}url=${encoded}`

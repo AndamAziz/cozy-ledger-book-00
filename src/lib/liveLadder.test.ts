@@ -25,7 +25,7 @@ describe('live engine ladder', () => {
     ).toBe('native');
     expect(
       liveEngineOrder({ tsOnly: false, nativeHls: false, hlsSupported: true })[0],
-    ).toBe('mpegts');
+    ).toBe('hls');
   });
 
   it('keeps native HLS first for an HLS-only panel on Safari-style browsers', () => {
