@@ -273,6 +273,33 @@ function mediaTypeFor(ext: string, fallback: string): string {
 }
 
 
+/**
+ * Keep the isolate resident for the whole body pipe.
+ *
+ * Supabase retires a worker as soon as the HTTP response has
+ * been returned and no `EdgeRuntime.waitUntil()` promise is
+ * pending -- the `EarlyDrop` event. For a continuous transport
+ * stream that cuts playback off mid-feed, which is what Live TV
+ * pausing on its own after 45-90 s actually was. Registering the
+ * pipe keeps the worker alive until the stream really ends.
+ *
+ * It does NOT lift the hard wall clock ceiling (150 s on the
+ * free plan), so the client still reconnects -- this only makes
+ * the cut-off predictable instead of arbitrary.
+ */
+type EdgeRt = { waitUntil?: (p: Promise<unknown>) => void }
+
+function keepAlive(
+  body: ReadableStream<Uint8Array>,
+): ReadableStream<Uint8Array> {
+  const g = globalThis as { EdgeRuntime?: EdgeRt }
+  const rt = g.EdgeRuntime
+  if (typeof rt?.waitUntil !== 'function') return body
+  const ts = new TransformStream<Uint8Array, Uint8Array>()
+  rt.waitUntil(body.pipeTo(ts.writable).catch(() => undefined))
+  return ts.readable
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
@@ -859,7 +886,10 @@ Deno.serve(async (req) => {
     // 200 body is valid and playable; fabricating `Content-Range: .../*` is not.
     if (!Number.isFinite(total) && start === 0 && !parsed[2]) {
       out.delete('Accept-Ranges')
-      return new Response(upstream.body, { status: 200, headers: out })
+      return new Response(
+        kind === 'live' ? keepAlive(upstream.body) : upstream.body,
+        { status: 200, headers: out },
+      )
     }
 
     // Cap an open-ended range so we never buffer an entire movie in memory.
@@ -914,6 +944,11 @@ Deno.serve(async (req) => {
   }
 
   if (clen) out.set('Content-Length', clen)
-  return new Response(upstream.body, { status: upstream.status, headers: out })
+  return new Response(
+    kind === 'live' && upstream.body
+      ? keepAlive(upstream.body)
+      : upstream.body,
+    { status: upstream.status, headers: out },
+  )
 })
 

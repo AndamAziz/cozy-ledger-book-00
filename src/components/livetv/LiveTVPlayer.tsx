@@ -731,6 +731,31 @@ export function LiveTVPlayer({
           );
 
 
+          // The feed ENDING is not an mpegts.js error: the demuxer simply stops
+          // and the <video> element sits paused on its last frame, which is
+          // exactly what "Live TV stops by itself" looked like. Supabase
+          // retires an Edge Function worker at its wall clock ceiling (150 s on
+          // the free plan), so a continuous .ts stream proxied through one is
+          // always cut off sooner or later. Reconnect in place: same channel,
+          // same engine, no ladder advance, no error shown. Require a few
+          // seconds of real playback first so a feed that dies instantly falls
+          // through to the next engine instead of looping here.
+          const attachedAt = Date.now();
+          player.on(mpegts.Events.LOADING_COMPLETE, () => {
+            if (codecBlocked || disposed) return;
+            if ((channel.kind ?? 'live') !== 'live') return;
+            const played = Date.now() - attachedAt;
+            setTimeout(() => {
+              if (disposed) return;
+              if (played < 5000) {
+                safeDestroy();
+                nextEngine();
+                return;
+              }
+              setReload((r) => r + 1);
+            }, 0);
+          });
+
           player.on(mpegts.Events.ERROR, () => {
             if (codecBlocked) return;
 
