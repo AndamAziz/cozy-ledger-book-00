@@ -25,7 +25,7 @@ export type LiveFormats = {
  */
 export function liveFormatOrder(fmt: LiveFormats | null, _rawFirst = false): string[] {
   const known = fmt && fmt.formats.length > 0
-  if (!known) return ['m3u8', 'ts']
+  if (!known) return ['ts', 'm3u8']
   if (fmt!.tsOnly) return ['ts']
   const hasTs = fmt!.formats.some((f) => f === 'ts' || f === 'mpegts')
   if (fmt!.hls && !hasTs) return ['m3u8']
@@ -35,7 +35,7 @@ export function liveFormatOrder(fmt: LiveFormats | null, _rawFirst = false): str
   // frees the slot after a reconnect, while a 10 s segment releases it
   // immediately. This also matches liveEngineOrder() client-side, which
   // already leads with hls.js -- the two MUST ask for the same container.
-  return ['m3u8', 'ts']
+  return ['ts', 'm3u8']
 }
 
 

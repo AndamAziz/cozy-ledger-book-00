@@ -17,8 +17,8 @@ describe('Smart TV playback tuning', () => {
     expect(desktop.liveSyncDurationCount).toBe(2);
   });
 
-  it('enables source-buffer cleanup for mpegts on TV only', () => {
+  it('trims the mpegts back buffer on both TV and desktop', () => {
     expect(mpegtsConfigFor(true).autoCleanupSourceBuffer).toBe(true);
-    expect('autoCleanupSourceBuffer' in mpegtsConfigFor(false)).toBe(false);
+    expect(mpegtsConfigFor(false).autoCleanupSourceBuffer).toBe(true);
   });
 });

@@ -26,16 +26,20 @@ export function liveEngineOrder(opts: {
   if (opts.tsOnly) {
     return ['mpegts', 'native'];
   }
-  // FLIPPED BACK to hls.js-first, matching the server's candidate order: a
-  // live screenshot of the proven-working reference implementation showed it
-  // holding one stable HLS/XHR segment stream continuously for minutes with
-  // zero switching between request types on this exact single-slot account.
-  // The client and server must always agree on which container they are
-  // asking for, so this stays in lockstep with liveFormatOrder() server-side.
+  // A panel that advertises HLS and no `.ts` has nothing for mpegts.js to
+  // read, so the HLS engines stay in front there whatever the startup cost.
+  if (opts.hlsOnly) {
+    const hlsChain: LiveEngine[] = opts.nativeHls ? ['native', 'hls'] : ['hls', 'native'];
+    return hlsChain.filter((e) => (e === 'hls' ? opts.hlsSupported : true));
+  }
+  // TS FIRST. Measured against this provider: it pushes ~494 KB/s while one
+  // 10 s HLS segment is ~3.5 MB, so hls.js cannot paint a frame until a whole
+  // segment lands (7-9 s). A continuous transport stream decodes from the
+  // first bytes instead, which is what brings zap time under ~5 s. Without
+  // MSE neither hls.js nor mpegts.js runs, so native leads there as before.
+  // Stays in lockstep with liveFormatOrder() server-side.
   const chain: LiveEngine[] = opts.hlsSupported
-    ? opts.nativeHls
-      ? ['native', 'hls', 'mpegts']
-      : ['hls', 'mpegts', 'native']
+    ? ['mpegts', 'hls', 'native']
     : opts.nativeHls
       ? ['native', 'mpegts']
       : ['mpegts', 'native'];

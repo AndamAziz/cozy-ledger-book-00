@@ -19,13 +19,13 @@ describe('live engine ladder', () => {
     expect(order).toContain('mpegts');
   });
 
-  it('leads with hls.js for a normal panel, matching the server order', () => {
+  it('leads with mpegts for a normal panel, on every MSE browser', () => {
     expect(
       liveEngineOrder({ tsOnly: false, nativeHls: true, hlsSupported: true })[0],
-    ).toBe('native');
+    ).toBe('mpegts');
     expect(
       liveEngineOrder({ tsOnly: false, nativeHls: false, hlsSupported: true })[0],
-    ).toBe('hls');
+    ).toBe('mpegts');
   });
 
   it('keeps native HLS first for an HLS-only panel on Safari-style browsers', () => {
@@ -64,15 +64,15 @@ describe('candidate order heuristics', () => {
     expect(liveFormatOrder({ formats: ['m3u8', 'rtmp'], tsOnly: false, hls: true })).toEqual(['m3u8']);
   });
 
-  it('probes a minimal m3u8-then-ts set when the panel advertises nothing', () => {
-    expect(liveFormatOrder(null)).toEqual(['m3u8', 'ts']);
-    expect(liveFormatOrder({ formats: [], tsOnly: false, hls: false })).toEqual(['m3u8', 'ts']);
+  it('probes a minimal ts-then-m3u8 set when the panel advertises nothing', () => {
+    expect(liveFormatOrder(null)).toEqual(['ts', 'm3u8']);
+    expect(liveFormatOrder({ formats: [], tsOnly: false, hls: false })).toEqual(['ts', 'm3u8']);
   });
 
-  it('prefers segmented HLS for both-format panels (single-slot safe)', () => {
+  it('prefers the continuous transport stream for both-format panels', () => {
     const both = { formats: ['m3u8', 'ts'], tsOnly: false, hls: true };
-    expect(liveFormatOrder(both)).toEqual(['m3u8', 'ts']);
-    expect(liveFormatOrder(both, true)).toEqual(['m3u8', 'ts']);
+    expect(liveFormatOrder(both)).toEqual(['ts', 'm3u8']);
+    expect(liveFormatOrder(both, true)).toEqual(['ts', 'm3u8']);
   });
 });
 
