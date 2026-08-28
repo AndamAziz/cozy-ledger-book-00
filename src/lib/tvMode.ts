@@ -57,7 +57,7 @@ export function hlsConfigFor(tv = isTvMode()) {
         fragLoadingMaxRetry: 2,
         capLevelToPlayerSize: true,
       }
-    : { enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 };
+    : { enableWorker: true, lowLatencyMode: false, maxBufferLength: 20 };
 }
 
 /**

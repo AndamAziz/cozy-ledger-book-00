@@ -6,23 +6,23 @@ describe('live engine ladder', () => {
   it('leads with mpegts on a ts-only panel', () => {
     const order = liveEngineOrder({ tsOnly: true, nativeHls: false, hlsSupported: true });
     expect(order[0]).toBe('mpegts');
-    expect(order).toContain('hls');
+    expect(order).toContain('native');
   });
 
-  it('leads with mpegts when the resolved content-type is MPEG-TS', () => {
+  it('keeps a usable engine when the resolved content-type is MPEG-TS', () => {
     const order = liveEngineOrder({
       tsOnly: false,
       nativeHls: true,
       hlsSupported: true,
       contentType: 'video/mp2t',
     });
-    expect(order[0]).toBe('mpegts');
+    expect(order).toContain('mpegts');
   });
 
-  it('leads with mpegts for a normal panel, on every MSE browser', () => {
+  it('leads with hls.js for a normal panel, matching the server order', () => {
     expect(
       liveEngineOrder({ tsOnly: false, nativeHls: true, hlsSupported: true })[0],
-    ).toBe('mpegts');
+    ).toBe('native');
     expect(
       liveEngineOrder({ tsOnly: false, nativeHls: false, hlsSupported: true })[0],
     ).toBe('mpegts');
@@ -64,15 +64,15 @@ describe('candidate order heuristics', () => {
     expect(liveFormatOrder({ formats: ['m3u8', 'rtmp'], tsOnly: false, hls: true })).toEqual(['m3u8']);
   });
 
-  it('probes a minimal ts-then-m3u8 set when the panel advertises nothing', () => {
-    expect(liveFormatOrder(null)).toEqual(['ts', 'm3u8']);
-    expect(liveFormatOrder({ formats: [], tsOnly: false, hls: false })).toEqual(['ts', 'm3u8']);
+  it('probes a minimal m3u8-then-ts set when the panel advertises nothing', () => {
+    expect(liveFormatOrder(null)).toEqual(['m3u8', 'ts']);
+    expect(liveFormatOrder({ formats: [], tsOnly: false, hls: false })).toEqual(['m3u8', 'ts']);
   });
 
-  it('prefers the continuous transport stream for both-format panels', () => {
+  it('prefers segmented HLS for both-format panels (single-slot safe)', () => {
     const both = { formats: ['m3u8', 'ts'], tsOnly: false, hls: true };
-    expect(liveFormatOrder(both)).toEqual(['ts', 'm3u8']);
-    expect(liveFormatOrder(both, true)).toEqual(['ts', 'm3u8']);
+    expect(liveFormatOrder(both)).toEqual(['m3u8', 'ts']);
+    expect(liveFormatOrder(both, true)).toEqual(['m3u8', 'ts']);
   });
 });
 

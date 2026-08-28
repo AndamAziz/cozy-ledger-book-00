@@ -25,17 +25,17 @@ export type LiveFormats = {
  */
 export function liveFormatOrder(fmt: LiveFormats | null, _rawFirst = false): string[] {
   const known = fmt && fmt.formats.length > 0
-  if (!known) return ['ts', 'm3u8']
+  if (!known) return ['m3u8', 'ts']
   if (fmt!.tsOnly) return ['ts']
   const hasTs = fmt!.formats.some((f) => f === 'ts' || f === 'mpegts')
   if (fmt!.hls && !hasTs) return ['m3u8']
-  // Transport streams FIRST for every panel that serves them — exactly what
-  // IPTV Smarters / VLC do. A panel's `hlsr` manifest hands out per-segment
-  // tokens bound to the session that fetched it; each proxied segment is a new
-  // upstream connection, so the provider answered them with HTTP 403 and Direct
-  // channels died a few seconds in. One continuous `.ts` connection has no such
-  // token and streams indefinitely.
-  return ['ts', 'm3u8']
+  // HLS FIRST. Verified against this panel: a proxied segment returns
+  // 200 / 3.5 MB through the relay, so the old 403 note is obsolete.
+  // On a max_connections=1 account a continuous `.ts` connection never
+  // frees the slot after a reconnect, while a 10 s segment releases it
+  // immediately. This also matches liveEngineOrder() client-side, which
+  // already leads with hls.js -- the two MUST ask for the same container.
+  return ['m3u8', 'ts']
 }
 
 
@@ -62,6 +62,10 @@ export function refusalScope(args: {
   const { status, kind, format, otherFormatsUntried } = args
   if (status !== 407 && status !== 458) return 'route'
   if (kind !== 'live') return 'route'
-  if (format !== 'm3u8' && format !== 'm3u') return 'route'
+  // A 458/407 on ANY live container may just be a busy slot for that one
+  // transport. Blocking the whole host on a `.ts` refusal meant the m3u8
+  // candidate was never attempted; scope it to the format while another
+  // container is still untried. Extension-less candidates stay host-wide.
+  if (format === 'raw') return 'route'
   return otherFormatsUntried ? 'format' : 'route'
 }
