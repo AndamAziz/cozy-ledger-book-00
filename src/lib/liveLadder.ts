@@ -39,7 +39,9 @@ export function liveEngineOrder(opts: {
   // MSE neither hls.js nor mpegts.js runs, so native leads there as before.
   // Stays in lockstep with liveFormatOrder() server-side.
   const chain: LiveEngine[] = opts.hlsSupported
-    ? ['mpegts', 'hls', 'native']
+    ? opts.nativeHls
+      ? ['native', 'hls', 'mpegts']
+      : ['hls', 'mpegts', 'native']
     : opts.nativeHls
       ? ['native', 'mpegts']
       : ['mpegts', 'native'];

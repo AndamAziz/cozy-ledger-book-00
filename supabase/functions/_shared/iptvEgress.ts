@@ -244,3 +244,39 @@ export function isGeoBlocked(status: number, body?: string): boolean {
 
 export const GEO_BLOCK_MESSAGE =
   'The stream relay could not reach the provider. Please try again in a moment.'
+
+/**
+ * Seal a provider URL for the VPS media proxy.
+ *
+ * Byte pumping moved off this function because Supabase retires a worker at
+ * its wall clock ceiling (150 s on the free plan), which severed every live
+ * stream mid-playback. Resolution stays here -- that is a short request -- and
+ * the playable URL is handed to the browser as an opaque token so the Xtream
+ * username and password never leave the server.
+ *
+ * Wire format matches /root/andam-stream/server.js exactly:
+ * base64url( iv[12] || AES-GCM(JSON{u,x}) ), key = SHA-256(secret).
+ */
+export async function sealStreamUrl(
+  target: string,
+  ttlSeconds = 12 * 60 * 60,
+): Promise<string | null> {
+  const secret = (Deno.env.get('STREAM_TOKEN_SECRET') ?? '').trim()
+  if (!secret) return null
+  const enc = new TextEncoder()
+  const raw = await crypto.subtle.digest('SHA-256', enc.encode(secret))
+  const key = await crypto.subtle.importKey(
+    'raw', raw, { name: 'AES-GCM' }, false, ['encrypt'],
+  )
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const payload = JSON.stringify({ u: target, x: Date.now() + ttlSeconds * 1000 })
+  const cipher = new Uint8Array(
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(payload)),
+  )
+  const out = new Uint8Array(iv.length + cipher.length)
+  out.set(iv, 0)
+  out.set(cipher, iv.length)
+  let bin = ''
+  for (const b of out) bin += String.fromCharCode(b)
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}

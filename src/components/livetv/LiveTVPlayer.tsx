@@ -807,7 +807,28 @@ export function LiveTVPlayer({
       // holds, and single-slot accounts answer 458 — which is exactly what made
       // Direct live channels loop through "Reconnecting…". The proxy path is
       // proven, so live never handshakes for a direct URL.
-      if ((channel.kind ?? 'live') === 'live' || directDead.current) {
+      if ((channel.kind ?? 'live') === 'live') {
+        // Hand the bytes to the VPS proxy. An Edge Function worker is retired
+        // at its wall clock ceiling (150 s free plan), which severed playback
+        // and forced the visible reconnect; the VPS proxy has no ceiling and
+        // its hop to the relay is loopback. Measured on this panel: an HLS
+        // segment arrives at 36 MB/s that way, against 58 KB/s for a paced
+        // continuous .ts. Any failure keeps the proxied URL untouched.
+        void fetch(`${proxySrc}&handoff=1`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((j) => {
+            if (disposed) return;
+            if (typeof j?.url === 'string' && j.url.startsWith('https://')) {
+              src = j.url;
+              usingDirect = true;
+            }
+            reportDiag();
+            begin();
+          })
+          .catch(() => begin());
+        return;
+      }
+      if (directDead.current) {
         begin();
         return;
       }

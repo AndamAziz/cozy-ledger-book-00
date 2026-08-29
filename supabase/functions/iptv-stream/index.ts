@@ -1,7 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U, xtreamOrigins, xtreamApiBases } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
-import { egressFetch, finalUrlOf, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
+import { egressFetch, sealStreamUrl, finalUrlOf, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
 /**
  * Lean Live TV stream proxy — a 1:1 copy of the playback pipeline used by the
@@ -799,6 +799,23 @@ Deno.serve(async (req) => {
 
   // Committed to a candidate: the connect budget has done its job, and leaving
   // it armed would abort the body mid-playback.
+  // ?handoff=1 -- return a URL the browser fetches from the VPS proxy rather
+  // than streaming the body from here. An Edge Function worker is retired at
+  // its wall clock ceiling, which severed live playback; the VPS proxy has no
+  // ceiling and its hop to the relay is loopback.
+  if (reqUrl.searchParams.get('handoff') === '1') {
+    const sealed = await sealStreamUrl(upstreamBase)
+    if (sealed) {
+      cancelHopTimeout()
+      await upstream.body?.cancel().catch(() => undefined)
+      return json(
+        { url: `https://andam.uk/api/stream?t=${encodeURIComponent(sealed)}`, format: chosenFmt },
+        200,
+      )
+    }
+    // No secret configured: fall through to the proxied path unchanged.
+  }
+
   cancelHopTimeout()
 
   const finalUrl = new URL(upstreamBase)
