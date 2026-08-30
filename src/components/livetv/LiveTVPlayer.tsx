@@ -55,7 +55,7 @@ interface QualityLevel {
 }
 
 /** Xtream panels can keep a closed live socket counted briefly while draining. */
-const LIVE_RELEASE_GRACE_MS = 1_500;
+const LIVE_RELEASE_GRACE_MS = 1_000;
 /** Wait for the provider to free the single slot after a severed live feed. */
 const LIVE_SLOT_RELEASE_MS = 6_000;
 
@@ -522,6 +522,21 @@ export function LiveTVPlayer({
       // Never interrupt playback with a noisy terminal error card. Providers
       // recover from expired redirects, slot drains and transient relay faults,
       // so keep the player mounted and reconnect silently.
+      //
+      // Exception: a progressive VOD file (MP4/MKV) whose only engine is the
+      // native media element. If it reached this terminal point having never
+      // produced a frame — and the provider reported no fault (diagnoseStream
+      // returned nothing) — the browser genuinely cannot decode this file
+      // (HEVC/H.265 video or an MKV container that Chrome/Edge/Firefox ship no
+      // decoder for). The proven direct→proxy fallback and the diagnostic path
+      // have already run by this point, so stop the infinite reconnect loop and
+      // surface the honest message plus the external-player fallback (the proxy
+      // URL opens fine in VLC/mpv, which do decode HEVC/MKV).
+      if (!isLiveKind && engines.every((e) => e === 'native')) {
+        const isMkv = containerFromExt(channel.ext) === 'matroska';
+        flagCodec(isMkv ? 'MKV / HEVC video' : 'this video format');
+        return;
+      }
       setRetrying(true);
       setLoading(true);
       retryTimer = window.setTimeout(() => {
@@ -811,13 +826,17 @@ export function LiveTVPlayer({
       // holds, and single-slot accounts answer 458 — which is exactly what made
       // Direct live channels loop through "Reconnecting…". The proxy path is
       // proven, so live never handshakes for a direct URL.
-      if ((channel.kind ?? 'live') === 'live') {
+      if (isLiveKind) {
         // Hand the bytes to the VPS proxy. An Edge Function worker is retired
         // at its wall clock ceiling (150 s free plan), which severed playback
         // and forced the visible reconnect; the VPS proxy has no ceiling and
         // its hop to the relay is loopback. Measured on this panel: an HLS
         // segment arrives at 36 MB/s that way, against 58 KB/s for a paced
         // continuous .ts. Any failure keeps the proxied URL untouched.
+        // NOTE: the handoff opens a real provider media socket, so it MUST stay
+        // behind the slot-release grace window — running it during the wait
+        // overlaps the old+new connections and triggers 458/MAX_CONNECTIONS on
+        // single-slot accounts.
         void fetch(`${proxySrc}&handoff=1`)
           .then((r) => (r.ok ? r.json() : null))
           .then((j) => {

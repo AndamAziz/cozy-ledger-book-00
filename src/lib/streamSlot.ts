@@ -22,8 +22,11 @@ export function releaseActiveStream(): void {
     } catch (err) {
       console.warn('stream teardown failed', err);
     }
+    // Only count a release when a real stream was actually torn down.
+    // Stamping unconditionally made a fresh claim (no prior stream) pay the
+    // full grace wait for nothing, slowing the very first channel open.
+    lastReleaseAt = Date.now();
   }
-  lastReleaseAt = Date.now();
 }
 
 /**
@@ -40,5 +43,4 @@ export function claimStreamSlot(teardown: () => void): number {
 /** Drop the registration without counting it as a fresh release. */
 export function unregisterStream(teardown: () => void): void {
   if (activeTeardown === teardown) activeTeardown = null;
-  lastReleaseAt = Date.now();
 }

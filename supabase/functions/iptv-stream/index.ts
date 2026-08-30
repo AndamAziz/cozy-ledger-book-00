@@ -383,7 +383,15 @@ Deno.serve(async (req) => {
     // VOD/series: the panel is the only authority on the container. A client
     // hint is a catalogue guess (often `mp4`) and a wrong extension is answered
     // with an HTML error page (HTTP 422), so the panel value always wins.
-    if (kind !== 'live') {
+    //
+    // BUT the playlist already resolved `container_extension` per episode from
+    // `get_series_info`, so the client `ext` for a series episode is the real
+    // panel value — not a guess. Re-looking it up with `get_series_info&series_id=`
+    // is wrong there (the id is the episode id, not the parent series id) and it
+    // is a wasted provider round-trip on a single-slot account. Trust the hint
+    // when it is present; only probe the panel when the hint is empty (movies
+    // whose catalogue row carried no container_extension).
+    if (kind !== 'live' && !extHint) {
       const real = await lookupContainerExt(source, streamId, kind)
       if (real) extHint = real
     }
