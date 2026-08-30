@@ -27,8 +27,6 @@ import EmailStatus from "./pages/EmailStatus";
 import Trust from "./pages/Trust";
 import OAuthConsent from "./pages/OAuthConsent";
 import Subscribe from "./pages/Subscribe";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 
 
@@ -67,8 +65,6 @@ const App = () => (
                 <Route path="/trust" element={<Trust />} />
                 <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
                 <Route path="/subscribe" element={<Subscribe />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

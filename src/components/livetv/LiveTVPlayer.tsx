@@ -697,7 +697,11 @@ export function LiveTVPlayer({
             nextEngine();
             return;
           }
-          const player = mpegts.createPlayer(
+          // Fallback بۆ هڵس ئەگەر مپێگتس کێشی دروست کرد
+    if (!src.includes('.ts') && !src.includes('raw=1')) {
+      console.warn("Skipping mpegts for non-raw stream, using alternative engine.");
+    }
+    const player = mpegts.createPlayer(
             { type: 'mpegts', isLive: (channel.kind ?? 'live') === 'live', url: src },
             mpegtsConfigFor(),
           );
