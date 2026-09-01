@@ -54,6 +54,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Media must never pass through here. Cloning a stream to cache it
+  // pulled the whole title a second time and starved the player.
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+  // Media must never pass through here. Cloning a stream to cache it
+  // pulled the whole title a second time and starved the player.
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
   // Skip API requests (supabase, etc.)
   if (event.request.url.includes('/rest/') || 
       event.request.url.includes('/auth/') ||

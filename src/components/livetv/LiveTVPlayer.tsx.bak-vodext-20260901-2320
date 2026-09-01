@@ -267,12 +267,7 @@ export function LiveTVPlayer({
     const kind = channel.kind ?? 'live';
     const nativeHls = nativeHlsSupported();
     if (kind !== 'live') {
-      // Xtream VOD is always a progressive file (mp4/mkv) -- the panel never
-      // serves a movie as HLS. When the catalogue omits container_extension
-      // the hint is 'unknown', which put hls.js at the head of the ladder;
-      // hls.js then XHR'd an MP4, failed, and every rung burned another of
-      // the account's single connection. Default the hint to mp4.
-      const container = containerFromExt(channel.ext || 'mp4');
+      const container = containerFromExt(channel.ext);
       const chain = engineChain(container, { nativeHls });
       // A progressive container (mp4/mkv) is decodable ONLY by the media
       // element -- hls.js and mpegts.js reject it outright. Appending them as
@@ -431,12 +426,7 @@ export function LiveTVPlayer({
         if (!disposed) nextEngine();
         // Direct playback either starts fast or is unreachable — fail over to the
         // proxy quickly instead of holding the viewer on a spinner for 15s.
-      // A multi-GB VOD whose moov atom sits at the tail makes Chrome seek to
-      // the end of the file before it can decode a single frame; on this
-      // provider that takes well past fifteen seconds, and tearing the
-      // element down mid-seek restarted the whole ladder. Live still fails
-      // fast -- a live feed that has sent nothing in 15 s really is dead.
-      }, usingDirect ? 8_000 : (isLiveKind ? 15_000 : 45_000));
+      }, usingDirect ? 8_000 : 15_000);
     };
     const done = () => {
       clearWatchdog();
@@ -855,13 +845,7 @@ export function LiveTVPlayer({
             if (disposed) return;
             if (typeof j?.url === 'string' && j.url.startsWith('https://')) {
               src = j.url;
-              // The handoff returns OUR proxy (andam.uk/api/stream), not a
-              // provider URL. Marking it `direct` armed the 8 s watchdog meant
-              // for unreachable provider hosts and sent failures down the
-              // direct-is-dead path, so a large VOD -- whose moov atom sits at
-              // the end of a multi-GB file -- was torn down before its first
-              // frame and the ladder restarted forever.
-              usingDirect = !j.url.startsWith(window.location.origin);
+              usingDirect = true;
             }
             reportDiag();
             begin();
