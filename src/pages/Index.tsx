@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useFinanceData } from '@/hooks/useFinanceData';
@@ -253,6 +253,18 @@ const Dashboard = ({ onOpenAdmin, isAdmin, companyName, daysUntilExpiry, userEma
 
 
 
+
+
+          {/* Footer links */}
+          <div className="mb-6 flex items-center justify-center gap-3 text-xs no-print">
+            <Link to="/about" className="text-muted-foreground transition-colors hover:text-primary">
+              About Us
+            </Link>
+            <span className="text-muted-foreground/40">·</span>
+            <Link to="/contact" className="text-muted-foreground transition-colors hover:text-primary">
+              Contact Us
+            </Link>
+          </div>
 
           {financeOpen && (
             <>
