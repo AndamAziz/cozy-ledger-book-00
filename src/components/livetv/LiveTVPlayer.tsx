@@ -267,24 +267,18 @@ export function LiveTVPlayer({
     const kind = channel.kind ?? 'live';
     const nativeHls = nativeHlsSupported();
     if (kind !== 'live') {
-      // Xtream VOD is always a progressive file (mp4/mkv) -- the panel never
-      // serves a movie as HLS. When the catalogue omits container_extension
-      // the hint is 'unknown', which put hls.js at the head of the ladder;
-      // hls.js then XHR'd an MP4, failed, and every rung burned another of
-      // the account's single connection. Default the hint to mp4.
-      const container = containerFromExt(channel.ext || 'mp4');
+      // Xtream VOD is a progressive file: mp4/mkv, or a .ts remux. It is never
+      // an HLS manifest, so hls.js belongs nowhere in this ladder -- every rung
+      // it takes opens another provider connection, and the account allows one.
+      // The catalogue does not always carry container_extension, so when the
+      // hint is missing try the media element first (mp4/mkv, the common case)
+      // and fall back to mpegts.js for a .ts remux.
+      const container = containerFromExt(channel.ext);
       const chain = engineChain(container, { nativeHls });
-      // A progressive container (mp4/mkv) is decodable ONLY by the media
-      // element -- hls.js and mpegts.js reject it outright. Appending them as
-      // fallback rungs meant every native hiccup burned two more provider
-      // connections on engines that cannot succeed, and with
-      // max_connections=1 those retries starved the one slot the media element
-      // needed. Trust engineChain: it already returns ['native'] for these.
-      if (isProgressiveContainer(container)) return chain;
-      const vodChain: Engine[] = [...chain];
-      if (Hls.isSupported() && !vodChain.includes('hls')) vodChain.push('hls');
-      if (!vodChain.includes('mpegts')) vodChain.push('mpegts');
-      return vodChain.length ? vodChain : ['native'];
+      if (isProgressiveContainer(container)) return ['native'];
+      if (container === 'mpegts' || container === 'flv') return ['mpegts', 'native'];
+      if (container === 'hls') return chain;
+      return ['native', 'mpegts'];
     }
     // Live: mpegts.js first (it asks the proxy for `raw=1`, the continuous .ts
     // variant). Only a panel that serves HLS exclusively leads with hls.js.
