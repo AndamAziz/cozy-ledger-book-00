@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { parseXtream, isXtreamUrl, getM3U, xtreamOrigins, xtreamApiBases } from '../_shared/iptvConfig.ts'
 import { resolveViewer, tokenFromRequest } from '../_shared/iptvViewer.ts'
+import { signTranscodeUrl } from '../_shared/vpsTranscode.ts'
 import { egressFetch, sealStreamUrl, finalUrlOf, isGeoBlocked, GEO_BLOCK_MESSAGE } from '../_shared/iptvEgress.ts'
 
 /**
@@ -484,6 +485,12 @@ Deno.serve(async (req) => {
       }
     }
     const direct = /^https:\/\//i.test(url) && (kind === 'live' || ranges === true)
+    // Optional fallback for the client engine chain: a VPS-signed URL that
+    // transcodes this same stream (audio-only remux first) when the direct
+    // container/codec turns out to be unplayable. Never blocks the response —
+    // if signing fails (secret unset, etc.) the field is simply omitted and
+    // playback proceeds exactly as before.
+    const transcodeUrl = kind === 'live' ? await signTranscodeUrl(url) : null
     return new Response(
       JSON.stringify({
         url,
@@ -492,6 +499,7 @@ Deno.serve(async (req) => {
         candidates: candidates.length,
         format: candidateFormat(target),
         tsOnly: Boolean(liveFmt?.tsOnly),
+        ...(transcodeUrl ? { transcodeUrl } : {}),
       }),
       { headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=20' } },
     )

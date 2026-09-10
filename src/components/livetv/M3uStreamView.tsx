@@ -19,6 +19,7 @@ import { useVirtualList } from '@/hooks/useVirtualList';
 
 
 const PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/iptv-m3u-proxy?url=`;
+const VPS_RELAY_BASE = 'https://relay.andam.uk:8443/proxy?token=009c95e9a8c6e50d992b8313bb90b01948b4a58e870bd69504a640b32306a5da&url=';
 
 /** Fixed row metrics keep the virtual list maths exact. */
 const ROW_HEIGHT = 56;
@@ -54,7 +55,7 @@ export default function M3uStreamView({
 
   const [loadingStream, setLoadingStream] = useState(true);
   const [error, setError] = useState(false);
-  const [useProxy, setUseProxy] = useState(false);
+  const [proxyTier, setProxyTier] = useState<0 | 1 | 2>(0);
   const [muted, setMuted] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState('');
@@ -95,13 +96,6 @@ export default function M3uStreamView({
 
 
 
-  const retry = useCallback(() => {
-    setError(false);
-    setLoadingStream(true);
-    setUseProxy(false);
-    setAttempt((a) => a + 1);
-  }, []);
-
   /**
    * Channels that declare custom headers in the playlist must go through the
    * proxy from the very first attempt (a browser cannot send Referer/UA).
@@ -109,6 +103,13 @@ export default function M3uStreamView({
    */
   const requiresProxy = needsProxy(channel.headers);
   const headerKey = requiresProxy ? JSON.stringify(channel.headers) : '';
+
+  const retry = useCallback(() => {
+    setError(false);
+    setLoadingStream(true);
+    setProxyTier(requiresProxy ? 1 : 0);
+    setAttempt((a) => a + 1);
+  }, [requiresProxy]);
 
   /* playback engine — direct source first, proxy as automatic fallback */
   useEffect(() => {
@@ -124,11 +125,11 @@ export default function M3uStreamView({
     setError(false);
     setLoadingStream(true);
 
-    const src = resolveStreamSource(channel.url, channel.headers, PROXY_BASE, useProxy);
-    const exhausted = useProxy || requiresProxy;
+    const src = resolveStreamSource(channel.url, channel.headers, proxyTier, PROXY_BASE, VPS_RELAY_BASE);
+    const exhausted = proxyTier >= 2;
     const fail = () => {
       if (cancelled) return;
-      if (!exhausted) setUseProxy(true);
+      if (!exhausted) setProxyTier((t) => (t === 0 ? 1 : 2));
       else {
         setLoadingStream(false);
         setError(true);
@@ -139,9 +140,14 @@ export default function M3uStreamView({
     // Safari / iOS / Smart TVs play HLS natively (hardware decode, HEVC, AC-3);
     // everywhere else hls.js is required — including for extensionless IPTV
     // manifest URLs, which Chrome/Firefox cannot play on their own.
-    const native = nativeHlsSupported();
+    // canPlayType() has proven unreliable on some Chrome builds — it can
+    // report HLS as 'probably'/'maybe' playable even though native <video>
+    // playback then fails with NotSupportedError. Hls.isSupported() (real
+    // MediaSource Extensions capability) is the trustworthy signal instead;
+    // it is already false on Safari/iOS, so native playback there is
+    // unaffected by dropping the canPlayType-based check.
     const looksProgressive = /\.(mp4|mkv|webm|mov|m4v)(\?|$)/i.test(channel.url);
-    const useHlsJs = !native && !looksProgressive && Hls.isSupported();
+    const useHlsJs = !looksProgressive && Hls.isSupported();
 
     if (useHlsJs) {
       const hls = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 20 });
@@ -190,12 +196,12 @@ export default function M3uStreamView({
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
-  }, [channel.url, headerKey, useProxy, attempt]);
+  }, [channel.url, headerKey, proxyTier, attempt]);
 
 
   /* reset the proxy fallback whenever the user switches channel */
   useEffect(() => {
-    setUseProxy(false);
+    setProxyTier(requiresProxy ? 1 : 0);
   }, [channel.url]);
 
   /* TV zapping toast: always show the channel we switched to, then fade out */

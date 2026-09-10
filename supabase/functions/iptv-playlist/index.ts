@@ -575,7 +575,16 @@ async function buildIndex(source: string) {
   // The live catalogue is small enough to fetch once, so real counts are derived
   // from it and categories the line cannot actually access are dropped.
   let liveCatalogueOk = false
-  if (categories.some((c) => c.kind === 'live')) {
+  // Counting is a nicety; reaching the panel at all is not. A 40 000-channel
+  // line answers get_live_streams in ~75 s, so on catalogues this size the
+  // count pass burned the whole budget and returned nothing. Above the
+  // threshold it is skipped: categories arrive in ~1 s without counts, and
+  // each one loads its own channels on open, which is what native players do.
+  const HEAVY_CATEGORY_COUNT = 400
+  const liveCats = categories.filter((c) => c.kind === 'live').length
+  if (liveCats > HEAVY_CATEGORY_COUNT) {
+    console.log(`[playlist] ${liveCats} live categories — skipping the count pass`)
+  } else if (categories.some((c) => c.kind === 'live')) {
     const rows = await fetchJson<Record<string, unknown>[]>(
       sk,
       `${api}&action=${ACTIONS.live[1]}`,

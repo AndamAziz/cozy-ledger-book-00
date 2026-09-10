@@ -501,7 +501,10 @@ export function useIptvRefresh() {
   return async () => {
     clearCatalogCache();
     try {
-      await get<IptvIndex>('iptv-playlist?refresh=1').catch(() => undefined);
+      // Without the source id the edge function refreshes the account's default
+      // provider, so switching source then refreshing left the old catalogue in
+      // place. Every other call already carries sourceParam(); this one did not.
+      await get<IptvIndex>(`iptv-playlist?refresh=1${sourceParam()}`).catch(() => undefined);
     } finally {
       clearCatalogCache();
       qc.removeQueries({ queryKey: ['iptv-index'] });

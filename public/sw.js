@@ -59,9 +59,10 @@ self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('/api/')) {
     return;
   }
-  // Media must never pass through here. Cloning a stream to cache it
-  // pulled the whole title a second time and starved the player.
-  if (event.request.url.includes('/api/')) {
+  // Stream segments and manifests are single-use and often several MB.
+  // Caching them served the player a STALE segment forever, so the sequence
+  // never advanced and live playback restarted from zero on every cycle.
+  if (/\.(ts|m3u8|mp4|mkv|m4s|aac)(\?|$)/i.test(event.request.url)) {
     return;
   }
   // Skip API requests (supabase, etc.)

@@ -600,7 +600,11 @@ async function loadM3U(url: string, prev: M3uSnapshot | null, force = false): Pr
   const ATTEMPTS = 4
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     try {
-      res = await egressFetch(url, { headers, signal: AbortSignal.timeout(60_000) })
+      res = await egressFetch(url, { headers, // A 40 000-channel Xtream catalogue is a single 74 s JSON response on some
+      // panels; 60 s cut it off mid-body, so the probe reported a reachable
+      // stream with no counts. Providers that answer fast are unaffected --
+      // this only raises the ceiling, never the wait.
+      signal: AbortSignal.timeout(120_000) })
       if (res.status === 304) break
       // 5xx / 429 from the relay or panel are usually transient — retry instead
       // of surfacing them as a permanently dead playlist.

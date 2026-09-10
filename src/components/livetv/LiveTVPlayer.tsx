@@ -492,6 +492,13 @@ export function LiveTVPlayer({
         diagnosing = false;
         if (disposed) return;
         if (diag) {
+          // The browser has no decoder for this file. Every remaining engine
+          // would fail identically, so the ladder stops here and the external
+          // player button is offered instead of another spinner.
+          if (diag.code === 'CODEC_UNSUPPORTED') {
+            flagCodec('HEVC / H.265');
+            return;
+          }
           // Slot / throttle refusals clear by themselves. Never interrupt the
           // viewer with a popup for those — silently wait out the provider and
           // reconnect behind the normal loading spinner.
@@ -788,10 +795,20 @@ export function LiveTVPlayer({
             }, LIVE_SLOT_RELEASE_MS);
           });
 
-          player.on(mpegts.Events.ERROR, () => {
+          player.on(mpegts.Events.ERROR, (...args: unknown[]) => {
             if (codecBlocked) return;
-
-
+            // A Dolby track in a .ts VOD kills mpegts.js before MEDIA_INFO ever
+            // fires: MediaSource refuses addSourceBuffer('audio/mp4;codecs=ac-3')
+            // and the demuxer stops with nothing played, so the silent-audio
+            // check further down never sees a currentTime to judge. Read the
+            // codec out of the error text instead and stop the ladder here --
+            // every remaining engine hits the same wall.
+            const detail = args.map((a) => String(a)).join(' ');
+            if (/ac-3|ac3|ec-3|eac3|dts/i.test(detail)) {
+              codecBlocked = true;
+              flagCodec(audioCodecLabel(/e-?ac-?3/i.test(detail) ? 'ec-3' : /dts/i.test(detail) ? 'dts' : 'ac-3'));
+              return;
+            }
             setTimeout(() => {
               if (disposed) return;
               safeDestroy();
@@ -991,13 +1008,28 @@ export function LiveTVPlayer({
     setNoAudio(false);
     const v = videoRef.current;
     if (!v) return;
-    const timer = window.setTimeout(() => {
+    // One check at six seconds missed titles that were still buffering then:
+    // on a slow line currentTime can still be under a second, and the check
+    // never ran again. Poll instead, and stop at the first verdict either way.
+    const started = Date.now();
+    const timer = window.setInterval(() => {
       const decoded = (v as HTMLVideoElement & { webkitAudioDecodedByteCount?: number })
         .webkitAudioDecodedByteCount;
-      if (decoded === undefined) return;
-      if (v.currentTime > 1 && decoded === 0) setNoAudio(true);
-    }, 6000);
-    return () => clearTimeout(timer);
+      if (decoded === undefined) { window.clearInterval(timer); return; }
+      if (decoded > 0) { window.clearInterval(timer); return; }
+      if (v.currentTime > 1) {
+        setNoAudio(true);
+        window.clearInterval(timer);
+        return;
+      }
+      // A 2.5 GB HEVC title on a 420 kB/s line can take five minutes to show
+      // its first frame; at 45 s the poll gave up before playback had even
+      // started, so the silent track was never reported. Ten minutes covers
+      // the slowest file in the catalogue and costs nothing: the poll stops
+      // at the first verdict either way.
+      if (Date.now() - started > 600_000) window.clearInterval(timer);
+    }, 2000);
+    return () => clearInterval(timer);
   }, [channel.id, currentEpisodeId, stage, attempt, reload]);
 
   // Track position / length for movies and episodes so they can be scrubbed,
