@@ -730,7 +730,11 @@ export function LiveTVPlayer({
             return;
           }
           const player = mpegts.createPlayer(
-            { type: 'mpegts', isLive: (channel.kind ?? 'live') === 'live', url: src },
+            // VOD whose audio the VPS re-encodes (ac3/eac3 -> aac) arrives as a
+            // continuous ffmpeg pipe with no length and no Range: mpegts.js must
+            // treat it as live or it demands a 206 and reconnects for ever.
+            // This mirrors player-test, which plays these titles without stalling.
+            { type: 'mpegts', isLive: true, url: src },
             mpegtsConfigFor(),
           );
           tsRef.current = player;
@@ -884,8 +888,15 @@ export function LiveTVPlayer({
         begin();
         return;
       }
-      // Movies / series keep the direct-first handshake (a tiny JSON call, not
-      // the bytes) — that path is working and must not change.
+      // VOD must go through our own proxy, not the provider's direct URL: the
+      // VPS re-encodes ac3/eac3 audio to aac there (Chrome cannot decode ac3,
+      // which left these titles reconnecting for ever). Live keeps the
+      // direct-first handshake — its speed depends on it and its audio is fine.
+      if ((channel.kind ?? 'live') !== 'live') {
+        reportDiag();
+        begin();
+        return;
+      }
       void resolveDirectUrl(channel.id, channel.kind ?? 'live', channel.ext, engine === 'mpegts')
         .then((direct) => {
           if (disposed) return;
