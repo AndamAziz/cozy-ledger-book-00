@@ -864,12 +864,14 @@ export function LiveTVPlayer({
         // its hop to the relay is loopback. Measured on this panel: an HLS
         // segment arrives at 36 MB/s that way, against 58 KB/s for a paced
         // continuous .ts. Any failure keeps the proxied URL untouched.
+        let handoffOk = false;
         void fetch(`${proxySrc}&handoff=1`)
           .then((r) => (r.ok ? r.json() : null))
           .then((j) => {
             if (disposed) return;
             if (typeof j?.url === 'string' && j.url.startsWith('https://')) {
               src = j.url;
+              handoffOk = true;
               // The handoff returns OUR proxy (andam.uk/api/stream), not a
               // provider URL. Marking it `direct` armed the 8 s watchdog meant
               // for unreachable provider hosts and sent failures down the
@@ -878,10 +880,26 @@ export function LiveTVPlayer({
               // frame and the ladder restarted forever.
               usingDirect = !j.url.startsWith(window.location.origin);
             }
+            if (!handoffOk && (channel.kind ?? 'live') !== 'live') {
+              // VOD must never fall back to the Edge Function URL: that path
+              // serves the provider's raw ac3 audio, which Chrome cannot decode
+              // (addSourceBuffer rejects audio/mp4;codecs=ac-3) and the ladder
+              // then reconnects for ever. Our proxy re-encodes it to aac.
+              console.warn('[andam] VOD handoff failed — retrying, not using edge fn');
+              nextEngine();
+              return;
+            }
             reportDiag();
             begin();
           })
-          .catch(() => begin());
+          .catch(() => {
+            if ((channel.kind ?? 'live') !== 'live') {
+              console.warn('[andam] VOD handoff threw — retrying, not using edge fn');
+              nextEngine();
+              return;
+            }
+            begin();
+          });
         return;
       }
       if (directDead.current) {
